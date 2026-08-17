@@ -1,5 +1,7 @@
 # Wiggle 편집 기능과 Excalidraw 제한 도입 계획
 
+> 여러 페이지 AI 그림책 편집기의 상세 제품 범위, 저장 모델, API와 검증 기준은 [`picture-book-editor-spec.md`](./picture-book-editor-spec.md)를 따른다.
+
 ## 결론
 
 Excalidraw로 학생용 핵심 그림 캔버스를 교체하지 않는다. Wiggle의 수업 캔버스에는 단계 자동 저장, 질문 전후 버전, 점선·연필 시범 분리 레이어, 단계 진행, 타임랩스가 이미 연결되어 있다. Excalidraw 문서 모델로 바꾸면 이 연결을 다시 구현해야 하고, 저학년에게 불필요한 선택 도구와 화면 복잡도가 커진다.

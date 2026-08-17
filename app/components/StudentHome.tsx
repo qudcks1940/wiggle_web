@@ -102,6 +102,9 @@ export function StudentHome() {
       <a className="student-menu-card activities" href="/student/activities">
         <span aria-hidden="true">🎨</span><div><h2>활동 고르기</h2><p>선·도형부터 자유 창작까지 골라요.</p></div><b>고르기 →</b>
       </a>
+      <a className="student-menu-card storybooks" href="/student/books">
+        <span aria-hidden="true">📖</span><div><h2>AI 그림책</h2><p>내 그림과 이야기를 원하는 곳에 놓아 책을 만들어요.</p></div><b>만들기 →</b>
+      </a>
     </nav>
 
     <section className="teacher-selected-activity">

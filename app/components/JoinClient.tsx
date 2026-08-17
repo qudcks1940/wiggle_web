@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { activeProfile, deviceProfiles, DeviceProfile, storeProfile } from "@/lib/client-session";
 import { PICTURE_PASSWORD_LENGTH } from "@/lib/picture-password";
-import { classifyEntryError, EntryErrorKind, readStudentEntryResponse, StudentEntryResponseError } from "@/lib/student-entry-client";
+import { classifyEntryError, EntryErrorKind, readStudentEntryResponse, studentReturnPath, StudentEntryResponseError } from "@/lib/student-entry-client";
 import { Logo } from "./Logo";
 import { QrCode } from "./QrCode";
 import { SpeakButton } from "./SpeakButton";
@@ -54,6 +54,10 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
   const qrFlow = Boolean(initialEntry) && !recoveryToken;
   // QR로 들어왔으면 수업 코드는 QR이 대신하므로 코드 칸을 숨기고 번호를 별명부터 매긴다.
   const hideCodeField = qrFlow && mode === "join";
+
+  function finishEntry() {
+    location.replace(studentReturnPath(location.search));
+  }
 
   useEffect(() => {
     setPictures([]); setDuplicateWarning(false); setError(""); setErrorKind(""); setTeacherCallOpen(false);
@@ -174,7 +178,7 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
       }
       storeProfile({ studentId: data.student.id, nickname: data.student.nickname, animal: data.student.animal, classroomName: data.student.classroomName, deviceToken: data.deviceToken, expiresAt: data.expiresAt });
       setPersonalQrToken(data.personalQrToken ?? ""); setMode(data.personalQrToken ? "done" : "profiles");
-      if (!data.personalQrToken) location.href = "/student";
+      if (!data.personalQrToken) finishEntry();
     } catch (cause) {
       setError(cause instanceof StudentEntryResponseError ? cause.message : "입장 중 연결을 확인하지 못했어요. 잠시 뒤 다시 해 주세요.");
       setErrorKind(failureKind);
@@ -191,7 +195,7 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
   }
 
   if (mode === "done") {
-    return <main className="entry-shell"><div className="entry-top"><Logo /></div><section className="entry-card"><div className="success-mark">✓</div><h1>내 그림 카드가 생겼어요!</h1><p>다른 기기에서 이어 그릴 때 쓰는 비공개 QR이에요. 선생님과 함께 안전하게 보관해요.</p><div className="personal-card"><QrCode value={recoveryUrl} label={`${nickname} 개인 복구 QR`} /><span>{animal}</span><b>{nickname}</b><small>개인 복구 카드</small><code>{recoveryUrl.slice(-16)}</code></div><button className="button secondary full" onClick={() => navigator.clipboard?.writeText(recoveryUrl)}>복구 주소 복사</button><button className="button primary full" onClick={() => { setPersonalQrToken(""); location.replace("/student"); }}>그림 시작하기</button></section></main>;
+    return <main className="entry-shell"><div className="entry-top"><Logo /></div><section className="entry-card"><div className="success-mark">✓</div><h1>내 그림 카드가 생겼어요!</h1><p>다른 기기에서 이어 그릴 때 쓰는 비공개 QR이에요. 선생님과 함께 안전하게 보관해요.</p><div className="personal-card"><QrCode value={recoveryUrl} label={`${nickname} 개인 복구 QR`} /><span>{animal}</span><b>{nickname}</b><small>개인 복구 카드</small><code>{recoveryUrl.slice(-16)}</code></div><button className="button secondary full" onClick={() => navigator.clipboard?.writeText(recoveryUrl)}>복구 주소 복사</button><button className="button primary full" onClick={() => { setPersonalQrToken(""); finishEntry(); }}>그림 시작하기</button></section></main>;
   }
 
   return (

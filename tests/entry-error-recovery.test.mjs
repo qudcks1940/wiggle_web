@@ -8,7 +8,7 @@ const executableJavaScript = ts.transpileModule(entrySource, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 const entryClient = await import(`data:text/javascript;base64,${Buffer.from(executableJavaScript).toString("base64")}`);
-const { classifyEntryError } = entryClient;
+const { classifyEntryError, studentReturnPath } = entryClient;
 
 const join = (await readFile(new URL("../app/components/JoinClient.tsx", import.meta.url), "utf8")).replace(
   /\r\n/g,
@@ -25,6 +25,13 @@ test("a wrong class code is classified for code-field recovery, wrong pictures f
   assert.equal(classifyEntryError({ status: 401, action: "join", hasPersonalQrToken: false }), "general");
   assert.equal(classifyEntryError({ status: 429, action: "switchProfile", hasPersonalQrToken: false }), "general");
   assert.equal(classifyEntryError({ status: 500, action: "join", hasPersonalQrToken: false }), "general");
+});
+
+test("student entry only returns to an internal student page", () => {
+  assert.equal(studentReturnPath("?next=%2Fstudent%2Fbooks%3Fcreate%3Dlandscape"), "/student/books?create=landscape");
+  assert.equal(studentReturnPath("?next=https%3A%2F%2Fevil.example%2Fstudent"), "/student");
+  assert.equal(studentReturnPath("?next=%2F%2Fevil.example%2Fstudent"), "/student");
+  assert.equal(studentReturnPath("?next=%2Fteacher"), "/student");
 });
 
 test("errors are shown with a warning picture and can be heard aloud", () => {

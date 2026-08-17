@@ -1,0 +1,94 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+
+test("그림책 API는 학생 소유권·요청 출처·저장 충돌을 확인한다", async () => {
+  const [collection, book, assets, assetImage] = await Promise.all([
+    read("../app/api/storybooks/route.ts"),
+    read("../app/api/storybooks/[id]/route.ts"),
+    read("../app/api/storybooks/[id]/assets/route.ts"),
+    read("../app/api/storybooks/[id]/assets/[assetId]/route.ts"),
+  ]);
+  for (const source of [collection, book, assets]) {
+    assert.match(source, /studentFromRequest/);
+    assert.match(source, /sameOrigin/);
+    assert.match(source, /rateLimit/);
+  }
+  assert.match(collection, /student_id = \?/);
+  assert.match(collection, /status = 'complete'/);
+  assert.match(book, /validateStorybookDocument/);
+  assert.match(book, /expectedRevision/);
+  assert.match(book, /REVISION_CONFLICT/);
+  assert.match(book, /storybook_mutations/);
+  assert.match(book, /다른 그림책의 이미지는 사용할 수 없어요/);
+  assert.match(assets, /PNG 이미지가 아니거나 파일이 너무 커요/);
+  assert.match(assets, /ARTWORKS\.put/);
+  assert.match(assets, /ARTWORKS\.delete/);
+  assert.match(assetImage, /JOIN storybooks/);
+  assert.match(assetImage, /b\.student_id = \?/);
+  assert.match(assetImage, /private, no-store/);
+  assert.match(assetImage, /x-content-type-options/);
+});
+
+test("D1 메타데이터와 R2 이미지 바이트가 분리되고 인덱스가 있다", async () => {
+  const [schema, runtime, migration] = await Promise.all([
+    read("../db/schema.ts"), read("../db/runtime.ts"), read("../drizzle/0006_cloudy_taskmaster.sql"),
+  ]);
+  for (const table of ["storybooks", "storybook_assets", "storybook_mutations"]) {
+    assert.match(schema, new RegExp(`sqliteTable\\(\"${table}\"`));
+    assert.match(runtime, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+    assert.match(migration, new RegExp(`CREATE TABLE .${table}.`));
+  }
+  assert.match(schema, /objectKey: text\("object_key"\)/);
+  assert.match(schema, /documentJson: text\("document_json"\)/);
+  assert.match(migration, /storybook_assets_book_idx/);
+  assert.match(migration, /storybooks_student_idx/);
+});
+
+test("학생 화면에 실제 그림책 진입·편집·가져오기·미리보기가 연결된다", async () => {
+  const [home, detail, editor, cutout, library, demo, studentApi, css] = await Promise.all([
+    read("../app/components/StudentHome.tsx"),
+    read("../app/components/ArtworkDetail.tsx"),
+    read("../app/components/StorybookEditor.tsx"),
+    read("../app/components/ImageCutoutModal.tsx"),
+    read("../app/components/StorybookLibrary.tsx"),
+    read("../app/components/StorybookDemoBootstrap.tsx"),
+    read("../app/api/student/route.ts"),
+    read("../app/globals.css"),
+  ]);
+  assert.match(home, /href="\/student\/books"/);
+  assert.match(detail, /이 그림으로 그림책 만들기/);
+  assert.match(detail, /artworkId: artwork\.id/);
+  assert.match(library, /가로 그림책/);
+  assert.match(library, /세로 그림책/);
+  assert.match(library, /activeProfile/);
+  assert.match(library, /\/join\?next=/);
+  assert.match(library, /URLSearchParams\(location\.search\)\.get\("create"\)/);
+  assert.match(studentApi, /action === "localStorybookDemo"/);
+  assert.match(studentApi, /isLocalDemoRequest\(request\)/);
+  assert.match(demo, /ensureCompletedArtwork/);
+  assert.match(demo, /finalDataUrl/);
+  assert.match(demo, /artworkId: artwork\.id/);
+  assert.match(editor, /T 글 넣기/);
+  assert.match(editor, /🎨 내 그림/);
+  assert.match(editor, /🖼️ 새 이미지/);
+  assert.match(editor, /쪽 복제/);
+  assert.match(editor, /↶ 되돌리기/);
+  assert.match(editor, /↷ 다시하기/);
+  assert.match(editor, /맨 앞으로/);
+  assert.match(editor, /잠그기/);
+  assert.match(editor, /미리보기/);
+  assert.match(editor, /그림 가로 크기/);
+  assert.match(editor, /그림 세로 크기/);
+  assert.match(editor, /캐릭터만 오리기/);
+  assert.match(editor, /sourceType: "upload", dataUrl/);
+  assert.match(cutout, /모서리 배경 자동 지우기/);
+  assert.match(cutout, /removeConnectedColor/);
+  assert.match(cutout, /opaqueBounds/);
+  assert.match(editor, /setPointerCapture/);
+  assert.match(editor, /canvas\.toDataURL\("image\/png"\)/);
+  assert.match(css, /\.storybook-stage-element\.selected/);
+  assert.match(css, /@media \(max-height:480px\) and \(orientation:landscape\)/);
+});

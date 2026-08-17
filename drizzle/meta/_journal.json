@@ -43,6 +43,13 @@
       "when": 1784781736523,
       "tag": "0005_worried_whizzer",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1786960820399,
+      "tag": "0006_cloudy_taskmaster",
+      "breakpoints": true
     }
   ]
 }

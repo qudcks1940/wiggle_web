@@ -158,6 +158,16 @@
 - 본문 정정: 교사 세션 쿠키 서술을 실제 코드와 일치시킴(구글 콜백 발급만 Lax, 그 외 Strict — e2df6de 반영), `/student/activities` 경로 추가, `check:browser`의 `--ipad`(768×880 포함)·`--desktop` 모드 안내 추가.
 - 검증: typecheck·lint·268/268(EXIT=0)·diff-check, 로컬 서버에서 `/og.png` 신규 파일 서빙 확인. `docs/security-data-model.md`에 은퇴한 worker/D1 서술이 남은 것은 별도 작업으로 분리.
 
+## 2026-08-20 최신 디자인 기준 그림책 편집기 재통합 (`codex/updated-design-storybook`, 로컬 검증)
+
+- 최신 `origin/main`(`b38dd2a`)을 기준으로 새 브랜치를 만들고, 이전 Moveable 편집기 작업은 stash로 별도 보존한 뒤 최신 Next.js + Turso + R2 구조에 다시 이식했다.
+- 학생 홈의 확정된 `이어 그리기 → 내 그림 → 활동 고르기` 메뉴 순서는 유지하고 그 아래에 그림책 작업실 카드를 추가했다. 완성 작품 상세에서도 해당 그림을 첫 페이지에 넣은 그림책을 바로 만들 수 있다.
+- `react-moveable@0.56.0`(MIT)로 이동·8방향 크기 변경·회전·가운데/요소 스냅·44px 조작 여백을 제공한다. 페이지/글/이미지 편집, 앞뒤 순서·잠금, 실행 취소·다시 실행, 배경 오리기, 미리보기와 자동 저장을 복구했다.
+- 그림책 테이블 3종을 Turso 자가 프로비저닝 정본과 Drizzle 스키마에 추가했다. 이미지 업로드는 Vercel 4.5MB 본문 한도에 맞춰 base64 JSON 대신 3.5MB 이하 raw PNG로 R2 호환 저장소에 전송한다.
+- 자동 검증: typecheck·lint·production build·전체 테스트 `281/281`·`git diff --check` 통과. 기존 `320×568`, `390×844`, `844×390` 브라우저 점검도 실패 0건이다.
+- 실제 로컬 체험에서 샘플 완성 그림→그림책 생성, Moveable 그림 이동, 자동 저장, 글 추가, 실행 취소·다시 실행, 미리보기, 학생 홈 진입 카드와 가로 넘침 0을 확인했다. 중간 폭에서 도구줄 첫 버튼이 잘리던 문제도 가로 스크롤 도구줄로 보정했다.
+- 로컬 서버는 `http://localhost:3000`, 체험 시작은 `/student/books/demo`이며, 커밋·push·운영 배포는 아직 하지 않았다.
+
 ## 다음 작업 시작 전 확인
 
 1. 이 문서와 `product-decisions.md`, `pending-decisions.md`를 읽는다.

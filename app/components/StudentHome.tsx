@@ -122,5 +122,11 @@ export function StudentHome() {
         <span aria-hidden="true">🎨</span><div><h2>활동 고르기</h2><p>다른 활동 찾아보기</p></div>
       </a>
     </nav>
+
+    <section className="storybook-home-entry" aria-labelledby="storybook-home-title">
+      <div className="storybook-home-books" aria-hidden="true"><span>📘</span><span>📖</span><span>✏️</span></div>
+      <div><p className="eyebrow">내 그림 다음 이야기</p><h2 id="storybook-home-title">나만의 그림책 만들기</h2><p>완성한 그림과 글을 직접 놓고, 크기와 각도까지 바꿔 한 권으로 꾸며요.</p></div>
+      <a className="button primary" href="/student/books">그림책 작업실 열기 →</a>
+    </section>
   </main>;
 }

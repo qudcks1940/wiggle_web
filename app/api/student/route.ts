@@ -1,7 +1,8 @@
 import { bindings, ensureSchema } from "@/db/runtime";
-import { cleanText, clearRateLimit, clientIp, deriveSecret, id, jsonError, noStoreJson, normalizePicturePassword, picturePasswordLength, randomToken, rateLimit, sameOrigin, sha256, studentFromRequest, verifySecret } from "@/lib/security";
+import { cleanText, clearRateLimit, clientIp, deriveSecret, id, isLocalDemoRequest, jsonError, noStoreJson, normalizePicturePassword, picturePasswordLength, randomToken, rateLimit, sameOrigin, sha256, studentFromRequest, verifySecret } from "@/lib/security";
 import { activityLabel, normalizeActivityKey } from "@/lib/lesson-content";
 import { nicknameKeySql, nicknameMatchKey, nicknameRateKeyPart } from "@/lib/nickname";
+import { ensureLocalStorybookStudent } from "@/lib/demo-seed";
 
 type RecoveredStudent = { id: string; nickname: string; animal: string; classroomName: string; pictureHash: string; pictureSalt: string };
 
@@ -74,6 +75,15 @@ async function studentPost(request: Request) {
   await ensureSchema();
   const payload = await request.json().catch(() => ({})) as Record<string, unknown>;
   const action = cleanText(payload.action, 30);
+
+  if (action === "localStorybookDemo") {
+    if (!isLocalDemoRequest(request)) return jsonError("로컬 체험에서만 사용할 수 있어요.", 404);
+    if (!(await rateLimit(`local-storybook-demo:${requestIp(request)}`, 12, 60))) return jsonError("체험 준비가 너무 빨라요. 잠시 후 다시 해 주세요.", 429);
+    const student = await ensureLocalStorybookStudent();
+    const demoSession = await issueDeviceSession(student.id);
+    if (!demoSession) return jsonError("체험 학생을 준비하지 못했어요.", 500);
+    return noStoreJson({ student, deviceToken: demoSession.token, expiresAt: demoSession.expiresAt });
+  }
 
   if (action === "logout") {
     const student = await studentFromRequest(request);

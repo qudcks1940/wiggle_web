@@ -178,7 +178,7 @@ export async function studentFetch(path: string, init: RequestInit = {}, profile
   if (!profile) throw new Error("그림 비밀번호로 내 프로필을 열어 주세요.");
   const headers = new Headers(init.headers);
   headers.set("authorization", `Bearer ${profile.deviceToken}`);
-  if (init.body) headers.set("content-type", "application/json");
+  if (typeof init.body === "string" && !headers.has("content-type")) headers.set("content-type", "application/json");
   return fetch(path, { ...init, headers, cache: "no-store" });
 }
 

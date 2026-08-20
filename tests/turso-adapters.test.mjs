@@ -3,8 +3,8 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { FsArtworksStore } from "../db/adapters/artworks-store.ts";
-import { createTursoClientFromUrl, TursoD1 } from "../db/adapters/turso-d1.ts";
+import { createArtworksStore, FsArtworksStore, PrefixedArtworksStore } from "../db/adapters/artworks-store.ts";
+import { createTursoClientFromUrl, createTursoD1, TursoD1 } from "../db/adapters/turso-d1.ts";
 
 // D1 → Turso 어댑터 계약 테스트. CAS 가드 10곳이 의존하는 meta.changes와
 // batch 원자성은 문자열 검사가 아니라 실제 libsql 실행으로 고정한다.
@@ -120,4 +120,34 @@ test("FsArtworksStore round-trips bytes with metadata and rejects unsafe keys", 
   await assert.rejects(store.get("../escape.png"), /형식/);
   await assert.rejects(store.put("students//double.png", bytes), /형식/);
   await assert.rejects(store.delete("students/./dot.png"), /형식/);
+});
+
+test("environment adapters reject crossed data scopes before connecting", () => {
+  assert.throws(
+    () => createTursoD1("local", { WIGGLE_DATA_ENV: "local", TURSO_DATABASE_URL: "libsql://production.invalid" }),
+    /원격 TURSO_DATABASE_URL/,
+  );
+  assert.throws(
+    () => createTursoD1("preview", { WIGGLE_DATA_ENV: "production", TURSO_DATABASE_URL: "libsql://preview.invalid" }),
+    /preview/,
+  );
+  assert.throws(
+    () => createArtworksStore("local", { WIGGLE_DATA_ENV: "local", R2_S3_ENDPOINT: "https://r2.invalid" }),
+    /R2 S3 자격증명/,
+  );
+  assert.throws(
+    () => createArtworksStore("production", { WIGGLE_DATA_ENV: "production" }),
+    /production 환경의 R2 S3 자격증명/,
+  );
+});
+
+test("preview object storage always receives an isolated key prefix", () => {
+  const store = createArtworksStore("preview", {
+    WIGGLE_DATA_ENV: "preview",
+    R2_S3_ENDPOINT: "https://account.invalid",
+    R2_S3_BUCKET: "wiggle-preview",
+    R2_S3_ACCESS_KEY_ID: "preview-key",
+    R2_S3_SECRET_ACCESS_KEY: "preview-secret",
+  });
+  assert.ok(store instanceof PrefixedArtworksStore);
 });

@@ -1,5 +1,6 @@
+import "server-only";
 import { bindings, ensureSchema } from "@/db/runtime";
-import { deriveSecret, id, randomToken, sha256, verifySecret } from "@/lib/security";
+import { deriveSecret, id, randomToken, verifySecret } from "@/lib/security";
 
 type LocalTeacher = { id: string; email: string; displayName: string };
 
@@ -43,14 +44,6 @@ export async function ensureLocalTeacher(email: string, pin: string, displayName
     db.prepare(`INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token, admission_open, active, current_activity) VALUES (?, ?, ?, ?, ?, 1, 1, ?)`).bind(classroomId, teacherId, "로컬 연습반", classCode, randomToken(18), "자유롭게 그리기"),
   ]);
   return teacherId;
-}
-
-export async function issueTeacherSession(teacherId: string) {
-  const token = randomToken(32);
-  const now = new Date();
-  const expires = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-  await bindings().DB.prepare(`INSERT INTO teacher_sessions(token_hash, teacher_id, expires_at, last_used_at) VALUES (?, ?, ?, ?)`).bind(await sha256(token), teacherId, expires.toISOString(), now.toISOString()).run();
-  return { token, expires };
 }
 
 export async function ensureLocalStorybookStudent() {

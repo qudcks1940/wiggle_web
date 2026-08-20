@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { storeProfile, studentFetch, type ActiveDeviceProfile } from "@/lib/client-session";
 import { emptyDocument } from "@/lib/drawing-model";
-import { Logo } from "./Logo";
+import { Logo } from "../Logo";
 
 type DemoSession = {
   student?: { id: string; nickname: string; animal: string; classroomName: string };

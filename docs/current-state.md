@@ -166,7 +166,16 @@
 - 그림책 테이블 3종을 Turso 자가 프로비저닝 정본과 Drizzle 스키마에 추가했다. 이미지 업로드는 Vercel 4.5MB 본문 한도에 맞춰 base64 JSON 대신 3.5MB 이하 raw PNG로 R2 호환 저장소에 전송한다.
 - 자동 검증: typecheck·lint·production build·전체 테스트 `281/281`·`git diff --check` 통과. 기존 `320×568`, `390×844`, `844×390` 브라우저 점검도 실패 0건이다.
 - 실제 로컬 체험에서 샘플 완성 그림→그림책 생성, Moveable 그림 이동, 자동 저장, 글 추가, 실행 취소·다시 실행, 미리보기, 학생 홈 진입 카드와 가로 넘침 0을 확인했다. 중간 폭에서 도구줄 첫 버튼이 잘리던 문제도 가로 스크롤 도구줄로 보정했다.
-- 로컬 서버는 `http://localhost:3000`, 체험 시작은 `/student/books/demo`이며, 커밋·push·운영 배포는 아직 하지 않았다.
+- 로컬 서버는 `http://localhost:3000`, 체험 시작은 `/student/books/demo`다. 그림책 재통합은 `25f7046`으로 개인 원격의 `codex/updated-design-storybook` 브랜치에 push했으며 `origin/main`·운영 배포는 건드리지 않았다.
+
+## 2026-08-20 Local·Preview·Production 환경 분리 (`codex/updated-design-storybook`)
+
+- 사용자의 확정 지시에 따라 세 환경은 같은 UI·도메인·API 코드를 공유하고, 인증·데이터·파일 저장·시드만 환경에 맞게 선택하도록 정리했다. `NODE_ENV`를 배포 대상 판별에서 제거하고 Vercel의 `VERCEL_ENV`를 우선하는 `lib/runtime/environment.ts`를 정본으로 추가했다.
+- 공통 교사 세션은 `lib/auth/`, localhost 전용 교사·그림책 시드는 `lib/dev-only/`, 로컬 데모 UI는 `app/components/dev-only/`로 분리했다. Vercel Preview와 Production에서는 localhost 기능을 강제로 켤 수 없고 모두 구글 OAuth를 사용한다.
+- Local/Test는 원격 Turso·R2 값이 들어오면 실행을 거부한다. Preview/Production은 `WIGGLE_DATA_ENV`가 현재 환경과 일치하고 원격 Turso·R2·Google OAuth 설정이 모두 있어야 한다. Preview R2에는 adapter가 `preview/` 접두사를 적용하며 Production의 기존 object key는 유지한다.
+- `/api/health`는 현재 환경과 DB·저장소·OAuth 설정을 검증하되 비밀값은 노출하지 않는다. 환경별 설정·Vercel 변수 범위·승격 절차의 정본은 `docs/environments.md`다. `.openai/hosting.json`은 이력 그대로 수정하지 않았다.
+- 독립 검증: typecheck·lint·production build·전체 테스트 `288/288`·adapter 테스트 `19/19`·`git diff --check` 통과. 로컬 `/api/health`가 `environment=local`로 응답했고, `320×568`, `390×844`, `844×390` 실제 DOM 브라우저 점검도 실패 0건(390×844 핀치 1건은 기존 CDP 환경 사유 SKIP)이다.
+- 이 환경 분리 변경은 이 문서를 포함해 개인 원격의 `codex/updated-design-storybook` 기능 브랜치에 push했다. `origin/main`과 Vercel 환경 변수·Production 배포는 건드리지 않았으며, 실제 Vercel Preview 연결은 전용 Turso·R2·OAuth 값을 준비한 뒤 별도로 확인한다.
 
 ## 다음 작업 시작 전 확인
 

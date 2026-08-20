@@ -1,6 +1,7 @@
 import { createArtworksStore } from "@/db/adapters/artworks-store";
 import { createTursoD1 } from "@/db/adapters/turso-d1";
 import { upgradeMvp3Schema } from "@/lib/mvp3-schema-upgrade";
+import { runtimeEnvironment } from "@/lib/runtime/environment";
 
 export interface WiggleEnv {
   DB: D1Database;
@@ -28,11 +29,12 @@ let cachedEnv: WiggleEnv | undefined;
 
 export function bindings(): WiggleEnv {
   if (!cachedEnv) {
+    const environment = runtimeEnvironment();
     // 어댑터는 D1/R2에서 실제로 쓰는 표면만 구현한다. 전체 인터페이스 타입은
     // 호출부 38곳의 제네릭 시그니처를 보존하기 위해 여기서 한 번만 좁혀 단언한다.
     cachedEnv = {
-      DB: createTursoD1() as unknown as D1Database,
-      ARTWORKS: createArtworksStore() as unknown as R2Bucket,
+      DB: createTursoD1(environment) as unknown as D1Database,
+      ARTWORKS: createArtworksStore(environment) as unknown as R2Bucket,
       WHISPER_RELAY: whisperRelayFetcher(),
     };
   }

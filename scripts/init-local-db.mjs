@@ -5,8 +5,16 @@
 // 확인하고 싶을 때를 위해 남겨 둔다.
 import { createTursoClientFromUrl, TursoD1 } from "../db/adapters/turso-d1.ts";
 import { provisionSchema } from "../db/runtime.ts";
+import { assertDataEnvironment, runtimeEnvironment } from "../lib/runtime/environment.ts";
 
 const LOCAL_DATABASE_URL = "file:.data/wiggle-local.db";
+const environment = runtimeEnvironment();
+
+if (environment !== "local") {
+  console.error(`로컬 DB 초기화는 local 환경에서만 실행할 수 있어요. 현재 환경: ${environment}`);
+  process.exit(1);
+}
+assertDataEnvironment(environment);
 
 if (process.env.TURSO_DATABASE_URL) {
   // 운영 자격증명이 켜져 있는 채로 실행하면 원격 DB를 건드릴 뻔한다 — 여기서 멈춘다.

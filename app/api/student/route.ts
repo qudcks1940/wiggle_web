@@ -2,7 +2,7 @@ import { bindings, ensureSchema } from "@/db/runtime";
 import { cleanText, clearRateLimit, clientIp, deriveSecret, id, isLocalDemoRequest, jsonError, noStoreJson, normalizePicturePassword, picturePasswordLength, randomToken, rateLimit, sameOrigin, sha256, studentFromRequest, verifySecret } from "@/lib/security";
 import { activityLabel, normalizeActivityKey } from "@/lib/lesson-content";
 import { nicknameKeySql, nicknameMatchKey, nicknameRateKeyPart } from "@/lib/nickname";
-import { ensureLocalStorybookStudent } from "@/lib/demo-seed";
+import { ensureLocalStorybookStudent } from "@/lib/dev-only/demo-seed";
 
 type RecoveredStudent = { id: string; nickname: string; animal: string; classroomName: string; pictureHash: string; pictureSalt: string };
 

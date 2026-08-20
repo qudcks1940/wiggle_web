@@ -64,6 +64,11 @@ export async function startTestServer({ env: extraEnv } = {}) {
       env: {
         ...process.env,
         NODE_ENV: "production",
+        WIGGLE_APP_ENV: "test",
+        WIGGLE_DATA_ENV: "test",
+        // 상위 셸이 Vercel 관련 값을 가지고 있어도 하네스는 반드시 격리된 test로 판정한다.
+        VERCEL: "",
+        VERCEL_ENV: "",
         TURSO_DATABASE_URL: databaseUrl,
         TURSO_AUTH_TOKEN: "",
         ARTWORKS_FS_DIR: artworksDir,

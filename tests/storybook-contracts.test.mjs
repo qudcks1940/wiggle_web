@@ -51,7 +51,7 @@ test("학생 화면에 실제 그림책 진입·편집·가져오기·미리보�
     read("../app/components/StorybookEditor.tsx"),
     read("../app/components/ImageCutoutModal.tsx"),
     read("../app/components/StorybookLibrary.tsx"),
-    read("../app/components/StorybookDemoBootstrap.tsx"),
+    read("../app/components/dev-only/StorybookDemoBootstrap.tsx"),
     read("../app/api/student/route.ts"),
     read("../app/globals.css"),
   ]);

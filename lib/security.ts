@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { bindings, ensureSchema } from "@/db/runtime";
 import { id, sha256 } from "@/lib/token-crypto";
 import { consumeRateLimit, releaseRateLimit } from "@/lib/rate-limit";
+import { isLocalDevelopmentRequest } from "@/lib/runtime/environment";
 
 export { id, randomToken, sha256 } from "@/lib/token-crypto";
 export { normalizePicturePassword, picturePasswordLength } from "@/lib/picture-password";
@@ -60,9 +61,7 @@ export async function requireTeacher(): Promise<TeacherIdentity | null> {
 }
 
 export function isLocalDemoRequest(request: Request) {
-  if (process.env.NODE_ENV === "production") return false;
-  const hostname = new URL(request.url).hostname.toLowerCase();
-  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+  return isLocalDevelopmentRequest(request);
 }
 
 export async function revokeTeacherSession() {

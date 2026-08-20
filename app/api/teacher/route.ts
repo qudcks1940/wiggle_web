@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { bindings } from "@/db/runtime";
 import { bytesToDataUrl } from "@/lib/image-data";
-import { ensureLocalAutoTeacher, ensureLocalTeacher, issueTeacherSession } from "@/lib/demo-seed";
+import { ensureLocalAutoTeacher, ensureLocalTeacher } from "@/lib/dev-only/demo-seed";
+import { issueTeacherSession } from "@/lib/auth/teacher-session";
 import { cleanText, clientIp, id, isLocalDemoRequest, jsonError, noStoreJson, randomToken, rateLimit, requireTeacher, revokeTeacherSession, sameOrigin, sha256 } from "@/lib/security";
 import { prepareTeacherMessageInsert, validateTeacherMessageTarget } from "@/lib/teacher-messages";
 import { createFamilyShare, revokeFamilyShare } from "@/lib/family-sharing";
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
   const payload = await request.json().catch(() => ({})) as Record<string, unknown>;
   const action = cleanText(payload.action, 30);
   if (action === "login") {
-    if (!isLocalDemoRequest(request)) return jsonError("운영 환경에서는 구글 로그인만 사용할 수 있어요.", 401);
+    if (!isLocalDemoRequest(request)) return jsonError("배포 환경에서는 구글 로그인만 사용할 수 있어요.", 401);
     if (!(await rateLimit(clientKey(request, "teacher-login"), 8, 10 * 60))) return jsonError("잠시 후 다시 시도해 주세요.", 429);
     const email = cleanText(payload.email, 120).toLowerCase();
     const pin = cleanText(payload.pin, 32);

@@ -11,6 +11,7 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { createClient, type Client, type InStatement, type InValue, type ResultSet, type Row } from "@libsql/client";
+import { assertDataEnvironment, runtimeEnvironment, type EnvironmentSource, type WiggleRuntimeEnvironment } from "../../lib/runtime/environment.ts";
 
 export type D1LikeResult<T = unknown> = {
   results: T[];
@@ -113,9 +114,25 @@ export function createTursoClientFromUrl(url: string, authToken?: string): Clien
   return createClient({ url, authToken, intMode: "number" });
 }
 
-export function createTursoD1(): TursoD1 {
-  const url = process.env.TURSO_DATABASE_URL;
-  if (url) return new TursoD1(createTursoClientFromUrl(url, process.env.TURSO_AUTH_TOKEN));
-  if (process.env.NODE_ENV === "production") throw new Error("TURSO_DATABASE_URL이 설정되지 않았어요.");
-  return new TursoD1(createTursoClientFromUrl("file:.data/wiggle-local.db"));
+export function createTursoD1(
+  environment: WiggleRuntimeEnvironment = runtimeEnvironment(),
+  source: EnvironmentSource = process.env,
+): TursoD1 {
+  assertDataEnvironment(environment, source);
+  const url = source.TURSO_DATABASE_URL?.trim();
+  const isLocalFile = Boolean(url?.startsWith("file:"));
+
+  if (environment === "local" || environment === "test") {
+    if (url && !isLocalFile) {
+      throw new Error(`${environment} 환경에서는 원격 TURSO_DATABASE_URL을 사용할 수 없어요.`);
+    }
+    if (environment === "test" && !url) {
+      throw new Error("test 환경에는 격리된 file: TURSO_DATABASE_URL이 필요해요.");
+    }
+    return new TursoD1(createTursoClientFromUrl(url || "file:.data/wiggle-local.db"));
+  }
+
+  if (!url) throw new Error(`${environment} 환경의 TURSO_DATABASE_URL이 설정되지 않았어요.`);
+  if (isLocalFile) throw new Error(`${environment} 환경에서는 file: 데이터베이스를 사용할 수 없어요.`);
+  return new TursoD1(createTursoClientFromUrl(url, source.TURSO_AUTH_TOKEN));
 }

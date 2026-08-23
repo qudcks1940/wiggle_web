@@ -1,6 +1,6 @@
 # Wiggle Web 현재 상태
 
-> 마지막 갱신: 2026-08-20
+> 마지막 갱신: 2026-08-23
 > 목적: 긴 대화가 압축되거나 담당 AI가 바뀌어도 실제 구현·검증·배포 상태를 잃지 않기 위한 기준 문서
 
 ## 상태 기준
@@ -157,6 +157,48 @@
 - README에 실캡처 미리보기 3장(태블릿 입장 2열 카드·그리기 화면·교사 진행실, `docs/images/`) 섹션을 추가했다.
 - 본문 정정: 교사 세션 쿠키 서술을 실제 코드와 일치시킴(구글 콜백 발급만 Lax, 그 외 Strict — e2df6de 반영), `/student/activities` 경로 추가, `check:browser`의 `--ipad`(768×880 포함)·`--desktop` 모드 안내 추가.
 - 검증: typecheck·lint·268/268(EXIT=0)·diff-check, 로컬 서버에서 `/og.png` 신규 파일 서빙 확인. `docs/security-data-model.md`에 은퇴한 worker/D1 서술이 남은 것은 별도 작업으로 분리.
+
+## 2026-08-20 최신 디자인 기준 그림책 편집기 재통합 (`codex/updated-design-storybook`, 로컬 검증)
+
+- 최신 `origin/main`(`b38dd2a`)을 기준으로 새 브랜치를 만들고, 이전 Moveable 편집기 작업은 stash로 별도 보존한 뒤 최신 Next.js + Turso + R2 구조에 다시 이식했다.
+- 학생 홈의 확정된 `이어 그리기 → 내 그림 → 활동 고르기` 메뉴 순서는 유지하고 그 아래에 그림책 작업실 카드를 추가했다. 완성 작품 상세에서도 해당 그림을 첫 페이지에 넣은 그림책을 바로 만들 수 있다.
+- `react-moveable@0.56.0`(MIT)로 이동·8방향 크기 변경·회전·가운데/요소 스냅·44px 조작 여백을 제공한다. 페이지/글/이미지 편집, 앞뒤 순서·잠금, 실행 취소·다시 실행, 배경 오리기, 미리보기와 자동 저장을 복구했다.
+- 그림책 테이블 3종을 Turso 자가 프로비저닝 정본과 Drizzle 스키마에 추가했다. 이미지 업로드는 Vercel 4.5MB 본문 한도에 맞춰 base64 JSON 대신 3.5MB 이하 raw PNG로 R2 호환 저장소에 전송한다.
+- 자동 검증: typecheck·lint·production build·전체 테스트 `281/281`·`git diff --check` 통과. 기존 `320×568`, `390×844`, `844×390` 브라우저 점검도 실패 0건이다.
+- 실제 로컬 체험에서 샘플 완성 그림→그림책 생성, Moveable 그림 이동, 자동 저장, 글 추가, 실행 취소·다시 실행, 미리보기, 학생 홈 진입 카드와 가로 넘침 0을 확인했다. 중간 폭에서 도구줄 첫 버튼이 잘리던 문제도 가로 스크롤 도구줄로 보정했다.
+- 로컬 서버는 `http://localhost:3000`, 체험 시작은 `/student/books/demo`다. 그림책 재통합은 `25f7046`으로 개인 원격의 `codex/updated-design-storybook` 브랜치에 push했으며 `origin/main`·운영 배포는 건드리지 않았다.
+
+## 2026-08-20 Local·Preview·Production 환경 분리 (`codex/updated-design-storybook`)
+
+- 사용자의 확정 지시에 따라 세 환경은 같은 UI·도메인·API 코드를 공유하고, 인증·데이터·파일 저장·시드만 환경에 맞게 선택하도록 정리했다. `NODE_ENV`를 배포 대상 판별에서 제거하고 Vercel의 `VERCEL_ENV`를 우선하는 `lib/runtime/environment.ts`를 정본으로 추가했다.
+- 공통 교사 세션은 `lib/auth/`, localhost 전용 교사·그림책 시드는 `lib/dev-only/`, 로컬 데모 UI는 `app/components/dev-only/`로 분리했다. Vercel Preview와 Production에서는 localhost 기능을 강제로 켤 수 없고 모두 구글 OAuth를 사용한다.
+- Local/Test는 원격 Turso·R2 값이 들어오면 실행을 거부한다. Preview/Production은 `WIGGLE_DATA_ENV`가 현재 환경과 일치하고 원격 Turso·R2·Google OAuth 설정이 모두 있어야 한다. Preview R2에는 adapter가 `preview/` 접두사를 적용하며 Production의 기존 object key는 유지한다.
+- `/api/health`는 현재 환경과 DB·저장소·OAuth 설정을 검증하되 비밀값은 노출하지 않는다. 환경별 설정·Vercel 변수 범위·승격 절차의 정본은 `docs/environments.md`다. `.openai/hosting.json`은 이력 그대로 수정하지 않았다.
+- 독립 검증: typecheck·lint·production build·전체 테스트 `288/288`·adapter 테스트 `19/19`·`git diff --check` 통과. 로컬 `/api/health`가 `environment=local`로 응답했고, `320×568`, `390×844`, `844×390` 실제 DOM 브라우저 점검도 실패 0건(390×844 핀치 1건은 기존 CDP 환경 사유 SKIP)이다.
+- 이 환경 분리 변경은 이 문서를 포함해 개인 원격의 `codex/updated-design-storybook` 기능 브랜치에 push했다. `origin/main`과 Vercel 환경 변수·Production 배포는 건드리지 않았으며, 실제 Vercel Preview 연결은 전용 Turso·R2·OAuth 값을 준비한 뒤 별도로 확인한다.
+
+## 2026-08-21 로컬 `.env.local` 재실행 확인
+
+- 사용자가 준비한 `.env.local`을 Next.js 개발 서버가 인식한 상태로 `codex/updated-design-storybook` 브랜치를 `http://localhost:3000`에서 실행했다.
+- 대문이 HTTP 200으로 렌더링되고 `/api/health`가 `{"ok":true,"environment":"local"}`을 반환해 로컬 환경 경계가 유지됨을 확인했다. 비밀값은 출력하지 않았다.
+- `/student/books/demo`에서 로컬 전용 학생·작품·그림책 시드가 생성되고 실제 편집기로 이동했다. 그림책 조회와 이미지 자산 회수가 모두 HTTP 200이었고 브라우저 오류 로그는 없었다.
+
+## 2026-08-21 어린이용 그림책 고정 레이아웃 개편 (`codex/updated-design-storybook`, 로컬 작업)
+
+- 사용자 캡처와 실제 DOM을 대조해 선택 요소는 약 `604×360px`인데 내부 그림은 약 `604×453px`로 넘치던 원인을 확인했다. 그림의 자연 비율을 요소 모델에 저장하고, 요소와 내부 이미지가 같은 너비·높이를 쓰도록 바꿔 선택 박스와 그림 비율을 일치시켰다.
+- 페이지마다 이야기 글은 정확히 하나만 두고 상단 가운데 고정 영역에 배치한다. 글 추가·복제·이동·회전·삭제는 제거하고, 오른쪽의 `이야기 글` 입력칸에서 내용·크기·색만 바꾼다.
+- 그림은 글 아래 점선 영역 안에서만 추가·이동·크기 변경되며 자연 비율을 유지한다. 새 그림, 기존 그림, 배경 오리기 결과, 책 비율 변경 때 모두 같은 배치 계산을 사용하고 서버 저장 검증도 동일한 경계를 강제한다.
+- 페이지 배경 이미지 자산을 별도로 지정할 수 있게 해 페이지 전체를 `cover`로 채우고 그 위에 이야기와 그림이 올라가도록 했다. 저장 API의 자산 소유권 검사에도 배경 자산을 포함했다.
+- 편집기와 페이지 설정 양쪽에서 가로형·세로형·정사각형을 선택할 수 있다. 책 전체 비율을 바꾸면 모든 페이지의 고정 글 영역과 그림 배치를 새 비율에 맞게 다시 계산한다.
+- 자동 검증: typecheck·lint·production build·전체 테스트 `289/289`, 그림책 집중 테스트 `9/9` 통과. 로컬 브라우저에서 수정 전 DOM 수치까지 재현한 뒤 브라우저 자동화의 localhost URL 정책에 막혀 최종 화면 자동 실측은 중단했으며, 생성된 CSS와 빌드 산출물에 높이·배경·배치 규칙이 포함된 것을 확인했다.
+
+## 2026-08-23 그림 실제 경계 맞춤·생성 전 책 모양 선택 (`codex/updated-design-storybook`)
+
+- 그림 선택 박스가 원본 PNG 전체 캔버스를 잡아 흰색·투명 여백까지 포함하던 문제를 수정했다. 가장자리와 이어진 배경색 및 투명 픽셀을 분석해 실제 내용 경계를 요소의 `crop`으로 저장하고, 원본 이미지 자산은 변경하지 않는다.
+- 기존 그림과 새 그림은 로드 시 자동으로 경계를 계산한다. 오른쪽 그림 설정의 `빈 여백 없이 맞추기`는 더 넓은 색 허용 범위로 다시 계산하며, 자른 원본을 요소 안에서 확대·이동해 보이는 그림과 Moveable 선택 박스가 같은 경계를 사용한다.
+- 완성 작품의 `이 그림으로 그림책 만들기`는 곧바로 가로형을 만드는 대신 가로·세로·정사각형 선택 창을 먼저 연다. 로컬 실제 흐름에서 세로형 선택 후 `format-portrait` 편집기가 열리는 것을 확인했다. 그림책 목록의 기존 세 모양 선택도 유지한다.
+- 브라우저 실측: 데모 원본의 내용 경계가 `x=34.95%`, `y=4.08%`, `width=58.69%`, `height=76.69%`로 계산됐고, 내부 원본은 선택 요소 대비 `170.4%×130.4%`로 배치되어 빈 캔버스가 잘리고 실제 그림이 박스를 채웠다. typecheck·lint·production build·전체 테스트 `291/291`, 집중 테스트 `16/16`을 통과했다.
+- 위 변경 전체는 개인 원격의 `codex/updated-design-storybook` 기능 브랜치에 push한다. `origin/main`과 Vercel Production은 건드리지 않는다.
 
 ## 다음 작업 시작 전 확인
 

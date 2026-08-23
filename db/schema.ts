@@ -107,6 +107,50 @@ export const artworkVersions = sqliteTable("artwork_versions", {
   createdAt: createdAt(),
 }, (table) => [uniqueIndex("artwork_versions_artwork_sequence_uq").on(table.artworkId, table.sequence)]);
 
+export const storybooks = sqliteTable("storybooks", {
+  id: text("id").primaryKey(),
+  studentId: text("student_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  classroomId: text("classroom_id").notNull().references(() => classrooms.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  documentJson: text("document_json").notNull(),
+  schemaVersion: integer("schema_version").notNull().default(1),
+  revision: integer("revision").notNull().default(0),
+  status: text("status", { enum: ["draft", "complete"] }).notNull().default("draft"),
+  lastMutationId: text("last_mutation_id"),
+  completedAt: text("completed_at"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (table) => [
+  index("storybooks_student_idx").on(table.studentId, table.updatedAt),
+  index("storybooks_classroom_idx").on(table.classroomId, table.updatedAt),
+]);
+
+export const storybookAssets = sqliteTable("storybook_assets", {
+  id: text("id").primaryKey(),
+  storybookId: text("storybook_id").notNull().references(() => storybooks.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  sourceType: text("source_type", { enum: ["artwork", "upload"] }).notNull(),
+  sourceArtworkId: text("source_artwork_id").references(() => artworks.id, { onDelete: "set null" }),
+  objectKey: text("object_key").notNull(),
+  contentType: text("content_type").notNull(),
+  byteSize: integer("byte_size").notNull(),
+  createdAt: createdAt(),
+}, (table) => [
+  index("storybook_assets_book_idx").on(table.storybookId, table.createdAt),
+  index("storybook_assets_student_idx").on(table.studentId, table.createdAt),
+]);
+
+export const storybookMutations = sqliteTable("storybook_mutations", {
+  requestId: text("request_id").notNull(),
+  storybookId: text("storybook_id").notNull().references(() => storybooks.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  resultRevision: integer("result_revision").notNull(),
+  createdAt: createdAt(),
+}, (table) => [
+  primaryKey({ columns: [table.storybookId, table.studentId, table.requestId] }),
+  index("storybook_mutations_book_idx").on(table.storybookId, table.createdAt),
+]);
+
 export const coachingEvents = sqliteTable("coaching_events", {
   id: text("id").primaryKey(),
   artworkId: text("artwork_id").notNull().references(() => artworks.id, { onDelete: "cascade" }),

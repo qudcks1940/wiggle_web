@@ -1,5 +1,6 @@
+import "server-only";
 import { bindings, ensureSchema } from "@/db/runtime";
-import { deriveSecret, id, randomToken, sha256, verifySecret } from "@/lib/security";
+import { deriveSecret, id, randomToken, verifySecret } from "@/lib/security";
 
 type LocalTeacher = { id: string; email: string; displayName: string };
 
@@ -45,10 +46,23 @@ export async function ensureLocalTeacher(email: string, pin: string, displayName
   return teacherId;
 }
 
-export async function issueTeacherSession(teacherId: string) {
-  const token = randomToken(32);
-  const now = new Date();
-  const expires = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-  await bindings().DB.prepare(`INSERT INTO teacher_sessions(token_hash, teacher_id, expires_at, last_used_at) VALUES (?, ?, ?, ?)`).bind(await sha256(token), teacherId, expires.toISOString(), now.toISOString()).run();
-  return { token, expires };
+export async function ensureLocalStorybookStudent() {
+  await ensureSchema();
+  const db = bindings().DB;
+  const teacherId = "teacher_local_storybook_demo";
+  const classroomId = "class_local_storybook_demo";
+  const studentId = "student_local_storybook_demo";
+  const now = new Date().toISOString();
+  await db.batch([
+    db.prepare(`INSERT INTO teachers(id, email, display_name, credential_hash, credential_salt)
+      VALUES (?, 'storybook-demo@localhost.invalid', '로컬 그림책 선생님', '', '')
+      ON CONFLICT(id) DO UPDATE SET display_name = excluded.display_name`).bind(teacherId),
+    db.prepare(`INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token, admission_open, active, current_activity)
+      VALUES (?, ?, '그림책 체험반', 'BOOK-DEMO', 'local-storybook-demo-entry', 1, 1, '자유롭게 그리기')
+      ON CONFLICT(id) DO UPDATE SET admission_open = 1, active = 1, updated_at = CURRENT_TIMESTAMP`).bind(classroomId, teacherId),
+    db.prepare(`INSERT INTO student_profiles(id, classroom_id, nickname, animal, last_activity_at, archived_at)
+      VALUES (?, ?, '상상 화가', '🦊', ?, NULL)
+      ON CONFLICT(id) DO UPDATE SET classroom_id = excluded.classroom_id, last_activity_at = excluded.last_activity_at, archived_at = NULL`).bind(studentId, classroomId, now),
+  ]);
+  return { id: studentId, nickname: "상상 화가", animal: "🦊", classroomName: "그림책 체험반" };
 }

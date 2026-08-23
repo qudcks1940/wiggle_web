@@ -32,7 +32,7 @@
   <img alt="React 19.2.6" src="https://img.shields.io/badge/React-19.2.6-149ECA?logo=react&logoColor=white" />
   <img alt="TypeScript 5.9" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white" />
   <img alt="Vercel with Turso and R2" src="https://img.shields.io/badge/Vercel-Turso%20%2B%20R2-000000?logo=vercel&logoColor=white" />
-  <img alt="Automated tests 268 passing" src="https://img.shields.io/badge/tests-268%20passing-2EA44F" />
+  <img alt="Automated tests 288 passing" src="https://img.shields.io/badge/tests-288%20passing-2EA44F" />
   <img alt="Status active development" src="https://img.shields.io/badge/status-active%20development-FFB020" />
 </p>
 
@@ -241,7 +241,7 @@ flowchart TB
     Coach --> DB
 ```
 
-서버는 호스트 중립 어댑터(`db/adapters/`)를 거쳐 저장소에 접근합니다. 로컬 개발·테스트는 자격증명 없이 파일 libSQL과 파일 저장소로 동작하고, 운영은 같은 코드가 Turso·R2를 씁니다.
+서버는 호스트 중립 어댑터(`db/adapters/`)를 거쳐 저장소에 접근합니다. Local·Vercel Preview·Production은 같은 기능 코드를 사용하며, 중앙 환경 설정이 각각 로컬 파일, Preview 전용 Turso·R2, 운영 Turso·R2를 선택합니다. 자세한 환경 행렬은 [환경 분리 문서](./docs/environments.md)에 있습니다.
 
 ### 데이터 저장 원칙
 
@@ -310,6 +310,8 @@ Copy-Item .env.example .env.local
 `.env.local`에 필요한 값을 입력합니다.
 
 ```dotenv
+WIGGLE_APP_ENV=local
+WIGGLE_DATA_ENV=local
 OPENAI_API_KEY=your_api_key_here
 OPENAI_MODEL=gpt-5.6-sol
 WIGGLE_VOICE_WHISPER_ENABLED=false
@@ -317,7 +319,7 @@ WIGGLE_SUBSCRIPTIONS_ENABLED=false
 ```
 
 > [!CAUTION]
-> `.env.local`과 실제 API 키는 Git에 커밋하지 마세요. 브라우저 코드에 `OPENAI_API_KEY`를 사용하지 않습니다.
+> `.env.local`과 실제 API 키는 Git에 커밋하지 마세요. 로컬의 `TURSO_*`와 `R2_S3_*`는 비워 두며, 앱은 원격 값이 들어오면 실행을 거부합니다. 브라우저 코드에 `OPENAI_API_KEY`를 사용하지 않습니다.
 
 ### 3. 로컬 데이터베이스와 개발 서버
 
@@ -332,10 +334,10 @@ npm.cmd run dev
 
 로컬 개발 환경에서 `/teacher`를 열면 최근 사용한 로컬 교사로 자동 로그인합니다. 기존 교사가 없으면 비밀번호가 없는 개발 전용 `로컬 선생님` 레코드를 만들며, 운영용 인증 계정으로 사용할 수 없습니다.
 
-- `NODE_ENV`가 production이 아님
+- 실행 환경이 `local` 또는 자동화용 `test`
 - 요청 호스트가 `localhost`, `127.0.0.1`, `[::1]` 중 하나
 
-위 조건에서만 자동 로그인이 열립니다. 운영 교사 화면은 구글 로그인(자체 OAuth 코드 플로우)을 요구합니다.
+위 조건에서만 자동 로그인이 열립니다. Vercel Preview와 Production 교사 화면은 모두 구글 로그인(자체 OAuth 코드 플로우)을 요구합니다.
 
 ## ✅ 검증하기
 
@@ -351,8 +353,8 @@ git diff --check
 현재 기준:
 
 ```text
-268 tests
-268 passed
+288 tests
+288 passed
 0 failed
 ```
 
@@ -396,7 +398,8 @@ npm.cmd run db:generate
 **GitHub `main` push → Vercel 자동 빌드·배포**입니다. 공개 주소는 [wiggleweb.vercel.app](https://wiggleweb.vercel.app)입니다.
 
 - Vercel 프로젝트 `wiggle-web`이 `main` 브랜치를 감시합니다. `main` push가 곧 운영 배포이므로 사용자만 실행합니다.
-- 운영 환경 변수 9종(`TURSO_*` 2, `R2_S3_*` 4, `GOOGLE_CLIENT_*` 2, `OPENAI_API_KEY`)은 Vercel 대시보드에서만 관리합니다. 값에 따옴표를 넣지 않습니다.
+- 기능 브랜치는 Vercel Preview에서 공동 개발·QA에 사용하며 Production 데이터와 분리합니다.
+- Preview에는 `WIGGLE_DATA_ENV=preview`와 Preview 전용 Turso·R2 자격증명을, Production에는 `WIGGLE_DATA_ENV=production`과 운영 자격증명을 각각의 Vercel 환경 범위에 등록합니다. 값에 따옴표를 넣지 않습니다.
 - DB는 Turso(libSQL), 그림 파일은 Cloudflare R2(S3 API)입니다. 호스트 중립 어댑터라 다른 호스팅으로 옮겨도 코드 재공사가 없습니다.
 - 교사 인증은 구글 OAuth입니다. 도메인을 추가하면 구글 콘솔의 승인된 리디렉션 URI에 `https://<도메인>/api/auth/google/callback`을 함께 등록해야 합니다.
 - 저장·이미지·인증 경로를 바꾼 배포는 운영 실측으로 마무리합니다:
@@ -424,6 +427,9 @@ wiggle_web/
 ├─ drizzle/                   # SQLite migrations
 ├─ lib/
 │  ├─ lesson-content.ts       # 30개 교육 콘텐츠
+│  ├─ runtime/                # Local·Preview·Production 판별과 안전 경계
+│  ├─ auth/                   # 환경 공통 교사 세션
+│  ├─ dev-only/               # localhost 전용 시드·개발 로그인
 │  ├─ drawing-model.ts        # DrawDoc / DrawOp
 │  ├─ trace-guidance.mjs      # 점선 자석 추적과 경로 보간
 │  ├─ openai-coaching.ts      # AI schema·prompt·validation
@@ -508,6 +514,7 @@ Claude Code는 루트 [`CLAUDE.md`](./CLAUDE.md), 그 외 에이전트는 [`AGEN
 - [현재 구현·검증·배포 상태](./docs/current-state.md)
 - [확정 제품 결정](./docs/product-decisions.md)
 - [미결정 항목과 최근 논의](./docs/pending-decisions.md)
+- [Local·Preview·Production 환경 분리](./docs/environments.md)
 - [MVP 1 데이터·권한·복구 구조](./docs/architecture-mvp1.md)
 - [보안·데이터 모델](./docs/security-data-model.md)
 - [Flutter 참고 자료 이식 감사](./docs/flutter-adoption-audit.md)

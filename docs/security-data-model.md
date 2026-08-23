@@ -10,8 +10,8 @@
 
 ## 세션과 복구
 
-- 운영 교사는 Sites가 전달한 ChatGPT 인증 헤더를 서버에서 검증하고 이메일 기준 Teacher를 upsert한다. `/teacher` 페이지는 production에서 dispatch-owned SIWC를 요구한다.
-- 로컬 PIN 로그인은 `NODE_ENV != production`이며 요청 URL hostname이 localhost/127.0.0.1/[::1]일 때만 허용한다. 고정 공개 계정은 없다.
+- Vercel Preview와 Production의 교사는 구글 OAuth(PKCE·state 검증)로 확인한 이메일 기준 Teacher를 upsert한다. `/teacher` 페이지는 두 배포 환경 모두 구글 로그인을 요구한다.
+- 로컬 PIN 로그인과 자동 교사는 중앙 실행 환경이 `local|test`이고 요청 URL hostname이 localhost/127.0.0.1/[::1]일 때만 허용한다. Vercel 시스템 환경값이 로컬 override보다 우선하므로 Preview/Production에서 개발 로그인을 강제로 켤 수 없다. 고정 공개 계정은 없다.
 - 로컬 교사 세션은 8시간, `HttpOnly`, `SameSite=Strict`, HTTPS에서 `Secure`이며 logout 시 D1 행도 삭제한다.
 - 학생 활성 세션은 2시간 뒤 만료하고 원문 대신 SHA-256 해시를 저장한다. 안전한 프로필 카드에는 token을 저장하지 않으며 공유 태블릿 전환 때 그림 비밀번호로 새 세션을 발급한다.
 - 그림 비밀번호와 교사 PIN은 개인 salt를 둔 PBKDF2-SHA256 100,000회 결과만 저장한다. 이는 Sites 운영 런타임의 PBKDF2 상한을 준수하며, Worker에서는 `nodejs_compat`의 비동기 `node:crypto` 구현을 사용한다. 그림 비밀번호는 반복 가능한 그림 세 개만 사용한다.
@@ -31,7 +31,7 @@
 
 ## 응답 헤더
 
-- `worker/index.ts`가 모든 응답에 `x-content-type-options: nosniff`와 `referrer-policy: strict-origin-when-cross-origin`을 붙인다.
+- `next.config.ts`가 모든 응답에 `x-content-type-options: nosniff`와 `referrer-policy: strict-origin-when-cross-origin`을 붙인다.
 - 공개 랜딩(`/`)을 제외한 모든 경로에 `x-frame-options: DENY`와 `content-security-policy: frame-ancestors 'none'`을 붙여 학생·교사 화면의 clickjacking을 막는다. 랜딩만 남긴 이유는 호스팅 미리보기가 사이트 루트를 iframe으로 여는 경우를 깨지 않기 위해서다.
 - 가족 공유 경로(`/family/*`, `/api/family/*`)는 그대로 더 강한 전용 헤더 묶음(no-store, no-referrer, 전체 CSP, noindex)을 유지한다.
 - 아직 남은 과제: 앱 전체에 script/style/connect까지 제한하는 완전한 CSP는 Next 인라인 스크립트 정책을 정한 뒤 적용한다.
@@ -42,6 +42,14 @@
 - rate limit 행, 만료 세션, 오래된 autosave 이미지와 고아 R2 object는 주기 작업으로 정리한다.
 - 전체 원본 채팅은 수집하지 않는다. 작품, 메시지, 소감, 구조화 coaching event만 저장한다.
 - 출생연도, 이메일, 실명, 학교명, 공개 프로필은 수집하지 않는다.
+
+## 실행 환경과 데이터 격리
+
+- Local/Test는 file libSQL과 로컬/임시 파일 저장소만 허용하며 원격 Turso·R2 자격증명이 들어오면 실패한다.
+- Vercel Preview와 Production은 Vercel의 시스템 환경값으로 구분하고 `WIGGLE_DATA_ENV`가 각각 `preview`, `production`과 일치해야 한다.
+- Preview와 Production은 각 Vercel 환경 범위에 서로 다른 Turso·R2 자격증명을 둔다. Preview R2 object에는 adapter가 `preview/` 접두사를 추가하고 Production 기존 key는 바꾸지 않는다.
+- 로컬 데모 시드와 데모 UI는 `lib/dev-only/`, `app/components/dev-only/`에 격리하며 공통 기능에서 import하지 않는다.
+- 환경별 상세 설정과 배포 순서는 `docs/environments.md`를 정본으로 사용한다.
 
 ## 운영 전 필수 검토
 

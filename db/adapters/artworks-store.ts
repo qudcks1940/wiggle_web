@@ -9,6 +9,7 @@
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { AwsClient } from "aws4fetch";
+import { assertDataEnvironment, runtimeEnvironment, runtimePolicy, type EnvironmentSource, type WiggleRuntimeEnvironment } from "../../lib/runtime/environment.ts";
 
 type PutOptions = {
   httpMetadata?: { contentType?: string; cacheControl?: string };
@@ -169,18 +170,64 @@ export class FsArtworksStore implements ArtworksStore {
   }
 }
 
-export function createArtworksStore(): ArtworksStore {
-  const endpoint = process.env.R2_S3_ENDPOINT;
-  const bucket = process.env.R2_S3_BUCKET;
-  const accessKeyId = process.env.R2_S3_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_S3_SECRET_ACCESS_KEY;
-  if (endpoint && bucket && accessKeyId && secretAccessKey) return new S3ArtworksStore(endpoint, bucket, accessKeyId, secretAccessKey);
-  // 통합 테스트는 프로덕션 빌드를 그대로 띄우므로(next start) NODE_ENV가 production이다.
-  // ARTWORKS_FS_DIR을 명시한 경우에만 파일 저장소를 허용하고, 실제 배포(VERCEL)에서는
-  // 그 변수가 있어도 거부한다 — 자격증명 누락이 임시 디스크로 조용히 굴러가면 안 된다.
-  const fsDir = process.env.ARTWORKS_FS_DIR;
-  if (process.env.NODE_ENV === "production" && (!fsDir || process.env.VERCEL)) {
-    throw new Error("R2 S3 자격증명(R2_S3_*)이 설정되지 않았어요.");
+export class PrefixedArtworksStore implements ArtworksStore {
+  private readonly inner: ArtworksStore;
+  private readonly prefix: string;
+
+  constructor(inner: ArtworksStore, prefix: string) {
+    this.inner = inner;
+    this.prefix = prefix.replace(/^\/+|\/+$/g, "");
+    if (!this.prefix || !SAFE_KEY.test(this.prefix)) throw new Error("저장소 접두사 형식이 올바르지 않아요.");
   }
-  return new FsArtworksStore(path.resolve(fsDir || ".data/artworks-store"));
+
+  private key(key: string): string {
+    assertSafeKey(key);
+    return `${this.prefix}/${key}`;
+  }
+
+  put(key: string, value: ArrayBuffer | ArrayBufferView, options?: PutOptions): Promise<void> {
+    return this.inner.put(this.key(key), value, options);
+  }
+
+  get(key: string): Promise<StoredObject | null> {
+    return this.inner.get(this.key(key));
+  }
+
+  head(key: string): Promise<{ size: number } | null> {
+    return this.inner.head(this.key(key));
+  }
+
+  delete(key: string): Promise<void> {
+    return this.inner.delete(this.key(key));
+  }
+}
+
+export function createArtworksStore(
+  environment: WiggleRuntimeEnvironment = runtimeEnvironment(),
+  source: EnvironmentSource = process.env,
+): ArtworksStore {
+  assertDataEnvironment(environment, source);
+  const endpoint = source.R2_S3_ENDPOINT?.trim();
+  const bucket = source.R2_S3_BUCKET?.trim();
+  const accessKeyId = source.R2_S3_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = source.R2_S3_SECRET_ACCESS_KEY?.trim();
+  const remoteValues = [endpoint, bucket, accessKeyId, secretAccessKey];
+  const hasAnyRemoteValue = remoteValues.some(Boolean);
+  const hasAllRemoteValues = remoteValues.every(Boolean);
+
+  if (environment === "local" || environment === "test") {
+    if (hasAnyRemoteValue) {
+      throw new Error(`${environment} 환경에서는 R2 S3 자격증명을 사용할 수 없어요.`);
+    }
+    const fsDir = source.ARTWORKS_FS_DIR?.trim();
+    if (environment === "test" && !fsDir) {
+      throw new Error("test 환경에는 격리된 ARTWORKS_FS_DIR이 필요해요.");
+    }
+    return new FsArtworksStore(path.resolve(fsDir || ".data/artworks-store"));
+  }
+
+  if (!hasAllRemoteValues) throw new Error(`${environment} 환경의 R2 S3 자격증명(R2_S3_*)이 설정되지 않았어요.`);
+  const remote = new S3ArtworksStore(endpoint!, bucket!, accessKeyId!, secretAccessKey!);
+  const prefix = runtimePolicy(environment).storagePrefix;
+  return prefix ? new PrefixedArtworksStore(remote, prefix) : remote;
 }

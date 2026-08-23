@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { issueTeacherSession } from "@/lib/demo-seed";
+import { issueTeacherSession } from "@/lib/auth/teacher-session";
 import { decodeOAuthCookie, exchangeGoogleCode, fetchGoogleUser, googleOAuthConfig, timingSafeEqualText, validateGoogleTeacher } from "@/lib/google-auth";
 import { upsertGoogleTeacher } from "@/lib/security";
 

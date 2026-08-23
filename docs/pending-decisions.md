@@ -34,6 +34,19 @@
 
 아직 결정하지 않은 것은 중복 별명을 실제 학생과 연결하는 운영 방식이다. 실명, 출석번호, 교사 메모, 명부 연결 입력란은 운영 방식 결정 전에는 추가하지 않는다.
 
+## P-004 신규 GitHub 저장소와 Vercel 연결 전환
+
+### 현재 합의
+
+- 이후 개발 코드는 `https://github.com/wwwiggle/new_wiggle`에 push한다.
+- 기존 공개 운영 `https://wiggleweb.vercel.app`은 현재 `yonghwan86/wiggle_web`의 `main`과 연결돼 있다.
+
+### 아직 결정하지 않은 것
+
+- Vercel 프로젝트의 Git 저장소 연결을 언제 신규 저장소로 바꿀지
+- 신규 저장소에서 어떤 브랜치를 Production Branch로 사용할지
+- 기존 저장소를 전환 후 읽기 전용으로 보존할지
+
 ## 갱신 규칙
 
 1. 사용자가 항목을 확정하면 결정 내용과 이유를 `product-decisions.md`로 옮긴다.

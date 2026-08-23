@@ -6,7 +6,8 @@
 ## 상태 기준
 
 - 로컬 저장소: `C:\Users\user\Desktop\Project\wiggle_web`
-- GitHub: `https://github.com/yonghwan86/wiggle_web`
+- 신규 개발 GitHub: `https://github.com/wwwiggle/new_wiggle`
+- 기존 운영 연결 GitHub: `https://github.com/yonghwan86/wiggle_web` — Vercel 프로젝트의 Git 연결을 바꾸기 전까지 현재 운영 배포 원본으로 유지한다.
 - **공개 운영: `https://wiggleweb.vercel.app`** — Vercel 프로젝트 `wiggle-web`, GitHub `main` push 시 자동 배포(서울 리전). `main` push는 사용자만 실행한다.
 - 옛 공개 Sites `https://wiggle-classroom-web.chan1940.chatgpt.site`는 2026-08-19 재플랫폼으로 은퇴 — 사이트·데이터는 보존(폐기는 사용자 승인 필요), 신규 서버는 데이터 이전 없이 새로 시작했다.
 - 운영 저장소: DB는 Turso(libSQL), 그림 파일은 Cloudflare R2 버킷 `wiggle-artworks`(S3 API). 운영 자격증명은 Vercel 대시보드에서만 관리한다.
@@ -199,6 +200,11 @@
 - 완성 작품의 `이 그림으로 그림책 만들기`는 곧바로 가로형을 만드는 대신 가로·세로·정사각형 선택 창을 먼저 연다. 로컬 실제 흐름에서 세로형 선택 후 `format-portrait` 편집기가 열리는 것을 확인했다. 그림책 목록의 기존 세 모양 선택도 유지한다.
 - 브라우저 실측: 데모 원본의 내용 경계가 `x=34.95%`, `y=4.08%`, `width=58.69%`, `height=76.69%`로 계산됐고, 내부 원본은 선택 요소 대비 `170.4%×130.4%`로 배치되어 빈 캔버스가 잘리고 실제 그림이 박스를 채웠다. typecheck·lint·production build·전체 테스트 `291/291`, 집중 테스트 `16/16`을 통과했다.
 - 위 변경 전체는 개인 원격의 `codex/updated-design-storybook` 기능 브랜치에 push한다. `origin/main`과 Vercel Production은 건드리지 않는다.
+
+## 2026-08-23 신규 팀 GitHub 저장소 전환
+
+- 사용자의 지시에 따라 이후 개발 대상 저장소를 `https://github.com/wwwiggle/new_wiggle`로 정했다. 확인 시점에는 브랜치와 커밋이 하나도 없는 빈 저장소다.
+- 검증된 현재 커밋을 신규 저장소의 `codex/updated-design-storybook` 기능 브랜치에 첫 push한다. 새 저장소의 `main` 생성과 Vercel Git 연결 변경은 사용자 결정·작업 전까지 수행하지 않는다.
 
 ## 다음 작업 시작 전 확인
 

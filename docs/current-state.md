@@ -203,9 +203,16 @@
 
 ## 2026-08-23 신규 팀 GitHub 저장소 전환
 
-- 사용자의 지시에 따라 이후 개발 대상 저장소를 `https://github.com/wwwiggle/new_wiggle`로 정했다. 확인 시점에는 브랜치와 커밋이 하나도 없는 빈 저장소다.
-- 검증된 현재 커밋을 신규 저장소의 `codex/updated-design-storybook` 기능 브랜치에 첫 push했다. 사용자는 새 저장소의 기본 브랜치를 `main`으로 두고 이 기능 브랜치를 PR로 병합하기로 확정했다.
-- 원본 기준 커밋 `b38dd2a`를 `codex/main-base` 브랜치로 준비했다. 저장소 규칙에 따라 `main` 생성·push와 기본 브랜치 지정은 사용자가 수행하며, Vercel Git 연결 변경은 별도 결정 전까지 하지 않는다.
+- 사용자의 지시에 따라 이후 개발 대상 저장소를 `https://github.com/wwwiggle/new_wiggle`로 정했다.
+- 신규 저장소의 기본 브랜치는 현재 `main`이며, 검증된 그림책 편집기 변경까지 병합된 `bbbc51e`가 정본이다. 전환에 사용한 임시 기능 브랜치는 원격에서 정리해 `main`만 유지한다.
+- 로컬 `main`은 `team/main`을 추적한다. Vercel Git 연결은 아직 기존 `yonghwan86/wiggle_web` 저장소를 가리키므로, 연결 변경 전까지 신규 저장소의 `main` push는 공개 운영 배포를 시작하지 않는다.
+
+## 2026-08-23 README AI 그림책 편집기 안내 (`codex/readme-storybook-editor`)
+
+- README의 현재 기능에 AI 그림책 편집기의 진입 흐름, 3가지 책 모양, 고정 이야기 영역, 그림 배치 제한, 실제 내용 경계 맞춤, 페이지·레이어 편집, 저장·완성 기능을 추가했다.
+- 외부 Canva 대신 Wiggle 내부 편집기와 MIT 라이선스 `react-moveable`을 사용한다는 점, Turso 그림책 문서와 R2 이미지 자산의 역할, 학생 화면 경로를 문서화했다.
+- 신규 정본 저장소 주소를 `wwwiggle/new_wiggle`로 바꾸고 전체 테스트 표기를 최근 검증 결과인 `291/291`로 현행화했다. Vercel이 아직 기존 저장소에 연결된 전환 상태도 README 배포 안내에 명시했다.
+- 문서 변경 뒤 typecheck·lint·production build·전체 테스트 `291/291`과 `git diff --check`를 다시 통과했다.
 
 ## 다음 작업 시작 전 확인
 

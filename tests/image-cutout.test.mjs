@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { containedCropPlacement, opaqueBounds, removeConnectedColor, removeEdgeBackground } from "../lib/image-cutout.ts";
+import { containedCropPlacement, opaqueBounds, removeConnectedColor, removeEdgeBackground, visibleContentBounds } from "../lib/image-cutout.ts";
 
 function image(width, height, pixel) {
   const data = new Uint8ClampedArray(width * height * 4);
@@ -21,6 +21,13 @@ test("네 모서리 색을 보간해 그라데이션 배경도 자동 제거한�
   });
   assert.equal(removeEdgeBackground(value, 18), 26);
   assert.deepEqual(opaqueBounds(value, 1), { x: 1, y: 0, width: 5, height: 5 });
+});
+
+test("원본을 지우지 않고 흰색·투명 여백을 제외한 실제 그림 경계를 찾는다", () => {
+  const value = image(10, 8, (x, y) => x >= 3 && x <= 6 && y >= 2 && y <= 5 ? [25, 65, 105, 255] : [255, 255, 255, 255]);
+  const before = new Uint8ClampedArray(value.data);
+  assert.deepEqual(visibleContentBounds(value, 20, 1), { x: 2, y: 1, width: 6, height: 6 });
+  assert.deepEqual(value.data, before);
 });
 
 test("누른 색과 연결된 영역만 지우고 떨어진 같은 색은 보존한다", () => {

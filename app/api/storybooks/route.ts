@@ -40,13 +40,13 @@ export async function POST(request: Request) {
 
   const storybookId = id("storybook");
   const pageId = id("page");
-  const document = emptyStorybookDocument(format, pageId);
+  const document = emptyStorybookDocument(format, pageId, id("element"));
   const assetId = artwork ? id("asset") : null;
   if (assetId) {
     document.pages[0].elements.push({
       id: id("element"), type: "image", assetId,
-      x: 0.06, y: 0.07, width: 0.88, height: 0.7,
-      rotation: 0, zIndex: 0, opacity: 1, locked: false,
+      x: 0.08, y: 0.27, width: 0.84, height: 0.65,
+      rotation: 0, zIndex: 1, opacity: 1, locked: false,
     });
   }
   const title = cleanText(payload.title, 60) || (artwork ? `${artwork.title} 그림책` : "나의 새 그림책");

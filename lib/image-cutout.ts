@@ -77,6 +77,16 @@ export function opaqueBounds(image: EditablePixelImage, padding = 0): PixelBound
   return { x: left, y: top, width: right - left + 1, height: bottom - top + 1 };
 }
 
+export function visibleContentBounds(image: EditablePixelImage, tolerance = 36, padding = 0): PixelBounds | null {
+  const withoutEdgeBackground: EditablePixelImage = {
+    width: image.width,
+    height: image.height,
+    data: new Uint8ClampedArray(image.data),
+  };
+  removeEdgeBackground(withoutEdgeBackground, tolerance);
+  return opaqueBounds(withoutEdgeBackground, padding);
+}
+
 export function containedCropPlacement(container: NormalizedRect, stageAspect: number, sourceAspect: number, crop: NormalizedRect): NormalizedRect {
   const boxWidth = container.width * stageAspect;
   const boxHeight = container.height;

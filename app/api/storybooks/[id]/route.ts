@@ -29,7 +29,10 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   if (!Number.isInteger(expectedRevision) || expectedRevision !== book.revision) return noStoreJson({ error: "다른 저장이 먼저 반영됐어요. 새로고침해 주세요.", code: "REVISION_CONFLICT", serverRevision: book.revision }, { status: 409 });
   const document = validateStorybookDocument(payload.document);
   if (!document) return jsonError("그림책 페이지 데이터가 올바르지 않아요.");
-  const referencedAssets = new Set(document.pages.flatMap((page) => page.elements.filter((element) => element.type === "image").map((element) => element.assetId as string)));
+  const referencedAssets = new Set(document.pages.flatMap((page) => [
+    ...(page.backgroundAssetId ? [page.backgroundAssetId] : []),
+    ...page.elements.filter((element) => element.type === "image").map((element) => element.assetId as string),
+  ]));
   if (referencedAssets.size) {
     const ownedAssets = await storybookAssets(storybookId, student.id);
     if ([...referencedAssets].some((assetId) => !ownedAssets.some((asset) => asset.id === assetId))) return jsonError("다른 그림책의 이미지는 사용할 수 없어요.", 403);

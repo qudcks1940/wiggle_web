@@ -53,7 +53,7 @@ export function StorybookLibrary() {
 
   return <main className="app-shell storybook-library">
     <header className="app-header"><Logo /><a className="small-button" href="/student">← 처음 화면</a></header>
-    <section className="storybook-library-hero"><div><p className="eyebrow">내가 직접 꾸미는 작업실</p><h1>나만의 그림책 만들기</h1><p>내 그림과 새 이미지를 가져와 글을 쓰고, 손잡이로 크기와 각도를 마음껏 바꿔 봐요.</p></div><span aria-hidden="true">📖✨</span></section>
+    <section className="storybook-library-hero"><div><p className="eyebrow">내가 직접 꾸미는 작업실</p><h1>나만의 그림책 만들기</h1><p>가로·세로·정사각형 책을 고르고, 위쪽에는 이야기 한 편을 쓰고 그 아래에는 내 그림을 놓아 봐요.</p></div><span aria-hidden="true">📖✨</span></section>
     {error && <p className="error-box" role="alert">{error}</p>}
     <section className="storybook-new-book"><h2>새 그림책</h2><div className="storybook-format-options">
       <button type="button" disabled={Boolean(creating)} onClick={() => void create("landscape")}><i className="format-landscape" /><b>가로 그림책</b><small>이야기책 추천</small></button>

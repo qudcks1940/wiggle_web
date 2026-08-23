@@ -7,6 +7,11 @@ export const MAX_STORYBOOK_TEXT_GRAPHEMES = 800;
 export const STORYBOOK_FORMATS = ["landscape", "portrait", "square"] as const;
 export type StorybookFormat = (typeof STORYBOOK_FORMATS)[number];
 export type StorybookTextAlign = "left" | "center" | "right";
+export type StorybookCrop = { x: number; y: number; width: number; height: number };
+
+export const DEFAULT_STORYBOOK_TEXT = "여기에 이야기를 써 보세요";
+export const STORYBOOK_TEXT_BOX = { x: 0.06, y: 0.04, width: 0.88, height: 0.16 } as const;
+export const STORYBOOK_IMAGE_AREA = { x: 0.04, y: 0.24, width: 0.92, height: 0.72 } as const;
 
 export type StorybookElement = {
   id: string;
@@ -20,6 +25,8 @@ export type StorybookElement = {
   opacity: number;
   locked: boolean;
   assetId?: string;
+  aspectRatio?: number;
+  crop?: StorybookCrop;
   text?: string;
   fontSize?: number;
   color?: string;
@@ -29,6 +36,7 @@ export type StorybookElement = {
 export type StorybookPage = {
   id: string;
   background: string;
+  backgroundAssetId?: string;
   elements: StorybookElement[];
 };
 
@@ -47,6 +55,10 @@ function finiteBetween(value: unknown, min: number, max: number): value is numbe
 
 function round(value: number) {
   return Number(value.toFixed(4));
+}
+
+function nearly(value: number, expected: number) {
+  return Math.abs(value - expected) <= 0.001;
 }
 
 function graphemes(value: string) {
@@ -90,7 +102,21 @@ function validateElement(value: unknown): StorybookElement | null {
 
   if (element.type === "image") {
     if (!element.assetId || !ID_PATTERN.test(element.assetId)) return null;
+    const areaRight = STORYBOOK_IMAGE_AREA.x + STORYBOOK_IMAGE_AREA.width;
+    const areaBottom = STORYBOOK_IMAGE_AREA.y + STORYBOOK_IMAGE_AREA.height;
+    if (element.x < STORYBOOK_IMAGE_AREA.x - 0.001 || element.y < STORYBOOK_IMAGE_AREA.y - 0.001) return null;
+    if (element.x + element.width > areaRight + 0.001 || element.y + element.height > areaBottom + 0.001) return null;
+    if (element.aspectRatio !== undefined && !finiteBetween(element.aspectRatio, 0.1, 10)) return null;
     normalized.assetId = element.assetId;
+    if (element.aspectRatio !== undefined) normalized.aspectRatio = round(element.aspectRatio);
+    if (element.crop !== undefined) {
+      if (!element.crop || typeof element.crop !== "object" || Array.isArray(element.crop)) return null;
+      const crop = element.crop as Partial<StorybookCrop>;
+      if (!finiteBetween(crop.x, 0, 1) || !finiteBetween(crop.y, 0, 1)) return null;
+      if (!finiteBetween(crop.width, 0.01, 1) || !finiteBetween(crop.height, 0.01, 1)) return null;
+      if (crop.x + crop.width > 1.001 || crop.y + crop.height > 1.001) return null;
+      normalized.crop = { x: round(crop.x), y: round(crop.y), width: round(crop.width), height: round(crop.height) };
+    }
     return normalized;
   }
 
@@ -98,7 +124,8 @@ function validateElement(value: unknown): StorybookElement | null {
   const text = cleanStoryText(element.text);
   if (text !== element.text || graphemes(text) > MAX_STORYBOOK_TEXT_GRAPHEMES) return null;
   if (!finiteBetween(element.fontSize, 0.018, 0.12) || !element.color || !COLOR_PATTERN.test(element.color)) return null;
-  if (!element.align || !["left", "center", "right"].includes(element.align)) return null;
+  if (element.align !== "center" || element.rotation !== 0 || element.opacity !== 1 || element.locked !== true) return null;
+  if (!nearly(element.x, STORYBOOK_TEXT_BOX.x) || !nearly(element.y, STORYBOOK_TEXT_BOX.y) || !nearly(element.width, STORYBOOK_TEXT_BOX.width) || !nearly(element.height, STORYBOOK_TEXT_BOX.height)) return null;
   normalized.text = text;
   normalized.fontSize = round(element.fontSize);
   normalized.color = element.color.toUpperCase();
@@ -120,6 +147,7 @@ export function validateStorybookDocument(value: unknown): StorybookDocument | n
     const page = raw as Partial<StorybookPage>;
     if (!page.id || !ID_PATTERN.test(page.id) || pageIds.has(page.id)) return null;
     if (!page.background || !COLOR_PATTERN.test(page.background)) return null;
+    if (page.backgroundAssetId !== undefined && (!page.backgroundAssetId || !ID_PATTERN.test(page.backgroundAssetId))) return null;
     if (!Array.isArray(page.elements) || page.elements.length > MAX_STORYBOOK_ELEMENTS_PER_PAGE) return null;
     pageIds.add(page.id);
     const elements: StorybookElement[] = [];
@@ -129,13 +157,30 @@ export function validateStorybookDocument(value: unknown): StorybookDocument | n
       elementIds.add(element.id);
       elements.push(element);
     }
-    pages.push({ id: page.id, background: page.background.toUpperCase(), elements });
+    if (elements.filter((element) => element.type === "text").length !== 1) return null;
+    pages.push({ id: page.id, background: page.background.toUpperCase(), ...(page.backgroundAssetId ? { backgroundAssetId: page.backgroundAssetId } : {}), elements });
   }
 
   const normalized: StorybookDocument = { schemaVersion: 1, format: document.format as StorybookFormat, pages };
   return serializedBytes(normalized) <= MAX_STORYBOOK_DOCUMENT_BYTES ? normalized : null;
 }
 
-export function emptyStorybookDocument(format: StorybookFormat = "landscape", pageId = "page_starter0001"): StorybookDocument {
-  return { schemaVersion: 1, format, pages: [{ id: pageId, background: "#FFFFFF", elements: [] }] };
+export function createStorybookTextElement(id = "element_startertext0001"): StorybookElement {
+  return {
+    id,
+    type: "text",
+    text: DEFAULT_STORYBOOK_TEXT,
+    ...STORYBOOK_TEXT_BOX,
+    rotation: 0,
+    zIndex: 0,
+    opacity: 1,
+    locked: true,
+    fontSize: 0.045,
+    color: "#24324A",
+    align: "center",
+  };
+}
+
+export function emptyStorybookDocument(format: StorybookFormat = "landscape", pageId = "page_starter0001", textElementId = "element_startertext0001"): StorybookDocument {
+  return { schemaVersion: 1, format, pages: [{ id: pageId, background: "#FFFFFF", elements: [createStorybookTextElement(textElementId)] }] };
 }

@@ -204,7 +204,8 @@
 ## 2026-08-23 신규 팀 GitHub 저장소 전환
 
 - 사용자의 지시에 따라 이후 개발 대상 저장소를 `https://github.com/wwwiggle/new_wiggle`로 정했다. 확인 시점에는 브랜치와 커밋이 하나도 없는 빈 저장소다.
-- 검증된 현재 커밋을 신규 저장소의 `codex/updated-design-storybook` 기능 브랜치에 첫 push했다. 새 저장소의 `main` 생성과 Vercel Git 연결 변경은 사용자 결정·작업 전까지 수행하지 않는다.
+- 검증된 현재 커밋을 신규 저장소의 `codex/updated-design-storybook` 기능 브랜치에 첫 push했다. 사용자는 새 저장소의 기본 브랜치를 `main`으로 두고 이 기능 브랜치를 PR로 병합하기로 확정했다.
+- 원본 기준 커밋 `b38dd2a`를 `codex/main-base` 브랜치로 준비했다. 저장소 규칙에 따라 `main` 생성·push와 기본 브랜치 지정은 사용자가 수행하며, Vercel Git 연결 변경은 별도 결정 전까지 하지 않는다.
 
 ## 다음 작업 시작 전 확인
 

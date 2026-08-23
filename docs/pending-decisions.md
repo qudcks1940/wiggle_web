@@ -39,12 +39,12 @@
 ### 현재 합의
 
 - 이후 개발 코드는 `https://github.com/wwwiggle/new_wiggle`에 push한다.
+- 신규 저장소는 `main`을 기본 브랜치로 사용하고 현재 기능 브랜치를 PR로 병합한다.
 - 기존 공개 운영 `https://wiggleweb.vercel.app`은 현재 `yonghwan86/wiggle_web`의 `main`과 연결돼 있다.
 
 ### 아직 결정하지 않은 것
 
 - Vercel 프로젝트의 Git 저장소 연결을 언제 신규 저장소로 바꿀지
-- 신규 저장소에서 어떤 브랜치를 Production Branch로 사용할지
 - 기존 저장소를 전환 후 읽기 전용으로 보존할지
 
 ## 갱신 규칙

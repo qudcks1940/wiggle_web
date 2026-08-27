@@ -218,6 +218,7 @@
 - `friendly-dog`는 일반 수치 변형에서 분리하고 `lib/friendly-dog-guides.ts`의 손설계 벡터 4종으로 교체했다. 눈 두 개는 작고 서로 떨어지며, 코·웃는 입만 얼굴 안에 두고 큰 주둥이 원을 없앴다. 귀는 얼굴 중앙을 침범하지 않고, 몸·앞다리·발·꼬리도 각 단계에서 서로 알아볼 수 있게 분리했다. AI 이미지 생성이나 아이 그림 교체는 사용하지 않는다.
 - `scripts/render-guide-audit.mjs friendly-dog`로 4종의 모든 단계를 한 장에 누적 렌더링해 형태를 직접 비교할 수 있게 했다. 실제 브라우저에서는 새 작품의 1단계 머리→2단계 귀→3단계 얼굴→4단계 몸·앞다리→5단계 발·꼬리를 각각 열어 점선 크기·위치·잘림을 확인했다.
 - 회귀 테스트는 중복 눈, 큰 얼굴 타원, 귀의 얼굴 중앙 침범을 구조적으로 차단한다. typecheck·lint·production build·전체 테스트 `295/295`·두 diff check가 통과했고, `check:browser`의 `320×568`, `390×844`, `844×390`도 실패 0건이었다(390×844 핀치 1건은 기존 CDP 환경 사유 SKIP).
+- 신규 정본 저장소 `wwwiggle/new_wiggle`의 `codex/teacher-storybooks-cute-guides` 브랜치에 검증된 변경을 push했고, `qudcks1940` 계정으로 PR [#2](https://github.com/wwwiggle/new_wiggle/pull/2)를 열었다. `main` 병합과 Vercel 운영 배포는 수행하지 않았다.
 
 ## 2026-08-23 신규 팀 GitHub 저장소 전환
 

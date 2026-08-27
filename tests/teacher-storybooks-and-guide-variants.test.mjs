@@ -39,6 +39,27 @@ test("모든 따라 그리기 활동은 네 가지 고정 가이드를 안전한
   }
 });
 
+test("강아지 가이드는 얼굴 특징을 겹치지 않고 귀를 머리 바깥에 둔다", () => {
+  const lesson = LESSONS.find((item) => item.slug === "friendly-dog");
+  for (let variant = 0; variant < GUIDED_LESSON_VARIANT_COUNT; variant += 1) {
+    const marks = guideMarksForVariant(lesson, variant);
+    const eyes = marks.filter((mark) => mark.step === 3 && mark.kind === "ellipse").slice(0, 2);
+    assert.equal(eyes.length, 2, `variant ${variant}: 두 눈`);
+    assert.ok(eyes.every((eye) => eye.rx <= 0.025 && eye.ry <= 0.03), `variant ${variant}: 작은 눈`);
+    assert.ok(Math.abs(eyes[0].x - eyes[1].x) >= 0.12, `variant ${variant}: 눈이 겹치지 않음`);
+    assert.ok(eyes.every((eye) => eye.x >= 0.36 && eye.x <= 0.64 && eye.y >= 0.25 && eye.y <= 0.37), `variant ${variant}: 눈이 얼굴 안에 위치`);
+
+    const faceEllipses = marks.filter((mark) => mark.step === 3 && mark.kind === "ellipse");
+    assert.equal(faceEllipses.length, 3, `variant ${variant}: 눈 두 개와 코만 타원`);
+    assert.ok(faceEllipses.every((mark) => mark.rx < 0.04 && mark.ry < 0.04), `variant ${variant}: 큰 주둥이 원 금지`);
+
+    const earMarks = marks.filter((mark) => mark.step === 2 && mark.kind === "curve");
+    assert.equal(earMarks.length, 6, `variant ${variant}: 양쪽 귀 윤곽`);
+    const earPoints = earMarks.flatMap((mark) => mark.points);
+    assert.ok(earPoints.every(([x]) => x <= 0.45 || x >= 0.55), `variant ${variant}: 귀가 얼굴 중앙을 침범하지 않음`);
+  }
+});
+
 test("새 그림은 같은 활동의 가이드를 순환하고 교사는 자기 반 완성 그림책만 열고 피드백 요청한다", async (context) => {
   const server = await startTestServer();
   context.after(() => server.dispose());

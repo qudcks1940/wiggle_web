@@ -1,4 +1,5 @@
 import type { GuideMark, Lesson } from "@/lib/lesson-content";
+import { FRIENDLY_DOG_GUIDES } from "@/lib/friendly-dog-guides";
 
 export const GUIDED_LESSON_VARIANT_COUNT = 4;
 
@@ -115,6 +116,7 @@ export function guideVariantLabel(value: unknown) {
 export function guideMarksForVariant(lesson: Lesson, value: unknown) {
   if (lesson.mode !== "guided") return lesson.guide;
   const variant = normalizedVariant(value);
+  if (lesson.slug === "friendly-dog") return FRIENDLY_DOG_GUIDES[variant];
   return lesson.guide.map((mark) => transformMark(lesson.slug, variant, mark));
 }
 

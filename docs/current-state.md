@@ -6,7 +6,9 @@
 ## 상태 기준
 
 - 로컬 저장소: `C:\Users\user\Desktop\Project\wiggle_web`
-- GitHub: `https://github.com/yonghwan86/wiggle_web`
+- 신규 개발 GitHub: `https://github.com/wwwiggle/new_wiggle`
+- 기존 운영 연결 GitHub: `https://github.com/yonghwan86/wiggle_web` — Vercel 프로젝트의 Git 연결을 바꾸기 전까지 현재 운영 배포 원본으로 유지한다.
+- 로컬 Git 원격: `origin`은 신규 개발 GitHub, `legacy-origin`은 기존 운영 연결 GitHub다. GitHub 접근은 사용자 승인에 따라 `qudcks1940` 계정 권한을 사용할 수 있다(자격증명은 저장소에 기록하지 않는다).
 - **공개 운영: `https://wiggleweb.vercel.app`** — Vercel 프로젝트 `wiggle-web`, GitHub `main` push 시 자동 배포(서울 리전). `main` push는 사용자만 실행한다.
 - 옛 공개 Sites `https://wiggle-classroom-web.chan1940.chatgpt.site`는 2026-08-19 재플랫폼으로 은퇴 — 사이트·데이터는 보존(폐기는 사용자 승인 필요), 신규 서버는 데이터 이전 없이 새로 시작했다.
 - 운영 저장소: DB는 Turso(libSQL), 그림 파일은 Cloudflare R2 버킷 `wiggle-artworks`(S3 API). 운영 자격증명은 Vercel 대시보드에서만 관리한다.
@@ -216,6 +218,19 @@
 - `friendly-dog`는 일반 수치 변형에서 분리하고 `lib/friendly-dog-guides.ts`의 손설계 벡터 4종으로 교체했다. 눈 두 개는 작고 서로 떨어지며, 코·웃는 입만 얼굴 안에 두고 큰 주둥이 원을 없앴다. 귀는 얼굴 중앙을 침범하지 않고, 몸·앞다리·발·꼬리도 각 단계에서 서로 알아볼 수 있게 분리했다. AI 이미지 생성이나 아이 그림 교체는 사용하지 않는다.
 - `scripts/render-guide-audit.mjs friendly-dog`로 4종의 모든 단계를 한 장에 누적 렌더링해 형태를 직접 비교할 수 있게 했다. 실제 브라우저에서는 새 작품의 1단계 머리→2단계 귀→3단계 얼굴→4단계 몸·앞다리→5단계 발·꼬리를 각각 열어 점선 크기·위치·잘림을 확인했다.
 - 회귀 테스트는 중복 눈, 큰 얼굴 타원, 귀의 얼굴 중앙 침범을 구조적으로 차단한다. typecheck·lint·production build·전체 테스트 `295/295`·두 diff check가 통과했고, `check:browser`의 `320×568`, `390×844`, `844×390`도 실패 0건이었다(390×844 핀치 1건은 기존 CDP 환경 사유 SKIP).
+
+## 2026-08-23 신규 팀 GitHub 저장소 전환
+
+- 사용자의 지시에 따라 이후 개발 대상 저장소를 `https://github.com/wwwiggle/new_wiggle`로 정했다.
+- 신규 저장소의 기본 브랜치는 현재 `main`이며, 검증된 그림책 편집기 변경까지 병합된 `bbbc51e`가 정본이다. 전환에 사용한 임시 기능 브랜치는 원격에서 정리해 `main`만 유지한다.
+- 로컬 `main`과 기능 브랜치는 신규 저장소의 `origin/main`을 기준으로 추적한다. 옛 저장소는 `legacy-origin`으로 보존한다. Vercel Git 연결은 아직 기존 `yonghwan86/wiggle_web` 저장소를 가리키므로, 연결 변경 전까지 신규 저장소의 `main` push는 공개 운영 배포를 시작하지 않는다.
+
+## 2026-08-23 README AI 그림책 편집기 안내 (`codex/readme-storybook-editor`)
+
+- README의 현재 기능에 AI 그림책 편집기의 진입 흐름, 3가지 책 모양, 고정 이야기 영역, 그림 배치 제한, 실제 내용 경계 맞춤, 페이지·레이어 편집, 저장·완성 기능을 추가했다.
+- 외부 Canva 대신 Wiggle 내부 편집기와 MIT 라이선스 `react-moveable`을 사용한다는 점, Turso 그림책 문서와 R2 이미지 자산의 역할, 학생 화면 경로를 문서화했다.
+- 신규 정본 저장소 주소를 `wwwiggle/new_wiggle`로 바꾸고 전체 테스트 표기를 최근 검증 결과인 `291/291`로 현행화했다. Vercel이 아직 기존 저장소에 연결된 전환 상태도 README 배포 안내에 명시했다.
+- 문서 변경 뒤 typecheck·lint·production build·전체 테스트 `291/291`과 `git diff --check`를 다시 통과했다.
 
 ## 다음 작업 시작 전 확인
 

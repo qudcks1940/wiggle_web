@@ -49,6 +49,19 @@
 - 교사가 AI 초안을 검토·수정·승인한 뒤 학생에게 보여 줄지, 교사용으로만 둘지
 - 체크박스 일괄 요청의 동시 처리 수와 실패 재시도 정책
 
+## P-005 신규 GitHub 저장소와 Vercel 연결 전환
+
+### 현재 합의
+
+- 이후 개발 코드는 `https://github.com/wwwiggle/new_wiggle`에 push한다.
+- 신규 저장소는 `main`을 기본 브랜치로 사용하고 현재 기능 브랜치를 PR로 병합한다.
+- 기존 공개 운영 `https://wiggleweb.vercel.app`은 현재 `yonghwan86/wiggle_web`의 `main`과 연결돼 있다.
+
+### 아직 결정하지 않은 것
+
+- Vercel 프로젝트의 Git 저장소 연결을 언제 신규 저장소로 바꿀지
+- 기존 저장소를 전환 후 읽기 전용으로 보존할지
+
 ## 갱신 규칙
 
 1. 사용자가 항목을 확정하면 결정 내용과 이유를 `product-decisions.md`로 옮긴다.

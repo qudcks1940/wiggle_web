@@ -9,6 +9,7 @@ import { clearAllDrawing, redoDrawing, undoDrawing } from "@/lib/drawing-history
 import { DrawingInputMode, INPUT_MODE_EVENT } from "@/lib/input-mode";
 import { CanvasView, IDENTITY_VIEW, pinchView } from "@/lib/canvas-view";
 import { lessonBySlug, Lesson } from "@/lib/lesson-content";
+import { guideMarksForVariant } from "@/lib/lesson-guide-variants";
 import { createLessonStepBaseline, isLessonStepProgress, lessonStepActionStatus, LessonStepProgress } from "@/lib/lesson-step-progress";
 import { lockGuideTrace, snapGuideTrace } from "@/lib/trace-guidance.mjs";
 import { clampTextPlacement, suggestTextPlacement } from "@/lib/text-placement";
@@ -146,6 +147,7 @@ type ArtworkPayload = {
   topic: string;
   learningMode: string;
   lessonSlug: string | null;
+  guideVariant: number;
   intent: string;
   document: DrawDocument;
   currentStep: number;
@@ -249,9 +251,10 @@ function sampleCurve(points: [[number, number], [number, number], [number, numbe
   return trace;
 }
 
-function guideTraces(lesson: Lesson | undefined, lessonStep = 0, aiShape: GuideStep["guideShape"] = "none") {
+function guideTraces(lesson: Lesson | undefined, lessonStep = 0, aiShape: GuideStep["guideShape"] = "none", guideVariant = 0) {
   const traces: GuideTrace[] = [];
-  for (const mark of lesson?.guide.filter((item) => item.step === lessonStep + 1) ?? []) {
+  const lessonMarks = lesson ? guideMarksForVariant(lesson, guideVariant) : [];
+  for (const mark of lessonMarks.filter((item) => item.step === lessonStep + 1)) {
     if (mark.kind === "line") traces.push(sampleLine(mark.points));
     if (mark.kind === "ellipse") traces.push(sampleEllipse(mark.x, mark.y, mark.rx, mark.ry));
     if (mark.kind === "rect")
@@ -718,14 +721,14 @@ export function DrawingStudio() {
     unsavedRef.current = true;
   }, []);
   const aiGuideShape = aiGuide?.steps[aiGuideStep]?.guideShape ?? "none";
-  const currentGuideTraces = useMemo(() => guideTraces(aiGuide ? undefined : lesson, artwork?.currentStep ?? 0, aiGuideShape), [aiGuide, aiGuideShape, artwork?.currentStep, lesson]);
+  const currentGuideTraces = useMemo(() => guideTraces(aiGuide ? undefined : lesson, artwork?.currentStep ?? 0, aiGuideShape, artwork?.guideVariant ?? 0), [aiGuide, aiGuideShape, artwork?.currentStep, artwork?.guideVariant, lesson]);
   const currentLessonActivity = lesson?.steps[artwork?.currentStep ?? 0]?.activity;
   const lessonGuideAvailable = currentGuideTraces.length > 0;
   const currentLessonStepStatus = useMemo(
     () => lessonStepActionStatus(documentState.ops, lessonStepProgress, currentGuideTraces.length, currentLessonActivity),
     [currentGuideTraces.length, currentLessonActivity, documentState.ops, lessonStepProgress],
   );
-  const guideSourceKey = aiGuide ? `ai:${aiGuide.eventId}:${aiGuideStep}` : lesson ? `lesson:${lesson.slug}:${artwork?.currentStep ?? 0}` : "none";
+  const guideSourceKey = aiGuide ? `ai:${aiGuide.eventId}:${aiGuideStep}` : lesson ? `lesson:${lesson.slug}:${artwork?.guideVariant ?? 0}:${artwork?.currentStep ?? 0}` : "none";
   const lessonArtworkId = artwork?.id;
   const lessonArtworkStep = artwork?.currentStep;
 
@@ -2629,7 +2632,7 @@ export function DrawingStudio() {
           lesson && (
             <aside className="step-panel">
               <div className="reference-tile">
-                <LessonIllustration lesson={lesson} currentStep={step} />
+                <LessonIllustration lesson={lesson} currentStep={step} guideVariant={artwork.guideVariant} />
                 <small>{lesson.mode === "observe" ? `${lesson.topic} 관찰하기` : lesson.mode === "guided" ? `${lesson.topic} 색칠 완성 예시` : `${lesson.topic} 그려 보기`}</small>
               </div>
               <p className="eyebrow">지금 할 일</p>

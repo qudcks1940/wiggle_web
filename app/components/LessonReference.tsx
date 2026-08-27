@@ -5,15 +5,15 @@ import type { Lesson } from "@/lib/lesson-content";
 import { LessonFinishedIllustration } from "./LessonFinishedIllustration";
 import { LessonIllustration } from "./LessonIllustration";
 
-export function LessonReference({ lesson, currentStep, className = "" }: { lesson: Lesson; currentStep?: number; className?: string }) {
+export function LessonReference({ lesson, currentStep, guideVariant = 0, className = "" }: { lesson: Lesson; currentStep?: number; guideVariant?: number; className?: string }) {
   const [open, setOpen] = useState(false);
 
   if (lesson.mode === "guided") {
-    return <LessonFinishedIllustration lesson={lesson} className={className} />;
+    return <LessonFinishedIllustration lesson={lesson} guideVariant={guideVariant} className={className} />;
   }
 
   if (lesson.mode !== "observe" || !lesson.referenceImage) {
-    return <LessonIllustration lesson={lesson} currentStep={currentStep} className={className} />;
+    return <LessonIllustration lesson={lesson} currentStep={currentStep} guideVariant={guideVariant} className={className} />;
   }
 
   const words = lesson.observationWords ?? [];

@@ -78,6 +78,7 @@ export const artworks = sqliteTable("artworks", {
   topic: text("topic").notNull(),
   learningMode: text("learning_mode", { enum: ["practice", "guided", "observe", "free"] }).notNull(),
   lessonSlug: text("lesson_slug"),
+  guideVariant: integer("guide_variant").notNull().default(0),
   intent: text("intent").notNull().default(""),
   opsJson: text("ops_json").notNull().default("[]"),
   schemaVersion: integer("schema_version").notNull().default(1),
@@ -149,6 +150,22 @@ export const storybookMutations = sqliteTable("storybook_mutations", {
 }, (table) => [
   primaryKey({ columns: [table.storybookId, table.studentId, table.requestId] }),
   index("storybook_mutations_book_idx").on(table.storybookId, table.createdAt),
+]);
+
+export const storybookFeedbackRequests = sqliteTable("storybook_feedback_requests", {
+  id: text("id").primaryKey(),
+  storybookId: text("storybook_id").notNull().references(() => storybooks.id, { onDelete: "cascade" }),
+  classroomId: text("classroom_id").notNull().references(() => classrooms.id, { onDelete: "cascade" }),
+  teacherId: text("teacher_id").notNull().references(() => teachers.id, { onDelete: "cascade" }),
+  status: text("status", { enum: ["waiting_rubric", "queued", "processing", "complete", "failed"] }).notNull().default("waiting_rubric"),
+  rubricVersion: text("rubric_version"),
+  feedbackJson: text("feedback_json"),
+  requestedAt: text("requested_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  completedAt: text("completed_at"),
+  updatedAt: updatedAt(),
+}, (table) => [
+  uniqueIndex("storybook_feedback_book_teacher_uq").on(table.storybookId, table.teacherId),
+  index("storybook_feedback_classroom_idx").on(table.classroomId, table.status, table.requestedAt),
 ]);
 
 export const coachingEvents = sqliteTable("coaching_events", {

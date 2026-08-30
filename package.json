@@ -28,6 +28,9 @@
     "react-dom": "19.2.6",
     "react-moveable": "0.56.0"
   },
+  "overrides": {
+    "ws": "8.21.1"
+  },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260702.1",
     "@tailwindcss/postcss": "4.2.1",

@@ -21,8 +21,12 @@ test("teacher classroom cards separate navigation from the accessible delete act
   assert.match(card, /aria-label=\{`\$\{item\.displayName\} 학급 삭제`\}/);
   assert.match(teacher, /item\.displayName/);
   assert.match(teacher, /학생 \$\{item\.studentCount\}명/);
-  assert.match(teacher, /목록에서 삭제되고 학생 입장과 기존 로그인, 가족 공유가 즉시 종료됩니다/);
-  assert.match(teacher, /내부 데이터는 복구를 위해 안전하게 보관됩니다/);
+  // 학급 삭제는 restoreClassroom이 없어 교사 화면에서 되돌릴 수 없다.
+  // 아이가 자기 그림·동화책을 다시 열 수 없다는 사실을 문구가 숨기지 않아야 한다.
+  assert.match(teacher, /되돌릴 수 없어요/);
+  assert.match(teacher, /학생 입장과 기존 로그인, 가족 공유가 즉시 끝나고/);
+  assert.match(teacher, /자기 그림과 동화책을 다시 열 수 없어요/);
+  assert.doesNotMatch(teacher, /복구를 위해 안전하게 보관/);
   assert.match(teacher, /await teacherPost\(\{ action: "deleteClassroom", classroomId: item\.id \}\); await load\(\)/);
   assert.match(css, /\.class-delete-button \{[^}]*min-height:44px;[^}]*white-space:normal;[^}]*overflow-wrap:break-word;/);
 });

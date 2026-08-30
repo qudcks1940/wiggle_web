@@ -158,7 +158,7 @@ export function TeacherApp({ classroomId = "" }: { classroomId?: string }) {
   async function login(event: FormEvent) { event.preventDefault(); setError(""); try { await teacherPost({ action: "login", email, pin }); await load(); } catch (cause) { setError(cause instanceof Error ? cause.message : "로그인할 수 없어요."); } }
   async function createClass(event: FormEvent) { event.preventDefault(); try { const data = await teacherPost<{ classroom: Classroom }>({ action: "createClassroom", displayName: newClass }); setNewClass(""); location.href = `/teacher/class/${data.classroom.id}`; } catch (cause) { setError(cause instanceof Error ? cause.message : "학급을 만들 수 없어요."); } }
   async function deleteClassroom(item: Classroom) {
-  const confirmed = confirm(`${item.displayName} 학급(학생 ${item.studentCount}명)을 삭제할까요?\n\n목록에서 삭제되고 학생 입장과 기존 로그인, 가족 공유가 즉시 종료됩니다. 내부 데이터는 복구를 위해 안전하게 보관됩니다.`);
+  const confirmed = confirm(`${item.displayName} 학급(학생 ${item.studentCount}명)을 삭제할까요?\n\n되돌릴 수 없어요. 학생 입장과 기존 로그인, 가족 공유가 즉시 끝나고 이 학급 아이들은 자기 그림과 동화책을 다시 열 수 없어요.`);
     if (!confirmed) return;
     setDeletingClassroom(item.id); setError("");
     try { await teacherPost({ action: "deleteClassroom", classroomId: item.id }); await load(); }

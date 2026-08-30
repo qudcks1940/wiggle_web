@@ -236,6 +236,26 @@ async function main() {
         check(landing.codeInputs === 4 && landing.inputBoxes.every((box) => Math.min(box.w, box.h) >= 44), `${viewport.name} 수업 코드 네 칸이 44px 이상`, landing.inputBoxes);
         check(landing.submitBox && landing.teacherBox && landing.submitBox.w * landing.submitBox.h >= landing.teacherBox.w * landing.teacherBox.h, `${viewport.name} 학생 행동(그리러 가기)이 교사 링크보다 크게 보임`, { submit: landing.submitBox, teacher: landing.teacherBox });
 
+        // 브라우저가 폼 값을 화면에만 복원하고 React input 이벤트를 보내지 않는 경우에도
+        // 네 칸이 보이는 그대로 제출되어야 한다.
+        const restoredCode = await evaluate(cdp, session, `(() => {
+          const inputs = [...document.querySelectorAll('.landing-code-box')];
+          const submit = document.querySelector('.landing-code-submit');
+          const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+          ${JSON.stringify(seeded.classCode)}.split('').forEach((digit, index) => setter.call(inputs[index], digit));
+          window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+          const result = { inputs: inputs.length, valid: inputs.every((input) => input.checkValidity()), disabled: submit?.disabled ?? true };
+          setTimeout(() => submit?.click(), 0);
+          return result;
+        })()`);
+        let restoredUrl = "";
+        for (let attempt = 0; attempt < 60; attempt += 1) {
+          await new Promise((done) => setTimeout(done, 100));
+          try { restoredUrl = await evaluate(cdp, session, "location.href"); } catch { continue; }
+          if (restoredUrl.includes(`/join?code=${seeded.classCode}`)) break;
+        }
+        check(restoredCode.inputs === 4 && restoredCode.valid && !restoredCode.disabled && restoredUrl.includes(`/join?code=${seeded.classCode}`), `${viewport.name} 브라우저가 복원한 네 자리 코드로 입장 가능`, { restoredCode, restoredUrl });
+
         // 2) QR 입장: 학생이 있는 학급은 선택 화면(새로 시작/이어가기)이 먼저 나온다
         await navigate(cdp, session, `${BASE}/join/${seeded.joinToken}`);
         await evaluate(cdp, session, MEASURE_HELPERS);

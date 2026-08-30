@@ -52,6 +52,8 @@ button { color:inherit; }
 .landing-code-box { width:52px; height:58px; border-radius:16px; border:2px solid var(--border); background:white; text-align:center; font-size:22px; font-weight:900; color:var(--ink); }
 .landing-code-box:focus-visible { border-color:var(--primary); }
 .landing-code-submit { width:100%; margin-top:0; }
+.landing-code-form:has(.landing-code-box:invalid) .landing-code-submit { opacity:.45; cursor:not-allowed; }
+.landing-code-form:has(.landing-code-box:invalid) .landing-code-submit:hover { transform:none; }
 .landing-trust-note { margin:18px 0 0; color:var(--secondary); font-size:13px; font-weight:700; }
 /* 이 svg는 width/height 속성이 없어 CSS가 안 잡으면 100% 폭으로 커진다 — 무대(cqw) 밖 모든 화면의 기본 크기.
    주의: `.landing-trust-note svg`(자손 선택자)로 쓰면 빌드가 뒤의 무대 블록 동일 선택자와 합치며 이 규칙을 떨어뜨린다. */
@@ -2446,7 +2448,8 @@ body {
     font-size:1.45cqw;
     box-shadow:0 .35cqw 0 #07528b!important;
   }
-  .landing-code-form .landing-code-submit:disabled { opacity:1; background:#096bb5; color:#fff; }
+  .landing-code-form .landing-code-submit:disabled,
+  .landing-code-form:has(.landing-code-box:invalid) .landing-code-submit { opacity:1; background:#096bb5; color:#fff; }
   .landing-trust-note {
     position:absolute;
     z-index:2;
@@ -2485,7 +2488,8 @@ body {
 
 @media (max-width:600px) {
   .landing .topbar { margin:0 auto; flex:none; flex-wrap:nowrap; }
-  .landing-code-submit:disabled { opacity:1; background:#096bb5; color:#fff; }
+  .landing-code-submit:disabled,
+  .landing-code-form:has(.landing-code-box:invalid) .landing-code-submit { opacity:1; background:#096bb5; color:#fff; }
 }
 
 @media (min-width:601px) and (max-width:900px) and (max-height:600px) {

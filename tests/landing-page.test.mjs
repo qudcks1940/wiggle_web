@@ -21,12 +21,23 @@ test("landing hero puts the code form in a titled card with exactly four accessi
   assert.match(form, /digits\.map\(\(digit, index\) =>/);
 });
 
-test("landing code submit stays disabled until all four digits are filled, then navigates to /join?code=", async () => {
+test("landing code submit reads all four visible boxes before navigating to /join?code=", async () => {
   const form = await read("../app/components/LandingCodeForm.tsx");
-  assert.match(form, /const complete = digits\.every\(\(digit\) => digit !== ""\);/);
-  assert.match(form, /disabled=\{!complete\}/);
-  assert.match(form, /if \(!complete\) return;/);
-  assert.match(form, /window\.location\.href = `\/join\?code=\$\{digits\.join\(""\)\}`;/);
+  assert.match(form, /const submittedDigits = inputRefs\.current\.map/);
+  assert.match(form, /const firstEmptyIndex = submittedDigits\.findIndex/);
+  assert.match(form, /inputRefs\.current\[firstEmptyIndex\]\?\.focus\(\)/);
+  assert.match(form, /pattern="\[0-9\]"/);
+  assert.match(form, /required/);
+  assert.doesNotMatch(form, /disabled=\{!complete\}/);
+  assert.match(form, /window\.location\.href = `\/join\?code=\$\{submittedDigits\.join\(""\)\}`;/);
+});
+
+test("landing reconciles browser-restored code boxes with React state", async () => {
+  const form = await read("../app/components/LandingCodeForm.tsx");
+  assert.match(form, /function syncRestoredDigits\(\)/);
+  assert.match(form, /inputRefs\.current\.map\(\(input\) => input\?\.value/);
+  assert.match(form, /window\.addEventListener\("pageshow", syncRestoredDigits\)/);
+  assert.match(form, /\[0, 100, 500\]\.map/);
 });
 
 test("teacher link uses the exact copy with a hidden person icon", async () => {

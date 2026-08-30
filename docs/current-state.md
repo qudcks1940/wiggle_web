@@ -226,6 +226,17 @@
 - 복원 시점의 입력값을 React 상태와 다시 맞추고, 제출 시에는 상태 배열 대신 실제 네 입력 요소의 값을 읽는다. 각 칸은 HTML `required`와 한 자리 숫자 패턴으로 검증하므로 화면에 완성된 코드가 있으면 상태 복원 시점과 관계없이 입장할 수 있고, 빈 칸이 있으면 해당 칸으로 안내된다.
 - 검증: typecheck·lint·production build·전체 테스트 `296/296`·`git diff --check` 통과. `browser-check`에 입력 이벤트 없이 네 칸을 복원한 뒤 실제 입장 URL까지 확인하는 회귀 항목을 추가했고 `320×568`, `390×844`, `844×390`에서 모두 통과했다. 서버 재시작 후 실제 브라우저에서도 `4341` 입력 → 활성 버튼 → `/join?code=4341` → `어떻게 들어갈까요?`까지 확인했다. 수정은 기존 PR #2 브랜치에 추가하고 `main`과 운영 배포는 건드리지 않는다.
 
+### Next.js 2026년 8월 긴급 보안 패치
+
+- 공식 2026년 8월 보안 릴리스에서 Next.js `16.2.6`은 AVIF 이미지 최적화 경로의 비인증 원격 코드 실행과 Windows 호스팅 서버의 비인증 원격 코드 실행 취약 범위에 포함됐다. 7월 릴리스의 rewrite·Server Action·이미지 최적화 관련 HIGH/MEDIUM 취약점 범위에도 포함돼 있었다.
+- Active LTS의 공식 수정판인 `next@16.3.3`과 `eslint-config-next@16.3.3`으로 올렸다. 잠금 파일에서 함께 갱신된 `sharp@0.35.4`, `postcss@8.5.23`도 기존 취약 버전에서 벗어났고, 운영 의존성의 `ws`는 호환 범위 내 `8.21.3`으로 갱신했다.
+- 앱은 `next/image`·AVIF 설정, rewrite, Server Action, Cache Components를 사용하지 않아 일부 공격 경로의 실제 노출은 낮다. 그러나 App Router를 사용하고 로컬 개발이 Windows에서 이뤄지므로 버전 기반 패치는 필수다.
+- `16.3.3` 기본 Turbopack 빌드는 한글 소스 오류 위치를 표시할 때 UTF-8 바이트 경계를 잘못 잘라 Rust panic을 일으키는 공개 이슈(`vercel/next.js#92641`)를 재현했다. 소스 오류는 Webpack 빌드에서 없음을 확인했고, 공식 지원 플래그인 `--webpack`을 dev/build 스크립트에 고정해 Vercel 빌드와 로컬 개발을 안정화했다. 보안 회귀 테스트는 Next가 `16.3.3` 아래로 내려가지 않고 eslint 설정 버전과 일치하며 두 스크립트가 Webpack을 유지하는지 검사한다.
+- Next 16.3 개발 서버가 루트 `AGENTS.md`에 자체 규칙을 자동 추가하는 동작은 저장소의 제품·보안 규칙을 실행 때마다 오염시키므로 `next.config.ts`의 `agentRules: false`로 끄고 자동 생성분은 포함하지 않았다.
+- `npm audit`의 Next.js·sharp·postcss·운영 의존성 경고는 0건이다. 전체 감사에 남은 4개 moderate는 실행 중 앱이 아니라 `drizzle-kit@0.31.10`이 내부적으로 쓰는 로컬 개발용 `@esbuild-kit/esm-loader → esbuild@0.18.20` 체인이다. 이를 자동 제거하는 유일한 제안은 `drizzle-kit@0.18.1`로 강제 다운그레이드하는 breaking change이므로 적용하지 않았다.
+- 검증: typecheck 통과, lint `0 errors`(새 규칙이 기존 의도적 전체 페이지 이동 8곳을 warning으로 보고), Webpack production build와 전체 테스트 `297/297`, `git diff --check` 2종 통과. 실제 브라우저 점검은 `320×568`, `390×844`, `844×390`에서 실패 0건이었고, `/student`·`/teacher`는 `DENY`와 `frame-ancestors 'none'`, 공개 랜딩은 프레임 차단 없음, 외부 AVIF 이미지 최적화 요청은 HTTP 400임을 확인했다.
+- 이 변경은 기능 브랜치와 기존 PR #2에만 반영하며 `main` 병합과 Vercel 운영 배포는 수행하지 않는다.
+
 ## 2026-08-23 신규 팀 GitHub 저장소 전환
 
 - 사용자의 지시에 따라 이후 개발 대상 저장소를 `https://github.com/wwwiggle/new_wiggle`로 정했다.

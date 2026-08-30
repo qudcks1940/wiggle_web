@@ -5,6 +5,21 @@ import { clientIp } from "../lib/client-ip.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
+test("Next.js stays on the August 2026 security patch and keeps UTF-8-safe builds", async () => {
+  const pkg = JSON.parse(await read("../package.json"));
+  const installed = pkg.dependencies.next.split(".").map(Number);
+  const minimum = [16, 3, 3];
+  const isPatched = installed.some((part, index) => part > minimum[index] && installed.slice(0, index).every((value, prefix) => value === minimum[prefix]))
+    || installed.every((part, index) => part === minimum[index]);
+
+  assert.equal(isPatched, true, `Next.js ${pkg.dependencies.next} is below the patched 16.3.3 release`);
+  assert.equal(pkg.devDependencies["eslint-config-next"], pkg.dependencies.next);
+  // Next 16.3.3 Turbopack's code-frame renderer can panic while highlighting Korean
+  // source (vercel/next.js#92641). Webpack is the supported stable fallback until fixed.
+  assert.equal(pkg.scripts.dev, "next dev --webpack");
+  assert.equal(pkg.scripts.build, "next build --webpack");
+});
+
 // Cloudflare가 앞단에 있을 때만 cf-connecting-ip를 믿을 수 있었다. Vercel에는 그 대리인이
 // 없으므로 요청자가 헤더를 지어내면 그만이고, 그러면 요청마다 새 IP를 쓰는 것만으로
 // 그림 비밀번호 추측 방어(IP·학급 단위 상한)를 통째로 우회한다.

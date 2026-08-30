@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "test": "npm run build && node --import ./tests/harness/register.mjs --test \"tests/*.test.mjs\"",
     "typecheck": "tsc --noEmit",
@@ -22,7 +22,7 @@
   "dependencies": {
     "@libsql/client": "^0.17.4",
     "aws4fetch": "^1.0.20",
-    "next": "16.2.6",
+    "next": "16.3.3",
     "qrcode": "^1.5.4",
     "react": "19.2.6",
     "react-dom": "19.2.6",

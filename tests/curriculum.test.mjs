@@ -160,7 +160,7 @@ test("student and teacher surfaces expose four unlocked stages and round-trip gr
   assert.match(teacherRoute, /DEFAULT_ACTIVITY_KEY/);
   assert.match(teacherRoute, /currentActivityKey/);
   assert.match(teacherMutations, /UPDATE classrooms SET current_activity = \?/);
-  assert.match(studentRoute, /SELECT current_activity AS currentActivity FROM classrooms WHERE id = \?/);
+  assert.match(studentRoute, /SELECT current_activity AS currentActivity, current_arc_id AS currentArcId, current_episode_id AS currentEpisodeId FROM classrooms WHERE id = \?/);
   assert.match(studentRoute, /normalizeActivityKey\(classroom\?\.currentActivity\)/);
   assert.match(studentRoute, /currentActivityLabel: activityLabel\(currentActivityKey\)/);
 });

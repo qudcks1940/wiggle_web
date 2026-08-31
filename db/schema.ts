@@ -81,6 +81,10 @@ export const artworks = sqliteTable("artworks", {
   topic: text("topic").notNull(),
   learningMode: text("learning_mode", { enum: ["practice", "guided", "observe", "free"] }).notNull(),
   lessonSlug: text("lesson_slug"),
+  // 회차 귀속 — 생성 시점에 고정, 어떤 쓰기도 학급 포인터로 재결정하지 않는다 (AD-10)
+  arcId: text("arc_id"),
+  episodeId: text("episode_id"),
+  arcVersion: integer("arc_version"),
   intent: text("intent").notNull().default(""),
   opsJson: text("ops_json").notNull().default("[]"),
   schemaVersion: integer("schema_version").notNull().default(1),

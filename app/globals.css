@@ -2673,3 +2673,12 @@ body {
 .arc-cockpit-jump>summary { cursor:pointer; min-height:44px; display:flex; align-items:center; color:var(--secondary); font-weight:700; }
 .arc-cockpit-jump>button { display:block; margin:6px 0; min-height:44px; }
 @media (max-width:640px) { .arc-cockpit { flex-direction:column; align-items:stretch; } .arc-cockpit-actions { align-items:stretch; flex-direction:column; } }
+
+/* ── 오늘 회차 카드 (FR-4, A안) — 수업이 열려 있으면 학생 홈을 차지한다 ── */
+.today-episode-card { max-width:720px; margin:0 auto 18px; background:var(--paper); border:2px solid var(--border); border-radius:20px; padding:24px 22px; display:flex; flex-direction:column; gap:10px; align-items:center; text-align:center; }
+.today-episode-card>.teacher-activity-pill { margin:0; }
+.today-episode-card>h2 { margin:0; font-size:26px; color:var(--ink); }
+.today-episode-scene { max-width:280px; border-radius:14px; }
+.today-episode-scene-text { margin:0; font-size:17px; color:var(--secondary); font-weight:700; line-height:1.6; }
+.today-episode-card>.child-primary-action { min-height:56px; min-width:220px; font-size:19px; }
+@media (max-width:480px) { .today-episode-card>h2 { font-size:22px; } .today-episode-card>.child-primary-action { width:100%; } }

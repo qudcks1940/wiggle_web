@@ -1,7 +1,9 @@
 import { Logo } from "./components/Logo";
 import { LandingCodeForm } from "./components/LandingCodeForm";
 
-export default function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = await searchParams;
+  const teacherAuthFailed = params.teacherAuth === "failed";
   return (
     <main className="landing landing-centered">
       <section className="landing-hero">
@@ -37,6 +39,16 @@ export default function Home() {
             </svg>
             학생 이메일 · 실명 없이 안전하게
           </p>
+          {teacherAuthFailed && (
+            <aside className="teacher-auth-notice" role="alert">
+              <b>구글 로그인이 되지 않았어요.</b>
+              <span>
+                학교 구글 계정은 학교 관리자가 외부 서비스 접속을 막아 둔 경우가 있어요.
+                <br />개인 Gmail로 다시 시도하거나, 학교 관리자에게 이 서비스 허용을 요청해 주세요.
+              </span>
+              <a className="button secondary" href="/api/auth/google/start?return_to=%2Fteacher">다른 계정으로 다시 로그인</a>
+            </aside>
+          )}
           <p className="landing-policy-links">
             <a href="/privacy">개인정보처리방침</a>
             <span aria-hidden="true">·</span>

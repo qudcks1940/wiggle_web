@@ -2693,3 +2693,9 @@ body {
 .episode-drawer-empty { display:flex; align-items:center; justify-content:center; height:120px; font-size:34px; }
 .episode-drawer-item>figcaption { margin-top:6px; font-size:13px; font-weight:700; color:var(--secondary); text-align:center; }
 @media (max-width:640px) { .episode-drawer { top:auto; height:45vh; width:100%; border-right:0; border-top:2px solid var(--border); } }
+
+/* ── 교사 구글 로그인 실패 안내 (Story 1.3) — Workspace 차단은 게시와 무관, 학교 관리자만 해결 ── */
+.teacher-auth-notice { max-width:560px; margin:14px auto 0; background:var(--paper); border:2px solid var(--yellow); border-radius:14px; padding:14px 16px; display:flex; flex-direction:column; gap:8px; text-align:left; }
+.teacher-auth-notice>b { color:var(--ink); font-size:15px; }
+.teacher-auth-notice>span { color:var(--secondary); font-size:13.5px; line-height:1.6; }
+.teacher-auth-notice>.button { align-self:flex-start; min-height:44px; }

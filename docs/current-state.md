@@ -1,6 +1,6 @@
 # Wiggle Web 현재 상태
 
-> 마지막 갱신: 2026-08-23
+> 마지막 갱신: 2026-08-31
 > 목적: 긴 대화가 압축되거나 담당 AI가 바뀌어도 실제 구현·검증·배포 상태를 잃지 않기 위한 기준 문서
 
 ## 상태 기준
@@ -30,6 +30,38 @@
 - `git reset --hard`, `git checkout --`, 광범위한 삭제를 사용하지 않는다.
 - 새 작업을 시작하기 전에 `git status --short`와 최근 커밋을 확인한다.
 - 로컬·브랜치 커밋은 게이트를 통과했어도 `main` 반영(사용자 push) 전까지 배포 상태로 간주하지 않는다.
+
+## 2026-08-30~31 이야기 아크 재기획·구현 (브랜치 wpdbs1229/bmad-product-planning, main 미반영)
+
+- **기획 정본 신설**: BMAD 브라운필드 재기획으로 PRD(`docs/bmad/planning-artifacts/prds/prd-wiggle-web-2026-08-30/`),
+  아키텍처 스파인(AD 19개, `.../architecture/architecture-wiggle-web-2026-08-30/`),
+  에픽·스토리 12개(`.../epics.md`), UX 스파인(DESIGN.md·EXPERIENCE.md, `.../ux-designs/ux-wiggle-web-2026-08-31/`)이 확정됐다.
+  `product-decisions.md` 「학습 과정」이 회차 누적 이야기 아크(정본: See-Think-Wonder + Studio Thinking + Storyline Method)로 개정됐다.
+- **보안**: next 16.2.6→16.3.3(CVSS 10.0 RCE 2건 수정). 16.3.3 Turbopack이 한글 소스에서 패닉해
+  `build`는 `--webpack`(dev는 Turbopack 유지). `agentRules: false`. ws 8.21.1 override로 운영 의존성 취약점 0.
+  `engines`를 실측에 맞춰 `>=22.18.0`으로 정정(22.13에서는 테스트 하네스가 돌지 않는다 — registerHooks·타입 스트리핑).
+- **에픽 1 일부**: `/privacy`·`/terms` 정책 페이지(초안 — 게시 전 사용자 검토 필요), 랜딩 링크,
+  구글 콜백 실패 시 `/?teacherAuth=failed` 안내(학교 Workspace 차단 대응 — Story 1.3).
+  **OAuth 클라이언트 프로덕션 전환(Story 1.2)과 운영 잔여 정리(1.4)는 사용자 작업으로 남음.**
+- **에픽 2·3 구현 완료** (모두 이 브랜치, main 미반영):
+  - `lib/arc-content.ts`(자전거 아크 2회차, 안정 episodeId, 체크섬 버전 감시) + `lib/arc-session.ts`(AD-14 판별).
+  - `classrooms.current_arc_id/current_episode_id`, `artworks.arc_id/episode_id/arc_version` —
+    schemaStatements·schema.ts 양쪽 + `provisionSchema()` 조건부 ALTER(기존 운영 테이블 대응),
+    `(student, arc, episode)` 완성작 부분 UNIQUE.
+  - 교사 수업 조종석(학급 화면 맨 위, setEpisode/listArcs), 학생 홈 오늘 회차 카드(A안),
+    재사용 우선 작품 생성(두 태블릿 경합 대응), 오프라인 flush 귀속 불변,
+    지난 이야기 서랍(보기 전용, 귀속 컬럼 조회).
+  - 레슨 카탈로그 은퇴: 활동 30개·화면 5종·라우트 4종 삭제, `normalizeActivityKey` 조용한 폴백 제거
+    (알 수 없는 키는 free로, 한 곳에서만 처리). 레거시 lesson_slug 작품은 자유 모드로 열린다.
+  - 책 팀 계약: 저장 경로의 옛 완성 키 삭제 제거(AD-6 — storybook_assets 스냅샷 보호),
+    UNIQUE 위반 409 매핑, `docs/arc-book-contract.md` 신설.
+- **검증**: Node 22.23.2에서 typecheck·lint·`npm test`(294개)·`check:browser` 전 항목 통과 —
+  이 워크트리에서 전 게이트가 완주된 최초 상태. 신규 회귀 테스트: 아크 체크섬, classrooms ALTER,
+  두 태블릿 경합, flush 귀속, AD-15 응답 형상, 완성 키 비삭제, 서랍 계약.
+- **남은 사용자 작업**: ① 구글 OAuth 클라이언트 In production 전환(콘솔 — 정책 URL은 준비됨, main push 후)
+  ② 정책 페이지 문안·연락처 검토 ③ 검증용 학생 3명 정리 승인 ④ QR 재출력 ⑤ main push.
+- **알려진 잔여**: 장면 삽화(sceneImage)가 null — 현장 투입 전 제작 필요(21항).
+  reopen(재완성) 미구현이라 관련 회귀 테스트 이연. 수업 닫힘 홈 최종 구성은 P-004 잔여.
 
 ## 현재 구현된 핵심 흐름
 

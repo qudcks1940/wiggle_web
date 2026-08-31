@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { activeProfile, deactivateProfile, flushSaves, studentFetch } from "@/lib/client-session";
-import { lessonBySlug } from "@/lib/lesson-content";
-import { LessonReference } from "./LessonReference";
 import { Logo } from "./Logo";
 import { SpeakButton } from "./SpeakButton";
 import { StudentMessageCenter, StudentTeacherMessage } from "./StudentMessageCenter";
@@ -63,13 +61,10 @@ export function StudentHome() {
 
   if (!data) return <main className="app-shell"><header className="app-header"><Logo /></header><div className="loading-card" role="status">{error || "내 그림을 찾고 있어요…"}</div></main>;
 
-  const teacherLesson = data.currentActivityKey.startsWith("lesson:") ? lessonBySlug(data.currentActivityKey.slice(7)) : undefined;
+  // 레슨 카탈로그는 은퇴했다(Story 2.3). 수업이 닫혀 있으면 자유 그리기가 유일한 시작 경로다(AD-14).
   const teacherArtwork = data.currentActivityArtwork;
   const teacherDone = teacherArtwork?.status === "complete";
-  const teacherActivityPath = teacherArtwork && !teacherDone ? `/student/draw/${teacherArtwork.id}` : teacherLesson ? `/student/draw/new?lesson=${teacherLesson.slug}` : "/student/draw/new?mode=free";
-  const teacherStepTotal = teacherLesson?.steps.length ?? 1;
-  const teacherStep = teacherDone ? teacherStepTotal : teacherArtwork ? Math.min(teacherStepTotal, teacherArtwork.currentStep + 1) : 0;
-  const teacherProgress = Math.round((teacherStep / teacherStepTotal) * 100);
+  const freeDrawPath = teacherArtwork && !teacherDone ? `/student/draw/${teacherArtwork.id}` : "/student/draw/new?mode=free";
 
   async function startTodayEpisode() {
     const episode = data?.todayEpisode;
@@ -135,37 +130,20 @@ export function StudentHome() {
       <SpeakButton text="오늘은 무엇을 그릴까? 선생님이 고른 활동부터 시작해 봐요." />
     </section>
 
-    <section className="teacher-activity-book" aria-labelledby="today-activity-title">
-      <div className="book-page book-copy-page">
-        <span className="book-tape" aria-hidden="true" />
-        <div className="teacher-activity-copy">
-          <p className="teacher-activity-pill">⭐ 선생님이 선택한 오늘 활동</p>
-          <h2 id="today-activity-title">{data.currentActivityLabel}</h2>
-          <p>{teacherLesson?.description ?? "내 생각을 그리고, 필요할 때 그리미를 불러요."}</p>
-          <a className="button primary child-primary-action" href={teacherActivityPath}><span aria-hidden="true">▶️</span>{teacherDone ? "한 번 더 그리기" : teacherArtwork ? "이어 그리기" : "그림 시작하기"}</a>
-        </div>
-      </div>
-      <div className="book-binding" aria-hidden="true">{Array.from({ length: 6 }, (_, index) => <i key={index} />)}</div>
-      <div className="book-page book-visual-page">
-        <span className="book-tape" aria-hidden="true" />
-        <div className="teacher-activity-visual">{teacherLesson ? <LessonReference lesson={teacherLesson} /> : <img src="/brand/grimi-mascot.png" alt="자유 창작을 안내하는 그리미" />}</div>
-        <div className="teacher-pencil-progress" aria-label={`오늘 활동 ${teacherStep}/${teacherStepTotal}단계, ${teacherProgress}% 진행`}>
-          <div aria-hidden="true">{Array.from({ length: teacherStepTotal }, (_, index) => <span className={index < teacherStep ? "done" : ""} key={index}>✏️</span>)}</div>
-          <b>{teacherStep}/{teacherStepTotal}</b>
-        </div>
-      </div>
+    <section className="today-episode-card" aria-labelledby="free-draw-title">
+      <p className="teacher-activity-pill">🎨 자유롭게 그리기</p>
+      <h2 id="free-draw-title">내 마음 그림</h2>
+      <p className="today-episode-scene-text">그리고 싶은 것을 마음껏 그려요. 그리다 막히면 그리미를 불러요.</p>
+      <a className="button primary child-primary-action" href={freeDrawPath}><span aria-hidden="true">▶️</span>{teacherArtwork && !teacherDone ? "이어 그리기" : "그리기 시작"}</a>
     </section>
     </>}
 
     <nav className="student-primary-menu student-tool-shelf" aria-label="내 그림 메뉴">
-      <a className="student-menu-card resume" href={unfinished ? `/student/draw/${unfinished.id}` : "/student/activities"}>
+      <a className="student-menu-card resume" href={unfinished ? `/student/draw/${unfinished.id}` : "/student/draw/new?mode=free"}>
         <span aria-hidden="true">✏️</span><div><h2>이어 그리기</h2><p>{unfinished ? unfinished.title : "이어 그릴 그림 없음"}</p></div><b>{unfinished ? "열기" : "없음"}</b>
       </a>
       <a className="student-menu-card archive" href="/student/archive">
         <span aria-hidden="true">🖼️</span><div><h2>내 그림</h2><p>그린 그림 다시 보기</p></div><b>{data.artworkTotal}개</b>
-      </a>
-      <a className="student-menu-card activities" href="/student/activities">
-        <span aria-hidden="true">🎨</span><div><h2>활동 고르기</h2><p>다른 활동 찾아보기</p></div>
       </a>
     </nav>
 

@@ -9,7 +9,7 @@ const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 test("teacher classroom cards separate navigation from the accessible delete action", async () => {
   const [teacher, css] = await Promise.all([read("../app/components/TeacherApp.tsx"), read("../app/globals.css")]);
   const start = teacher.indexOf("function ClassroomCard");
-  const end = teacher.indexOf("function TeacherActivitySelect");
+  const end = teacher.indexOf("function ArcCockpit");
   const card = teacher.slice(start, end);
   const link = card.match(/<a className="class-card-link"[\s\S]*?<\/a>/)?.[0] ?? "";
 

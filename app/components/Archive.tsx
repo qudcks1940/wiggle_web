@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { studentFetch } from "@/lib/client-session";
-import { lessonBySlug } from "@/lib/lesson-content";
 import { Logo } from "./Logo";
 
 type ArchiveArtwork = { id: string; title: string; learningMode: string; lessonSlug: string | null; status: string; hasImage: number | boolean; updatedAt: string; completedAt: string | null };
@@ -37,8 +36,7 @@ function ArtworkPreview({ artwork }: { artwork: ArchiveArtwork }) {
 }
 
 function modeLabel(artwork: ArchiveArtwork) {
-  const lesson = artwork.lessonSlug ? lessonBySlug(artwork.lessonSlug) : undefined;
-  if (lesson) return lesson.title;
+  // 레슨 카탈로그는 은퇴했다(Story 2.3) — 남은 레거시 작품은 자기 제목으로 표시한다.
   if (artwork.learningMode === "practice") return "선·도형 기초";
   if (artwork.learningMode === "guided") return "따라 그리기";
   if (artwork.learningMode === "observe") return "관찰 그리기";

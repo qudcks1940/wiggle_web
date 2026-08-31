@@ -70,8 +70,12 @@ test("entry can be completed with pictures and a generated nickname instead of r
 test("drawing, navigation and reflection retain familiar visual actions when text is not understood", () => {
   assert.match(home, /<span aria-hidden="true">✏️<\/span>[\s\S]*<h2>이어 그리기<\/h2>/);
   assert.match(home, /<span aria-hidden="true">🖼️<\/span>[\s\S]*<h2>내 그림<\/h2>/);
-  assert.match(home, /<span aria-hidden="true">🎨<\/span>[\s\S]*<h2>활동 고르기<\/h2>/);
-  assert.match(home, /<span aria-hidden="true">▶️<\/span>\{teacherDone \? "한 번 더 그리기" : teacherArtwork \? "이어 그리기" : "그림 시작하기"\}/);
+  // 활동 고르기는 레슨 철거(Story 2.4)와 함께 사라졌다. 수업이 닫혀 있으면 자유 그리기 카드가 그 자리를 맡는다.
+  assert.match(home, /🎨 자유롭게 그리기/);
+  assert.match(home, /<h2 id="free-draw-title">내 마음 그림<\/h2>/);
+  // 시작 버튼 문구: 회차 카드(재입장 분기)와 자유 그리기 카드 양쪽 모두 ▶️ 표지를 유지한다.
+  assert.match(home, /<span aria-hidden="true">▶️<\/span>/);
+  assert.match(home, /"내 그림 다시 보기" : "이어 그리기"/);
   assert.match(studio, /⬅️ 이전/);
   assert.match(studio, /"➡️ 다음"/);
   assert.match(studio, /QUICK_DRAW_TOPICS/);
@@ -94,7 +98,8 @@ test("speaker, picture slots and choice controls remain large and visible on sma
   assert.match(css, /@media \(max-width:460px\) and \(orientation:portrait\)[\s\S]*\.lesson-spoken-prompt \{ grid-column:1; grid-row:1; grid-template-columns:minmax\(0,1fr\) 48px/);
   assert.match(css, /\.reflection-choice-grid \{ display:grid; grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(home, /className="student-home-intro"[\s\S]*<SpeakButton text="오늘은 무엇을 그릴까\? 선생님이 고른 활동부터 시작해 봐요\."/);
-  assert.match(home, /className="teacher-activity-book"[\s\S]*className="book-binding"[\s\S]*className="teacher-pencil-progress"/);
+  // 오늘 회차 카드(FR-4)가 그림책형 레슨 카드를 대체했다 — 삽화 자리 + 제목 + 장면 문장 + 큰 시작 버튼.
+  assert.match(home, /className="today-episode-card"[\s\S]*today-episode-scene-text[\s\S]*child-primary-action/);
   assert.match(css, /\.teacher-activity-book \{[^}]*grid-template-columns:minmax\(0,1fr\) 46px minmax\(0,1fr\);/);
   assert.match(css, /\.student-tool-shelf \{[^}]*border:4px solid #d4a25d/);
   assert.match(css, /@media \(max-width:720px\)[\s\S]*\.teacher-activity-book \{[^}]*grid-template-columns:1fr/);

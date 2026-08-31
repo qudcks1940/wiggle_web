@@ -20,7 +20,6 @@ import { SpeakButton } from "./SpeakButton";
 import { TimelapsePlayer } from "./TimelapsePlayer";
 import { VoiceWhisperStatus } from "./VoiceWhisper";
 import { useModalDialog } from "./useModalDialog";
-import { LessonReference as LessonIllustration } from "./LessonReference";
 import { StudentMessageCenter, StudentTeacherMessage } from "./StudentMessageCenter";
 
 const PALETTE = ["#1B3A57", "#E53935", "#FB8C00", "#FDD835", "#43A047", "#1E88E5", "#8E24AA", "#8D6E63", "#F06292", "#4DD0E1", "#FFCC80", "#FFFFFF"];
@@ -2629,7 +2628,7 @@ export function DrawingStudio() {
           lesson && (
             <aside className="step-panel">
               <div className="reference-tile">
-                <LessonIllustration lesson={lesson} currentStep={step} />
+                <span className="reference-emoji" aria-hidden="true">{lesson.emoji}</span>
                 <small>{lesson.mode === "observe" ? `${lesson.topic} 관찰하기` : lesson.mode === "guided" ? `${lesson.topic} 색칠 완성 예시` : `${lesson.topic} 그려 보기`}</small>
               </div>
               <p className="eyebrow">지금 할 일</p>

@@ -6,9 +6,9 @@ import { issueTeacherSession } from "@/lib/auth/teacher-session";
 import { cleanText, clientIp, id, isLocalDemoRequest, jsonError, noStoreJson, randomToken, rateLimit, requireTeacher, revokeTeacherSession, sameOrigin, sha256 } from "@/lib/security";
 import { prepareTeacherMessageInsert, validateTeacherMessageTarget } from "@/lib/teacher-messages";
 import { createFamilyShare, revokeFamilyShare } from "@/lib/family-sharing";
-import { activityLabel, DEFAULT_ACTIVITY_KEY, isActivityKey, normalizeActivityKey } from "@/lib/lesson-content";
+import { activityLabel, DEFAULT_ACTIVITY_KEY, normalizeActivityKey } from "@/lib/lesson-content";
 import { nicknameKeySql } from "@/lib/nickname";
-import { resetActiveStudentRecovery, rotateClassroomEntry, setClassroomEpisode, updateClassroomActivity, updateClassroomAdmission, upsertTeacherView } from "@/lib/teacher-classroom-mutations";
+import { resetActiveStudentRecovery, rotateClassroomEntry, setClassroomEpisode, updateClassroomAdmission, upsertTeacherView } from "@/lib/teacher-classroom-mutations";
 import { arcById, ARCS, episodeById, isValidArcEpisode } from "@/lib/arc-content";
 
 type ClassroomRow = { id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; currentArcId: string | null; currentEpisodeId: string | null; studentCount: number; updatedAt: string };
@@ -215,13 +215,6 @@ export async function POST(request: Request) {
   if (action === "listArcs") {
     // 조종석의 아크·회차 선택지. 콘텐츠는 코드 상수(AD-8)이므로 그대로 내려준다.
     return noStoreJson({ arcs: ARCS.map((arc) => ({ arcId: arc.arcId, title: arc.title, episodes: arc.episodes.map(({ episodeId, title }) => ({ episodeId, title })) })) });
-  }
-  if (action === "setActivity") {
-    const activity = cleanText(payload.activity, 50);
-    if (!isActivityKey(activity)) return jsonError("목록에 있는 활동을 골라 주세요.");
-    const updated = await updateClassroomActivity(db, { teacherId: teacher.id, classroomId, activity });
-    if (!updated) return jsonError("활성 학급을 다시 확인해 주세요.", 403);
-    return noStoreJson({ activity });
   }
   if (action === "viewStudent") {
     const studentId = cleanText(payload.studentId, 40);

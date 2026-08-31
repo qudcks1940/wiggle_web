@@ -10,12 +10,6 @@ export async function rotateClassroomEntry(DB: D1Database, input: { teacherId: s
   return Boolean(result.meta.changes);
 }
 
-export async function updateClassroomActivity(DB: D1Database, input: { teacherId: string; classroomId: string; activity: string }) {
-  const result = await DB.prepare(`UPDATE classrooms SET current_activity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND teacher_id = ? AND active = 1`)
-    .bind(input.activity, input.classroomId, input.teacherId).run();
-  return Boolean(result.meta.changes);
-}
-
 /**
  * 학급 포인터(아크·회차)를 지정한다 (AD-9, Story 2.1).
  * 검증(isValidArcEpisode)은 라우트에서 끝났다는 전제이며, 여기서는 소유권 WHERE만 강제한다.

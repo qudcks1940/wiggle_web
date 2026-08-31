@@ -62,10 +62,9 @@ export async function GET(request: Request) {
   ]);
   const artworks = artworkRows.results.slice(0, artworkPageSize);
   const currentActivityKey = normalizeActivityKey(classroom?.currentActivity);
-  const currentLessonSlug = currentActivityKey.startsWith("lesson:") ? currentActivityKey.slice(7) : null;
-  const currentActivityArtwork = currentLessonSlug
-    ? await db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND lesson_slug = ? ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id, currentLessonSlug).first()
-    : await db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND learning_mode = 'free' ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id).first();
+  // 레슨 카탈로그 은퇴(Story 2.3) — 활동은 free 하나이므로 최근 자유 그림만 조회한다.
+  // 아크 회차 작품은 todayEpisodeArtwork가 따로 나른다(회차 귀속 조회, AD-10).
+  const currentActivityArtwork = await db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND learning_mode = 'free' AND arc_id IS NULL ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id).first();
   const artworkTotal = Number(artworkTotalRow?.count ?? 0);
   const teacherViewing = Boolean(teacherView);
   // 접속 맥락 판별(AD-14): current_episode_id 유효성 하나만 보고, 요청당 한 번 계산해 응답에 싣는다.

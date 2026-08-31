@@ -5,7 +5,6 @@ import { lockGuideTrace, snapGuideTrace } from "../lib/trace-guidance.mjs";
 
 const studio = await readFile(new URL("../app/components/DrawingStudio.tsx", import.meta.url), "utf8");
 const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-const lessons = await readFile(new URL("../lib/lesson-content.ts", import.meta.url), "utf8");
 
 test("children choose help before the pencil demonstration and dotted practice", () => {
   assert.match(studio, /type GuidePhase = "independent" \| "demo" \| "practice"/);
@@ -129,8 +128,4 @@ test("guide status no longer covers the paper and cat choices change the actual 
   assert.match(studio, /"회색 고양이": \{ color: "#9AA7B1"[\s\S]*회색 크레용을 골랐어요/);
   assert.match(studio, /setup\.shade === "light"[\s\S]*setColorsExpanded\(true\)[\s\S]*setColor\(setup\.color\)/);
   assert.match(studio, /className="choice-feedback"/);
-  assert.match(lessons, /머리 위에 귀 삼각형을 포개던 이전 가이드는 그대로 따라도 선이 겹쳤다/);
-  assert.doesNotMatch(lessons.match(/slug: "curious-cat"[\s\S]*?\n  \},\n  \{/u)?.[0] ?? "", /line\(2, \[\.37, \.16\]/);
-  assert.match(lessons, /가슴부터 몸과 두 앞다리를 천천히 이어요/);
-  assert.match(lessons, /둥근 뒷발과 위로 살랑이는 꼬리를 더해요/);
 });

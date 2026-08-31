@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { createTestDb } from "./harness/db.mjs";
-import { resetActiveStudentRecovery, rotateClassroomEntry, updateClassroomActivity, updateClassroomAdmission, upsertTeacherView } from "../lib/teacher-classroom-mutations.ts";
+import { resetActiveStudentRecovery, rotateClassroomEntry, setClassroomEpisode, updateClassroomAdmission, upsertTeacherView } from "../lib/teacher-classroom-mutations.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -58,14 +58,13 @@ test("every post-delete teacher mutation rechecks active ownership at its SQL bo
     read("../lib/family-sharing.ts"),
   ]);
 
-  assert.equal((mutations.match(/UPDATE classrooms SET/g) ?? []).length, 4);
-  assert.equal((mutations.match(/WHERE id = \? AND teacher_id = \? AND active = 1/g) ?? []).length, 4);
+  assert.equal((mutations.match(/UPDATE classrooms SET/g) ?? []).length, 3);
+  assert.equal((mutations.match(/WHERE id = \? AND teacher_id = \? AND active = 1/g) ?? []).length, 3);
   assert.match(mutations, /INSERT INTO teacher_views[\s\S]*FROM classrooms c JOIN student_profiles s ON s\.classroom_id = c\.id[\s\S]*c\.teacher_id = \? AND c\.active = 1 AND s\.id = \?/);
   assert.equal((mutations.match(/c\.teacher_id = \? AND c\.active = 1/g) ?? []).length, 2);
   assert.equal((mutations.match(/\$\{activeStudent\}/g) ?? []).length, 2);
   assert.match(route, /updateClassroomAdmission[\s\S]*if \(!updated\) return jsonError\("활성 학급을 다시 확인해 주세요\.", 403\)/);
   assert.match(route, /rotateClassroomEntry[\s\S]*if \(!updated\) return jsonError\("활성 학급을 다시 확인해 주세요\.", 403\)/);
-  assert.match(route, /updateClassroomActivity[\s\S]*if \(!updated\) return jsonError\("활성 학급을 다시 확인해 주세요\.", 403\)/);
   assert.match(route, /setClassroomEpisode[\s\S]*if \(!updated\) return jsonError\("활성 학급을 다시 확인해 주세요\.", 403\)/);
   assert.match(route, /upsertTeacherView[\s\S]*if \(!viewed\) return jsonError\("활성 학급의 학생을 다시 확인해 주세요\.", 403\)/);
   assert.match(route, /resetActiveStudentRecovery[\s\S]*if \(!reset\) return jsonError\("활성 학급의 학생을 다시 확인해 주세요\.", 403\)/);
@@ -79,7 +78,7 @@ test("a committed delete prevents stale teacher actions from changing class stat
   context.after(() => handle.dispose());
   const DB = handle.DB;
   await DB.exec(`
-    CREATE TABLE classrooms (id TEXT PRIMARY KEY, teacher_id TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, admission_open INTEGER NOT NULL DEFAULT 1, class_code TEXT NOT NULL, join_token TEXT NOT NULL, current_activity TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE classrooms (id TEXT PRIMARY KEY, teacher_id TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, admission_open INTEGER NOT NULL DEFAULT 1, class_code TEXT NOT NULL, join_token TEXT NOT NULL, current_activity TEXT NOT NULL, current_arc_id TEXT, current_episode_id TEXT, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE student_profiles (id TEXT PRIMARY KEY, classroom_id TEXT NOT NULL, archived_at TEXT);
     CREATE TABLE teacher_views (teacher_id TEXT NOT NULL, classroom_id TEXT NOT NULL, student_id TEXT NOT NULL, expires_at TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(teacher_id, student_id));
     CREATE TABLE recovery_credentials (student_id TEXT PRIMARY KEY, personal_qr_hash TEXT NOT NULL, reset_at TEXT);
@@ -104,7 +103,7 @@ test("a committed delete prevents stale teacher actions from changing class stat
 
   assert.equal(await updateClassroomAdmission(DB, { teacherId: "teacher_a", classroomId: "class_a", open: true }), false);
   assert.equal(await rotateClassroomEntry(DB, { teacherId: "teacher_a", classroomId: "class_a", classCode: "9876", joinToken: "join_new" }), false);
-  assert.equal(await updateClassroomActivity(DB, { teacherId: "teacher_a", classroomId: "class_a", activity: "practice_line" }), false);
+  assert.equal(await setClassroomEpisode(DB, { teacherId: "teacher_a", classroomId: "class_a", arcId: "bicycle-story", episodeId: "bicycle-begin" }), false);
   assert.equal(await upsertTeacherView(DB, { teacherId: "teacher_a", classroomId: "class_a", studentId: "student_a", expiresAt: "2099-02-01T00:00:00.000Z" }), false);
   assert.equal(await resetActiveStudentRecovery(DB, { teacherId: "teacher_a", classroomId: "class_a", studentId: "student_a", personalQrHash: "qr_new" }), false);
 

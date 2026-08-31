@@ -490,7 +490,7 @@ So that **매 차시 시나리오를 직접 짜지 않아도 수업을 열 수 �
 
 **Given** 회차의 데이터 형상을
 **When** 정의하면
-**Then** 이번 범위의 회차 타입은 **`{ episodeId, title, sceneText }` 뿐이다**
+**Then** 이번 범위의 회차 타입은 **`{ episodeId, title, sceneText, sceneImage }` 뿐이다** (삽화는 2026-08-31 UX 결정 — 비문해 3채널)
 **And** 기존 `Lesson`의 `steps`·`guide`·`observationWords`·`finalFree`를 **이번 범위에 넣지 않는다**
 **And** 점선 가이드·단계 안내가 아크 회차에 없다는 것이 명시된다 — 필요해지면 별도 결정이다
 

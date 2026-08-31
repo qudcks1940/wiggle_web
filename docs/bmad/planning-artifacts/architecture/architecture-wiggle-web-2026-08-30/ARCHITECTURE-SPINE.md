@@ -9,10 +9,10 @@ status: draft
 created: '2026-08-30'
 updated: '2026-08-30'
 binds:
-  - FR-1, FR-2, FR-2a, FR-2b, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-10, FR-10a, FR-10c
+  - FR-1, FR-2, FR-2a, FR-2b, FR-3, FR-4, FR-5
+  - FR-7 (귀속 정본까지. 쪽 연결은 책 팀)
   - FR-15
   - FR-19, FR-20, FR-21
-  - FR-24
   - FR-33, FR-34
 sources:
   - docs/bmad/planning-artifacts/prds/prd-wiggle-web-2026-08-30/prd.md
@@ -95,9 +95,13 @@ ORM 계층은 **없다.** `db/schema.ts`는 선언·`drizzle-kit generate`용이
   키는 `students/<studentId>/...` 프리픽스와 `assertSafeKey()`로 강제하고,
   쓰기는 후보 키 선업로드 → DB CAS 성공 시에만 채택 → **패자 후보만** 보상 삭제한다.
   - **채택된 완성 이미지 키는 저장 경로에서 삭제하지 않는다.**
-    현재 `PUT /api/artworks/[id]` 말미의 `artwork.finalImageKey` 삭제는 AD-11이 재완성을 허용하는
+    현재 `PUT /api/artworks/[id]` 말미의 `artwork.finalImageKey` 삭제는 AD-13이 재완성을 허용하는
     순간 **`storybook_assets.object_key`가 가리키는 객체를 지운다**(그 컬럼은 채택 당시 키의 스냅샷이다).
     이전 키는 누적하고 회수는 정리 작업(Deferred)의 몫이다.
+    ⚠️ 같은 `removeCandidates` 호출이 **옛 썸네일도 함께 지운다** — 썸네일 정리는 유지하고
+    완성 키 항목만 `null`로 바꾼다. 줄 전체를 지우면 자동저장마다 썸네일이 누적된다.
+    ⚠️ 재완성 경로(`reopen`)는 **아직 구현돼 있지 않다**(저장소 전체에 `reopen` 0건).
+    지금 이 삭제는 도달 불가능한 죽은 코드이며, 회귀 테스트는 `reopen` 도입과 함께 온다.
 
 **AD-7 오류·응답 의미론** `[ADOPTED]`
 - **Binds** 모든 라우트의 응답
@@ -129,32 +133,39 @@ ORM 계층은 **없다.** `db/schema.ts`는 선언·`drizzle-kit generate`용이
     `normalizeActivityKey`는 **닫힌 허용목록 + 조용한 폴백**이라 모르는 키를 오류 없이
     `DEFAULT_ACTIVITY_KEY`로 바꿔 읽는다. 그 폴백은 FR-15와 같은 변경에서 제거한다
     (`DEFAULT_ACTIVITY_KEY`·`ACTIVITY_KEYS`·`activityLabel()`이 모두 `LESSONS[0]`을 참조한다).
-  - 아이는 `(student_id, arc_id)`마다 **책 하나**를 소유하고, 책이 회차별 쪽을 갖는다.
-  - 교사가 아크를 바꾸면 새 `(student, arc)` 책이 생기고 **이전 책은 그대로 남는다.**
-  - **책과 쪽 행은 아이가 그 아크에서 처음 저장할 때** 같은 batch 안에서
-    `INSERT ... ON CONFLICT DO NOTHING`으로 생기고, 쪽은 그 `arcVersion`의 회차 수만큼 한꺼번에 만들어진다.
-    빈 쪽 = `source_artwork_id IS NULL`.
+  - 아이의 작업은 `(student_id, arc_id, episode_id)`로 식별된다. 이것이 아크 팀이 소유하는 전부다.
+  - 교사가 아크를 바꿔도 **이전 아크의 작품은 그대로 남는다** — 귀속이 작품 행에 고정돼 있으므로
+    (AD-10) 아무것도 지우거나 옮기지 않는 것으로 보존이 성립한다.
+  - **책·쪽 행은 아크 팀이 만들지 않는다**(AD-11). 아이 단위로 그것을 어떻게 묶어 보여줄지는
+    책 팀이 정하며, 아크 팀은 회차 귀속만 정확히 남긴다.
 
-**AD-10 회차 귀속은 작품 생성 시점에 고정된다**
-- **Binds** 그림이 어느 책 어느 쪽에 속하는지 결정하는 모든 경로
-- **Prevents** 오프라인 큐가 며칠 뒤 flush될 때 그림이 엉뚱한 회차에 꽂히는 것
-- **Rule** 작품 행이 `arc_id` + `episode_id`를 직접 갖는다(`artworks.lesson_slug` 자리를 승계).
-  **어떤 쓰기도 요청 시점의 학급 포인터로 쪽을 재결정하지 않는다.**
-  회차의 그림은 **쪽 행이 유일하게 결정**한다 — 그림에서 회차를 역추적하는
-  `latest by updated_at` 류의 조회를 만들지 않는다.
+**AD-10 회차 귀속의 정본은 작품 행이다 — 팀 간 계약**
+- **Binds** 그림이 어느 회차에 속하는지 결정하는 모든 경로, 그리고 책 팀과의 인터페이스
+- **Prevents** 오프라인 큐가 며칠 뒤 flush될 때 그림이 엉뚱한 회차에 꽂히는 것,
+  그리고 두 팀이 귀속을 각자 계산해 서로 다른 답을 내는 것
+- **Rule** **`artworks.arc_id` + `artworks.episode_id`가 회차 귀속의 유일한 정본이다**
+  (`artworks.lesson_slug` 자리를 승계). 아크 팀이 쓰고, 책 팀은 **읽기만** 한다.
+  - 값은 **작품 생성 시점에 고정**된다. **어떤 쓰기도 요청 시점의 학급 포인터로
+    귀속을 재결정하지 않는다** — 오프라인 큐가 며칠 뒤 flush돼도 그대로다.
+  - 귀속을 시각·순서로 추론하는 조회(`latest by updated_at` 류)를 **어느 팀도 만들지 않는다.**
+  - **유일성**: `(student_id, arc_id, episode_id)`에 완성 작품은 최대 하나다.
+    이 제약이 없으면 책 팀은 어느 그림을 쪽에 걸지 스스로 판단해야 하고,
+    두 팀의 답이 갈린다. 아크 팀이 DB 제약으로 보장한다.
+  - 책 팀이 필요로 하는 것은 이 세 컬럼과 `final_image_key`가 전부다.
+    아크 팀은 책·쪽 테이블을 만들지 않고 읽지도 않는다.
 
-**AD-11 아크 책과 수동 그림책은 다른 엔티티다**
-- **Binds** 아크 책·쪽의 저장 구조
-- **Prevents** 하나의 저장 문서에 두 개의 CAS 주인이 생기는 것
-- **Rule** 아크 책은 **신규 테이블**(책 · 쪽)이며 기존 `storybooks`/`storybook_assets`
-  (자유 레이아웃 편집기)와 **다른 엔티티**다. `storybooks`에 `arc_id`를 얹지 않는다.
-  - 쪽의 그림 참조·이미지 키는 **쪽 행의 컬럼**이며 `document_json` 안에 넣지 않는다.
-    그래서 회차 저장이 아이 소유 레이아웃 문서를 건드리지 않고, `storybooks.revision`을 올리지 않는다.
-  - 회차 쪽의 순서는 아크가 정하며 **이동할 수 없다.** 순서 이동은 수동 편집기의 기능이다.
-  - 한 그림이 아크 쪽과 수동 그림책 양쪽에서 참조될 수 있다 —
-    완성 이미지 키가 바뀌면 **참조하는 모든 종류의 쪽**을 갱신한다.
-  - 쪽 → 책은 `ON DELETE CASCADE`. **쪽의 그림 참조에 `ON DELETE SET NULL`을 쓰지 않는다** —
-    유실이 빈 쪽으로 위장되면 결석(부재)과 손상을 구분할 수 없게 된다(AD-15).
+**AD-11 책은 아크 팀이 만들지 않는다 — 소유 경계**
+- **Binds** 아크 작업과 책 작업의 경계
+- **Prevents** 두 팀이 같은 개념의 테이블을 두 벌 만드는 것
+- **Rule** **책·쪽 테이블은 책 팀이 소유한다.** 아크 팀은 만들지도 읽지도 않는다.
+  - 아크 팀이 제공하는 것은 AD-10의 세 컬럼뿐이다. 그 위에 무엇을 세울지는 책 팀이 정한다.
+  - 아크 팀은 `storybooks`/`storybook_assets`를 건드리지 않는다.
+  - 회차 쪽의 **순서는 아크가 정한다** — 회차 순서는 아크 상수(AD-8)가 정본이며
+    책 팀이 재정의하지 않는다. 자유 순서 이동은 수동 편집기 안에서만 유효하다.
+  - 빈 쪽(결석한 회차)의 표현과 저장은 책 팀 소관이다.
+    다만 그 표현은 AD-15의 응답 형상 금지를 그대로 따라야 한다 — 팀이 달라도 원칙은 하나다.
+  - 한 그림이 여러 종류의 쪽에서 참조될 수 있으므로 **완성 이미지 키는 삭제하지 않는다**(AD-6).
+    이것이 두 팀을 잇는 가장 취약한 지점이다.
 
 **AD-12 책 쪽은 그림을 참조한다 — 복사하지 않는다**
 - **Binds** 회차 그림과 쪽의 관계
@@ -309,8 +320,9 @@ sequenceDiagram
 
 ## Seed — 초기 구조 (코드가 소유하게 되면 구속력을 잃는다)
 
-- 신규 테이블 2개: 아크 책(`(student_id, arc_id)` 유일), 아크 쪽(`(book_id, episode_id)` 유일,
-  `source_artwork_id` nullable, 책으로 `ON DELETE CASCADE`).
+- **책·쪽 테이블은 만들지 않는다**(AD-11, 책 팀 소유).
+- `artworks`에 `(student_id, arc_id, episode_id)` 부분 유일 인덱스 —
+  완성 작품에 한해 회차당 하나(AD-10의 유일성 보장).
 - `classrooms`에 `current_arc_id` · `current_episode_id` 추가 —
   **`provisionSchema()`에 `classrooms`용 조건부 ALTER 분기를 새로 만들어야 한다**(AD-2).
 - `artworks`에 `arc_id` · `episode_id` 추가(`lesson_slug` 자리 승계).

@@ -2659,3 +2659,17 @@ body {
 .policy-updated { margin:0 0 18px; color:var(--secondary); font-size:13px; }
 .policy-contact>a { color:var(--primary-dark); font-weight:700; }
 @media (max-width:480px) { .policy-body { padding:20px 16px 26px; } .policy-body>h1 { font-size:22px; } }
+
+/* ── 수업 조종석 (FR-34) — 학급 화면 맨 위. 회차 열기→QR→입장 순서와 화면 순서 일치 ── */
+.arc-cockpit { max-width:1080px; margin:0 auto 14px; background:var(--paper); border:1px solid var(--border); border-radius:14px; padding:14px 16px; display:flex; flex-wrap:wrap; gap:12px 18px; align-items:center; justify-content:space-between; }
+.arc-cockpit-now { display:flex; flex-direction:column; gap:2px; min-width:220px; }
+.arc-cockpit-now>small { color:var(--secondary); font-weight:700; }
+.arc-cockpit-now>b { font-size:17px; color:var(--ink); }
+.arc-cockpit-actions { display:flex; flex-wrap:wrap; gap:10px; align-items:end; }
+.arc-cockpit-actions>label { display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--secondary); font-weight:700; }
+.arc-cockpit-actions select { min-height:44px; border:1px solid var(--border); border-radius:10px; padding:0 10px; font-size:15px; background:var(--paper); color:var(--ink); }
+.arc-cockpit-actions>.button { min-height:44px; }
+.arc-cockpit-done { color:var(--secondary); font-weight:700; align-self:center; }
+.arc-cockpit-jump>summary { cursor:pointer; min-height:44px; display:flex; align-items:center; color:var(--secondary); font-weight:700; }
+.arc-cockpit-jump>button { display:block; margin:6px 0; min-height:44px; }
+@media (max-width:640px) { .arc-cockpit { flex-direction:column; align-items:stretch; } .arc-cockpit-actions { align-items:stretch; flex-direction:column; } }

@@ -30,6 +30,9 @@ export const classrooms = sqliteTable("classrooms", {
   admissionOpen: integer("admission_open", { mode: "boolean" }).notNull().default(true),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
   currentActivity: text("current_activity").notNull().default("자유롭게 그리기"),
+  // 학급 포인터 — 지금 어떤 아크의 어느 회차인가 (AD-9). 아이의 진행 상태는 넣지 않는다.
+  currentArcId: text("current_arc_id"),
+  currentEpisodeId: text("current_episode_id"),
   startsAt: text("starts_at"),
   endsAt: text("ends_at"),
   createdAt: createdAt(),

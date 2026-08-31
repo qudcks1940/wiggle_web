@@ -44,7 +44,7 @@ export function bindings(): WiggleEnv {
 const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS teachers (id TEXT PRIMARY KEY NOT NULL, email TEXT NOT NULL UNIQUE, display_name TEXT NOT NULL, credential_hash TEXT, credential_salt TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS teacher_sessions (token_hash TEXT PRIMARY KEY NOT NULL, teacher_id TEXT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE, expires_at TEXT NOT NULL, last_used_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
-  `CREATE TABLE IF NOT EXISTS classrooms (id TEXT PRIMARY KEY NOT NULL, teacher_id TEXT NOT NULL REFERENCES teachers(id), display_name TEXT NOT NULL, class_code TEXT NOT NULL UNIQUE, join_token TEXT NOT NULL UNIQUE, admission_open INTEGER NOT NULL DEFAULT 1, active INTEGER NOT NULL DEFAULT 1, current_activity TEXT NOT NULL DEFAULT '자유롭게 그리기', starts_at TEXT, ends_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS classrooms (id TEXT PRIMARY KEY NOT NULL, teacher_id TEXT NOT NULL REFERENCES teachers(id), display_name TEXT NOT NULL, class_code TEXT NOT NULL UNIQUE, join_token TEXT NOT NULL UNIQUE, admission_open INTEGER NOT NULL DEFAULT 1, active INTEGER NOT NULL DEFAULT 1, current_activity TEXT NOT NULL DEFAULT '자유롭게 그리기', current_arc_id TEXT, current_episode_id TEXT, starts_at TEXT, ends_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS student_profiles (id TEXT PRIMARY KEY NOT NULL, classroom_id TEXT NOT NULL REFERENCES classrooms(id), nickname TEXT NOT NULL, animal TEXT NOT NULL, last_activity_at TEXT NOT NULL, archived_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS recovery_credentials (student_id TEXT PRIMARY KEY NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, picture_hash TEXT NOT NULL, picture_salt TEXT NOT NULL, personal_qr_hash TEXT NOT NULL, reset_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS device_sessions (token_hash TEXT PRIMARY KEY NOT NULL, student_id TEXT NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, expires_at TEXT NOT NULL, last_used_at TEXT NOT NULL, revoked_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
@@ -156,6 +156,12 @@ export async function provisionSchema(DB: D1Database) {
   const artworkColumns = await DB.prepare(`PRAGMA table_info(artworks)`).all<{ name: string }>();
   if (!artworkColumns.results.some((column) => column.name === "last_mutation_id")) await DB.prepare(`ALTER TABLE artworks ADD COLUMN last_mutation_id TEXT`).run();
   if (!artworkColumns.results.some((column) => column.name === "lesson_slug")) await DB.prepare(`ALTER TABLE artworks ADD COLUMN lesson_slug TEXT`).run();
+  // 학급 포인터(아크·회차)는 기존 운영 classrooms 테이블에 뒤늦게 추가된 컬럼이다.
+  // CREATE TABLE IF NOT EXISTS는 이미 있는 테이블에 무시되므로, 이 분기가 없으면
+  // 로컬·테스트(새 DB)는 통과하고 운영만 `no such column`으로 500이 난다 (AD-2).
+  const classroomColumns = await DB.prepare(`PRAGMA table_info(classrooms)`).all<{ name: string }>();
+  if (!classroomColumns.results.some((column) => column.name === "current_arc_id")) await DB.prepare(`ALTER TABLE classrooms ADD COLUMN current_arc_id TEXT`).run();
+  if (!classroomColumns.results.some((column) => column.name === "current_episode_id")) await DB.prepare(`ALTER TABLE classrooms ADD COLUMN current_episode_id TEXT`).run();
   const studentColumns = await DB.prepare(`PRAGMA table_info(student_profiles)`).all<{ name: string }>();
   if (!studentColumns.results.some((column) => column.name === "archived_at")) await DB.prepare(`ALTER TABLE student_profiles ADD COLUMN archived_at TEXT`).run();
   await DB.prepare(`CREATE INDEX IF NOT EXISTS students_classroom_archived_idx ON student_profiles(classroom_id, archived_at, nickname)`).run();

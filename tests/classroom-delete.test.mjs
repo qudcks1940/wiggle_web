@@ -58,14 +58,15 @@ test("every post-delete teacher mutation rechecks active ownership at its SQL bo
     read("../lib/family-sharing.ts"),
   ]);
 
-  assert.equal((mutations.match(/UPDATE classrooms SET/g) ?? []).length, 3);
-  assert.equal((mutations.match(/WHERE id = \? AND teacher_id = \? AND active = 1/g) ?? []).length, 3);
+  assert.equal((mutations.match(/UPDATE classrooms SET/g) ?? []).length, 4);
+  assert.equal((mutations.match(/WHERE id = \? AND teacher_id = \? AND active = 1/g) ?? []).length, 4);
   assert.match(mutations, /INSERT INTO teacher_views[\s\S]*FROM classrooms c JOIN student_profiles s ON s\.classroom_id = c\.id[\s\S]*c\.teacher_id = \? AND c\.active = 1 AND s\.id = \?/);
   assert.equal((mutations.match(/c\.teacher_id = \? AND c\.active = 1/g) ?? []).length, 2);
   assert.equal((mutations.match(/\$\{activeStudent\}/g) ?? []).length, 2);
   assert.match(route, /updateClassroomAdmission[\s\S]*if \(!updated\) return jsonError\("활성 학급을 다시 확인해 주세요\.", 403\)/);
   assert.match(route, /rotateClassroomEntry[\s\S]*if \(!updated\) return jsonError\("활성 학급을 다시 확인해 주세요\.", 403\)/);
   assert.match(route, /updateClassroomActivity[\s\S]*if \(!updated\) return jsonError\("활성 학급을 다시 확인해 주세요\.", 403\)/);
+  assert.match(route, /setClassroomEpisode[\s\S]*if \(!updated\) return jsonError\("활성 학급을 다시 확인해 주세요\.", 403\)/);
   assert.match(route, /upsertTeacherView[\s\S]*if \(!viewed\) return jsonError\("활성 학급의 학생을 다시 확인해 주세요\.", 403\)/);
   assert.match(route, /resetActiveStudentRecovery[\s\S]*if \(!reset\) return jsonError\("활성 학급의 학생을 다시 확인해 주세요\.", 403\)/);
   assert.match(familySharing, /revokeFamilyShare[\s\S]*c\.teacher_id = \? AND c\.active = 1/);

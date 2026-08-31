@@ -1,12 +1,13 @@
 import { bindings } from "@/db/runtime";
+import { arcById } from "@/lib/arc-content";
 import { MAX_DOCUMENT_BYTES, validateDrawDocument } from "@/lib/drawing-model";
 import { cleanText, id, jsonError, noStoreJson, randomToken, rateLimit, sameOrigin, studentFromRequest } from "@/lib/security";
 import { settleUploadsBeforeCleanup } from "@/lib/settled-uploads";
 
-type Artwork = { id: string; studentId: string; classroomId: string; title: string; topic: string; learningMode: string; lessonSlug: string | null; intent: string; opsJson: string; currentStep: number; revision: number; status: string; versionCount: number; thumbnailKey: string | null; finalImageKey: string | null; updatedAt: string; completedAt: string | null };
+type Artwork = { id: string; studentId: string; classroomId: string; title: string; topic: string; learningMode: string; lessonSlug: string | null; arcId: string | null; episodeId: string | null; arcVersion: number | null; intent: string; opsJson: string; currentStep: number; revision: number; status: string; versionCount: number; thumbnailKey: string | null; finalImageKey: string | null; updatedAt: string; completedAt: string | null };
 
 async function ownedArtwork(artworkId: string, studentId: string) {
-  return bindings().DB.prepare(`SELECT id, student_id AS studentId, classroom_id AS classroomId, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, intent, ops_json AS opsJson, current_step AS currentStep, revision, status, version_count AS versionCount, thumbnail_key AS thumbnailKey, final_image_key AS finalImageKey, updated_at AS updatedAt, completed_at AS completedAt FROM artworks WHERE id = ? AND student_id = ?`).bind(artworkId, studentId).first<Artwork>();
+  return bindings().DB.prepare(`SELECT id, student_id AS studentId, classroom_id AS classroomId, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, arc_id AS arcId, episode_id AS episodeId, arc_version AS arcVersion, intent, ops_json AS opsJson, current_step AS currentStep, revision, status, version_count AS versionCount, thumbnail_key AS thumbnailKey, final_image_key AS finalImageKey, updated_at AS updatedAt, completed_at AS completedAt FROM artworks WHERE id = ? AND student_id = ?`).bind(artworkId, studentId).first<Artwork>();
 }
 
 function decodeImage(dataUrl: unknown, maxBytes: number) {
@@ -44,12 +45,32 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const artworkId = cleanText((await context.params).id, 80); const artwork = await ownedArtwork(artworkId, student.id);
   if (!artwork) return jsonError("내 그림이 아니거나 찾을 수 없어요.", 404);
   const reflection = await bindings().DB.prepare(`SELECT favorite_part AS favoritePart, favorite_reason AS favoriteReason, spoken_description AS spokenDescription, story_text AS storyText, next_suggestion AS nextSuggestion FROM reflections WHERE artwork_id = ?`).bind(artworkId).first();
+  // 지난 회차 서랍(Story 3.1): 같은 아크의 다른 회차 그림을 참조용으로 함께 내려준다.
+  // 귀속 컬럼으로만 찾는다 — 책·쪽 테이블을 거치지 않고, 시각·순서 추론도 쓰지 않는다(AD-10·AD-11).
+  // 회차 순서는 아크 상수가 정본이므로 episode 목록 순서로 정렬해 돌려준다.
+  let previousEpisodes: Array<{ id: string; episodeId: string; episodeTitle: string; hasImage: boolean }> = [];
+  const arcMeta = artwork as { arcId?: string | null; episodeId?: string | null; arcVersion?: number | null };
+  if (arcMeta.arcId) {
+    const arc = arcById(arcMeta.arcId);
+    if (arc) {
+      const rows = await bindings().DB.prepare(
+        `SELECT id, episode_id AS episodeId, CASE WHEN thumbnail_key IS NOT NULL OR final_image_key IS NOT NULL THEN 1 ELSE 0 END AS hasImage FROM artworks WHERE student_id = ? AND arc_id = ? AND id <> ?`,
+      ).bind(student.id, arcMeta.arcId, artworkId).all<{ id: string; episodeId: string; hasImage: number }>();
+      const byEpisode = new Map(rows.results.map((row) => [row.episodeId, row]));
+      previousEpisodes = arc.episodes
+        .filter((episode) => episode.episodeId !== arcMeta.episodeId && byEpisode.has(episode.episodeId))
+        .map((episode) => {
+          const row = byEpisode.get(episode.episodeId)!;
+          return { id: row.id, episodeId: episode.episodeId, episodeTitle: episode.title, hasImage: Boolean(row.hasImage) };
+        });
+    }
+  }
   if (new URL(request.url).searchParams.get("summary") === "1") {
     const { opsJson: _opsJson, ...summary } = artwork;
     void _opsJson;
-    return noStoreJson({ artwork: summary, reflection });
+    return noStoreJson({ artwork: summary, reflection, previousEpisodes });
   }
-  return noStoreJson({ artwork: { ...artwork, document: JSON.parse(artwork.opsJson), opsJson: undefined }, reflection });
+  return noStoreJson({ artwork: { ...artwork, document: JSON.parse(artwork.opsJson), opsJson: undefined }, reflection, previousEpisodes });
 }
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -118,6 +139,11 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     await removeCandidates([thumbnailKey, finalKey]);
     const duplicate = await priorMutation(requestId, artworkId, student.id);
     if (duplicate) return noStoreJson({ ok: true, revision: duplicate.resultRevision, duplicate: true });
+    // (student, arc, episode) 완성작 유일 제약(AD-10) 위반은 배치 안에서 터진다 —
+    // 내부 오류(500)가 아니라 분기 가능한 409로 바꿔 내보낸다 (Story 3.4).
+    if (error instanceof Error && /UNIQUE constraint failed: .*artworks/.test(error.message)) {
+      return noStoreJson({ error: "이 회차에는 이미 완성한 그림이 있어요.", code: "EPISODE_ALREADY_COMPLETE" }, { status: 409 });
+    }
     throw error;
   }
   if (!results[0]?.meta.changes) {
@@ -128,6 +154,11 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     return noStoreJson({ error: current?.status === "complete" ? "완성한 작품은 바꿀 수 없어요." : "다른 저장이 먼저 반영됐어요.", code: current?.status === "complete" ? "ARTWORK_COMPLETE" : "REVISION_CONFLICT", serverRevision: current?.revision }, { status: 409 });
   }
 
-  await removeCandidates([thumbnailKey && artwork.thumbnailKey !== thumbnailKey ? artwork.thumbnailKey : null, finalKey && artwork.finalImageKey !== finalKey ? artwork.finalImageKey : null]);
+  // 채택된 완성 이미지 키는 지우지 않는다(AD-6, Story 3.4) — storybook_assets.object_key가
+  // 채택 당시 키의 스냅샷이라, 재완성이 가능해지는 순간 이 삭제가 아이가 만든 책 쪽을
+  // 영구 백지로 만든다. 두 팀이 각자 테스트하면 잡히지 않는 유일한 지점이다.
+  // 옛 썸네일 정리는 유지한다 — 지우지 않으면 자동저장마다 R2에 누적된다.
+  // 옛 완성 키의 회수는 참조 여부를 아는 정리 작업(미구현)의 몫이다.
+  await removeCandidates([thumbnailKey && artwork.thumbnailKey !== thumbnailKey ? artwork.thumbnailKey : null]);
   return noStoreJson({ ok: true, revision: newRevision, status: complete ? "complete" : artwork.status });
 }

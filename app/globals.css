@@ -2682,3 +2682,14 @@ body {
 .today-episode-scene-text { margin:0; font-size:17px; color:var(--secondary); font-weight:700; line-height:1.6; }
 .today-episode-card>.child-primary-action { min-height:56px; min-width:220px; font-size:19px; }
 @media (max-width:480px) { .today-episode-card>h2 { font-size:22px; } .today-episode-card>.child-primary-action { width:100%; } }
+
+/* ── 지난 이야기 서랍 (Story 3.1) — 보기 전용, 도화지를 가리지 않는 옆 패널 ── */
+.episode-drawer { position:fixed; top:64px; left:0; bottom:0; width:min(40vw,340px); background:var(--bg); border-right:2px solid var(--border); padding:14px; overflow-y:auto; z-index:40; display:flex; flex-direction:column; gap:12px; }
+.episode-drawer-head { display:flex; justify-content:space-between; align-items:center; }
+.episode-drawer-head>b { font-size:16px; color:var(--ink); }
+.episode-drawer-head>.icon-button { min-width:44px; min-height:44px; font-size:20px; }
+.episode-drawer-item { margin:0; background:var(--paper); border:1px solid var(--soft-border); border-radius:12px; padding:8px; box-shadow:3px 3px 0 var(--border); }
+.episode-drawer-item>img { width:100%; border-radius:8px; display:block; background:#fff; }
+.episode-drawer-empty { display:flex; align-items:center; justify-content:center; height:120px; font-size:34px; }
+.episode-drawer-item>figcaption { margin-top:6px; font-size:13px; font-weight:700; color:var(--secondary); text-align:center; }
+@media (max-width:640px) { .episode-drawer { top:auto; height:45vh; width:100%; border-right:0; border-top:2px solid var(--border); } }

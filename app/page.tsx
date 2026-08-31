@@ -37,6 +37,11 @@ export default function Home() {
             </svg>
             학생 이메일 · 실명 없이 안전하게
           </p>
+          <p className="landing-policy-links">
+            <a href="/privacy">개인정보처리방침</a>
+            <span aria-hidden="true">·</span>
+            <a href="/terms">서비스 약관</a>
+          </p>
         </div>
       </section>
     </main>

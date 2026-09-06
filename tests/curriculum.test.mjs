@@ -77,9 +77,9 @@ test("guided lessons show polished finished art while observation lessons show t
   const [illustration, finished, reference, studio, picker] = await Promise.all([
     read("../app/components/LessonIllustration.tsx"), read("../app/components/LessonFinishedIllustration.tsx"), read("../app/components/LessonReference.tsx"), read("../app/components/DrawingStudio.tsx"), read("../app/components/LessonPicker.tsx"),
   ]);
-  assert.match(illustration, /for \(const mark of lesson\.guide\)/);
+  assert.match(illustration, /for \(const mark of guideMarksForVariant\(lesson, guideVariant\)\)/);
   assert.match(illustration, /const STEP_COLORS = \[/);
-  assert.match(illustration, /aria-label=\{`\$\{lesson\.title\} 전체 참고 그림`\}/);
+  assert.match(illustration, /guideVariantLabel\(guideVariant\).*전체 참고 그림/);
   assert.match(reference, /lesson\.mode !== "observe"/);
   assert.match(reference, /lesson\.mode === "guided"/);
   assert.match(finished, /guided-finished-sprite\.webp/);
@@ -93,7 +93,8 @@ test("guided lessons show polished finished art while observation lessons show t
   assert.match(studio, /currentLessonActivity === "color"/);
   assert.match(studio, /setStudioTool\("crayon"\)/);
   assert.match(studio, /setDrawWidth\(48\)/);
-  assert.match(finished, /lesson\.slug === "delivery-bike" \? "scaleX\(-1\)"/);
+  assert.match(finished, /const bicycleMirror = lesson\.slug === "delivery-bike"/);
+  assert.match(finished, /bicycleMirror !== presentation\.mirrored/);
   assert.match(picker, /<LessonReference lesson=\{lesson\}/);
   const observationLessons = LESSONS.filter((lesson) => lesson.mode === "observe");
   assert.equal(observationLessons.length, 10);

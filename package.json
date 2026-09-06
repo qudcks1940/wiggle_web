@@ -6,8 +6,8 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
     "start": "next start",
     "test": "npm run build && node --import ./tests/harness/register.mjs --test \"tests/*.test.mjs\"",
     "typecheck": "tsc --noEmit",
@@ -22,7 +22,7 @@
   "dependencies": {
     "@libsql/client": "^0.17.4",
     "aws4fetch": "^1.0.20",
-    "next": "16.2.6",
+    "next": "16.3.3",
     "qrcode": "^1.5.4",
     "react": "19.2.6",
     "react-dom": "19.2.6",
@@ -38,7 +38,7 @@
     "drizzle-kit": "0.31.10",
     "drizzle-orm": "0.45.2",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.2.6",
+    "eslint-config-next": "16.3.3",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3"
   }

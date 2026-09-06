@@ -1,13 +1,32 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const CODE_LENGTH = 4;
 
 export function LandingCodeForm() {
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(""));
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
-  const complete = digits.every((digit) => digit !== "");
+
+  useEffect(() => {
+    function syncRestoredDigits() {
+      const restored = inputRefs.current.map((input) => input?.value.replace(/[^0-9]/g, "").slice(0, 1) ?? "");
+      if (!restored.some(Boolean)) return;
+      setDigits((current) => restored.every((digit, index) => digit === current[index]) ? current : restored);
+    }
+
+    // Browsers can restore the visible values of separate code inputs after React has
+    // hydrated them. Reconcile those values so a visibly complete code never leaves
+    // the submit button disabled.
+    const timers = [0, 100, 500].map((delay) => window.setTimeout(syncRestoredDigits, delay));
+    window.addEventListener("pageshow", syncRestoredDigits);
+    window.addEventListener("focus", syncRestoredDigits);
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+      window.removeEventListener("pageshow", syncRestoredDigits);
+      window.removeEventListener("focus", syncRestoredDigits);
+    };
+  }, []);
 
   function fillFrom(startIndex: number, value: string) {
     const chars = value.replace(/[^0-9]/g, "").slice(0, CODE_LENGTH - startIndex).split("");
@@ -47,8 +66,13 @@ export function LandingCodeForm() {
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!complete) return;
-    window.location.href = `/join?code=${digits.join("")}`;
+    const submittedDigits = inputRefs.current.map((input) => input?.value.replace(/[^0-9]/g, "").slice(0, 1) ?? "");
+    const firstEmptyIndex = submittedDigits.findIndex((digit) => digit === "");
+    if (firstEmptyIndex >= 0) {
+      inputRefs.current[firstEmptyIndex]?.focus();
+      return;
+    }
+    window.location.href = `/join?code=${submittedDigits.join("")}`;
   }
 
   return (
@@ -61,7 +85,8 @@ export function LandingCodeForm() {
             className="landing-code-box"
             type="tel"
             inputMode="numeric"
-            pattern="[0-9]*"
+            pattern="[0-9]"
+            required
             autoComplete="off"
             maxLength={1}
             value={digit}
@@ -72,7 +97,7 @@ export function LandingCodeForm() {
           />
         ))}
       </div>
-      <button type="submit" className="button primary large full landing-code-submit" disabled={!complete}>
+      <button type="submit" className="button primary large full landing-code-submit">
         그리러 가기
       </button>
     </form>

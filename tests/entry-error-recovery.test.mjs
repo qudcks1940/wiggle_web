@@ -41,8 +41,8 @@ test("one big reset clears every picked picture and highlights after a wrong pas
 });
 
 test("the first correction clears the previous error for nickname, animal and pictures (the classroom code has no visible field to correct — it comes from the landing page or QR)", () => {
-  assert.match(join, /setNickname\(event\.target\.value\); setNicknameAuto\(false\); setDuplicateWarning\(false\); clearEntryError\(\);/);
-  assert.match(join, /setAnimal\(value\); setDuplicateWarning\(false\); clearEntryError\(\);/);
+  assert.match(join, /setNickname\(event\.target\.value\); setNicknameAuto\(false\); clearEntryError\(\);/);
+  assert.match(join, /setAnimal\(value\); clearEntryError\(\);/);
   assert.match(join, /function appendPicture\(value: string\) \{\s*clearEntryError\(\);/);
   assert.match(join, /function removeLastPicture\(\) \{\s*clearEntryError\(\);/);
 });

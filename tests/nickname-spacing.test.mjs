@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { pbkdf2Sync } from "node:crypto";
 import test, { after } from "node:test";
 import { resetRows } from "./harness/db.mjs";
 import { startTestServer } from "./harness/server.mjs";
@@ -38,10 +37,12 @@ function studentRequest(body, ip = "203.0.113.60") {
   };
 }
 
-async function seedClassroom(DB, suffix) {
+async function seedClassroom(DB, suffix, seats = 1) {
   await DB.batch([
     DB.prepare(`INSERT INTO teachers(id, email, display_name) VALUES ('teacher_${suffix}', '${suffix}@example.com', 'Spacing')`),
     DB.prepare(`INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token) VALUES ('class_${suffix}', 'teacher_${suffix}', '공백 학급', '4321', 'join_${suffix}')`),
+    // 입장은 선생님 명단의 번호로만 한다. 빈 자리를 미리 만들어 둔다.
+    ...Array.from({ length: seats }, (_, index) => DB.prepare(`INSERT INTO student_profiles(id, classroom_id, seat_number, real_name, claimed_at, nickname, animal, last_activity_at) VALUES ('student_${suffix}_${index + 1}', 'class_${suffix}', ${index + 1}, '학생${index + 1}', NULL, '${index + 1}번', '❔', '2026-09-07T00:00:00.000Z')`)),
   ]);
   return "class_" + suffix;
 }
@@ -109,95 +110,79 @@ test("the dice never repeats the current nickname and cycles through far more th
   assert.equal(pickDifferentNickname(["가", "나"], "가", 1), "나");
 });
 
-test("spacing variants re-enter the same student and are blocked as duplicate new profiles", async (context) => {
+/* 입장과 재입장이 번호로 바뀌면서(2026-09-07) 별명 중복·공백 변형으로 프로필을 찾던
+ * 계약은 사라졌다. 번호가 이미 한 사람을 가리키므로 별명이 겹쳐도 상관없다.
+ * 위의 순수 함수 테스트는 그대로 둔다 — 아이가 고르는 표시 별명에는 여전히 쓰인다.
+ * 여기서는 그 자리를 대신할 실제 계약, 즉 번호 재입장과 브루트포스 차단을 검증한다. */
+
+test("번호 + 그림 비밀번호로만 재입장하고, 별명이 겹쳐도 서로 다른 학생이다", async (context) => {
   const server = await sharedServer();
   context.after(() => resetRows(server.DB));
   const DB = server.DB;
-  await seedClassroom(DB, "spacing");
+  await seedClassroom(DB, "seatentry", 2);
 
   const password = ["⭐", "🍎", "🚲"];
-  const joined = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", nickname: "토끼 화가", animal: "🐰", picturePassword: password }, "203.0.113.61"));
-  assert.equal(joined.status, 201);
-  const original = await joined.json();
-  assert.equal(original.student.nickname, "토끼 화가");
+  // 두 아이가 같은 별명을 골라도 번호가 다르면 다른 학생이다.
+  const first = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", seatNumber: 1, nickname: "토끼 화가", animal: "🐰", picturePassword: password }, "203.0.113.61"));
+  assert.equal(first.status, 201);
+  const second = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", seatNumber: 2, nickname: "토끼 화가", animal: "🐰", picturePassword: ["🌈", "🌈", "🌈"] }, "203.0.113.62"));
+  assert.equal(second.status, 201);
+  const firstPayload = await first.json();
+  const secondPayload = await second.json();
+  assert.notEqual(firstPayload.student.id, secondPayload.student.id);
 
-  // 공백 제거·연속 공백·탭 변형 모두 같은 학생으로 재입장한다.
-  for (const variant of ["토끼화가", "  토끼   화가  ", "토끼\t화가"]) {
-    const recovered = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", nickname: variant, animal: "🐰", picturePassword: password }, "203.0.113.62"));
-    assert.equal(recovered.status, 200, variant);
-    const payload = await recovered.json();
-    assert.equal(payload.student.id, original.student.id, variant);
-    assert.equal(payload.student.nickname, "토끼 화가", "display nickname keeps its original spacing");
-  }
-
-  // 공백 변형 신규 생성은 기존 프로필 중복으로 차단된다.
-  const duplicate = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", nickname: "토끼화가", animal: "🐰", picturePassword: ["⭐", "⭐", "⭐"] }, "203.0.113.63"));
-  assert.equal(duplicate.status, 409);
-  assert.equal((await duplicate.json()).code, "PROFILE_EXISTS");
-
-  // 같은 그림 비밀번호까지 같으면 allowDuplicate여도 동일 자격정보로 차단된다.
-  const sameCredentials = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", nickname: "토끼  화가", animal: "🐰", picturePassword: password, allowDuplicate: true }, "203.0.113.64"));
-  assert.equal(sameCredentials.status, 409);
-  assert.equal((await sameCredentials.json()).code, "PROFILE_CREDENTIALS_EXIST");
-
-  // 다른 그림 비밀번호의 의도적 중복 생성은 그대로 허용된다.
-  const allowedDuplicate = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", nickname: "토끼화가", animal: "🐰", picturePassword: ["🌈", "🌈", "🌈"], allowDuplicate: true }, "203.0.113.65"));
-  assert.equal(allowedDuplicate.status, 201);
-
-  // 다른 동물이면 같은 별명이라도 새 프로필이고, 다른 한글 글자는 합쳐지지 않는다.
-  const otherAnimal = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", nickname: "토끼화가", animal: "🐻", picturePassword: ["⭐", "⭐", "⭐"] }, "203.0.113.66"));
-  assert.equal(otherAnimal.status, 201);
-  const differentHangul = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", nickname: "토기 화가", animal: "🐰", picturePassword: ["⭐", "⭐", "⭐"] }, "203.0.113.67"));
-  assert.equal(differentHangul.status, 201);
-
-  assert.equal((await DB.prepare("SELECT COUNT(*) AS count FROM student_profiles").first()).count, 4);
-});
-
-test("a pre-existing DB profile with spaces is found by spaceless re-entry without any migration", async (context) => {
-  const server = await sharedServer();
-  context.after(() => resetRows(server.DB));
-  const DB = server.DB;
-  await seedClassroom(DB, "legacy");
-
-  // 새 코드 이전에 저장된 행을 흉내 낸다: API를 거치지 않고 DB에 직접 넣는다.
-  const salt = "legacysalt";
-  const pictureHash = pbkdf2Sync("⭐→⭐→⭐", salt, 100_000, 32, "sha256").toString("hex");
-  await DB.batch([
-    DB.prepare(`INSERT INTO student_profiles(id, classroom_id, nickname, animal, last_activity_at) VALUES ('student_legacy', 'class_legacy', '아기 곰 화가', '🐻', '2026-08-01T00:00:00.000Z')`),
-    DB.prepare(`INSERT INTO recovery_credentials(student_id, picture_hash, picture_salt, personal_qr_hash) VALUES ('student_legacy', ?, ?, 'legacy_qr_hash')`).bind(pictureHash, salt),
-  ]);
-
-  const recovered = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", nickname: "아기곰화가", animal: "🐻", picturePassword: ["⭐", "⭐", "⭐"] }, "203.0.113.70"));
+  // 재입장은 자기 번호와 자기 그림 비밀번호로만 된다.
+  const recovered = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", seatNumber: 1, picturePassword: password }, "203.0.113.63"));
   assert.equal(recovered.status, 200);
-  const payload = await recovered.json();
-  assert.equal(payload.student.id, "student_legacy");
-  assert.equal(payload.student.nickname, "아기 곰 화가");
+  assert.equal((await recovered.json()).student.id, firstPayload.student.id);
 
-  // 틀린 비밀번호는 공백 변형으로도 열리지 않는다.
-  const wrongPassword = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", nickname: "아기곰화가", animal: "🐻", picturePassword: ["🍎", "🍎", "🍎"] }, "203.0.113.71"));
-  assert.equal(wrongPassword.status, 401);
+  // 1번의 비밀번호로 2번 자리를 열 수 없다.
+  const crossed = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", seatNumber: 2, picturePassword: password }, "203.0.113.64"));
+  assert.equal(crossed.status, 401);
+
+  assert.equal((await DB.prepare("SELECT COUNT(*) AS count FROM student_profiles").first()).count, 2);
 });
 
-test("spacing variants share one brute-force bucket so spacing cannot bypass the rate limit", async (context) => {
+test("이미 쓰는 번호는 다시 차지할 수 없고, 없는 번호는 명단을 알려 주지 않는다", async (context) => {
   const server = await sharedServer();
   context.after(() => resetRows(server.DB));
   const DB = server.DB;
-  await seedClassroom(DB, "ratelimit");
+  await seedClassroom(DB, "seatclaim", 2);
 
-  const password = ["⭐", "🍎", "🚲"];
-  const joined = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", nickname: "토끼 화가", animal: "🐰", picturePassword: password }, "203.0.113.80"));
+  const joined = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", seatNumber: 1, nickname: "토끼 화가", animal: "🐰", picturePassword: ["⭐", "🍎", "🚲"] }, "203.0.113.70"));
   assert.equal(joined.status, 201);
 
-  // 대상별 한도는 8회/15분. 공백 변형을 번갈아 써도 같은 버킷을 소비해야 한다.
-  const variants = ["토끼 화가", "토끼화가", " 토끼  화가 "];
+  // 남이 1번을 다시 차지하려 하면 막히고, 원래 아이의 비밀번호는 그대로다.
+  const stolen = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", seatNumber: 1, nickname: "가로채기", animal: "🐻", picturePassword: ["🍎", "🍎", "🍎"] }, "203.0.113.71"));
+  assert.equal(stolen.status, 409);
+  assert.equal((await stolen.json()).code, "SEAT_CLAIMED");
+  const stillMine = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", seatNumber: 1, picturePassword: ["⭐", "🍎", "🚲"] }, "203.0.113.72"));
+  assert.equal(stillMine.status, 200);
+
+  // 명단에 없는 번호는 401/404로만 답하고 누가 있는지 알려 주지 않는다.
+  const missingJoin = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", seatNumber: 9, nickname: "없는번호", animal: "🐰", picturePassword: ["⭐", "⭐", "⭐"] }, "203.0.113.73"));
+  assert.equal(missingJoin.status, 404);
+  const missingRecover = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", seatNumber: 9, picturePassword: ["⭐", "⭐", "⭐"] }, "203.0.113.74"));
+  assert.equal(missingRecover.status, 401);
+  assert.equal((await missingRecover.json()).error, "번호나 그림 비밀번호를 다시 확인해 주세요.");
+});
+
+test("같은 번호를 반복해서 틀리면 한 버킷에서 잠긴다", async (context) => {
+  const server = await sharedServer();
+  context.after(() => resetRows(server.DB));
+  const DB = server.DB;
+  await seedClassroom(DB, "ratelimit", 1);
+
+  const password = ["⭐", "🍎", "🚲"];
+  const joined = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", seatNumber: 1, nickname: "토끼 화가", animal: "🐰", picturePassword: password }, "203.0.113.80"));
+  assert.equal(joined.status, 201);
+
+  // 대상별 한도는 8회/15분. IP를 바꿔도 번호 버킷은 같아야 한다.
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    const failed = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", nickname: variants[attempt % variants.length], animal: "🐰", picturePassword: ["🌙", "🌙", "🌙"] }, "203.0.113.81"));
+    const failed = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", seatNumber: 1, picturePassword: ["🌙", "🌙", "🌙"] }, `203.0.113.${90 + attempt}`));
     assert.equal(failed.status, 401, `attempt ${attempt}`);
   }
-  // 9번째는 올바른 비밀번호여도 공백 변형이어도 잠긴다.
-  const blockedRecover = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", nickname: "토끼화가", animal: "🐰", picturePassword: password }, "203.0.113.82"));
-  assert.equal(blockedRecover.status, 429);
-  // 중복 생성 분기의 비밀번호 대조(409 오라클)도 같은 버킷으로 잠긴다.
-  const blockedProbe = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", nickname: "토끼화가", animal: "🐰", picturePassword: password, allowDuplicate: true }, "203.0.113.83"));
-  assert.equal(blockedProbe.status, 429);
+  // 9번째는 올바른 비밀번호여도 잠긴다.
+  const blocked = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", seatNumber: 1, picturePassword: password }, "203.0.113.99"));
+  assert.equal(blocked.status, 429);
 });

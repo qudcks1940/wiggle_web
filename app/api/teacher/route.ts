@@ -158,13 +158,10 @@ export async function POST(request: Request) {
   if (action === "createClassroom") {
     const displayName = cleanText(payload.displayName, 30);
     if (displayName.length < 2) return jsonError("학급 이름을 두 글자 이상 적어 주세요.");
-    // 명단은 선택이다. 없이 만들면 예전처럼 아이가 직접 프로필을 만드는 학급이 된다.
-    let roster: RosterEntry[] = [];
-    if (payload.roster !== undefined) {
-      const parsed = parseRoster(payload.roster);
-      if ("error" in parsed) return jsonError(parsed.error);
-      roster = parsed.entries;
-    }
+    // 명단은 필수다. 입장은 명단의 번호로만 하므로, 명단 없는 학급은 아무도 못 들어온다.
+    const parsedRoster = parseRoster(payload.roster);
+    if ("error" in parsedRoster) return jsonError(parsedRoster.error);
+    const roster = parsedRoster.entries;
     const classroom = { id: id("class"), classCode: await uniqueClassCode(), joinToken: randomToken(18) };
     await db.batch([
       db.prepare(`INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token, admission_open, active, current_activity) VALUES (?, ?, ?, ?, ?, 1, 1, ?)`).bind(classroom.id, teacher.id, displayName, classroom.classCode, classroom.joinToken, DEFAULT_ACTIVITY_KEY),

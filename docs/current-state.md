@@ -356,6 +356,25 @@
   (좌표를 늘리면 아이 그림이 찌그러진다). 4:3은 제품의 전시 그림·액자 에셋(960×720)에 맞춘 값이며
   다른 비율을 원하면 `DOCUMENT_HEIGHTS`에 값을 더하고 `DEFAULT_DOCUMENT_HEIGHT`만 바꾸면 된다.
 
+## 2026-09-07 AI 도우미 이름 몽그리로 변경 (`claude/mongri-rename-20260907`, 로컬 검증)
+
+- 아이에게 보이는 이름과 AI 시스템 프롬프트의 이름을 `그리미`에서 `몽그리`로 바꿨다.
+  앱 화면·API 오류 문구·README·검증 스크립트 라벨·데모 데이터까지 73건이다.
+- **안전 필터는 넓히기만 했다.** `lib/openai-coaching.ts`의 "대신 그려 줄게" 차단 패턴과
+  평가자 화자 집합(`EVALUATOR`)에 `몽그리`를 더하면서 `그리미`를 그대로 남겼다. 이미 저장된
+  과거 코칭 기록과 모델이 옛 이름을 쓰는 경우를 계속 막아야 하기 때문이다.
+  `tests/coaching-safety.test.mjs`에 두 이름 모두를 막는지 보는 사례를 더했다.
+- 코드 식별자(`grimi-panel`, `grimiOpen`, `askGrimi` 등)와 자산 경로(`/brand/grimi-mascot.png`)는
+  그대로 두었다. 아이에게 보이지 않고, 바꾸면 변경 범위와 위험만 커진다.
+- 과거 기록 문서(`docs/claude-handoff-2026-07-27.md`, `ux-market-audit-2026-07.md`,
+  `agent-handoff/latest.md`, `flutter-adoption-audit.md`)의 옛 이름은 그날의 기록이므로 남겼다.
+- 검증: `npm run typecheck`, `npm run lint`, `npm run build`, `git diff --check` 통과.
+  전체 테스트는 `node --experimental-strip-types`로 305개 중 304개 통과이며, 남은 1건
+  (`tests/pbkdf2-runtime.test.mjs`)은 이 맥의 Node v22.13.0에 `node:module`의 `registerHooks`가
+  없어서 나는 환경 문제다.
+- 참고: 앞선 기록들이 "전체 테스트 실패 33건/11건"이라고 적은 것은 상당수가 로컬 dev 서버가
+  포트를 잡고 있어 하네스 서버가 뜨지 못한 탓이었다. dev 서버를 내리고 돌리면 304/305다.
+
 ## 다음 작업 시작 전 확인
 
 1. 이 문서와 `product-decisions.md`, `pending-decisions.md`를 읽는다.

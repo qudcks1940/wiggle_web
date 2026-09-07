@@ -2699,3 +2699,23 @@ body {
 .grimi-button-label { line-height:1; }
 /* 버튼 안의 장식 아이콘은 히트 테스트 대상이 되지 않게 한다. */
 .studio button>svg,.studio a>svg { pointer-events:none; }
+
+/* ── 2026-09-07 가로 도화지 ──────────────────────────────────────────────────
+ * 도화지 비율은 문서(`DrawDocument.height`)가 정한다. `height`가 없는 기존 작품은
+ * 예전처럼 정사각(1/1)이라 저장된 그림이 그대로 유지되고, 새 작품만 4:3 가로 도화지다.
+ * 좌표는 x·y 모두 0~1로 정규화돼 있어 화면 상자의 비율이 곧 그림의 비율이다.
+ */
+.canvas-wrap {
+  width:auto;
+  height:100%;
+  max-width:100%;
+  max-height:100%;
+  aspect-ratio:var(--paper-aspect,1);
+}
+/* 지우개 자국은 가로 %로만 크기를 잡고 정사각을 유지한다(가로 도화지에서 %가 축마다 다르다). */
+.eraser-footprint { aspect-ratio:1; }
+/* 타임랩스도 같은 비율로 재생한다. */
+.timelapse-modal canvas { aspect-ratio:var(--paper-aspect,1); }
+/* 작품 썸네일은 잘라내지 않고 전부 보여 준다 — 가로 도화지가 정사각 칸에서 양옆이 잘리면
+   아이 그림의 일부가 교사 화면에서 사라진다. */
+.student-thumb img,.teacher-artwork-history-grid img { object-fit:contain; }

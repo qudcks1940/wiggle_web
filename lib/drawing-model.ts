@@ -1,6 +1,11 @@
 export const DRAWING_SCHEMA_VERSION = 1;
 export const RENDERER_VERSION = 1;
 export const DOCUMENT_SIZE = 1024;
+/* 도화지 세로. 좌표는 x·y 모두 0~1로 정규화돼 있으므로 세로를 바꾸면 같은 문서가 다르게 그려진다.
+ * 그래서 세로는 문서에 함께 저장하고, `height`가 없는 기존 문서는 예전처럼 정사각(1024)으로 읽는다.
+ * 새 문서는 4:3 가로 도화지다 — 제품의 전시 그림(960×720)과 액자 에셋이 이미 4:3이다. */
+export const DOCUMENT_HEIGHTS = [1024, 768] as const;
+export const DEFAULT_DOCUMENT_HEIGHT = 768;
 export const STICKER_ALLOWLIST = ["star", "heart", "leaf", "cloud", "sparkle"] as const;
 // 서버 validator와 클라이언트가 같은 목록을 봐야 한다. 클라이언트만 넓히면
 // 새 도구로 그린 문서가 서버에서 거부돼 저장이 영구 실패한다.
@@ -92,12 +97,20 @@ export type DrawOp = {
   deleted?: boolean;
 };
 
+export type DocumentHeight = (typeof DOCUMENT_HEIGHTS)[number];
+
 export type DrawDocument = {
   schemaVersion: 1;
   rendererVersion: 1;
   size: 1024;
+  /* 없으면 정사각(1024). 기존 작품은 이 값이 없으므로 저장된 그림이 그대로 유지된다. */
+  height?: DocumentHeight;
   ops: DrawOp[];
 };
+
+export function documentHeight(document: Pick<DrawDocument, "height">): number {
+  return document.height ?? DOCUMENT_SIZE;
+}
 
 function finiteUnit(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1;
@@ -157,6 +170,9 @@ export function validateDrawDocument(value: unknown): DrawDocument | null {
   if (!value || typeof value !== "object") return null;
   const doc = value as Partial<DrawDocument>;
   if (doc.schemaVersion !== DRAWING_SCHEMA_VERSION || doc.rendererVersion !== RENDERER_VERSION || doc.size !== DOCUMENT_SIZE || !Array.isArray(doc.ops) || doc.ops.length > MAX_DOCUMENT_OPS) return null;
+  // 세로는 없거나(기존 정사각 문서) 허용 목록 안이어야 한다. 임의 값을 받으면 저장된 그림의
+  // 비율을 클라이언트가 마음대로 바꿀 수 있고, 렌더 결과가 썸네일과 어긋난다.
+  if (doc.height !== undefined && !DOCUMENT_HEIGHTS.includes(doc.height)) return null;
   const seen = new Set<string>();
   const activeTextIds = new Set<string>();
   for (const raw of doc.ops) {
@@ -199,7 +215,7 @@ export function validateDrawDocument(value: unknown): DrawDocument | null {
   // 알려진 필드만 남기고 좌표를 정규화한 사본을 돌려준다. 원본을 그대로 통과시키면
   // 전체 정밀도 좌표(0.12345678901234568)와 미지의 속성이 함께 저장돼,
   // 크기 추정이 실제 직렬화 길이의 상한이 아니게 되고 저장이 한도에 걸린다.
-  return { schemaVersion: 1, rendererVersion: 1, size: 1024, ops: doc.ops.map(normalizeOp) };
+  return { schemaVersion: 1, rendererVersion: 1, size: 1024, ...(doc.height === undefined ? {} : { height: doc.height }), ops: doc.ops.map(normalizeOp) };
 }
 
 function normalizePoint(point: Point): Point {
@@ -239,5 +255,5 @@ function normalizeOp(raw: DrawOp): DrawOp {
 }
 
 export function emptyDocument(): DrawDocument {
-  return { schemaVersion: 1, rendererVersion: 1, size: 1024, ops: [] };
+  return { schemaVersion: 1, rendererVersion: 1, size: 1024, height: DEFAULT_DOCUMENT_HEIGHT, ops: [] };
 }

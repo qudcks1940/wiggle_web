@@ -3,6 +3,8 @@
 export type RGB = readonly [number, number, number];
 
 export type FloodFillMaskOptions = {
+  /** 격자의 세로. 없으면 size와 같다고 보고 정사각으로 훑는다. */
+  height?: number;
   strongTolerance?: number;
   weakTolerance?: number;
   maxWeakRing?: number;
@@ -56,14 +58,16 @@ export function computeFloodFillMask(
   target: RGB,
   options: FloodFillMaskOptions = {},
 ): Uint8Array {
+  // size는 가로(행 간격)다. 세로가 다르면 options.height로 받는다 — 없으면 예전처럼 정사각이다.
+  const height = options.height ?? size;
   const strongTolerance = options.strongTolerance ?? FLOOD_FILL_STRONG_TOLERANCE;
   const weakTolerance = options.weakTolerance ?? FLOOD_FILL_WEAK_TOLERANCE;
   const maxWeakRing = options.maxWeakRing ?? FLOOD_FILL_MAX_WEAK_RING;
-  const mask = new Uint8Array(size * size);
-  if (seedX < 0 || seedX >= size || seedY < 0 || seedY >= size) return mask;
-  const ring = new Uint8Array(size * size);
+  const mask = new Uint8Array(size * height);
+  if (seedX < 0 || seedX >= size || seedY < 0 || seedY >= height) return mask;
+  const ring = new Uint8Array(size * height);
   // 각 픽셀 본인의 대상 색과의 거리. 다음 픽셀이 "더 멀어졌는지" 비교하는 기준이 된다.
-  const distanceAt = new Uint16Array(size * size);
+  const distanceAt = new Uint16Array(size * height);
   const start = seedY * size + seedX;
   mask[start] = 1;
   distanceAt[start] = colorDistance(pixels, start * 4, target);
@@ -79,7 +83,7 @@ export function computeFloodFillMask(
     for (const [dx, dy] of NEIGHBOR_OFFSETS) {
       const nx = x + dx;
       const ny = y + dy;
-      if (nx < 0 || nx >= size || ny < 0 || ny >= size) continue;
+      if (nx < 0 || nx >= size || ny < 0 || ny >= height) continue;
       const neighbor = ny * size + nx;
       if (mask[neighbor]) continue;
       const distance = colorDistance(pixels, neighbor * 4, target);

@@ -1,0 +1,364 @@
+{
+  "version": 1,
+  "created": "2026-09-06",
+  "status": "prepared assets; landing route not integrated",
+  "generation": "built-in ImageGen; exact prompts in docs/design-assets/gallery/prompts.json",
+  "reference": "docs/design-assets/gallery/selected-reference.png",
+  "reusedLogo": "/brand/logo.png",
+  "assets": [
+    {
+      "id": "duck-painter",
+      "alt": "붓과 팔레트를 든 노란 오리 화가",
+      "recommendedCssWidth": "clamp(240px, 36vw, 560px)",
+      "source": {
+        "path": "docs/design-assets/gallery/source/duck-painter.png",
+        "width": 1254,
+        "height": 1254,
+        "sha256": "d43c91c295cee912b03689111139273fc8722418173875fa0cd91cdeebd7b0f6"
+      },
+      "alphaVerified": true,
+      "png": {
+        "path": "/landing-gallery/duck-painter.png",
+        "width": 1200,
+        "height": 1200,
+        "bytes": 1998676,
+        "hasAlpha": true,
+        "sha256": "06f3c91122e03e21acf8566fa4be2f14c83072f50932292f69cae4b21478199d"
+      },
+      "variants": [
+        {
+          "path": "/landing-gallery/duck-painter-640.webp",
+          "width": 640,
+          "height": 640,
+          "bytes": 67710,
+          "hasAlpha": true,
+          "sha256": "3227118d7f330c3b993d1e69c9aecafe33d75c4300670baa13b20c59cfc194df"
+        },
+        {
+          "path": "/landing-gallery/duck-painter-1200.webp",
+          "width": 1200,
+          "height": 1200,
+          "bytes": 211576,
+          "hasAlpha": true,
+          "sha256": "f1ff6a2732de8ea3d0752d6ee386bf104c081773b2b105ba40c7abc6901a93a9"
+        }
+      ],
+      "srcSet": "/landing-gallery/duck-painter-640.webp 640w, /landing-gallery/duck-painter-1200.webp 1200w"
+    },
+    {
+      "id": "artwork-rocket",
+      "alt": "크레용으로 그린 로켓과 우주 비행사",
+      "recommendedCssWidth": "260–380px",
+      "source": {
+        "path": "docs/design-assets/gallery/source/artwork-rocket.png",
+        "width": 1448,
+        "height": 1086,
+        "sha256": "c2dbc4abec4afbcc1c089304331bd77f81dedfe7a62546ce884e9a98d11c0595"
+      },
+      "alphaVerified": false,
+      "png": {
+        "path": "/landing-gallery/artwork-rocket.png",
+        "width": 960,
+        "height": 720,
+        "bytes": 1039121,
+        "hasAlpha": false,
+        "sha256": "406ba7596b4f04e91311887f82a574981ed65f63867ac2f45f1cbc44ef4998f0"
+      },
+      "variants": [
+        {
+          "path": "/landing-gallery/artwork-rocket-480.webp",
+          "width": 480,
+          "height": 360,
+          "bytes": 32674,
+          "hasAlpha": false,
+          "sha256": "bc2d35d34eb6af03fc609f67ef4dba531f54cd96dff91212abd82d4511a73ba6"
+        },
+        {
+          "path": "/landing-gallery/artwork-rocket-960.webp",
+          "width": 960,
+          "height": 720,
+          "bytes": 105836,
+          "hasAlpha": false,
+          "sha256": "fa7d39e982af2e978857065969de6821fe9947375ff5efd37c225c98890b9130"
+        }
+      ],
+      "srcSet": "/landing-gallery/artwork-rocket-480.webp 480w, /landing-gallery/artwork-rocket-960.webp 960w"
+    },
+    {
+      "id": "artwork-whale",
+      "alt": "크레용으로 그린 고래와 바닷속 친구들",
+      "recommendedCssWidth": "260–380px",
+      "source": {
+        "path": "docs/design-assets/gallery/source/artwork-whale.png",
+        "width": 1448,
+        "height": 1086,
+        "sha256": "6d741a3fe1465fe1e666b64ba071bbedc701e7ac4906550f56e9b338024a2c8d"
+      },
+      "alphaVerified": false,
+      "png": {
+        "path": "/landing-gallery/artwork-whale.png",
+        "width": 960,
+        "height": 720,
+        "bytes": 1663268,
+        "hasAlpha": false,
+        "sha256": "ccf5fd103834a0cf2661220e4b8bb5dee8097923a98e9de4e64a968a6a677e00"
+      },
+      "variants": [
+        {
+          "path": "/landing-gallery/artwork-whale-480.webp",
+          "width": 480,
+          "height": 360,
+          "bytes": 74026,
+          "hasAlpha": false,
+          "sha256": "b4e978b6d1161172092864e9a19b4655c91ed5ffe9acca77fc3c5e50aecca3d0"
+        },
+        {
+          "path": "/landing-gallery/artwork-whale-960.webp",
+          "width": 960,
+          "height": 720,
+          "bytes": 274622,
+          "hasAlpha": false,
+          "sha256": "3240c75fc10bfe67cfdbbd4f80c76df184bd9b586d278d6597b3ee4b9adb68d0"
+        }
+      ],
+      "srcSet": "/landing-gallery/artwork-whale-480.webp 480w, /landing-gallery/artwork-whale-960.webp 960w"
+    },
+    {
+      "id": "artwork-house",
+      "alt": "크레용으로 그린 빨간 지붕 집과 꽃밭",
+      "recommendedCssWidth": "260–380px",
+      "source": {
+        "path": "docs/design-assets/gallery/source/artwork-house.png",
+        "width": 1448,
+        "height": 1086,
+        "sha256": "7eeb0ea68958adc2352b0d262cd71e74850caaf77a083e8d15ae2b2beaa9b498"
+      },
+      "alphaVerified": false,
+      "png": {
+        "path": "/landing-gallery/artwork-house.png",
+        "width": 960,
+        "height": 720,
+        "bytes": 1559410,
+        "hasAlpha": false,
+        "sha256": "61361074bb4c5bf806bb17c5d302ebe759316ed399a5ce10fdc39862b9e8de54"
+      },
+      "variants": [
+        {
+          "path": "/landing-gallery/artwork-house-480.webp",
+          "width": 480,
+          "height": 360,
+          "bytes": 61002,
+          "hasAlpha": false,
+          "sha256": "92d2b3c3c24b8773f95aae25d4583542f12adddaa821d1d33f36052f90a9daec"
+        },
+        {
+          "path": "/landing-gallery/artwork-house-960.webp",
+          "width": 960,
+          "height": 720,
+          "bytes": 228062,
+          "hasAlpha": false,
+          "sha256": "5842cc05e751152afaab444a55870964358c0379078bf52df563c97a125802fa"
+        }
+      ],
+      "srcSet": "/landing-gallery/artwork-house-480.webp 480w, /landing-gallery/artwork-house-960.webp 960w"
+    },
+    {
+      "id": "leaves",
+      "alt": "",
+      "recommendedCssWidth": "64–100px",
+      "source": {
+        "path": "docs/design-assets/gallery/source/leaves.png",
+        "width": 1223,
+        "height": 1286,
+        "sha256": "d25b5a25fada453d7b41665644253133ce804772d30a0a9db517e45daed5ea3a"
+      },
+      "alphaVerified": true,
+      "png": {
+        "path": "/landing-gallery/leaves.png",
+        "width": 320,
+        "height": 336,
+        "bytes": 122965,
+        "hasAlpha": true,
+        "sha256": "a0228b8d85179a5ea055b6c1f385f073eee8f54502ad2ec02a54f7fea6d15dfb"
+      },
+      "variants": [
+        {
+          "path": "/landing-gallery/leaves-160.webp",
+          "width": 160,
+          "height": 168,
+          "bytes": 9636,
+          "hasAlpha": true,
+          "sha256": "ed1e625b577e01d33c09fa56414e7688953c718ccc1312dd26f428e8b274ee4f"
+        },
+        {
+          "path": "/landing-gallery/leaves-320.webp",
+          "width": 320,
+          "height": 336,
+          "bytes": 24822,
+          "hasAlpha": true,
+          "sha256": "4cefef734fc8748f025b0440d8c25a25bb81879b25bb5154b55daa7260dc98d5"
+        }
+      ],
+      "srcSet": "/landing-gallery/leaves-160.webp 160w, /landing-gallery/leaves-320.webp 320w"
+    },
+    {
+      "id": "paper-blue",
+      "alt": "",
+      "recommendedCssWidth": "background-size: cover (tile seams not guaranteed)",
+      "source": {
+        "path": "docs/design-assets/gallery/source/paper-blue.png",
+        "width": 1254,
+        "height": 1254,
+        "sha256": "9d2a3e571e0bc6452723bbfa59bf807ee50357b963e1df97c9703bb8e32e562d"
+      },
+      "alphaVerified": false,
+      "png": {
+        "path": "/landing-gallery/paper-blue.png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 1427730,
+        "hasAlpha": false,
+        "sha256": "b07590991fefe2c9e5a36498bea50f3a4dfd6793dd0199f5d390e9eda985fbc4"
+      },
+      "variants": [
+        {
+          "path": "/landing-gallery/paper-blue-1024.webp",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 77582,
+          "hasAlpha": false,
+          "sha256": "389a552b0974456c12609e5a4bc007b7334f602d7c4f7b52163f6b75e7ca3002"
+        }
+      ],
+      "srcSet": "/landing-gallery/paper-blue-1024.webp 1024w"
+    },
+    {
+      "id": "frame-blue",
+      "alt": "",
+      "recommendedCssWidth": "300–440px",
+      "source": {
+        "path": "docs/design-assets/gallery/source/frame-blue.png",
+        "width": 1448,
+        "height": 1086,
+        "sha256": "69abdbe585b4b44656f7953137e85c2585dd1da4b758a9d074fd40c360bdd26e"
+      },
+      "alphaVerified": true,
+      "png": {
+        "path": "/landing-gallery/frame-blue.png",
+        "width": 960,
+        "height": 720,
+        "bytes": 721249,
+        "hasAlpha": true,
+        "sha256": "2b679bfe60ae2f8ce1402247d8683a84fb7547ae1a0ea7e25f05a2313015a5c2"
+      },
+      "variants": [
+        {
+          "path": "/landing-gallery/frame-blue-480.webp",
+          "width": 480,
+          "height": 360,
+          "bytes": 34674,
+          "hasAlpha": true,
+          "sha256": "eb91147ff17b7d3f01d708102d226eb26ff73060cf287dc7e6a741043020d39c"
+        },
+        {
+          "path": "/landing-gallery/frame-blue-960.webp",
+          "width": 960,
+          "height": 720,
+          "bytes": 128178,
+          "hasAlpha": true,
+          "sha256": "f5a4e33cfe2023b85231e1d5c2a46a865b8e5fb5c4a97f65b349e746c90b2b4a"
+        }
+      ],
+      "srcSet": "/landing-gallery/frame-blue-480.webp 480w, /landing-gallery/frame-blue-960.webp 960w",
+      "artworkOverlay": {
+        "left": "14.1%",
+        "top": "18%",
+        "width": "71.7%",
+        "height": "62%"
+      },
+      "note": "Painting is layered ABOVE frame, never behind its soft inner alpha. Use object-fit: contain with white background to avoid stretching."
+    }
+  ],
+  "icons": [
+    {
+      "path": "/landing-gallery/icons/arrow-right.svg",
+      "width": 24,
+      "height": 24,
+      "bytes": 216,
+      "sha256": "e6a99f07792ce745bcf5b062fb7cd220c492374f5bd7619ded9464256e2240b2",
+      "source": "project-authored original SVG; 2px round stroke; no external icon package"
+    },
+    {
+      "path": "/landing-gallery/icons/book-discover.svg",
+      "width": 24,
+      "height": 24,
+      "bytes": 315,
+      "sha256": "362ac4c28437733077a3c9f882afac829d3552ebce51fbf51c61f927e10830f7",
+      "source": "project-authored original SVG; 2px round stroke; no external icon package"
+    },
+    {
+      "path": "/landing-gallery/icons/different-ideas.svg",
+      "width": 24,
+      "height": 24,
+      "bytes": 287,
+      "sha256": "91995cc5ae1d43803830b636dc1c20b7018d73778bc730997ecf11b8775c99f9",
+      "source": "project-authored original SVG; 2px round stroke; no external icon package"
+    },
+    {
+      "path": "/landing-gallery/icons/house.svg",
+      "width": 24,
+      "height": 24,
+      "bytes": 235,
+      "sha256": "3a57ad0271f13f0b877a512bf1e58550af68d2aa65667e2816c8e27e19729532",
+      "source": "project-authored original SVG; 2px round stroke; no external icon package"
+    },
+    {
+      "path": "/landing-gallery/icons/question.svg",
+      "width": 24,
+      "height": 24,
+      "bytes": 357,
+      "sha256": "5af77878171fefd34b328b7b58b1e3a8b19b9e38825ac8193f9aa3ea29871111",
+      "source": "project-authored original SVG; 2px round stroke; no external icon package"
+    },
+    {
+      "path": "/landing-gallery/icons/rocket.svg",
+      "width": 24,
+      "height": 24,
+      "bytes": 300,
+      "sha256": "5cecb1352cf2e019956a6857a012fd06a133527f15b1ca92d92772265636ebcc",
+      "source": "project-authored original SVG; 2px round stroke; no external icon package"
+    },
+    {
+      "path": "/landing-gallery/icons/shield-check.svg",
+      "width": 24,
+      "height": 24,
+      "bytes": 264,
+      "sha256": "f2aa4799d50eb874bbd29c23650f4d9d920b670f120e383657bb95d3e084034c",
+      "source": "project-authored original SVG; 2px round stroke; no external icon package"
+    },
+    {
+      "path": "/landing-gallery/icons/star.svg",
+      "width": 24,
+      "height": 24,
+      "bytes": 181,
+      "sha256": "2375ec48dd9c86b18db7657d16a8fd32fba27cd57db9e3f93867f93dbeae4baf",
+      "source": "project-authored original SVG; 2px round stroke; no external icon package"
+    },
+    {
+      "path": "/landing-gallery/icons/teacher.svg",
+      "width": 24,
+      "height": 24,
+      "bytes": 250,
+      "sha256": "b77c94120973ef039885b3b2f6389bb7d158935490f0676fc6fcab8eccce5607",
+      "source": "project-authored original SVG; 2px round stroke; no external icon package"
+    },
+    {
+      "path": "/landing-gallery/icons/whale.svg",
+      "width": 24,
+      "height": 24,
+      "bytes": 344,
+      "sha256": "192ebd50ffdb22db84d0c2cf5c78113a4225a2e29afa16c96eba4e5112e9245b",
+      "source": "project-authored original SVG; 2px round stroke; no external icon package"
+    }
+  ]
+}

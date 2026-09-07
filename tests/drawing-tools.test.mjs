@@ -148,10 +148,28 @@ test("marker and watercolor render distinctly from pencil", () => {
 test("eraser footprint matches the square area removed from the document", () => {
   assert.match(studio, /className="eraser-footprint"/);
   assert.match(studio, /footprint\.style\.width = `\$\{eraserWidth \/ 10\.24\}%`/);
+  assert.match(studio, /footprint\.style\.height = "auto"/);
+  assert.match(css, /\.eraser-footprint \{ aspect-ratio:1; \}/);
   assert.match(renderer, /function eraseWithSquareFootprint/);
   assert.match(renderer, /globalCompositeOperation = "destination-out"/);
-  assert.match(renderer, /fillRect\(x \* size - half, y \* size - half, footprint, footprint\)/);
+  assert.match(renderer, /fillRect\(x \* size - half, y \* docH - half, footprint, footprint\)/);
   assert.match(css, /\.eraser-footprint \{[^}]*border:2px solid #1b3a57/);
+});
+
+test("도화지 비율은 문서가 정하고, 화면·래스터·저장 이미지가 같은 비율을 쓴다", () => {
+  // 화면 상자의 비율이 곧 그림의 비율이다 — 좌표가 x·y 모두 0~1로 정규화돼 있기 때문이다.
+  assert.match(studio, /"--paper-aspect": `\$\{DOCUMENT_SIZE\} \/ \$\{documentHeight\(documentState\)\}`/);
+  assert.match(css, /\.canvas-wrap \{[^}]*aspect-ratio:var\(--paper-aspect,1\);/);
+  // 래스터도 문서 비율을 따른다. 정사각으로 고정하면 저장 PNG와 화면이 어긋난다.
+  assert.match(studio, /function documentPixels\(document: Pick<DrawDocument, "height">, width: number\)/);
+  assert.match(studio, /height: Math\.round\(width \* documentHeight\(document\) \/ DOCUMENT_SIZE\)/);
+  // 저장 이미지는 화면 캔버스 비율을 그대로 쓴다.
+  assert.match(studio, /const height = Math\.max\(1, Math\.round\(size \* canvas\.height \/ Math\.max\(1, canvas\.width\)\)\)/);
+  // 점선 안내 좌표는 정사각 기준이라, 가운데 정사각 영역에 넣어 동그라미가 타원이 되지 않게 한다.
+  assert.match(studio, /function guideSquare\(canvas: HTMLCanvasElement\)/);
+  assert.match(studio, /context\.scale\(square\.side \/ 1024, square\.side \/ 1024\)/);
+  // 작품 썸네일은 잘라내지 않는다 — 가로 그림이 정사각 칸에서 양옆이 잘리면 안 된다.
+  assert.match(css, /\.student-thumb img,\.teacher-artwork-history-grid img \{ object-fit:contain; \}/);
 });
 
 test("shape tool offers ten child-friendly shapes and outline or filled drawing", () => {

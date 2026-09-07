@@ -35,6 +35,13 @@
 
 ## 2026-09-07 정본 저장소 이동·병합 (브랜치 wpdbs1229/bmad-product-planning)
 
+- 2차 병합(같은 날, PR 충돌 해소 요청): main에 새로 합류한 PR 4건(몽그리 개명 #7, 4:3 도화지 #5,
+  오리 전시관 대문 #3, 플로팅 도구 #4)을 아크 브랜치에 병합. 충돌 4개 해소 —
+  레슨 카탈로그 은퇴 유지(`lib/lesson-content.ts` 빈 카탈로그), 학생 홈은 아크 카드 유지 +
+  몽그리 개명 반영, 대문은 main의 전시관을 채택하고 우리 쪽 `teacherAuth=failed` 안내와
+  정책 페이지 링크를 이식, product-decisions는 양쪽 신규 결정 모두 보존(4:3 항은
+  「캔버스와 입력」 9항으로 이동). 게이트: typecheck·lint(경고 11 기존)·테스트 308/308·
+  browser-check(:3299 명시) 전 항목 통과.
 - 타 팀 교사 화면 시안(파랑 「내 학급」) 피드백을 `docs/design-feedback-teacher-mockup-2026-09-07.md`로
   정리 — 필수 4건(팔레트, 학교명 수집, 삭제 문구, 아크 조종석 부재) + 정본 문서 목록.
 
@@ -297,6 +304,131 @@
 - 외부 Canva 대신 Wiggle 내부 편집기와 MIT 라이선스 `react-moveable`을 사용한다는 점, Turso 그림책 문서와 R2 이미지 자산의 역할, 학생 화면 경로를 문서화했다.
 - 신규 정본 저장소 주소를 `wwwiggle/new_wiggle`로 바꾸고 전체 테스트 표기를 최근 검증 결과인 `291/291`로 현행화했다. Vercel이 아직 기존 저장소에 연결된 전환 상태도 README 배포 안내에 명시했다.
 - 문서 변경 뒤 typecheck·lint·production build·전체 테스트 `291/291`과 `git diff --check`를 다시 통과했다.
+
+## 2026-09-07 오리 전시관 대문 구현 (`claude/landing-gallery-20260907`, 로컬 검증)
+
+- 사용자가 고른 전시관 시안(`docs/design-assets/gallery/selected-reference.png`)대로 `app/page.tsx`를
+  다시 만들었다. 화가 오리를 앞에 세우고 우주·바다·집 그림을 액자에 담아 뒤에 걸었으며, 하단에
+  `모두 다른 답`·`AI는 대신 그리지 않아요`·`비교보다 발견` 소개 영역을 추가했다.
+- 그림은 `public/landing-gallery/`의 개별 WebP와 직접 작성한 SVG 아이콘으로 배치했고, 문구·교사 버튼·
+  4자리 코드 입력·`그리러 가기`는 모두 실제 HTML이다. 로고는 기존 `/brand/logo.png`를 그대로 쓴다.
+  전시 그림과 도형 표식은 제품 소개용 장식이며 실제 학생 작품이나 레슨 씨앗 데이터가 아니다.
+- 입장 동작은 손대지 않았다. `LandingCodeForm`(4자리 → `/join?code=`)과 `/teacher` 링크,
+  인증·API·저장 경로는 기존 구현을 그대로 재사용한다.
+- 은퇴 처리: 단일 `landing-scene-v2.png` 그림 하나에 HTML을 얹던 `1488×1057` cqw 무대를 제거했다.
+  `app/globals.css`에서 셀렉터가 전부 `.landing` 계열인 규칙 182개(513줄)를 지우고 전시관 블록 하나로
+  대체했다. `.entry-*`·`.student-*`와 섞인 규칙과 이번 저장소의 `.teacher-*` 추가분은 그대로 두었다.
+  이 무대는 세로 태블릿에서 조작 요소를 44px 아래로 줄이던 원인이므로 새 대문은 cqw를 쓰지 않는다.
+  `public/brand/landing-scene-v2.png`는 이제 어디서도 참조하지 않지만 파일은 남겨 두었다.
+- `f0615ec`의 코드 입력 수정과 합쳤다. 제출 버튼은 더 이상 `disabled`가 아니라
+  `:has(.landing-code-box:invalid)`로 흐려지며, 브라우저가 복원한 값도 그대로 제출된다.
+  대문 CSS도 이 방식을 따르고 `:disabled` 규칙은 두지 않는다.
+- 에셋: `public/landing-gallery/`(WebP 13·PNG 7·SVG 아이콘 10·조합용 CSS·매니페스트)와
+  `docs/design-assets/gallery/`의 선택 시안·README·프롬프트·검수 화면·재생성 스크립트를 커밋했다.
+  15MB 생성 원본과 검수 연락판, 배포용 zip은 커밋하지 않았다 — 재생성 경로는 `prompts.json`에 있다.
+- `tests/landing-page.test.mjs`는 은퇴한 무대 계약(1488 좌표계, 옛 서브타이틀 폭, 옛 데스크톱 타이포)
+  세 항목을 전시관 계약으로 교체했다. 코드 카드·교사 링크·제목 마크업·`/join`·복원 코드 계약은 유지했다.
+  액자 안쪽 좌표는 `public/landing-gallery/gallery-assets.css`와 값이 어긋나면 실패하도록 교차 검사한다.
+- 검증: `npm run typecheck`, `npm run lint`, `npm run build`, 두 범위의 `git diff --check` 통과.
+- 실제 브라우저 검증(로컬, headless Chrome/CDP): `npm run check:browser`(320×568·390×844·844×390)와
+  `--ipad`(768×1024·768×880·820×1180) 전 항목 통과, `--desktop`(1440×900·1920×1080)의 대문 4항목 통과.
+  스크립트 인자는 `node scripts/browser-check.mjs <baseUrl> --desktop` 순서여야 한다
+  (`npm run check:browser -- --desktop`은 `--desktop`을 주소로 읽어 실패한다).
+- 6개 폭(320·390·844×390·768·1024·1440)에서 computed box를 직접 측정해 가로 스크롤 0,
+  44px 미만 터치 목표 0, 수업 코드 네 칸 46~52×48~56px을 확인했다. 실제 브라우저에서 코드 입력·
+  초점 이동·`/join?code=` 이동·`/teacher` 이동도 확인했다.
+- 휴대전화는 `오리 → 학생 태그 → 수업 코드 → 안전 문구 → 전시 그림 → 소개` 순서로 세로 정렬하고,
+  760px 이상에서 시안 구도(액자 뒤·오리 앞·오른쪽 아래 입장 카드)로 바뀐다.
+- 남은 위험: 대문 전체 높이는 1440×900에서 약 1005px이라 소개 영역을 보려면 한 번 스크롤한다.
+  휴대전화에서는 액자 3개가 세로로 쌓여 문서가 길다(390px 기준 약 1875px).
+
+## 2026-09-07 그리기 화면 플로팅 도구 (`claude/drawing-studio-floating-20260907`, 로컬 검증)
+
+- 기준 시안: `docs/design-assets/drawing-toolbar/drawing-studio-selected-reference.png`.
+  넓은 화면(가로 900px·세로 600px 이상)을 3열 고정 사이드바에서 시안의 떠 있는 카드 배치로 바꿨다.
+  도화지가 화면을 차지하고 그 위에 안내 카드(왼쪽 위), 도구 레일과 색 팔레트(오른쪽)가 뜬다.
+- 도구 레일은 `public/drawing-tools/`의 실제 도구 사진을 56×22 슬롯에 놓는다. 위에서부터
+  손잡이 · 되돌리기/다시하기 · 연필/크레용/마커/수채붓 · 지우개/대칭 · 더보기 순이며,
+  고른 도구는 테두리가 생기고 오른쪽으로 6px 나온다.
+- 선 굵기: 고른 펜을 다시 누르면 그 펜 왼쪽 줄에 드래그 슬라이더가 열린다. 다른 도구·바깥 누름·Esc로 닫는다.
+  값은 기존 `STROKE_WIDTHS` 5단을 그대로 쓰는 `input[type=range]`이므로 저장 문서 형식은 바뀌지 않는다.
+  좁은 화면은 실측으로 다듬어 둔 5단 점 버튼을 유지한다(`product-decisions.md` 캔버스와 입력 8번).
+- 자주 쓰지 않는 도구(채우기·도형·글씨·펜/손가락 모드·전체 지우기)는 `더보기` 시트로 접었고 레일 왼쪽에 열린다.
+- 안내 카드는 오른쪽 위 꺾쇠로 접고 펼 수 있다. 접으면 그림 썸네일만 남는다.
+- 아이콘은 시안 문서가 제안한 `lucide-react` 대신 같은 모양·2px 둥근 선의 인라인 SVG(`app/components/StudioIcons.tsx`)로
+  넣었다. 이 저장소는 아이콘을 인라인 SVG로 그려 왔고 필요한 모양이 10개뿐이라 패키지를 늘리지 않았다.
+- 좁은 화면 안전장치: 새 래퍼(`.tool-rail`/`.tool-sheet`/`.tool-colors`)는 좁은 화면에서 `display:contents`로
+  사라지고, 바뀐 DOM 차례는 `order`로 원래 보이던 순서로 되돌린다. 떠 있는 카드는 작은 도화지를 가리고
+  44px 터치 목표를 깨므로 넓은 화면에만 적용한다.
+- `scripts/browser-check.mjs` 3곳을 고쳤다. ① 숨겨진 도구 버튼은 접근성 검사 대상에서 뺀다(이미 `smallTargets`가
+  쓰던 `visible()`과 기준을 맞춤) ② `label()`이 SVG의 `className`(문자열이 아님)에서 죽지 않게 `String()`으로 감쌈
+  ③ 도구 아이콘 검사가 이모지 대신 실제로 보이는 아이콘(사진 또는 이모지)을 재고, 크기·아이콘 검사는 지금 보이는
+  버튼만 대상으로 한다. 이름 검사는 도구 9개 전부에 그대로 적용된다.
+- 검증: `npm run typecheck`, `npm run lint`, `npm run build`, `git diff --check` 통과.
+  `drawing-tools`·`mobile-css`·`guide-demonstration`·`responsive-drawing-ui`·`pre-reader-ux`·`landing-page` 통과(66개).
+  전체 `npm test`의 실패 33건은 대문 브랜치와 목록이 완전히 같다(Node v22.13.0의 `.ts` 로더 문제).
+- 실제 브라우저 검증: `npm run check:browser`(320×568·390×844·844×390)와 `--ipad`(768×1024·768×880·820×1180)
+  전 항목 통과. `--desktop`(1440×900·1920×1080)의 그리기 화면 항목은 전부 통과했고, 이전에 실패하던
+  `그리기 화면 터치 목표 44px 이상`(5단 점 버튼 폭 25.4px)은 슬라이더로 바뀌며 해결됐다. 남은 실패 5건은
+  입장 화면(`입장 단계`, `다시 골라요`)과 핀치 환경 문제로 이번 변경과 무관한 기존 항목이다.
+- 1440×1000·1024×768에서 굵기 슬라이더 열림·값 변경·다른 도구 선택 시 닫힘, 더보기 시트 열림·Esc 닫힘,
+  안내 접기·펼치기를 실제 브라우저로 확인했다.
+- 남은 위험: 도화지는 여전히 정사각형 문서다. 시안의 가로로 긴 도화지는 저장 형식을 바꿔야 해서 적용하지 않았다.
+  헤더의 `선생님 말씀`은 기존 컴포넌트라 💌 이모지를 그대로 쓴다(시안은 말풍선 아이콘).
+
+## 2026-09-07 가로 도화지 (`claude/wide-canvas-20260907`, 로컬 검증)
+
+- 새 작품의 도화지를 정사각(1024×1024)에서 가로 4:3(1024×768)으로 바꿨다. 그리기 화면 시안의
+  넓은 도화지를 실제로 구현한 것이다.
+- **저장 형식 변경**: `DrawDocument`에 `height?: 1024 | 768`을 더했다. 좌표는 x·y 모두 0~1로
+  정규화돼 있어 세로가 달라지면 같은 문서가 다르게 그려진다. 그래서 세로를 문서에 함께 저장하고,
+  `height`가 없는 기존 작품은 예전 그대로 정사각으로 읽는다. 이미 저장된 그림은 하나도 건드리지 않는다.
+  서버 `validateDrawDocument`는 세로가 없거나 허용 목록 안일 때만 통과시키고, 문서를 다시 만들어
+  돌려줄 때 `height`를 그대로 보존한다(빠뜨리면 저장된 가로 도화지가 조용히 정사각이 된다).
+- 렌더러(`lib/draw-renderer.ts`)의 크기 인자가 숫자 또는 `{width,height}`를 받는다. x는 가로,
+  y는 세로에 곱하고, 굵기·글자처럼 "문서 단위"로 저장된 값은 가로(1024) 기준으로 환산한다.
+  숫자를 그대로 주면 예전과 완전히 같은 정사각 렌더다.
+- `computeFloodFillMask`는 `options.height`로 세로를 받는다. 없으면 예전처럼 정사각을 훑는다.
+- 점선·시범 안내는 정사각 기준 좌표라, 도화지 가운데의 정사각 영역에 `translate`+`scale`로 넣어
+  동그라미가 타원이 되지 않게 했다.
+- 지우개 자국은 가로 %로만 크기를 잡고 `aspect-ratio:1`로 정사각을 지킨다 — 가로 도화지에서는
+  가로 %와 세로 %가 서로 다른 픽셀이라 예전 방식이면 실제로 지워지는 영역과 어긋난다.
+- 교사 화면의 작품 썸네일(`.student-thumb`, `.teacher-artwork-history-grid`)을 `cover`에서
+  `contain`으로 바꿨다. 가로 그림이 정사각 칸에서 양옆이 잘리면 아이 그림 일부가 사라진다.
+- 타임랩스도 문서 비율로 재생한다.
+- 검증: `npm run typecheck`, `npm run lint`, `npm run build`, `git diff --check` 통과.
+  `tests/wide-canvas.test.mjs`(신규, 런타임 계약 5개)와 `tests/drawing-tools.test.mjs`(소스 계약 추가) 통과.
+- 실제 브라우저·실제 저장 API로 확인한 호환 계약(`compat` 스크립트):
+  ① `height` 없는 기존 문서를 서버가 그대로 받고 ② 다시 읽어도 `height`가 붙지 않으며
+  ③ 화면·래스터 모두 1.000 비율로 렌더된다. 새 문서는 ④ `height:768`이 저장·회수되고
+  ⑤ 화면·래스터 모두 1.333이다. ⑥ 허용 목록 밖 세로(500)는 서버가 거절한다.
+- `npm run check:browser`(320×568·390×844·844×390) 전 항목 통과 — 가로 도화지에서 대칭·되돌리기·
+  채우기·도형 2탭·핀치까지 실제 입력으로 확인했다.
+- 이 맥의 Node v22.13.0은 `.ts`를 벗기지 못해 전체 `npm test`가 33건 실패한다.
+  `node --experimental-strip-types`를 붙이면 305개 중 294개가 통과하고, 남은 11건은
+  `node:module`의 `registerHooks`가 없어 실패하는 하네스 문제로 이번 변경과 무관하다.
+- 남은 위험: 이미 저장된 작품은 정사각 그대로다. 기존 작품을 가로로 바꾸는 마이그레이션은 하지 않았다
+  (좌표를 늘리면 아이 그림이 찌그러진다). 4:3은 제품의 전시 그림·액자 에셋(960×720)에 맞춘 값이며
+  다른 비율을 원하면 `DOCUMENT_HEIGHTS`에 값을 더하고 `DEFAULT_DOCUMENT_HEIGHT`만 바꾸면 된다.
+
+## 2026-09-07 AI 도우미 이름 몽그리로 변경 (`claude/mongri-rename-20260907`, 로컬 검증)
+
+- 아이에게 보이는 이름과 AI 시스템 프롬프트의 이름을 `그리미`에서 `몽그리`로 바꿨다.
+  앱 화면·API 오류 문구·README·검증 스크립트 라벨·데모 데이터까지 73건이다.
+- **안전 필터는 넓히기만 했다.** `lib/openai-coaching.ts`의 "대신 그려 줄게" 차단 패턴과
+  평가자 화자 집합(`EVALUATOR`)에 `몽그리`를 더하면서 `그리미`를 그대로 남겼다. 이미 저장된
+  과거 코칭 기록과 모델이 옛 이름을 쓰는 경우를 계속 막아야 하기 때문이다.
+  `tests/coaching-safety.test.mjs`에 두 이름 모두를 막는지 보는 사례를 더했다.
+- 코드 식별자(`grimi-panel`, `grimiOpen`, `askGrimi` 등)와 자산 경로(`/brand/grimi-mascot.png`)는
+  그대로 두었다. 아이에게 보이지 않고, 바꾸면 변경 범위와 위험만 커진다.
+- 과거 기록 문서(`docs/claude-handoff-2026-07-27.md`, `ux-market-audit-2026-07.md`,
+  `agent-handoff/latest.md`, `flutter-adoption-audit.md`)의 옛 이름은 그날의 기록이므로 남겼다.
+- 검증: `npm run typecheck`, `npm run lint`, `npm run build`, `git diff --check` 통과.
+  전체 테스트는 `node --experimental-strip-types`로 305개 중 304개 통과이며, 남은 1건
+  (`tests/pbkdf2-runtime.test.mjs`)은 이 맥의 Node v22.13.0에 `node:module`의 `registerHooks`가
+  없어서 나는 환경 문제다.
+- 참고: 앞선 기록들이 "전체 테스트 실패 33건/11건"이라고 적은 것은 상당수가 로컬 dev 서버가
+  포트를 잡고 있어 하네스 서버가 뜨지 못한 탓이었다. dev 서버를 내리고 돌리면 304/305다.
 
 ## 다음 작업 시작 전 확인
 

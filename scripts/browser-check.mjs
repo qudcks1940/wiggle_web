@@ -96,7 +96,7 @@ async function navigate(cdp, session, url) {
 const MEASURE_HELPERS = `
   window.__wiggle = {
     box(element) { const rect = element.getBoundingClientRect(); return { w: Math.round(rect.width * 10) / 10, h: Math.round(rect.height * 10) / 10, top: Math.round(rect.top), bottom: Math.round(rect.bottom), left: Math.round(rect.left), right: Math.round(rect.right) }; },
-    label(element) { return (element.getAttribute('aria-label') || element.textContent || element.className || element.tagName).replace(/\\s+/g, ' ').trim().slice(0, 44); },
+    label(element) { return String(element.getAttribute('aria-label') || element.textContent || element.className || element.tagName).replace(/\\s+/g, ' ').trim().slice(0, 44); },
     visible(element) { const style = getComputedStyle(element); if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false; const rect = element.getBoundingClientRect(); return rect.width > 0 && rect.height > 0; },
     interactive() { return [...document.querySelectorAll('button, a[href], summary, input[type=range], [role=button]')].filter((element) => window.__wiggle.visible(element) && !element.disabled); },
     smallTargets(floor) { return window.__wiggle.interactive().map((element) => ({ label: window.__wiggle.label(element), ...window.__wiggle.box(element) })).filter((item) => Math.min(item.w, item.h) < floor); },
@@ -434,7 +434,7 @@ async function main() {
           check(stickyOverlap.resetReach && stickyOverlap.resetReach.hitsSelf, `${viewport.name} 세 칸을 다 고른 뒤에도 다시 골라요를 누를 수 있음`, stickyOverlap.resetReach);
         }
 
-        // 5) 그리기 화면과 그리미 패널
+        // 5) 그리기 화면과 몽그리 패널
         await installSession(cdp, session, seeded);
         await stubCoaching(cdp, session);
         await navigate(cdp, session, `${BASE}/student/draw/${seeded.artworkId}`);
@@ -467,15 +467,18 @@ async function main() {
         const tools = await evaluate(cdp, session, `(async () => {
           const wait = (ms) => new Promise((done) => setTimeout(done, ms));
           const body = document.querySelector('.studio-body');
-          const targets = [...document.querySelectorAll('.tool-panel button')];
+          const targets = [...document.querySelectorAll('.tool-panel button')].filter((button) => window.__wiggle.visible(button));
           if (!targets.length) return { error: 'no-tools' };
           const primaryTools = [...document.querySelectorAll('.tool-panel .tool-group button')].map((button) => {
-            const icon = button.querySelector('.tool-icon');
+            const photo = button.querySelector('.tool-photo');
+            const emoji = button.querySelector('.tool-icon');
+            const icon = photo && window.__wiggle.visible(photo) ? photo : emoji;
             const name = button.querySelector('.tool-name');
             const buttonBox = window.__wiggle.box(button);
             const iconBox = icon ? window.__wiggle.box(icon) : null;
             return {
               label: button.getAttribute('aria-label') ?? '', title: button.getAttribute('title') ?? '',
+              visible: window.__wiggle.visible(button),
               buttonBox, iconBox, nameDisplay: name ? getComputedStyle(name).display : '',
               iconInside: Boolean(iconBox && iconBox.left >= buttonBox.left && iconBox.right <= buttonBox.right && iconBox.top >= buttonBox.top && iconBox.bottom <= buttonBox.bottom),
             };
@@ -494,8 +497,9 @@ async function main() {
           check(tools.unreachable.length === 0, `${viewport.name} 모든 그리기 도구에 닿을 수 있음`, tools.unreachable);
           check(tools.primaryTools.length === 9 && tools.primaryTools.every((tool) => tool.label && tool.title), `${viewport.name} 아이콘 도구 이름을 접근성 정보로 제공`, tools.primaryTools);
           check(tools.primaryTools.every((tool) => tool.nameDisplay === 'none'), `${viewport.name} 좁은 도구 버튼의 글자를 숨김`, tools.primaryTools);
-          check(tools.primaryTools.every((tool) => Math.min(tool.buttonBox.w, tool.buttonBox.h) >= 44), `${viewport.name} 아이콘 도구 터치 목표 44px 이상`, tools.primaryTools);
-          check(tools.primaryTools.every((tool) => tool.iconInside), `${viewport.name} 모든 도구 아이콘이 버튼 안에 온전히 보임`, tools.primaryTools);
+          const shownTools = tools.primaryTools.filter((tool) => tool.visible);
+          check(shownTools.length > 0 && shownTools.every((tool) => Math.min(tool.buttonBox.w, tool.buttonBox.h) >= 44), `${viewport.name} 아이콘 도구 터치 목표 44px 이상`, shownTools);
+          check(shownTools.every((tool) => tool.iconInside), `${viewport.name} 모든 도구 아이콘이 버튼 안에 온전히 보임`, shownTools);
         }
 
         // 4.5) 새 도구 실동작: 대칭 쌍·그룹 되돌리기·채우기·도형 2탭을 실제 입력 파이프라인으로 검증.
@@ -610,7 +614,7 @@ async function main() {
             await sleep(200);
           }
 
-          // 다음 검증(그리미·소감)을 위해 연필로 되돌린다.
+          // 다음 검증(몽그리·소감)을 위해 연필로 되돌린다.
           await clickPanelButton("연필"); await sleep(120);
         }
 
@@ -620,7 +624,7 @@ async function main() {
 
         const grimi = await evaluate(cdp, session, `(async () => {
           const wait = (ms) => new Promise((done) => setTimeout(done, ms));
-          const open = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('그리미 부르기'));
+          const open = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('몽그리 부르기'));
           if (!open) return { error: 'no-grimi-button' };
           open.click();
           for (let attempt = 0; attempt < 40 && !document.querySelector('.grimi-panel'); attempt += 1) await wait(120);
@@ -643,15 +647,15 @@ async function main() {
             guideRequestVisible: Boolean(panel.querySelector('.guide-request')) && window.__wiggle.visible(panel.querySelector('.guide-request')),
           };
         })()`);
-        check(!grimi.error, `${viewport.name} 그리미 패널 열림`, grimi.error);
+        check(!grimi.error, `${viewport.name} 몽그리 패널 열림`, grimi.error);
         if (!grimi.error) {
-          check(grimi.position === "fixed", `${viewport.name} 그리미가 바텀시트로 열림`, grimi.position);
+          check(grimi.position === "fixed", `${viewport.name} 몽그리가 바텀시트로 열림`, grimi.position);
           // 시트는 내용에 맞춰 자란다. 내용이 잘리는 경우에만 화면의 절반 이상을 요구한다.
           const clipped = grimi.scrollHeight - grimi.clientHeight > 4;
-          check(!clipped || grimi.box.h >= grimi.viewportHeight * 0.5, `${viewport.name} 그리미 표시 영역이 충분히 큼`, { h: grimi.box.h, viewport: grimi.viewportHeight, clipped });
-          check(grimi.box.bottom <= grimi.viewportHeight + 1, `${viewport.name} 그리미 시트가 화면 안에 있음`, grimi.box);
-          check(grimi.closeBox && Math.min(grimi.closeBox.w, grimi.closeBox.h) >= 44, `${viewport.name} 그리미 닫기 44px 이상`, grimi.closeBox);
-          check(grimi.closeReachable?.hitsSelf, `${viewport.name} 그리미 닫기를 바로 누를 수 있음`, grimi.closeReachable);
+          check(!clipped || grimi.box.h >= grimi.viewportHeight * 0.5, `${viewport.name} 몽그리 표시 영역이 충분히 큼`, { h: grimi.box.h, viewport: grimi.viewportHeight, clipped });
+          check(grimi.box.bottom <= grimi.viewportHeight + 1, `${viewport.name} 몽그리 시트가 화면 안에 있음`, grimi.box);
+          check(grimi.closeBox && Math.min(grimi.closeBox.w, grimi.closeBox.h) >= 44, `${viewport.name} 몽그리 닫기 44px 이상`, grimi.closeBox);
+          check(grimi.closeReachable?.hitsSelf, `${viewport.name} 몽그리 닫기를 바로 누를 수 있음`, grimi.closeReachable);
           check(grimi.exitReachable?.onScreen, `${viewport.name} 그냥 그릴래 탈출 경로가 화면 안에 있음`, grimi.exitReachable);
         }
 
@@ -682,7 +686,7 @@ async function main() {
         })()`);
         check(!coaching.error, `${viewport.name} 코칭 내용 레이아웃 재현`, coaching.error);
         if (!coaching.error) {
-          check(coaching.startState.question?.onScreen, `${viewport.name} 그리미 첫 질문이 바로 보임`, coaching.startState.question);
+          check(coaching.startState.question?.onScreen, `${viewport.name} 몽그리 첫 질문이 바로 보임`, coaching.startState.question);
           check(coaching.startState.firstChip?.hitsSelf, `${viewport.name} 첫 선택지를 바로 누를 수 있음`, coaching.startState.firstChip);
           check(coaching.startState.close?.hitsSelf, `${viewport.name} 코칭 중에도 닫기가 고정되어 보임`, coaching.startState.close);
           check(coaching.startState.exit?.hitsSelf, `${viewport.name} 코칭 중에도 탈출 버튼이 고정되어 보임`, coaching.startState.exit);
@@ -691,7 +695,7 @@ async function main() {
           check(coaching.nestedScrollers.length === 0, `${viewport.name} 시트 안에 숨은 중첩 스크롤이 없음`, coaching.nestedScrollers);
         }
 
-        // 5-c) 코칭을 유지한 채 그림을 그릴 수 있는가 (그리미가 "선을 하나 더 그어 보자"고 한 뒤)
+        // 5-c) 코칭을 유지한 채 그림을 그릴 수 있는가 (몽그리가 "선을 하나 더 그어 보자"고 한 뒤)
         const collapse = await evaluate(cdp, session, `(async () => {
           const wait = (ms) => new Promise((done) => setTimeout(done, ms));
           const collapseButton = document.querySelector('.grimi-collapse');
@@ -726,13 +730,13 @@ async function main() {
             panelTop: panelBox.top, viewportHeight: innerHeight,
           };
         })()`);
-        check(!collapse.error, `${viewport.name} 그리미 접기 재현`, collapse.error);
+        check(!collapse.error, `${viewport.name} 몽그리 접기 재현`, collapse.error);
         if (!collapse.error) {
           check(collapse.peekShown && collapse.nextActionShown, `${viewport.name} 접어도 다음 행동이 계속 보임`, collapse);
           check(collapse.confirmReachable?.hitsSelf, `${viewport.name} 접은 상태에서 '그렸어요'를 누를 수 있음`, collapse.confirmReachable);
           check(collapse.drawableHeight >= 140, `${viewport.name} 접으면 그릴 수 있는 도화지가 남음`, { drawableHeight: collapse.drawableHeight });
           check(collapse.probeHitsCanvas, `${viewport.name} 접은 상태에서 도화지에 실제로 그릴 수 있음`, collapse);
-          check(collapse.reExpandReachable?.hitsSelf, `${viewport.name} 그리미를 다시 펼칠 수 있음`, collapse.reExpandReachable);
+          check(collapse.reExpandReachable?.hitsSelf, `${viewport.name} 몽그리를 다시 펼칠 수 있음`, collapse.reExpandReachable);
         }
 
         // 6) 소감 모달 초점 이동과 Escape 닫기

@@ -99,30 +99,24 @@ test("the join preview card keeps the live picture-password slots so the right c
   assert.match(joinClient, /className="join-preview-slots"/);
 });
 
-test("landing subtitle has an explicit width so it wraps instead of overflowing as a centered flex item", async () => {
+test("landing subtitle has an explicit width so it wraps instead of overflowing as a centered item", async () => {
   const css = await read("../app/globals.css");
-  // .landing-hero is a column flex container with align-items:center; a subtitle with only
-  // max-width (no width) can shrink-to-fit past the hero's visible box on some renderers and
-  // get clipped by .landing's overflow:hidden. An explicit width keeps it reliably constrained.
-  assert.match(css, /\.landing-subtitle \{[^}]*width:min\(100%,420px\);[^}]*max-width:420px;/);
+  // 대문 카피는 가운데 정렬 컨테이너 안에 있다. max-width만 주면 렌더러에 따라 보이는 상자 밖으로
+  // 늘어나 잘릴 수 있다. 명시적 width가 있어야 어떤 폭에서도 줄바꿈으로 처리된다.
+  assert.match(css, /\.gallery-landing \.landing-subtitle \{[^}]*width:min\(100%,460px\);[^}]*margin-inline:auto;/);
 });
 
 test("desktop (min-width:900px) landing typography reads as a strong headline with an emphasized student card", async () => {
   const css = await read("../app/globals.css");
-  const desktop = css.match(/@media \(min-width:900px\) \{([\s\S]*?)\n\}/)?.[1] ?? "";
-  assert.ok(desktop, "expected a @media (min-width:900px) landing block");
+  const desktop = css.match(/@media \(min-width:900px\) \{\s*\.gallery-hero([\s\S]*?)\n\}/)?.[1] ?? "";
+  assert.ok(desktop, "expected a @media (min-width:900px) gallery landing block");
 
-  const headlineSize = desktop.match(/\.landing-headline \{ font-size:clamp\((\d+)px,[^,]+,(\d+)px\);/);
-  assert.ok(headlineSize, "expected a clamped desktop headline font-size");
-  assert.ok(Number(headlineSize[2]) >= 48, `expected desktop headline max size >= 48px, got ${headlineSize[2]}px`);
+  const headlineSize = desktop.match(/\.gallery-landing \.landing-headline \{ font-size:min\([^,]+,(\d+)px\);/);
+  assert.ok(headlineSize, "expected a capped desktop headline font-size");
+  assert.ok(Number(headlineSize[1]) >= 48, `expected desktop headline max size >= 48px, got ${headlineSize[1]}px`);
 
-  const tagWidth = desktop.match(/\.landing-student-tag \{[^}]*width:(\d+)px;/);
-  assert.ok(tagWidth, "expected an explicit desktop .landing-student-tag width");
-  const width = Number(tagWidth[1]);
-  assert.ok(width >= 210 && width <= 240, `expected student card width in 210-240px, got ${width}px`);
-
-  const tagLabelSize = desktop.match(/\.landing-student-tag b \{ font-size:(\d+)px; \}/);
-  assert.ok(tagLabelSize, "expected an explicit desktop .landing-student-tag b font-size");
+  const tagLabelSize = desktop.match(/\.gallery-student-tag b \{ font-size:(\d+)px; \}/);
+  assert.ok(tagLabelSize, "expected an explicit desktop .gallery-student-tag b font-size");
   assert.ok(Number(tagLabelSize[1]) >= 20, `expected 학생 label size >= 20px, got ${tagLabelSize[1]}px`);
 });
 
@@ -137,21 +131,76 @@ test("wide picture-book screens keep short landing and join copy on one line", a
   assert.match(wide, /text-wrap:nowrap;/);
 });
 
-test("normal-size screens scale the approved landing art and live controls as one 1488x1057 stage", async () => {
-  const css = await read("../app/globals.css");
-  const start = css.indexOf("/* The approved landing is one 1488×1057 stage: artwork and live HTML scale together.");
-  const end = css.indexOf("@media (max-width:340px)", start);
-  assert.ok(start >= 0 && end > start, "expected the approved landing stage rules");
-  const stage = css.slice(start, end);
+test("the gallery landing composes individual assets instead of one baked scene picture", async () => {
+  const page = await read("../app/page.tsx");
+  // 2026-09-06 사용자 선택으로 단일 landing-scene 그림 고정 결정은 은퇴했다.
+  assert.doesNotMatch(page, /landing-scene/);
+  assert.match(page, /className="landing gallery-landing"/);
+  assert.match(page, /src="\/landing-gallery\/duck-painter-1200\.webp"/);
+  assert.match(page, /src="\/landing-gallery\/frame-blue-960\.webp"/);
+  for (const id of ["rocket", "whale", "house"]) {
+    assert.ok(page.includes(`{ id: "${id}"`), `expected the ${id} exhibit`);
+  }
+  // 액자·걸이줄·잎은 장식이므로 보조기기에서 읽히지 않아야 한다.
+  assert.match(page, /className="gallery-frame__rim"[\s\S]*?alt=""[\s\S]*?aria-hidden="true"/);
+  assert.match(page, /className="gallery-wire" aria-hidden="true"/);
+  assert.match(page, /className="gallery-leaves gallery-decoration"[\s\S]*?aria-hidden="true"/);
+  // 도형→작품 표식은 예시 장식이지 실제 레슨 씨앗이 아니다 — 보조기기에서 읽히지 않는다.
+  assert.match(page, /className="gallery-shape-chip" aria-hidden="true"/);
+});
 
-  // 무대는 가로 화면(기존 601px 경계 유지)과 1025px 이상 전용 — 세로 태블릿(601~1024px)은
-  // cqw 축소가 터치 목표 44px을 깨서 제외한다 (2026-08-20 iPad 실측).
-  assert.match(stage, /@media \(min-width:601px\) and \(min-height:601px\) and \(orientation:landscape\), \(min-width:1025px\) and \(min-height:601px\)/);
-  assert.match(stage, /\.landing-illustration-wrap \{[\s\S]*container-type:inline-size;[\s\S]*aspect-ratio:1488\/1057;/);
-  assert.match(stage, /\.landing \.topbar \{[\s\S]*position:absolute;/);
-  assert.match(stage, /\.landing-illustration \{[\s\S]*position:absolute;[\s\S]*inset:0;/);
-  assert.match(stage, /\.landing-student-tag \{[\s\S]*top:29cqw;[\s\S]*width:18\.8cqw;/);
-  assert.match(stage, /\.landing-code-card \{[\s\S]*top:50cqw;[\s\S]*width:19\.5cqw;/);
-  assert.match(stage, /\.landing-code-box \{[\s\S]*width:3\.05cqw;/);
-  assert.doesNotMatch(stage, /flex-direction:column/);
+test("the landing keeps the three product promises under the gallery", async () => {
+  const page = await read("../app/page.tsx");
+  for (const [title, body] of [
+    ["모두 다른 답", "같은 시작에서도 생각은 달라져요"],
+    ["AI는 대신 그리지 않아요", "필요할 때만 질문으로 도와요"],
+    ["비교보다 발견", "선생님과 서로의 과정을 살펴봐요"],
+  ]) {
+    assert.ok(page.includes(`title: "${title}", body: "${body}"`), `expected the ${title} promise`);
+  }
+  // 점수·순위·재능 진단은 만들지 않는다는 확정 결정을 대문 문구에서도 지킨다.
+  assert.doesNotMatch(page, /순위|점수|등수|재능 진단/);
+});
+
+test("wide screens put the frames behind and the duck in front, with the code card clear of the wall", async () => {
+  const css = await read("../app/globals.css");
+  const start = css.indexOf("@media (min-width:760px) {");
+  assert.ok(start >= 0, "expected the gallery composition block");
+  const stage = css.slice(start, css.indexOf("@media (min-width:900px) {", start));
+
+  // 액자 벽은 첫 행 전체, 입장 카드는 둘째 행 오른쪽 — 카드가 액자를 덮지 않는다.
+  assert.match(stage, /\.gallery-wall \{[\s\S]*?grid-column:1\/-1;[\s\S]*?grid-row:1;/);
+  assert.match(stage, /\.gallery-entry \{ grid-column:2; grid-row:2;[\s\S]*?z-index:3;/);
+  // 오리는 무대 바닥에 붙여 액자 앞에 세운다.
+  assert.match(stage, /\.gallery-duck \{[\s\S]*?position:absolute;[\s\S]*?z-index:2;[\s\S]*?bottom:0;/);
+});
+
+test("the gallery landing never scales controls with container units, so touch targets stay 44px", async () => {
+  const css = await read("../app/globals.css");
+  // 주석에는 은퇴 사유로 cqw가 적혀 있다 — 규칙만 본다.
+  const gallery = css.slice(css.indexOf("/* ── 2026-09-07 오리 전시관 대문")).replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.ok(gallery.trim(), "expected the gallery landing block");
+  // 은퇴한 1488 무대는 cqw로 입력칸까지 줄여 세로 태블릿에서 44px이 깨졌다. 다시 도입하지 않는다.
+  assert.doesNotMatch(gallery, /cqw/);
+  assert.doesNotMatch(gallery, /container-type/);
+  const box = gallery.match(/\.gallery-landing \.landing-code-box \{[\s\S]*?\n\}/)?.[0] ?? "";
+  assert.match(box, /width:52px;/);
+  assert.match(box, /height:56px;/);
+  assert.match(box, /min-height:44px;/);
+});
+
+test("the frame inner box matches the verified geometry in the asset package", async () => {
+  const [css, assetCss] = await Promise.all([
+    read("../app/globals.css"),
+    read("../public/landing-gallery/gallery-assets.css"),
+  ]);
+  // globals.css는 에셋 패키지에서 검수된 액자 안쪽 좌표를 옮겨 쓴다. 둘이 어긋나면 그림이 액자를 벗어난다.
+  // 두 파일의 공백 표기가 달라 선언 값만 비교한다.
+  const artRule = (source) => {
+    const body = source.match(/\.gallery-frame__art\s*\{([^}]*)\}/)?.[1];
+    assert.ok(body, "expected a .gallery-frame__art rule");
+    return body.replace(/\s+/g, "");
+  };
+  assert.equal(artRule(css), artRule(assetCss));
+  assert.match(artRule(css), /left:14\.1%;top:18%;width:71\.7%;height:62%;/);
 });

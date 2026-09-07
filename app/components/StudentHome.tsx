@@ -133,7 +133,7 @@ export function StudentHome() {
     <section className="today-episode-card" aria-labelledby="free-draw-title">
       <p className="teacher-activity-pill">🎨 자유롭게 그리기</p>
       <h2 id="free-draw-title">내 마음 그림</h2>
-      <p className="today-episode-scene-text">그리고 싶은 것을 마음껏 그려요. 그리다 막히면 그리미를 불러요.</p>
+      <p className="today-episode-scene-text">그리고 싶은 것을 마음껏 그려요. 그리다 막히면 몽그리를 불러요.</p>
       <a className="button primary child-primary-action" href={freeDrawPath}><span aria-hidden="true">▶️</span>{teacherArtwork && !teacherDone ? "이어 그리기" : "그리기 시작"}</a>
     </section>
     </>}

@@ -1,6 +1,15 @@
 import { drawingTextGraphemes, visibleDrawOperations, type DrawOp } from "@/lib/drawing-model";
 import { computeFloodFillMask, paintFloodFillMask, sampleRgb } from "@/lib/flood-fill";
 
+/* 도화지 크기. 숫자를 주면 예전처럼 정사각이고, 가로 도화지는 {width,height}를 준다.
+ * 좌표는 x·y 모두 0~1로 정규화돼 있어 x는 가로, y는 세로에 각각 곱한다.
+ * 굵기·글자처럼 "문서 단위"로 저장된 값은 가로(1024)를 기준으로 환산한다. */
+export type RenderSize = number | { width: number; height: number };
+
+function dimensions(size: RenderSize) {
+  return typeof size === "number" ? { w: size, h: size } : { w: size.width, h: size.height };
+}
+
 const STICKER_EMOJI: Record<NonNullable<DrawOp["sticker"]>, string> = {
   star: "⭐", heart: "❤️", leaf: "🍃", cloud: "☁️", sparkle: "✨",
 };
@@ -9,25 +18,25 @@ function rgb(hex = "#1B3A57") {
   return [Number.parseInt(hex.slice(1, 3), 16), Number.parseInt(hex.slice(3, 5), 16), Number.parseInt(hex.slice(5, 7), 16)] as const;
 }
 
-function floodFill(context: CanvasRenderingContext2D, op: DrawOp, size: number) {
+function floodFill(context: CanvasRenderingContext2D, op: DrawOp, size: number, docH: number) {
   const seed = op.points?.[0]; if (!seed || !op.color) return;
-  const image = context.getImageData(0, 0, size, size); const pixels = image.data;
+  const image = context.getImageData(0, 0, size, docH); const pixels = image.data;
   const sx = Math.max(0, Math.min(size - 1, Math.round(seed.x * (size - 1))));
-  const sy = Math.max(0, Math.min(size - 1, Math.round(seed.y * (size - 1))));
+  const sy = Math.max(0, Math.min(docH - 1, Math.round(seed.y * (docH - 1))));
   const target = sampleRgb(pixels, size, sx, sy);
   const fill = rgb(op.color); if (fill.every((channel, index) => channel === target[index])) return;
-  const mask = computeFloodFillMask(pixels, size, sx, sy, target);
+  const mask = computeFloodFillMask(pixels, size, sx, sy, target, { height: docH });
   paintFloodFillMask(pixels, mask, fill);
   context.putImageData(image, 0, 0);
 }
 
-function drawShape(context: CanvasRenderingContext2D, op: DrawOp, size: number) {
+function drawShape(context: CanvasRenderingContext2D, op: DrawOp, size: number, docH: number) {
   const start = op.points?.[0]; const end = op.points?.[1]; if (!start || !end || !op.shape) return;
-  const left = Math.min(start.x, end.x) * size; const top = Math.min(start.y, end.y) * size;
-  const width = Math.abs(end.x - start.x) * size; const height = Math.abs(end.y - start.y) * size;
+  const left = Math.min(start.x, end.x) * size; const top = Math.min(start.y, end.y) * docH;
+  const width = Math.abs(end.x - start.x) * size; const height = Math.abs(end.y - start.y) * docH;
   const centerX = left + width / 2; const centerY = top + height / 2;
   context.save(); context.strokeStyle = op.color ?? "#1B3A57"; context.fillStyle = op.color ?? "#1B3A57"; context.lineWidth = (op.width ?? 8) * size / 1024; context.lineCap = "round"; context.lineJoin = "round"; context.beginPath();
-  if (op.shape === "line") { context.moveTo(start.x * size, start.y * size); context.lineTo(end.x * size, end.y * size); }
+  if (op.shape === "line") { context.moveTo(start.x * size, start.y * docH); context.lineTo(end.x * size, end.y * docH); }
   if (op.shape === "rectangle") context.rect(left, top, width, height);
   if (op.shape === "rounded-rectangle") context.roundRect(left, top, width, height, Math.min(width, height) * .2);
   if (op.shape === "circle") context.ellipse(centerX, centerY, width / 2, height / 2, 0, 0, Math.PI * 2);
@@ -53,8 +62,8 @@ function drawShape(context: CanvasRenderingContext2D, op: DrawOp, size: number) 
     context.moveTo(baseX, topStem); context.lineTo(neckX, topStem); context.lineTo(neckX, top); context.lineTo(tipX, centerY); context.lineTo(neckX, top + height); context.lineTo(neckX, bottomStem); context.lineTo(baseX, bottomStem); context.closePath();
   }
   if (op.shape === "curve") {
-    context.moveTo(start.x * size, start.y * size);
-    context.bezierCurveTo(start.x * size + (end.x - start.x) * size * .28, start.y * size - (end.y - start.y) * size * .55, start.x * size + (end.x - start.x) * size * .72, end.y * size + (end.y - start.y) * size * .55, end.x * size, end.y * size);
+    context.moveTo(start.x * size, start.y * docH);
+    context.bezierCurveTo(start.x * size + (end.x - start.x) * size * .28, start.y * docH - (end.y - start.y) * docH * .55, start.x * size + (end.x - start.x) * size * .72, end.y * docH + (end.y - start.y) * docH * .55, end.x * size, end.y * docH);
   }
   if (op.shape === "cloud") {
     context.moveTo(left + width * .18, top + height * .78);
@@ -76,14 +85,14 @@ function smoothedPoints(points: NonNullable<DrawOp["points"]>) {
   });
 }
 
-function eraseWithSquareFootprint(context: CanvasRenderingContext2D, op: DrawOp, size: number) {
+function eraseWithSquareFootprint(context: CanvasRenderingContext2D, op: DrawOp, size: number, docH: number) {
   if (!op.points?.length) return;
   const footprint = Math.max(1, (op.width ?? 8) * size / 1024); const half = footprint / 2;
   context.save(); context.globalCompositeOperation = "destination-out"; context.globalAlpha = 1; context.fillStyle = "#000";
-  const stamp = (x: number, y: number) => context.fillRect(x * size - half, y * size - half, footprint, footprint);
+  const stamp = (x: number, y: number) => context.fillRect(x * size - half, y * docH - half, footprint, footprint);
   stamp(op.points[0].x, op.points[0].y);
   for (let index = 1; index < op.points.length; index += 1) {
-    const start = op.points[index - 1]; const end = op.points[index]; const distance = Math.hypot((end.x - start.x) * size, (end.y - start.y) * size);
+    const start = op.points[index - 1]; const end = op.points[index]; const distance = Math.hypot((end.x - start.x) * size, (end.y - start.y) * docH);
     const steps = Math.max(1, Math.ceil(distance / Math.max(1, footprint * .22)));
     for (let step = 1; step <= steps; step += 1) {
       const amount = step / steps; stamp(start.x + (end.x - start.x) * amount, start.y + (end.y - start.y) * amount);
@@ -122,13 +131,13 @@ function wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: num
   return lines.slice(0, maxLines);
 }
 
-function drawText(context: CanvasRenderingContext2D, op: DrawOp, size: number) {
+function drawText(context: CanvasRenderingContext2D, op: DrawOp, size: number, docH: number) {
   const center = op.points?.[0];
   if (!center || !op.text || !op.textKind || !op.fontSize || op.deleted) return;
   const scale = size / 1024;
   const fontSize = op.fontSize * scale;
   const x = center.x * size;
-  const y = center.y * size;
+  const y = center.y * docH;
   const isTitle = op.textKind === "title";
   const isSpeech = op.textKind === "speech";
   const maxWidth = size * (isTitle ? 0.82 : isSpeech ? 0.58 : 0.55);
@@ -187,17 +196,18 @@ function drawText(context: CanvasRenderingContext2D, op: DrawOp, size: number) {
   context.restore();
 }
 
-export function renderDrawOperation(context: CanvasRenderingContext2D, op: DrawOp, size: number) {
-  if (op.type === "fill") { floodFill(context, op, size); return; }
-  if (op.type === "shape") { drawShape(context, op, size); return; }
-  if (op.type === "text") { drawText(context, op, size); return; }
+export function renderDrawOperation(context: CanvasRenderingContext2D, op: DrawOp, canvasSize: RenderSize) {
+  const { w: size, h: docH } = dimensions(canvasSize);
+  if (op.type === "fill") { floodFill(context, op, size, docH); return; }
+  if (op.type === "shape") { drawShape(context, op, size, docH); return; }
+  if (op.type === "text") { drawText(context, op, size, docH); return; }
   if (op.type === "sticker") {
     const center = op.points?.[0]; if (!center || !op.sticker) return;
     context.save(); context.globalCompositeOperation = "source-over"; context.globalAlpha = 1; context.textAlign = "center"; context.textBaseline = "middle"; context.font = `${Math.round(140 * size / 1024)}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
-    context.fillText(STICKER_EMOJI[op.sticker], center.x * size, center.y * size); context.restore(); return;
+    context.fillText(STICKER_EMOJI[op.sticker], center.x * size, center.y * docH); context.restore(); return;
   }
   if (!op.points?.length) return;
-  if (op.tool === "eraser" && op.squareEraser) { eraseWithSquareFootprint(context, op, size); return; }
+  if (op.tool === "eraser" && op.squareEraser) { eraseWithSquareFootprint(context, op, size, docH); return; }
   const points = op.smoothed ? smoothedPoints(op.points) : op.points;
   context.save(); context.lineCap = "round"; context.lineJoin = "round";
   context.globalCompositeOperation = op.tool === "eraser" ? "destination-out" : "source-over";
@@ -214,14 +224,14 @@ export function renderDrawOperation(context: CanvasRenderingContext2D, op: DrawO
       const start = points[index - 1]; const end = points[index];
       const pressure = ((start.pressure ?? 0.5) + (end.pressure ?? 0.5)) / 2;
       context.lineWidth = baseWidth * Math.max(0.35, Math.min(1.5, 0.5 + pressure));
-      context.beginPath(); context.moveTo(start.x * size, start.y * size); context.lineTo(end.x * size, end.y * size); context.stroke();
+      context.beginPath(); context.moveTo(start.x * size, start.y * docH); context.lineTo(end.x * size, end.y * docH); context.stroke();
     }
     context.restore(); return;
   }
   if (op.tool === "pencil") context.lineWidth = baseWidth * Math.max(0.35, Math.min(1.5, 0.5 + (points[0].pressure ?? 0.5)));
-  context.beginPath(); context.moveTo(points[0].x * size, points[0].y * size);
-  for (const point of points.slice(1)) context.lineTo(point.x * size, point.y * size);
-  if (points.length === 1) context.lineTo(points[0].x * size + 0.1, points[0].y * size + 0.1);
+  context.beginPath(); context.moveTo(points[0].x * size, points[0].y * docH);
+  for (const point of points.slice(1)) context.lineTo(point.x * size, point.y * docH);
+  if (points.length === 1) context.lineTo(points[0].x * size + 0.1, points[0].y * docH + 0.1);
   if (op.tool === "watercolor") {
     // 같은 경로를 넓고 옅게 한 번 더 그어 가장자리 번짐을 만든다. (결정적 — 재생·타임랩스 동일)
     context.globalAlpha = 0.12; context.lineWidth = baseWidth * 1.35; context.stroke();
@@ -230,10 +240,11 @@ export function renderDrawOperation(context: CanvasRenderingContext2D, op: DrawO
   context.stroke(); context.restore();
 }
 
-export function renderDrawDocument(context: CanvasRenderingContext2D, ops: readonly DrawOp[], size: number, limit = ops.length) {
+export function renderDrawDocument(context: CanvasRenderingContext2D, ops: readonly DrawOp[], size: RenderSize, limit = ops.length) {
   for (const op of visibleDrawOperations(ops, limit)) renderDrawOperation(context, op, size);
 }
 
-export function resetDrawingCanvas(context: CanvasRenderingContext2D, size: number) {
-  context.globalCompositeOperation = "source-over"; context.globalAlpha = 1; context.clearRect(0, 0, size, size); context.fillStyle = "#ffffff"; context.fillRect(0, 0, size, size);
+export function resetDrawingCanvas(context: CanvasRenderingContext2D, size: RenderSize) {
+  const { w, h } = dimensions(size);
+  context.globalCompositeOperation = "source-over"; context.globalAlpha = 1; context.clearRect(0, 0, w, h); context.fillStyle = "#ffffff"; context.fillRect(0, 0, w, h);
 }

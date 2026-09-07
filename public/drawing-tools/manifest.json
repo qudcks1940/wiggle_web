@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "displaySlot": {
+    "width": 56,
+    "height": 22,
+    "unit": "css-px",
+    "fit": "contain"
+  },
+  "tools": {
+    "pencil": {
+      "label": "연필",
+      "src": "/drawing-tools/pencil.png",
+      "srcSet": "/drawing-tools/pencil.png 1x, /drawing-tools/pencil@2x.png 2x, /drawing-tools/pencil@3x.png 3x"
+    },
+    "crayon": {
+      "label": "크레용",
+      "src": "/drawing-tools/crayon.png",
+      "srcSet": "/drawing-tools/crayon.png 1x, /drawing-tools/crayon@2x.png 2x, /drawing-tools/crayon@3x.png 3x"
+    },
+    "marker": {
+      "label": "마커",
+      "src": "/drawing-tools/marker.png",
+      "srcSet": "/drawing-tools/marker.png 1x, /drawing-tools/marker@2x.png 2x, /drawing-tools/marker@3x.png 3x"
+    },
+    "watercolor": {
+      "label": "수채붓",
+      "src": "/drawing-tools/watercolor.png",
+      "srcSet": "/drawing-tools/watercolor.png 1x, /drawing-tools/watercolor@2x.png 2x, /drawing-tools/watercolor@3x.png 3x"
+    }
+  }
+}

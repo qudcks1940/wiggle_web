@@ -29,14 +29,12 @@ const familyHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // 저장소의 제품·보안 규칙 AGENTS.md를 Next가 실행 때마다 자동 수정하지 않게 한다.
+  agentRules: false,
   // libSQL 클라이언트는 네이티브 바인딩을 포함하므로 서버 번들에 넣지 않는다.
   serverExternalPackages: ["@libsql/client", "libsql"],
   // dev 도구 부유 버튼이 어린이용 UI의 히트 테스트(브라우저 실측)를 가린다.
   devIndicators: false,
-  // Next 16.3부터 next dev가 AGENTS.md에 벤더 안내 블록을 덧붙인다.
-  // AGENTS.md는 사람이 관리하는 프로젝트 규칙 문서이므로 자동 추가를 끈다.
-  // (켜 두면 next dev를 돌릴 때마다 작업 트리가 더러워진다.)
-  agentRules: false,
   async headers() {
     return [
       { source: "/:path*", headers: baseHeaders },

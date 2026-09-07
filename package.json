@@ -6,7 +6,7 @@
     "node": ">=22.18.0"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
     "test": "npm run build && node --import ./tests/harness/register.mjs --test \"tests/*.test.mjs\"",
@@ -41,7 +41,7 @@
     "drizzle-kit": "0.31.10",
     "drizzle-orm": "0.45.2",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.2.6",
+    "eslint-config-next": "16.3.3",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3"
   }

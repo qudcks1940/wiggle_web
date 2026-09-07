@@ -4,10 +4,10 @@ import { MAX_DOCUMENT_BYTES, validateDrawDocument } from "@/lib/drawing-model";
 import { cleanText, id, jsonError, noStoreJson, randomToken, rateLimit, sameOrigin, studentFromRequest } from "@/lib/security";
 import { settleUploadsBeforeCleanup } from "@/lib/settled-uploads";
 
-type Artwork = { id: string; studentId: string; classroomId: string; title: string; topic: string; learningMode: string; lessonSlug: string | null; arcId: string | null; episodeId: string | null; arcVersion: number | null; intent: string; opsJson: string; currentStep: number; revision: number; status: string; versionCount: number; thumbnailKey: string | null; finalImageKey: string | null; updatedAt: string; completedAt: string | null };
+type Artwork = { id: string; studentId: string; classroomId: string; title: string; topic: string; learningMode: string; lessonSlug: string | null; guideVariant: number; arcId: string | null; episodeId: string | null; arcVersion: number | null; intent: string; opsJson: string; currentStep: number; revision: number; status: string; versionCount: number; thumbnailKey: string | null; finalImageKey: string | null; updatedAt: string; completedAt: string | null };
 
 async function ownedArtwork(artworkId: string, studentId: string) {
-  return bindings().DB.prepare(`SELECT id, student_id AS studentId, classroom_id AS classroomId, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, arc_id AS arcId, episode_id AS episodeId, arc_version AS arcVersion, intent, ops_json AS opsJson, current_step AS currentStep, revision, status, version_count AS versionCount, thumbnail_key AS thumbnailKey, final_image_key AS finalImageKey, updated_at AS updatedAt, completed_at AS completedAt FROM artworks WHERE id = ? AND student_id = ?`).bind(artworkId, studentId).first<Artwork>();
+  return bindings().DB.prepare(`SELECT id, student_id AS studentId, classroom_id AS classroomId, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, guide_variant AS guideVariant, arc_id AS arcId, episode_id AS episodeId, arc_version AS arcVersion, intent, ops_json AS opsJson, current_step AS currentStep, revision, status, version_count AS versionCount, thumbnail_key AS thumbnailKey, final_image_key AS finalImageKey, updated_at AS updatedAt, completed_at AS completedAt FROM artworks WHERE id = ? AND student_id = ?`).bind(artworkId, studentId).first<Artwork>();
 }
 
 function decodeImage(dataUrl: unknown, maxBytes: number) {

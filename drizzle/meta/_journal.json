@@ -43,6 +43,13 @@
       "when": 1784781736523,
       "tag": "0005_worried_whizzer",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787831774478,
+      "tag": "0006_free_silvermane",
+      "breakpoints": true
     }
   ]
 }

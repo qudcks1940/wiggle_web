@@ -2,12 +2,13 @@ import { bindings } from "@/db/runtime";
 import { emptyDocument } from "@/lib/drawing-model";
 import { lessonBySlug } from "@/lib/lesson-content";
 import { arcById, episodeById } from "@/lib/arc-content";
+import { GUIDED_LESSON_VARIANT_COUNT } from "@/lib/lesson-guide-variants";
 import { cleanText, id, jsonError, noStoreJson, rateLimit, sameOrigin, studentFromRequest } from "@/lib/security";
 
 export async function GET(request: Request) {
   const student = await studentFromRequest(request);
   if (!student) return jsonError("학생 로그인이 필요해요.", 401);
-  const rows = await bindings().DB.prepare(`SELECT id, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, intent, current_step AS currentStep, revision, status, updated_at AS updatedAt, completed_at AS completedAt FROM artworks WHERE student_id = ? ORDER BY updated_at DESC, id DESC LIMIT 50`).bind(student.id).all();
+  const rows = await bindings().DB.prepare(`SELECT id, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, guide_variant AS guideVariant, intent, current_step AS currentStep, revision, status, updated_at AS updatedAt, completed_at AS completedAt FROM artworks WHERE student_id = ? ORDER BY updated_at DESC, id DESC LIMIT 50`).bind(student.id).all();
   return noStoreJson({ artworks: rows.results });
 }
 
@@ -52,8 +53,13 @@ export async function POST(request: Request) {
   const title = lesson?.title ?? (cleanText(payload.title, 50) || "새 그림");
   const topic = lesson?.topic ?? (cleanText(payload.topic, 50) || title);
   const intent = cleanText(payload.intent, 160);
-  await bindings().DB.prepare(`INSERT INTO artworks(id, student_id, classroom_id, title, topic, learning_mode, lesson_slug, intent, ops_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`).bind(artworkId, student.id, student.classroomId, title, topic, mode, lesson?.slug ?? null, intent, JSON.stringify(emptyDocument())).run();
-  const artwork = await bindings().DB.prepare(`SELECT id, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, intent, revision, status FROM artworks WHERE id = ? AND student_id = ?`).bind(artworkId, student.id).first();
+  let guideVariant = 0;
+  if (lesson?.mode === "guided") {
+    const prior = await bindings().DB.prepare(`SELECT COUNT(*) AS count FROM artworks WHERE student_id = ? AND lesson_slug = ?`).bind(student.id, lesson.slug).first<{ count: number }>();
+    guideVariant = Number(prior?.count ?? 0) % GUIDED_LESSON_VARIANT_COUNT;
+  }
+  await bindings().DB.prepare(`INSERT INTO artworks(id, student_id, classroom_id, title, topic, learning_mode, lesson_slug, guide_variant, intent, ops_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`).bind(artworkId, student.id, student.classroomId, title, topic, mode, lesson?.slug ?? null, guideVariant, intent, JSON.stringify(emptyDocument())).run();
+  const artwork = await bindings().DB.prepare(`SELECT id, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, guide_variant AS guideVariant, intent, revision, status FROM artworks WHERE id = ? AND student_id = ?`).bind(artworkId, student.id).first();
   if (!artwork) return jsonError("그림을 만들 수 없어요.", 409);
   return noStoreJson({ artwork }, { status: 201 });
 }

@@ -6,7 +6,9 @@
 ## 상태 기준
 
 - 로컬 저장소: `C:\Users\user\Desktop\Project\wiggle_web`
-- GitHub: `https://github.com/yonghwan86/wiggle_web`
+- 신규 개발 GitHub: `https://github.com/wwwiggle/new_wiggle`
+- 기존 운영 연결 GitHub: `https://github.com/yonghwan86/wiggle_web` — Vercel 프로젝트의 Git 연결을 바꾸기 전까지 현재 운영 배포 원본으로 유지한다.
+- 로컬 Git 원격: `origin`은 신규 개발 GitHub, `legacy-origin`은 기존 운영 연결 GitHub다. GitHub 접근은 사용자 승인에 따라 `qudcks1940` 계정 권한을 사용할 수 있다(자격증명은 저장소에 기록하지 않는다).
 - **공개 운영: `https://wiggleweb.vercel.app`** — Vercel 프로젝트 `wiggle-web`, GitHub `main` push 시 자동 배포(서울 리전). `main` push는 사용자만 실행한다.
 - 옛 공개 Sites `https://wiggle-classroom-web.chan1940.chatgpt.site`는 2026-08-19 재플랫폼으로 은퇴 — 사이트·데이터는 보존(폐기는 사용자 승인 필요), 신규 서버는 데이터 이전 없이 새로 시작했다.
 - 운영 저장소: DB는 Turso(libSQL), 그림 파일은 Cloudflare R2 버킷 `wiggle-artworks`(S3 API). 운영 자격증명은 Vercel 대시보드에서만 관리한다.
@@ -231,6 +233,54 @@
 - 완성 작품의 `이 그림으로 그림책 만들기`는 곧바로 가로형을 만드는 대신 가로·세로·정사각형 선택 창을 먼저 연다. 로컬 실제 흐름에서 세로형 선택 후 `format-portrait` 편집기가 열리는 것을 확인했다. 그림책 목록의 기존 세 모양 선택도 유지한다.
 - 브라우저 실측: 데모 원본의 내용 경계가 `x=34.95%`, `y=4.08%`, `width=58.69%`, `height=76.69%`로 계산됐고, 내부 원본은 선택 요소 대비 `170.4%×130.4%`로 배치되어 빈 캔버스가 잘리고 실제 그림이 박스를 채웠다. typecheck·lint·production build·전체 테스트 `291/291`, 집중 테스트 `16/16`을 통과했다.
 - 위 변경 전체는 개인 원격의 `codex/updated-design-storybook` 기능 브랜치에 push한다. `origin/main`과 Vercel Production은 건드리지 않는다.
+
+## 2026-08-27 귀여운 점선 변형·교사용 완성 그림책 (`codex/teacher-storybooks-cute-guides`, 로컬 검증 완료)
+
+- 따라 그린 아이 작품을 AI 이미지로 바꾸지 않는다. 대신 따라 그리기 10개 활동에 작품별 고정 가이드 번호를 저장하고, 같은 학생이 같은 활동을 새로 만들 때 `방긋 정면 → 반대쪽 인사 → 왼쪽 갸웃 → 오른쪽 갸웃` 네 가지 미리 만든 변형을 순환한다. 머리·몸 단계의 중심과 비율을 따로 조정해 단순 좌우 반전만 반복하지 않으며, 다시 열기·다른 기기 재입장에서도 같은 가이드가 유지된다.
+- 교사 수업실에 `완성 그림책` 메뉴를 추가했다. 자기 학급의 `complete` 그림책만 동물·별명, 완성 시각, 쪽 수와 함께 볼 수 있고, 모든 쪽을 넘겨 보거나 브라우저 인쇄의 `PDF로 저장`을 사용할 수 있다. 그림책 이미지도 객체 키를 공개하지 않고 교사 세션·활성 학급 소유권을 다시 확인하는 전용 경로로 전달한다.
+- 교사는 한 권씩 또는 체크박스로 최대 50권을 골라 피드백을 요청할 수 있다. 다른 반 책이나 작성 중인 책이 하나라도 섞이면 전체 요청을 거절한다. 루브릭 미확정 상태에서는 피드백을 생성하지 않고 `storybook_feedback_requests.status = waiting_rubric`으로만 저장한다.
+- DB 정본과 런타임 자가 프로비저닝에 `artworks.guide_variant`, `storybook_feedback_requests` 및 인덱스를 추가했고 Drizzle `0006` 스키마 기록을 생성했다. 기존 작품의 가이드 번호는 `0`으로 안전하게 유지된다.
+- 자동 검증: typecheck·lint·production build·전체 테스트 `294/294`·`git diff --check` 통과. 실제 HTTP 통합 테스트에서 가이드 `0→1→2→3` 순환, 교사 목록의 완성본 필터, 다른 교사 학급 IDOR 차단, 혼합 일괄 요청 원자 거절, `waiting_rubric` 저장을 확인했다.
+- 브라우저 검증: 기본 `check:browser`의 `320×568`, `390×844`, `844×390` 전 항목 실패 0. 교사용 목록·열람 화면은 `320×568`, `390×844`, `768×1024`, `844×390`, `1024×768`에서 가로 넘침 0, 44px 미만 행동 0으로 확인했다. `1280×720`에서 책 아래가 잘리던 문제는 화면 높이에 맞춰 책 전체 비율을 축소하도록 고쳤다. 로컬에서 첫 강아지는 `방긋 정면`, 두 번째 새 강아지는 `반대쪽 인사`로 실제 생성되는 것을 확인했다.
+- 아직 `main` 반영·Vercel 배포는 하지 않았다. 사용자가 브랜치의 로컬 화면을 확인한 뒤 기능 브랜치 커밋·push 여부를 결정한다. 피드백 루브릭과 승인·노출 정책은 `pending-decisions.md` P-004에 남아 있다.
+
+### 강아지 점선 가이드 시각 결함 후속 수정
+
+- 첫 구현은 좌표 범위·변형 순환 테스트를 통과했지만 실제 3단계 누적 화면에서 기존 원본의 중복 왼쪽 눈, 얼굴 중앙의 큰 주둥이 타원, 머리 안으로 파고드는 귀 선이 그대로 확대되어 기괴하게 보였다. 자동 테스트 통과를 귀여움 검증으로 잘못 간주한 결함이었다.
+- `friendly-dog`는 일반 수치 변형에서 분리하고 `lib/friendly-dog-guides.ts`의 손설계 벡터 4종으로 교체했다. 눈 두 개는 작고 서로 떨어지며, 코·웃는 입만 얼굴 안에 두고 큰 주둥이 원을 없앴다. 귀는 얼굴 중앙을 침범하지 않고, 몸·앞다리·발·꼬리도 각 단계에서 서로 알아볼 수 있게 분리했다. AI 이미지 생성이나 아이 그림 교체는 사용하지 않는다.
+- `scripts/render-guide-audit.mjs friendly-dog`로 4종의 모든 단계를 한 장에 누적 렌더링해 형태를 직접 비교할 수 있게 했다. 실제 브라우저에서는 새 작품의 1단계 머리→2단계 귀→3단계 얼굴→4단계 몸·앞다리→5단계 발·꼬리를 각각 열어 점선 크기·위치·잘림을 확인했다.
+- 회귀 테스트는 중복 눈, 큰 얼굴 타원, 귀의 얼굴 중앙 침범을 구조적으로 차단한다. typecheck·lint·production build·전체 테스트 `295/295`·두 diff check가 통과했고, `check:browser`의 `320×568`, `390×844`, `844×390`도 실패 0건이었다(390×844 핀치 1건은 기존 CDP 환경 사유 SKIP).
+- 신규 정본 저장소 `wwwiggle/new_wiggle`의 `codex/teacher-storybooks-cute-guides` 브랜치에 검증된 변경을 push했고, `qudcks1940` 계정으로 PR [#2](https://github.com/wwwiggle/new_wiggle/pull/2)를 열었다. `main` 병합과 Vercel 운영 배포는 수행하지 않았다.
+
+### 대문 수업 코드 복원 후 입장 버튼 비활성 결함 수정
+
+- 브라우저가 네 개의 수업 코드 입력값을 화면에는 복원했지만 React의 `digits` 상태는 빈 배열로 남겨 `그리러 가기`가 비활성화되는 현상을 로컬 코드 `4341`로 재현했다. 학급 조회 결과 `4341`은 정상적인 `로컬 연습반` 코드였다.
+- 복원 시점의 입력값을 React 상태와 다시 맞추고, 제출 시에는 상태 배열 대신 실제 네 입력 요소의 값을 읽는다. 각 칸은 HTML `required`와 한 자리 숫자 패턴으로 검증하므로 화면에 완성된 코드가 있으면 상태 복원 시점과 관계없이 입장할 수 있고, 빈 칸이 있으면 해당 칸으로 안내된다.
+- 검증: typecheck·lint·production build·전체 테스트 `296/296`·`git diff --check` 통과. `browser-check`에 입력 이벤트 없이 네 칸을 복원한 뒤 실제 입장 URL까지 확인하는 회귀 항목을 추가했고 `320×568`, `390×844`, `844×390`에서 모두 통과했다. 서버 재시작 후 실제 브라우저에서도 `4341` 입력 → 활성 버튼 → `/join?code=4341` → `어떻게 들어갈까요?`까지 확인했다. 수정은 기존 PR #2 브랜치에 추가하고 `main`과 운영 배포는 건드리지 않는다.
+
+### Next.js 2026년 8월 긴급 보안 패치
+
+- 공식 2026년 8월 보안 릴리스에서 Next.js `16.2.6`은 AVIF 이미지 최적화 경로의 비인증 원격 코드 실행과 Windows 호스팅 서버의 비인증 원격 코드 실행 취약 범위에 포함됐다. 7월 릴리스의 rewrite·Server Action·이미지 최적화 관련 HIGH/MEDIUM 취약점 범위에도 포함돼 있었다.
+- Active LTS의 공식 수정판인 `next@16.3.3`과 `eslint-config-next@16.3.3`으로 올렸다. 잠금 파일에서 함께 갱신된 `sharp@0.35.4`, `postcss@8.5.23`도 기존 취약 버전에서 벗어났고, 운영 의존성의 `ws`는 호환 범위 내 `8.21.3`으로 갱신했다.
+- 앱은 `next/image`·AVIF 설정, rewrite, Server Action, Cache Components를 사용하지 않아 일부 공격 경로의 실제 노출은 낮다. 그러나 App Router를 사용하고 로컬 개발이 Windows에서 이뤄지므로 버전 기반 패치는 필수다.
+- `16.3.3` 기본 Turbopack 빌드는 한글 소스 오류 위치를 표시할 때 UTF-8 바이트 경계를 잘못 잘라 Rust panic을 일으키는 공개 이슈(`vercel/next.js#92641`)를 재현했다. 소스 오류는 Webpack 빌드에서 없음을 확인했고, 공식 지원 플래그인 `--webpack`을 dev/build 스크립트에 고정해 Vercel 빌드와 로컬 개발을 안정화했다. 보안 회귀 테스트는 Next가 `16.3.3` 아래로 내려가지 않고 eslint 설정 버전과 일치하며 두 스크립트가 Webpack을 유지하는지 검사한다.
+- Next 16.3 개발 서버가 루트 `AGENTS.md`에 자체 규칙을 자동 추가하는 동작은 저장소의 제품·보안 규칙을 실행 때마다 오염시키므로 `next.config.ts`의 `agentRules: false`로 끄고 자동 생성분은 포함하지 않았다.
+- `npm audit`의 Next.js·sharp·postcss·운영 의존성 경고는 0건이다. 전체 감사에 남은 4개 moderate는 실행 중 앱이 아니라 `drizzle-kit@0.31.10`이 내부적으로 쓰는 로컬 개발용 `@esbuild-kit/esm-loader → esbuild@0.18.20` 체인이다. 이를 자동 제거하는 유일한 제안은 `drizzle-kit@0.18.1`로 강제 다운그레이드하는 breaking change이므로 적용하지 않았다.
+- 검증: typecheck 통과, lint `0 errors`(새 규칙이 기존 의도적 전체 페이지 이동 8곳을 warning으로 보고), Webpack production build와 전체 테스트 `297/297`, `git diff --check` 2종 통과. 실제 브라우저 점검은 `320×568`, `390×844`, `844×390`에서 실패 0건이었고, `/student`·`/teacher`는 `DENY`와 `frame-ancestors 'none'`, 공개 랜딩은 프레임 차단 없음, 외부 AVIF 이미지 최적화 요청은 HTTP 400임을 확인했다.
+- 이 변경은 기능 브랜치와 기존 PR #2에만 반영하며 `main` 병합과 Vercel 운영 배포는 수행하지 않는다.
+
+## 2026-08-23 신규 팀 GitHub 저장소 전환
+
+- 사용자의 지시에 따라 이후 개발 대상 저장소를 `https://github.com/wwwiggle/new_wiggle`로 정했다.
+- 신규 저장소의 기본 브랜치는 현재 `main`이며, 검증된 그림책 편집기 변경까지 병합된 `bbbc51e`가 정본이다. 전환에 사용한 임시 기능 브랜치는 원격에서 정리해 `main`만 유지한다.
+- 로컬 `main`과 기능 브랜치는 신규 저장소의 `origin/main`을 기준으로 추적한다. 옛 저장소는 `legacy-origin`으로 보존한다. Vercel Git 연결은 아직 기존 `yonghwan86/wiggle_web` 저장소를 가리키므로, 연결 변경 전까지 신규 저장소의 `main` push는 공개 운영 배포를 시작하지 않는다.
+
+## 2026-08-23 README AI 그림책 편집기 안내 (`codex/readme-storybook-editor`)
+
+- README의 현재 기능에 AI 그림책 편집기의 진입 흐름, 3가지 책 모양, 고정 이야기 영역, 그림 배치 제한, 실제 내용 경계 맞춤, 페이지·레이어 편집, 저장·완성 기능을 추가했다.
+- 외부 Canva 대신 Wiggle 내부 편집기와 MIT 라이선스 `react-moveable`을 사용한다는 점, Turso 그림책 문서와 R2 이미지 자산의 역할, 학생 화면 경로를 문서화했다.
+- 신규 정본 저장소 주소를 `wwwiggle/new_wiggle`로 바꾸고 전체 테스트 표기를 최근 검증 결과인 `291/291`로 현행화했다. Vercel이 아직 기존 저장소에 연결된 전환 상태도 README 배포 안내에 명시했다.
+- 문서 변경 뒤 typecheck·lint·production build·전체 테스트 `291/291`과 `git diff --check`를 다시 통과했다.
 
 ## 다음 작업 시작 전 확인
 

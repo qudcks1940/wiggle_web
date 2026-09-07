@@ -451,7 +451,7 @@ function imageData(canvas: HTMLCanvasElement, size: 256 | 1024) {
 
 // 저장 이미지는 화면 픽셀이 아니라 저장하려는 문서에서 직접 렌더한다. 화면 캔버스에는
 // 그리는 중 미리보기 같은 문서 밖 픽셀이 있을 수 있고, 그게 썸네일·완성 PNG에 섞이면 안 된다.
-// (그리미에 보내는 이미지는 "아이가 지금 보는 화면"이어야 하므로 imageData를 그대로 쓴다.)
+// (몽그리에 보내는 이미지는 "아이가 지금 보는 화면"이어야 하므로 imageData를 그대로 쓴다.)
 function documentImage(documentValue: DrawDocument, size: 256 | 1024) {
   const output = document.createElement("canvas");
   renderDocument(output, documentValue, size);
@@ -553,10 +553,10 @@ export function DrawingStudio() {
   const [grimiOpen, setGrimiOpen] = useState(false);
   const [grimiLoading, setGrimiLoading] = useState(false);
   const [grimiError, setGrimiError] = useState("");
-  // 그리미가 "선을 하나 더 그어 보자"고 하면 아이는 그려야 한다. 시트를 닫으면 코칭이 사라지므로,
+  // 몽그리가 "선을 하나 더 그어 보자"고 하면 아이는 그려야 한다. 시트를 닫으면 코칭이 사라지므로,
   // 코칭을 유지한 채 도화지를 여는 접기 상태를 따로 둔다.
   const [grimiCollapsed, setGrimiCollapsed] = useState(false);
-  // 도구로 이동하는 플로팅 버튼이 정작 도구 패널·그리미 시트 위까지 떠서
+  // 도구로 이동하는 플로팅 버튼이 정작 도구 패널·몽그리 시트 위까지 떠서
   // 320px 세로에서 전체 지우기·탈출 버튼을 가렸다. 도구가 이미 보이면 숨긴다.
   const [toolPanelInView, setToolPanelInView] = useState(false);
   const [coaching, setCoaching] = useState<(StudentCoaching & { eventId: string }) | null>(null);
@@ -1138,7 +1138,7 @@ export function DrawingStudio() {
         };
         if (options?.complete) await preserveDraft(queued, "완성한 그림을 기기에 안전하게 보관했어요");
         // IndexedDB를 못 열면 queueSave도 던진다. 그 예외가 밖으로 나가면 호출부의
-        // 로딩 상태가 영구히 잠긴다(그리미 호출이 다시 안 됨).
+        // 로딩 상태가 영구히 잠긴다(몽그리 호출이 다시 안 됨).
         else {
           try {
             await queueSave(queued);
@@ -2232,10 +2232,10 @@ export function DrawingStudio() {
         eventId?: string;
         coaching?: StudentCoaching;
       };
-      if (!response.ok || !data.eventId || !data.coaching) throw new Error(data.error ?? "그리미의 답을 받지 못했어요.");
+      if (!response.ok || !data.eventId || !data.coaching) throw new Error(data.error ?? "몽그리의 답을 받지 못했어요.");
       setCoaching({ ...data.coaching, eventId: data.eventId });
     } catch (cause) {
-      setGrimiError(cause instanceof Error ? cause.message : "그리미를 부르지 못했어요.");
+      setGrimiError(cause instanceof Error ? cause.message : "몽그리를 부르지 못했어요.");
     } finally {
       setGrimiLoading(false);
     }
@@ -2518,7 +2518,7 @@ export function DrawingStudio() {
         </button>
         <button className="button grimi-button compact" disabled={grimiLoading || Boolean(conflictDraft)} onClick={askGrimi}>
           <SparklesIcon size={18} />
-          <span className="grimi-button-label">그리미 부르기</span>
+          <span className="grimi-button-label">몽그리 부르기</span>
         </button>
         <StudentMessageCenter messages={teacherMessages} floating compact />
         <button className="button primary compact" disabled={Boolean(conflictDraft)} onClick={requestArtworkCompletion}>
@@ -2548,14 +2548,14 @@ export function DrawingStudio() {
             <div className="grimi-head">
               <div>
                 <span>✨</span>
-                <b>그리미</b>
+                <b>몽그리</b>
               </div>
               {coaching && !grimiLoading && (
                 <button className="grimi-collapse" onClick={() => setGrimiCollapsed((value) => !value)}>
-                  {grimiCollapsed ? "✨ 그리미 다시 보기" : "✏️ 그리러 가기"}
+                  {grimiCollapsed ? "✨ 몽그리 다시 보기" : "✏️ 그리러 가기"}
                 </button>
               )}
-              <button onClick={dismissGrimi} aria-label="그리미 닫기">
+              <button onClick={dismissGrimi} aria-label="몽그리 닫기">
                 ×
               </button>
             </div>
@@ -2584,7 +2584,7 @@ export function DrawingStudio() {
                 {grimiError && <p className="error-box">{grimiError}</p>}
                 {coaching && !grimiLoading && (
                   <div className="grimi-coaching">
-                    <p className="eyebrow">그리미가 궁금해요</p>
+                    <p className="eyebrow">몽그리가 궁금해요</p>
                     <div className="spoken-prompt">
                       <h2>{coaching.question}</h2>
                       <SpeakButton text={`${coaching.question} 고를 수 있어요. ${coaching.choices.map((choice) => choice.label).join(", ")}`} compact />

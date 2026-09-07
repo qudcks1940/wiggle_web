@@ -96,7 +96,7 @@ async function navigate(cdp, session, url) {
 const MEASURE_HELPERS = `
   window.__wiggle = {
     box(element) { const rect = element.getBoundingClientRect(); return { w: Math.round(rect.width * 10) / 10, h: Math.round(rect.height * 10) / 10, top: Math.round(rect.top), bottom: Math.round(rect.bottom), left: Math.round(rect.left), right: Math.round(rect.right) }; },
-    label(element) { return (element.getAttribute('aria-label') || element.textContent || element.className || element.tagName).replace(/\\s+/g, ' ').trim().slice(0, 44); },
+    label(element) { return String(element.getAttribute('aria-label') || element.textContent || element.className || element.tagName).replace(/\\s+/g, ' ').trim().slice(0, 44); },
     visible(element) { const style = getComputedStyle(element); if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false; const rect = element.getBoundingClientRect(); return rect.width > 0 && rect.height > 0; },
     interactive() { return [...document.querySelectorAll('button, a[href], summary, input[type=range], [role=button]')].filter((element) => window.__wiggle.visible(element) && !element.disabled); },
     smallTargets(floor) { return window.__wiggle.interactive().map((element) => ({ label: window.__wiggle.label(element), ...window.__wiggle.box(element) })).filter((item) => Math.min(item.w, item.h) < floor); },
@@ -467,15 +467,18 @@ async function main() {
         const tools = await evaluate(cdp, session, `(async () => {
           const wait = (ms) => new Promise((done) => setTimeout(done, ms));
           const body = document.querySelector('.studio-body');
-          const targets = [...document.querySelectorAll('.tool-panel button')];
+          const targets = [...document.querySelectorAll('.tool-panel button')].filter((button) => window.__wiggle.visible(button));
           if (!targets.length) return { error: 'no-tools' };
           const primaryTools = [...document.querySelectorAll('.tool-panel .tool-group button')].map((button) => {
-            const icon = button.querySelector('.tool-icon');
+            const photo = button.querySelector('.tool-photo');
+            const emoji = button.querySelector('.tool-icon');
+            const icon = photo && window.__wiggle.visible(photo) ? photo : emoji;
             const name = button.querySelector('.tool-name');
             const buttonBox = window.__wiggle.box(button);
             const iconBox = icon ? window.__wiggle.box(icon) : null;
             return {
               label: button.getAttribute('aria-label') ?? '', title: button.getAttribute('title') ?? '',
+              visible: window.__wiggle.visible(button),
               buttonBox, iconBox, nameDisplay: name ? getComputedStyle(name).display : '',
               iconInside: Boolean(iconBox && iconBox.left >= buttonBox.left && iconBox.right <= buttonBox.right && iconBox.top >= buttonBox.top && iconBox.bottom <= buttonBox.bottom),
             };
@@ -494,8 +497,9 @@ async function main() {
           check(tools.unreachable.length === 0, `${viewport.name} 모든 그리기 도구에 닿을 수 있음`, tools.unreachable);
           check(tools.primaryTools.length === 9 && tools.primaryTools.every((tool) => tool.label && tool.title), `${viewport.name} 아이콘 도구 이름을 접근성 정보로 제공`, tools.primaryTools);
           check(tools.primaryTools.every((tool) => tool.nameDisplay === 'none'), `${viewport.name} 좁은 도구 버튼의 글자를 숨김`, tools.primaryTools);
-          check(tools.primaryTools.every((tool) => Math.min(tool.buttonBox.w, tool.buttonBox.h) >= 44), `${viewport.name} 아이콘 도구 터치 목표 44px 이상`, tools.primaryTools);
-          check(tools.primaryTools.every((tool) => tool.iconInside), `${viewport.name} 모든 도구 아이콘이 버튼 안에 온전히 보임`, tools.primaryTools);
+          const shownTools = tools.primaryTools.filter((tool) => tool.visible);
+          check(shownTools.length > 0 && shownTools.every((tool) => Math.min(tool.buttonBox.w, tool.buttonBox.h) >= 44), `${viewport.name} 아이콘 도구 터치 목표 44px 이상`, shownTools);
+          check(shownTools.every((tool) => tool.iconInside), `${viewport.name} 모든 도구 아이콘이 버튼 안에 온전히 보임`, shownTools);
         }
 
         // 4.5) 새 도구 실동작: 대칭 쌍·그룹 되돌리기·채우기·도형 2탭을 실제 입력 파이프라인으로 검증.

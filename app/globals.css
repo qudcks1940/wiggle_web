@@ -391,7 +391,7 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   @supports (width:1cqh) { .canvas-zone.has-canvas-status .canvas-wrap { width:min(100cqw,calc(100cqh - 58px)); } }
   @supports not (width:1cqh) { .canvas-zone .canvas-wrap { width:auto; height:100%; max-width:100%; max-height:100%; } }
   .tool-panel { padding-right:max(7px,env(safe-area-inset-right)); padding-bottom:max(7px,env(safe-area-inset-bottom)); padding-left:max(7px,env(safe-area-inset-left)); display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-auto-flow:row dense; gap:8px; align-items:stretch; overflow:hidden; }
-  .tool-panel>.tool-section-label { display:none; }
+  .tool-panel .tool-section-label { display:none; }
   .tool-panel .tool-group { grid-column:1/-1; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
   .tool-panel .tool-group button { min-width:0; min-height:48px; justify-content:center; font-size:12px; line-height:1.2; padding:6px; }
   .tool-panel .tool-group button[aria-pressed=true]:after { right:6px; top:6px; transform:none; font-size:11px; }
@@ -698,7 +698,7 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   .studio-body.without-step-panel .canvas-zone { grid-column:1; }
   .tool-panel { display:flex; order:initial; grid-column:3; flex-direction:column; align-items:stretch; gap:4px; padding:4px; overflow-y:auto; overflow-x:hidden; border-left:1px solid var(--border); }
   .studio-body.without-step-panel .tool-panel { grid-column:2; }
-  .tool-panel>.tool-section-label { display:none; }
+  .tool-panel .tool-section-label { display:none; }
   .tool-panel .tool-group { display:grid; grid-column:auto; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }
   .tool-panel .tool-group button { width:100%; min-width:0; min-height:44px; font-size:0; }
   .tool-panel .brush-group { grid-template-columns:repeat(4,minmax(0,1fr)); }
@@ -959,7 +959,7 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   /* 도구 4행(도구/굵기·모드·히스토리/색·전체지우기/팔레트)이 스크롤 없이 다 보여야 한다.
      한 행이라도 접히면 아이는 그 기능이 없는 줄 안다 (2026-08-20 iPad 실기기 보고). */
   .tool-panel { grid-row:3; max-height:276px; padding:8px max(10px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left)); display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); grid-auto-flow:row dense; gap:6px; overflow-y:auto; border:0; border-top:1px solid var(--border); }
-  .tool-panel>.tool-section-label { display:none; }
+  .tool-panel .tool-section-label { display:none; }
   .tool-panel .tool-group { display:grid; gap:5px; }
   .tool-panel .tool-group button { min-width:0; min-height:50px; justify-content:center; padding:5px; font-size:12px; }
   .tool-panel .tool-group .tool-icon { font-size:28px; }
@@ -2441,3 +2441,261 @@ body {
   .gallery-leaves { display:none; }
   .gallery-reasons { margin-top:14px; }
 }
+
+/* ── 2026-09-07 그리기 화면 플로팅 도구 ──────────────────────────────────────
+ * 기준 시안: docs/design-assets/drawing-toolbar/drawing-studio-selected-reference.png
+ * 넓은 화면은 도화지를 화면 전체로 두고 안내·도구·색을 그 위에 떠 있는 카드로 올린다.
+ * 좁은 화면(휴대전화·짧은 가로·세로 태블릿)은 실측으로 다듬어 둔 기존 배치를 그대로 쓴다 —
+ * 떠 있는 카드는 작은 도화지를 가리고 44px 터치 목표를 깨기 때문이다.
+ * 도구 사진은 /drawing-tools/의 56×22 슬롯 계약을 따르고, 이모지 아이콘은 좁은 화면용으로 남긴다.
+ */
+.tool-rail,.tool-sheet,.tool-colors { display:contents; }
+.panel-grip,.tool-more-button,.tool-width-popover { display:none; }
+.tool-photo { display:none; }
+
+/* 좁은 화면: 래퍼가 생기면서 바뀐 DOM 순서를 원래 보이던 차례로 되돌린다.
+   넓은 화면은 시안의 레일 순서(되돌리기 → 도구 → 지우개 → 더보기)를 쓰므로 제외한다. */
+@media (max-width:899px), (max-height:599px) {
+.tool-panel>.tool-rail>.tools-label { order:1; }
+.tool-panel>.tool-rail>.brush-group { order:2; }
+.tool-panel>.tool-rail>.width-row { order:3; }
+.tool-panel>.tool-sheet>.make-group { order:4; }
+.tool-panel>.tool-sheet>.shape-options { order:5; }
+.tool-panel>.tool-sheet>.text-options { order:6; }
+.tool-panel>.tool-rail>.edit-group { order:7; }
+.tool-panel>.tool-colors>.color-label { order:8; }
+.tool-panel>.tool-colors>.selected-color { order:9; }
+.tool-panel>.tool-colors>.more-colors-button { order:10; }
+.tool-panel>.tool-colors>.palette { order:11; }
+.tool-panel>.tool-sheet>.input-mode-control { order:12; }
+.tool-panel>.tool-rail>.history-row { order:13; }
+.tool-panel>.tool-sheet>.clear-all-button { order:14; }
+}
+
+.studio-save-state { display:inline-flex; align-items:center; gap:3px; }
+.studio-save-state>svg { flex:0 0 auto; color:#2e9e5b; }
+.studio-header>.icon-button.studio-back { color:var(--ink); }
+/* 좁은 화면 헤더는 버튼을 44px 정사각 이모지(::before)로 접는다 — 아이콘·글자는 숨긴다. */
+@media (max-width:720px) {
+  .studio-header>.button.compact>svg,.studio-header>.button.compact>span { display:none; }
+}
+
+.step-collapse { display:none; }
+
+@media (min-width:900px) and (min-height:600px) {
+  .studio-body,.studio-body.without-step-panel { position:relative; grid-template-columns:minmax(0,1fr); background:#f4f8fb; }
+  .studio-body:has(.step-panel .observation-reference) { grid-template-columns:minmax(0,1fr); }
+  .canvas-zone { grid-column:1; grid-row:1; padding:10px; }
+  .canvas-wrap { width:min(100%,calc(100dvh - 116px)); border-radius:6px; box-shadow:0 2px 18px rgba(26,59,92,.1); }
+  .canvas-zone.has-canvas-status .canvas-wrap { width:min(100%,calc(100dvh - 168px)); }
+
+  /* 안내: 왼쪽 위에 떠 있는 카드 */
+  .step-panel,.grimi-panel {
+    position:absolute;
+    z-index:4;
+    top:14px;
+    left:14px;
+    width:min(620px,calc(100% - 150px));
+    max-height:calc(100% - 28px);
+    padding:14px 52px 14px 14px;
+    border:1px solid #e4edf3;
+    border-right:1px solid #e4edf3;
+    border-radius:20px;
+    background:rgba(255,255,255,.97);
+    box-shadow:0 10px 30px rgba(26,59,92,.14);
+  }
+  .step-panel {
+    display:grid;
+    grid-template-columns:96px minmax(0,1fr) auto;
+    gap:6px 14px;
+    align-items:center;
+    align-content:start;
+    overflow:auto;
+  }
+  .step-panel>.eyebrow { grid-column:2; grid-row:1; margin:0; color:var(--primary-dark); font-size:13px; }
+  .step-panel .lesson-spoken-prompt { grid-column:2; grid-row:2; align-items:center; }
+  .step-panel .lesson-spoken-prompt h2 { margin:0; font-size:16px; line-height:1.4; }
+  .step-panel .reference-tile { grid-column:1; grid-row:1/3; margin:0; min-height:76px; border-radius:14px; }
+  .step-panel .reference-tile small { display:none; }
+  .step-panel .step-actions { grid-column:3; grid-row:1/3; margin:0; grid-template-columns:repeat(2,auto); }
+  .step-panel .step-actions button { min-width:74px; }
+  .step-panel .choice-chips,.step-panel .guide-actions,.step-panel .lesson-step-prompt,.step-panel>.text-button { grid-column:1/-1; margin:0; }
+  .step-panel>.text-button { justify-self:start; }
+  .step-collapse {
+    position:absolute;
+    top:14px;
+    right:12px;
+    display:grid;
+    place-items:center;
+    width:44px;
+    height:44px;
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:#fff;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .step-collapse[aria-expanded="false"]>svg { transform:rotate(180deg); }
+  .step-panel.collapsed { width:auto; min-height:0; padding-right:66px; }
+  .step-panel.collapsed>:not(.reference-tile):not(.step-collapse) { display:none; }
+
+  /* 도구·색: 오른쪽에 떠 있는 두 장의 카드 */
+  .tool-panel {
+    position:absolute;
+    z-index:5;
+    top:14px;
+    right:14px;
+    bottom:14px;
+    width:auto;
+    padding:0;
+    border:0;
+    background:transparent;
+    overflow:visible;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:14px;
+    pointer-events:none;
+  }
+  .tool-panel>* { pointer-events:auto; }
+  .tool-rail,.tool-colors {
+    position:relative;
+    width:108px;
+    padding:6px 8px 10px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    border:1px solid #e4edf3;
+    border-radius:22px;
+    background:rgba(255,255,255,.97);
+    box-shadow:0 10px 30px rgba(26,59,92,.16);
+  }
+  .tool-colors { margin-top:auto; }
+  .panel-grip { display:block; color:#c2d2dd; line-height:0; }
+
+  .tool-panel>.tool-rail>* { order:0; }
+  .tool-panel .tools-label,.tool-panel .color-label,.tool-panel .selected-color,.tool-panel .tool-name,.tool-panel .width-row { display:none; }
+  .tool-panel .history-row { width:100%; margin:0; display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+  .tool-panel .history-row button { min-width:44px; min-height:44px; padding:0; display:grid; place-items:center; border:0; border-radius:12px; background:#f3f8fb; color:var(--primary-dark); }
+  .tool-panel .history-row button:disabled { opacity:.35; }
+  .tool-panel .history-row b { display:none; }
+
+  .tool-panel .brush-group,.tool-panel .edit-group { width:100%; gap:2px; }
+  /* 도구는 시안처럼 한 줄에 하나씩 — 가로로 긴 도구 사진이 그대로 들어간다. */
+  .tool-panel .brush-group { display:grid; grid-template-columns:minmax(0,1fr); }
+  .tool-panel .edit-group { display:grid; grid-template-columns:repeat(2,minmax(44px,1fr)); gap:4px; }
+  .tool-panel .brush-group button,.tool-panel .edit-group button {
+    position:relative;
+    min-width:44px;
+    min-height:46px;
+    padding:0;
+    border:2px solid transparent;
+    border-radius:14px;
+    background:transparent;
+    box-shadow:none;
+  }
+  .tool-panel .brush-group button { justify-content:flex-end; }
+  /* 고른 도구는 시안처럼 테두리가 생기고 오른쪽으로 조금 나온다. */
+  .tool-panel .brush-group button[aria-pressed=true] {
+    border-color:#7fc6e4;
+    background:#fff;
+    box-shadow:0 2px 10px rgba(26,59,92,.12);
+    transform:translateX(6px);
+  }
+  .tool-panel .edit-group button[aria-pressed=true] { border-color:#7fc6e4; background:#eaf8ff; box-shadow:none; }
+  .tool-panel .brush-group button[aria-pressed=true]:after,.tool-panel .edit-group button[aria-pressed=true]:after { content:none; }
+  .tool-panel .brush-group .tool-icon { display:none; }
+  .tool-panel .tool-photo { display:block; width:56px; height:22px; object-fit:contain; }
+  .tool-panel .edit-group .tool-icon { width:26px; min-width:26px; font-size:21px; }
+  .tool-panel .edit-group .eraser-icon { height:19px; }
+
+  .tool-more-button {
+    display:grid;
+    place-items:center;
+    width:100%;
+    min-height:44px;
+    padding:0;
+    border:0;
+    border-radius:14px;
+    background:#f3f8fb;
+    color:var(--secondary);
+    cursor:pointer;
+  }
+  .tool-more-button[aria-expanded="true"] { background:#e4f4fb; color:var(--primary-dark); }
+
+  /* 굵기 슬라이더: 고른 펜을 다시 누르면 그 왼쪽에 열린다.
+     세로 위치는 고른 펜의 줄(--tool-row-top)을 따라간다. 값이 없으면 브러시 묶음 가운데. */
+  .tool-panel .brush-group { position:relative; }
+  .tool-width-popover {
+    position:absolute;
+    z-index:2;
+    top:var(--tool-row-top,50%);
+    right:calc(100% + 20px);
+    width:270px;
+    padding:10px 18px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    border:1px solid #e4edf3;
+    border-radius:999px;
+    background:#fff;
+    box-shadow:0 10px 30px rgba(26,59,92,.18);
+    transform:translateY(-50%);
+  }
+  .tool-width-preview { flex:0 0 auto; border-radius:50%; background:var(--ink); }
+  .tool-width-preview-small { width:8px; height:8px; }
+  .tool-width-preview-large { width:26px; height:26px; }
+  .tool-width-slider { flex:1 1 auto; min-width:0; height:44px; margin:0; padding:0; background:transparent; -webkit-appearance:none; appearance:none; cursor:pointer; }
+  .tool-width-slider::-webkit-slider-runnable-track { height:4px; border-radius:999px; background:#0d5c86; }
+  .tool-width-slider::-moz-range-track { height:4px; border-radius:999px; background:#0d5c86; }
+  .tool-width-slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:22px; height:22px; margin-top:-9px; border:0; border-radius:50%; background:#1e88e5; box-shadow:0 1px 4px rgba(26,59,92,.35); }
+  .tool-width-slider::-moz-range-thumb { width:22px; height:22px; border:0; border-radius:50%; background:#1e88e5; box-shadow:0 1px 4px rgba(26,59,92,.35); }
+
+  /* 색: 두 칸 원형 팔레트 */
+  .tool-panel .palette { width:100%; display:grid; grid-template-columns:1fr 1fr; gap:8px; justify-items:center; }
+  .tool-panel .palette button { width:44px; min-width:44px; height:44px; min-height:44px; border-width:1px; }
+  .tool-panel .palette button[aria-pressed=true] { outline:3px solid #0d5c86; outline-offset:2px; }
+  .tool-panel .more-colors-button {
+    width:44px;
+    min-width:44px;
+    height:44px;
+    min-height:44px;
+    margin:2px 0 0;
+    padding:0;
+    border:1px solid rgba(26,59,92,.2);
+    border-radius:50%;
+    font-size:0;
+    background:conic-gradient(#e53935,#fdd835,#43a047,#1e88e5,#8e24aa,#e53935);
+    cursor:pointer;
+  }
+
+  /* 더보기 시트: 레일 왼쪽에 열리는 나머지 도구 */
+  .tool-sheet { display:none; }
+  .tool-sheet.open {
+    position:absolute;
+    z-index:3;
+    top:0;
+    right:106px;
+    width:250px;
+    max-height:calc(100% - 8px);
+    padding:14px;
+    display:grid;
+    gap:10px;
+    align-content:start;
+    overflow:auto;
+    border:1px solid #e4edf3;
+    border-radius:20px;
+    background:#fff;
+    box-shadow:0 12px 32px rgba(26,59,92,.2);
+  }
+  .tool-sheet.open>* { order:0; margin:0; }
+  .tool-sheet.open .make-group { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
+  .tool-sheet.open .tool-name { display:block; font-size:11px; }
+  .tool-sheet.open .make-group button { min-height:60px; flex-direction:column; gap:2px; }
+}
+
+.studio-header>.grimi-button { gap:6px; }
+.grimi-button-label { line-height:1; }
+/* 버튼 안의 장식 아이콘은 히트 테스트 대상이 되지 않게 한다. */
+.studio button>svg,.studio a>svg { pointer-events:none; }

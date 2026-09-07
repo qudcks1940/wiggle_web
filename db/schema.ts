@@ -47,6 +47,8 @@ export const studentProfiles = sqliteTable("student_profiles", {
   classroomId: text("classroom_id").notNull().references(() => classrooms.id),
   nickname: text("nickname").notNull(),
   animal: text("animal").notNull(),
+  /** 출석번호(선택 입력). 이름은 수집하지 않는다 — 매칭은 교사 명부의 몫 (P-001). */
+  classNumber: integer("class_number"),
   lastActivityAt: text("last_activity_at").notNull(),
   archivedAt: text("archived_at"),
   createdAt: createdAt(),

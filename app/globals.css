@@ -67,6 +67,10 @@ legend small { color:var(--primary-dark); }
 @keyframes reset-pictures-nudge { 50% { transform:translateY(-3px); box-shadow:0 4px 0 rgba(214,69,69,.25); } }
 .picture-password-help { display:flex; align-items:center; gap:10px; }.picture-password-help .helper { flex:1; margin:0; }.password-slots { display:flex; justify-content:center; gap:8px; margin:12px 0; }.password-slots span { width:52px; height:52px; display:grid; place-items:center; border:2px dashed var(--border); border-radius:15px; background:#f6fbfd; color:#9eb0b9; font-size:24px; font-weight:900; }.password-slots span.filled { border-style:solid; border-color:#e3c74f; background:#fff7c8; color:var(--ink); }
 .nickname-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }.nickname-row button { min-width:126px; border:2px solid var(--border); border-radius:14px; background:#fff7c8; font-weight:900; }
+
+.class-number-field { display:flex; flex-direction:column; gap:6px; margin-top:10px; font-weight:700; }
+.class-number-field small { font-weight:600; color:var(--secondary); margin-left:6px; }
+.class-number-field input { width:110px; min-height:48px; border:1px solid var(--border); border-radius:12px; padding:0 14px; font-size:18px; background:var(--paper); color:var(--ink); }
 .child-primary-action { display:inline-flex; align-items:center; justify-content:center; gap:8px; }.child-primary-action>span { font-size:20px; }
 .text-button { display:block; width:100%; border:0; background:transparent; color:var(--primary-dark); text-align:center; font-weight:900; padding:16px 8px; cursor:pointer; }
 .error-box { background:#fff0f0; color:#9f2f2f; border:1px solid #f0bebe; padding:12px 14px; border-radius:12px; font-weight:700; }

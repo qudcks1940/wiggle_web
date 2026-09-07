@@ -84,7 +84,7 @@ test("join batches all three inserts while switch and recovery retain session is
   const recover = route.slice(route.indexOf('if (action === "recover")'));
   assert.match(join, /const \[pictureHash, personalQrHash, device\] = await Promise\.all/);
   assert.match(join, /const joinResults = await db\.batch\(\[[\s\S]*student_profiles[\s\S]*recovery_credentials[\s\S]*device_sessions[\s\S]*\]\)/);
-  assert.match(join, /student_profiles[^`]*SELECT \?, \?, \?, \?, \? WHERE EXISTS \(SELECT 1 FROM classrooms WHERE id = \? AND active = 1 AND admission_open = 1\)/);
+  assert.match(join, /student_profiles[^`]*SELECT \?, \?, \?, \?, \?, \? WHERE EXISTS \(SELECT 1 FROM classrooms WHERE id = \? AND active = 1 AND admission_open = 1\)/);
   assert.match(join, /recovery_credentials[^`]*WHERE EXISTS \(SELECT 1 FROM student_profiles WHERE id = \? AND classroom_id = \? AND archived_at IS NULL\)/);
   assert.match(join, /device_sessions[^`]*WHERE EXISTS \(SELECT 1 FROM student_profiles WHERE id = \? AND classroom_id = \? AND archived_at IS NULL\)/);
   assert.match(join, /if \(!joinResults\[0\]\?\.meta\.changes\)[\s\S]*return jsonError\("입장이 닫혔어요\. 선생님께 확인해 주세요\.", 403\)/);

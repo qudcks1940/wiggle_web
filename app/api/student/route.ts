@@ -154,6 +154,10 @@ async function studentPost(request: Request) {
     if (!classroom) return jsonError("수업 코드를 다시 확인해 주세요.", 404);
     if (!classroom.admissionOpen) return jsonError("선생님이 입장을 열 때까지 기다려 주세요.", 403);
     const nickname = cleanText(payload.nickname, 16); const animal = cleanText(payload.animal, 12); const pictureLength = picturePasswordLength(payload.picturePassword); const picture = normalizePicturePassword(payload.picturePassword); const allowDuplicate = payload.allowDuplicate === true;
+    // 반 번호(출석번호)는 선택 입력이다 — 이름은 수집하지 않는다(P-001, 2026-09-07 결정).
+    // 인증·중복 판정에 쓰지 않는 표시용 메타데이터이므로, 형식이 어긋나면 막지 않고 저장만 생략한다.
+    const classNumberRaw = Number(payload.classNumber);
+    const classNumber = Number.isInteger(classNumberRaw) && classNumberRaw >= 1 && classNumberRaw <= 99 ? classNumberRaw : null;
     // 형태 검증을 먼저 한다. 잘못된 본문이 아래 상한을 소비하면 공격자가 그 학급 전체의 입장을 막을 수 있다.
     if (nickname.length < 2 || !animal || pictureLength !== 3) return jsonError("별명, 동물, 그림 비밀번호 세 개를 모두 골라 주세요.");
     // 학급 상한은 IP와 함께 묶는다. 학급 단독 버킷은 한 클라이언트가 학급 전체를 잠그는 통로가 된다.
@@ -184,7 +188,7 @@ async function studentPost(request: Request) {
       prepareDeviceSession(),
     ]);
     const joinResults = await db.batch([
-      db.prepare(`INSERT INTO student_profiles(id, classroom_id, nickname, animal, last_activity_at) SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM classrooms WHERE id = ? AND active = 1 AND admission_open = 1) AND (? = 1 OR NOT EXISTS (SELECT 1 FROM student_profiles WHERE classroom_id = ? AND ${nicknameKeySql("nickname")} = ? COLLATE NOCASE AND animal = ? AND archived_at IS NULL))`).bind(studentId, classroom.id, nickname, animal, now, classroom.id, allowDuplicate ? 1 : 0, classroom.id, nicknameKey, animal),
+      db.prepare(`INSERT INTO student_profiles(id, classroom_id, nickname, animal, class_number, last_activity_at) SELECT ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM classrooms WHERE id = ? AND active = 1 AND admission_open = 1) AND (? = 1 OR NOT EXISTS (SELECT 1 FROM student_profiles WHERE classroom_id = ? AND ${nicknameKeySql("nickname")} = ? COLLATE NOCASE AND animal = ? AND archived_at IS NULL))`).bind(studentId, classroom.id, nickname, animal, classNumber, now, classroom.id, allowDuplicate ? 1 : 0, classroom.id, nicknameKey, animal),
       db.prepare(`INSERT INTO recovery_credentials(student_id, picture_hash, picture_salt, personal_qr_hash) SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM student_profiles WHERE id = ? AND classroom_id = ? AND archived_at IS NULL)`).bind(studentId, pictureHash, salt, personalQrHash, studentId, classroom.id),
       db.prepare(`INSERT INTO device_sessions(token_hash, student_id, expires_at, last_used_at) SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM student_profiles WHERE id = ? AND classroom_id = ? AND archived_at IS NULL)`).bind(device.tokenHash, studentId, device.expiresAt, device.lastUsedAt, studentId, classroom.id),
     ]);

@@ -2725,3 +2725,46 @@ body {
   max-height:100%;
   box-shadow:none;
 }
+
+/* ── 2026-09-07 교사 학급 명단 ───────────────────────────────────────────────
+ * 번호와 실명은 담임 교사 화면에만 나타난다. 학생 화면·가족 공유·AI 요청에는 싣지 않는다.
+ */
+.roster-field { display:grid; gap:6px; }
+.roster-field textarea { min-height:120px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; font-size:16px; line-height:1.6; resize:vertical; }
+.roster-hint { color:var(--secondary); font-size:12px; font-weight:800; }
+.roster-errors { margin:0; padding-left:18px; color:#9f2f2f; font-size:12px; font-weight:800; }
+.roster-privacy { margin:2px 0 0; color:var(--secondary); font-size:12px; font-weight:750; line-height:1.5; }
+.roster-add { margin-top:18px; padding:16px; display:grid; gap:10px; border:1px solid var(--border); border-radius:18px; background:#fff; }
+.roster-add button { justify-self:start; }
+.roster-edit { margin-top:14px; padding:14px 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:end; border:2px solid var(--primary); border-radius:18px; background:#f2fbff; }
+.roster-edit>b { width:100%; }
+.roster-edit label { display:grid; gap:4px; margin:0; font-size:12px; font-weight:900; }
+.roster-edit input { min-height:44px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; font-size:16px; }
+.roster-edit input[name="seat"] { width:88px; }
+.student-roster-name { display:block; color:var(--primary-dark); font-size:12px; font-weight:900; }
+
+/* ── 2026-09-07 번호로 입장 ──────────────────────────────────────────────────
+ * 선생님이 명단을 만든 학급은 아이가 자기 번호를 눌러 들어온다. 명단은 서버가 주지 않으므로
+ * 화면에도 반 전체 이름이 뜨지 않는다.
+ */
+.seat-card form { display:grid; gap:12px; }
+.seat-input-label { margin:0; color:var(--secondary); font-size:14px; font-weight:900; }
+.seat-input {
+  width:100%;
+  min-height:96px;
+  padding:8px;
+  border:3px solid var(--border);
+  border-radius:22px;
+  background:#fff;
+  color:var(--ink);
+  font-size:56px;
+  font-weight:950;
+  letter-spacing:.1em;
+  text-align:center;
+}
+.seat-input:focus-visible { border-color:var(--primary); }
+/* 번호로 다시 들어올 때는 그림 비밀번호만 묻는다 — 동물·별명 단계를 숨긴다. */
+.join-card.join-seat-recover .mobile-entry-progress,
+.join-card.join-seat-recover .join-step-1,
+.join-card.join-seat-recover .join-step-2 { display:none; }
+.join-card.join-seat-recover .join-step-3 { display:block; }

@@ -26,13 +26,13 @@ test("normal re-entry uses classroom-scoped animal, nickname and three pictures 
     read("../app/api/student/route.ts"),
     read("../app/components/JoinClient.tsx"),
   ]);
-  assert.match(join, /\{ action, entry, nickname, animal, picturePassword: pictures \}/);
+  assert.match(join, /\{ action, entry, nickname, animal, picturePassword: pictures, \.\.\.seat \}/);
   assert.match(route, /payload\.entry \?\? payload\.classCode/);
   assert.match(route, /s\.classroom_id = \? AND \$\{nicknameKeySql\("s\.nickname"\)\} = \? COLLATE NOCASE AND s\.animal = \?/);
   assert.match(route, /PROFILE_CREDENTIALS_EXIST/);
   assert.doesNotMatch(join, /개인 QR|새 개인 QR|복구 카드 재발급|다른 기기에서 그렸다면 선생님/);
   const normalSubmit = join.slice(join.indexOf('const payload = action === "join"'), join.indexOf('const response = await fetch', join.indexOf('const payload = action === "join"')));
-  assert.match(normalSubmit, /\{ action, entry, nickname, animal, picturePassword: pictures \}/);
+  assert.match(normalSubmit, /\{ action, entry, nickname, animal, picturePassword: pictures, \.\.\.seat \}/);
 });
 
 test("wide/tablet entry stays one screen and only phones or short viewports use three guided steps", async () => {

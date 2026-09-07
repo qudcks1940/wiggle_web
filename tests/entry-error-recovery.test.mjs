@@ -61,7 +61,7 @@ test("a wrong class code offers calling the teacher (there is no visible code fi
 
 test("join/recover keeps the code hidden and only the approved phone/short-screen step guide is rendered", () => {
   assert.match(join, /className="mobile-entry-progress"/);
-  assert.match(join, /data-mobile-step=\{mobileStep\}/);
+  assert.match(join, /data-mobile-step=\{seatRecover \? 3 : mobileStep\}/);
   assert.doesNotMatch(join, /1️⃣ 수업 코드/);
   assert.match(join, /<legend>1️⃣ 내 동물<\/legend>/);
   assert.match(join, /<span>2️⃣ 그림 별명<\/span>/);

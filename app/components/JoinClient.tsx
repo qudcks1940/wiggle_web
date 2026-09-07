@@ -22,13 +22,18 @@ const PICTURES = [
   { value: "로켓", picture: "🚀", name: "로켓" },
   { value: "풍선", picture: "🎈", name: "풍선" },
 ] as const;
-type Mode = "checking" | "choice" | "join" | "recover" | "legacyRecover";
+type Mode = "checking" | "seat" | "choice" | "join" | "recover" | "legacyRecover";
 type MobileStep = 1 | 2 | 3;
 
 export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialEntry?: string; recoveryToken?: string }) {
   const [mode, setMode] = useState<Mode>(recoveryToken ? "legacyRecover" : "checking");
   const [classroomName, setClassroomName] = useState("");
   const [hasProfiles, setHasProfiles] = useState(false);
+  /* 선생님이 명단을 만든 학급은 번호가 곧 신원이다. 명단 자체는 서버가 주지 않으므로
+   * 아이가 자기 번호만 입력한다 — 수업 코드를 아는 사람에게 반 전체 이름이 새지 않는다. */
+  const [hasRoster, setHasRoster] = useState(false);
+  const [seatInput, setSeatInput] = useState("");
+  const [seatNumber, setSeatNumber] = useState<number | null>(null);
   const [nickname, setNickname] = useState(NICKNAME_IDEAS["🐰"][0]);
   const [animal, setAnimal] = useState("🐰");
   const [pictures, setPictures] = useState<string[]>([]);
@@ -77,10 +82,35 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
       }
       setClassroomName(data.classroomName ?? "우리 반");
       setHasProfiles(Boolean(data.hasProfiles));
-      setMode(data.hasProfiles ? "choice" : "join");
+      setHasRoster(Boolean(data.hasRoster));
+      setSeatInput(""); setSeatNumber(null);
+      setMode(data.hasRoster ? "seat" : data.hasProfiles ? "choice" : "join");
     } catch (cause) {
       setError(cause instanceof StudentEntryResponseError ? cause.message : "수업을 확인하는 중 연결이 끊겼어요. 다시 시도해 주세요.");
     } finally { setBusy(false); }
+  }
+
+  async function checkSeat() {
+    const parsed = Number(seatInput);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 99) { setError("번호를 다시 확인해 주세요."); setErrorKind("general"); return; }
+    setBusy(true); clearEntryError();
+    try {
+      const response = await fetch("/api/student", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "seatStatus", entry, seatNumber: parsed }), cache: "no-store" });
+      const data = await readStudentEntryResponse(response);
+      if (!response.ok) { setErrorKind("general"); throw new StudentEntryResponseError(data.error ?? "번호를 확인하지 못했어요."); }
+      setSeatNumber(parsed);
+      setPictures([]); setMobileStep(1);
+      // 처음이면 동물·별명·그림 비밀번호를 고르고, 그다음부터는 그림 비밀번호만 확인한다.
+      setMode(data.firstTime ? "join" : "recover");
+      requestAnimationFrame(() => window.scrollTo(0, 0));
+    } catch (cause) {
+      setError(cause instanceof StudentEntryResponseError ? cause.message : "번호를 확인하는 중 연결이 끊겼어요.");
+    } finally { setBusy(false); }
+  }
+
+  function backToSeat() {
+    clearEntryError(); setDuplicateWarning(false); setPictures([]); setMobileStep(1); setSeatNumber(null); setMode("seat");
+    requestAnimationFrame(() => window.scrollTo(0, 0));
   }
 
   function clearEntryError() {
@@ -164,9 +194,10 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
     const action = mode === "join" ? "join" : "recover";
     let failureKind: EntryErrorKind = "general";
     try {
+      const seat = seatNumber === null ? {} : { seatNumber };
       const payload = action === "join"
-        ? { action, entry, nickname, animal, picturePassword: pictures, allowDuplicate }
-        : recoveryToken ? { action, personalQrToken: recoveryToken } : { action, entry, nickname, animal, picturePassword: pictures };
+        ? { action, entry, nickname, animal, picturePassword: pictures, allowDuplicate, ...seat }
+        : recoveryToken ? { action, personalQrToken: recoveryToken } : { action, entry, nickname, animal, picturePassword: pictures, ...seat };
       const response = await fetch("/api/student", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" });
       failureKind = classifyEntryError({ status: response.status, action, hasPersonalQrToken: Boolean(recoveryToken) });
       const data = await readStudentEntryResponse(response);
@@ -192,6 +223,31 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
     return <main className="entry-shell"><div className="entry-top"><Logo /></div><section className="entry-card entry-check-card"><div className="entry-title-row"><div><p className="eyebrow">수업에 들어가요</p><h1>{error ? "수업을 찾지 못했어요" : "우리 반을 확인하고 있어요"}</h1></div>{error && <SpeakButton text="수업 코드를 확인하지 못했어요. 화면의 안내를 보고 다시 시도하거나 선생님을 불러요." />}</div>{error ? <>{errorNotice()}<button type="button" className="button primary full" disabled={busy} onClick={() => void checkEntry()}>{busy ? "확인 중…" : "다시 확인하기"}</button><a className="text-button" href="/">수업 코드 다시 입력하기</a></> : <div className="entry-loading" role="status"><span aria-hidden="true">🎨</span><b>잠깐만 기다려 주세요</b></div>}</section></main>;
   }
 
+  if (mode === "seat") {
+    return <main className="entry-shell"><div className="entry-top"><Logo /><span>{classroomName}</span></div>
+      <section className="entry-card seat-card">
+        <div className="entry-title-row"><div><p className="eyebrow">{classroomName}</p><h1>내 번호를 눌러요</h1></div><SpeakButton text="선생님이 알려 준 내 번호를 눌러요. 다 눌렀으면 들어가기를 눌러요." /></div>
+        <form onSubmit={(event) => { event.preventDefault(); void checkSeat(); }}>
+          <label className="seat-input-label" htmlFor="seat-number">우리 반에서 내 번호</label>
+          <input
+            id="seat-number"
+            className="seat-input"
+            type="tel"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="off"
+            maxLength={2}
+            value={seatInput}
+            aria-label="내 번호"
+            onChange={(event) => { setSeatInput(event.target.value.replace(/[^0-9]/g, "").slice(0, 2)); clearEntryError(); }}
+          />
+          {errorNotice()}
+          <button className="button primary full child-primary-action" disabled={busy || !seatInput}><span aria-hidden="true">▶️</span>{busy ? "확인 중…" : "들어가기"}</button>
+        </form>
+        <a className="text-button" href="/">수업 코드 다시 입력하기</a>
+      </section></main>;
+  }
+
   if (mode === "choice") {
     return <main className="entry-shell"><div className="entry-top"><Logo /><span>{classroomName}</span></div><section className="entry-card entry-choice-card"><div className="entry-title-row"><div><p className="eyebrow">{classroomName}</p><h1>어떻게 들어갈까요?</h1><p>새 프로필을 만들거나, 전에 그리던 내 그림을 이어갈 수 있어요.</p></div><SpeakButton text="새로 시작하려면 새로 시작하기를 눌러요. 전에 그린 그림이 있다면 내 그림 이어가기를 눌러요." /></div><div className="entry-choice-grid"><button type="button" onClick={() => startMode("join")}><span aria-hidden="true">✨</span><b>새로 시작하기</b><small>나만의 꼬마 화가를 만들어요</small></button><button type="button" onClick={() => startMode("recover")}><span aria-hidden="true">🖼️</span><b>내 그림 이어가기</b><small>동물·별명·그림 비밀번호로 찾아요</small></button></div><p className="entry-choice-privacy">어느 태블릿에서도 같은 동물·별명·그림 비밀번호로 이어갈 수 있어요.</p></section></main>;
   }
@@ -201,13 +257,18 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
   }
 
   const creating = mode === "join";
-  const pageInstruction = creating
+  /* 번호로 들어온 재입장은 그림 비밀번호만 확인한다. 번호가 이미 한 사람을 가리키므로
+   * 동물·별명을 다시 묻지 않는다 — 아이가 별명을 잊어도 자기 그림으로 돌아올 수 있다. */
+  const seatRecover = seatNumber !== null && !creating;
+  const pageInstruction = seatRecover
+    ? `${seatNumber}번이 맞으면 그림 비밀번호 세 개를 순서대로 골라요. 모두 고르면 내 그림 이어가기를 눌러요.`
+    : creating
     ? "내 동물을 고르고, 그림 별명을 정한 다음, 그림 비밀번호 세 개를 순서대로 골라요. 모두 고르면 이 모습으로 수업 들어가기를 눌러요."
     : "전에 고른 동물과 그림 별명을 선택하고, 그림 비밀번호 세 개를 같은 순서로 골라요. 모두 고르면 내 그림 이어가기를 눌러요.";
 
-  return <main className="entry-shell entry-join-shell"><div className="entry-top entry-join-top"><Logo /></div><section className={`entry-card join-card ${creating ? "join-create" : "join-recover"}`} data-mobile-step={mobileStep}>
-    <div className="entry-title-row"><div><p className="eyebrow">{creating ? "수업에 들어가요" : "내 그림을 찾아요"}</p><h1>{creating ? "나만의 꼬마 화가를 만들어요" : "내 꼬마 화가를 찾아요"}</h1><p className="join-subtitle">{creating ? "세 가지만 고르면 바로 그림 수업에 들어갈 수 있어요." : "전에 고른 세 가지를 입력하면 어느 태블릿에서나 이어갈 수 있어요."}</p></div><SpeakButton text={pageInstruction} /></div>
-    {hasProfiles && <button type="button" className="entry-mode-back" onClick={returnToChoice}>← 입장 방법 다시 고르기</button>}
+  return <main className="entry-shell entry-join-shell"><div className="entry-top entry-join-top"><Logo /></div><section className={`entry-card join-card ${creating ? "join-create" : "join-recover"}${seatRecover ? " join-seat-recover" : ""}`} data-mobile-step={seatRecover ? 3 : mobileStep}>
+    <div className="entry-title-row"><div><p className="eyebrow">{seatNumber !== null ? `${seatNumber}번` : creating ? "수업에 들어가요" : "내 그림을 찾아요"}</p><h1>{seatRecover ? "내 그림 비밀번호" : creating ? "나만의 꼬마 화가를 만들어요" : "내 꼬마 화가를 찾아요"}</h1><p className="join-subtitle">{seatRecover ? "그림 세 개를 순서대로 골라요." : creating ? "세 가지만 고르면 바로 그림 수업에 들어갈 수 있어요." : "전에 고른 세 가지를 입력하면 어느 태블릿에서나 이어갈 수 있어요."}</p></div><SpeakButton text={pageInstruction} /></div>
+    {seatNumber !== null ? <button type="button" className="entry-mode-back" onClick={backToSeat}>← 번호 다시 입력하기</button> : hasProfiles && <button type="button" className="entry-mode-back" onClick={returnToChoice}>← 입장 방법 다시 고르기</button>}
     <div className="mobile-entry-progress" aria-label={`입장 ${mobileStep}단계 / 3단계`}><span className={mobileStep >= 1 ? "active" : ""}>1 동물</span><span className={mobileStep >= 2 ? "active" : ""}>2 별명</span><span className={mobileStep >= 3 ? "active" : ""}>3 비밀번호</span></div>
     <div className="join-card-body">
       <div className="join-preview"><img src="/brand/student-entry-arch.png" alt="" aria-hidden="true" /><div className="join-preview-card" role="status" aria-live="polite" aria-label={`선택한 동물 ${ANIMAL_NAMES[animal]}, 별명 ${nickname || "꼬마 화가"}, 그림 비밀번호 ${pictures.length}/${targetLength}개: ${pictures.length ? pictures.map((value, index) => `${index + 1}번째 ${pictureNameFor(value)}`).join(", ") : "아직 없음"}`}><span className="join-preview-animal" data-animal-index={ANIMALS.indexOf(animal)} aria-hidden="true" /><b aria-hidden="true">{nickname || "꼬마 화가"}</b><span className="join-preview-password-title" aria-hidden="true">그림 비밀번호</span><div className="join-preview-slots" aria-hidden="true">{Array.from({ length: targetLength }, (_, index) => <span className={pictures[index] ? "filled" : ""} key={index}><i>{pictures[index] ? pictureFor(pictures[index]) : "?"}</i></span>)}</div></div></div>

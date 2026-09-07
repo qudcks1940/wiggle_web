@@ -111,7 +111,7 @@ export default function Home() {
                 <path d="M12 3 5 6v5c0 4.8 2.9 8.2 7 10 4.1-1.8 7-5.2 7-10V6l-7-3Z" />
                 <path d="m9 12 2 2 4-5" />
               </svg>
-              학생 이메일 · 실명 없이 안전하게
+              학생 이메일 없이 안전하게
             </p>
           </div>
         </div>

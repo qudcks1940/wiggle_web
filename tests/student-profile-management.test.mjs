@@ -43,7 +43,7 @@ test("class status, duplicate credentials, cross-device re-entry, archive and re
     method: "POST", headers: studentHeaders("203.0.113.100"), body: JSON.stringify({ action: "entryStatus", entry: classroom.classCode }),
   });
   assert.equal(emptyStatus.status, 200);
-  assert.deepEqual(await emptyStatus.json(), { classroomName: "중복 점검반", hasProfiles: false });
+  assert.deepEqual(await emptyStatus.json(), { classroomName: "중복 점검반", hasProfiles: false, hasRoster: false });
 
   const joinBody = {
     action: "join",
@@ -63,7 +63,7 @@ test("class status, duplicate credentials, cross-device re-entry, archive and re
     method: "POST", headers: studentHeaders("203.0.113.105"), body: JSON.stringify({ action: "entryStatus", entry: classroom.classCode }),
   });
   assert.equal(occupiedStatus.status, 200);
-  assert.deepEqual(await occupiedStatus.json(), { classroomName: "중복 점검반", hasProfiles: true });
+  assert.deepEqual(await occupiedStatus.json(), { classroomName: "중복 점검반", hasProfiles: true, hasRoster: false });
 
   const duplicate = await server.fetch("/api/student", {
     method: "POST", headers: studentHeaders("203.0.113.102"), body: JSON.stringify(joinBody),

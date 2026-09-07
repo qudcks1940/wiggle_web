@@ -3,9 +3,29 @@ export const RENDERER_VERSION = 1;
 export const DOCUMENT_SIZE = 1024;
 /* 도화지 세로. 좌표는 x·y 모두 0~1로 정규화돼 있으므로 세로를 바꾸면 같은 문서가 다르게 그려진다.
  * 그래서 세로는 문서에 함께 저장하고, `height`가 없는 기존 문서는 예전처럼 정사각(1024)으로 읽는다.
- * 새 문서는 4:3 가로 도화지다 — 제품의 전시 그림(960×720)과 액자 에셋이 이미 4:3이다. */
-export const DOCUMENT_HEIGHTS = [1024, 768] as const;
-export const DEFAULT_DOCUMENT_HEIGHT = 768;
+ *
+ * 시안의 도화지는 화면을 가득 채운다. 그래서 새 작품은 첫 획을 긋기 전까지 화면에 맞춰
+ * 세로를 정한다(아래 clampDocumentHeight). 한 번이라도 그리면 그 비율로 굳는다 — 그린 뒤에
+ * 비율을 바꾸면 이미 그린 선이 늘어나기 때문이다.
+ * 범위를 둔 이유: 아무 값이나 받으면 저장된 그림의 비율을 마음대로 바꿀 수 있고, 극단적인
+ * 비율은 썸네일·그림책 배치를 깨뜨린다. 16의 배수로 맞춰 값이 무한히 늘어나지 않게 한다. */
+export const DOCUMENT_MIN_HEIGHT = 512;
+export const DOCUMENT_MAX_HEIGHT = 1024;
+export const DOCUMENT_HEIGHT_STEP = 16;
+export const DEFAULT_DOCUMENT_HEIGHT = 640;
+
+export function isDocumentHeight(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value)
+    && value >= DOCUMENT_MIN_HEIGHT && value <= DOCUMENT_MAX_HEIGHT
+    && value % DOCUMENT_HEIGHT_STEP === 0;
+}
+
+/** 화면에서 잰 비율을 저장 가능한 세로 값으로 맞춘다. */
+export function clampDocumentHeight(rawHeight: number): number {
+  if (!Number.isFinite(rawHeight)) return DEFAULT_DOCUMENT_HEIGHT;
+  const stepped = Math.round(rawHeight / DOCUMENT_HEIGHT_STEP) * DOCUMENT_HEIGHT_STEP;
+  return Math.max(DOCUMENT_MIN_HEIGHT, Math.min(DOCUMENT_MAX_HEIGHT, stepped));
+}
 export const STICKER_ALLOWLIST = ["star", "heart", "leaf", "cloud", "sparkle"] as const;
 // 서버 validator와 클라이언트가 같은 목록을 봐야 한다. 클라이언트만 넓히면
 // 새 도구로 그린 문서가 서버에서 거부돼 저장이 영구 실패한다.
@@ -97,7 +117,7 @@ export type DrawOp = {
   deleted?: boolean;
 };
 
-export type DocumentHeight = (typeof DOCUMENT_HEIGHTS)[number];
+export type DocumentHeight = number;
 
 export type DrawDocument = {
   schemaVersion: 1;
@@ -172,7 +192,7 @@ export function validateDrawDocument(value: unknown): DrawDocument | null {
   if (doc.schemaVersion !== DRAWING_SCHEMA_VERSION || doc.rendererVersion !== RENDERER_VERSION || doc.size !== DOCUMENT_SIZE || !Array.isArray(doc.ops) || doc.ops.length > MAX_DOCUMENT_OPS) return null;
   // 세로는 없거나(기존 정사각 문서) 허용 목록 안이어야 한다. 임의 값을 받으면 저장된 그림의
   // 비율을 클라이언트가 마음대로 바꿀 수 있고, 렌더 결과가 썸네일과 어긋난다.
-  if (doc.height !== undefined && !DOCUMENT_HEIGHTS.includes(doc.height)) return null;
+  if (doc.height !== undefined && !isDocumentHeight(doc.height)) return null;
   const seen = new Set<string>();
   const activeTextIds = new Set<string>();
   for (const raw of doc.ops) {

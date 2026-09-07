@@ -387,8 +387,8 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   .studio-body { overflow:hidden; }
   .studio-body.without-step-panel { display:flex; }
   .canvas-zone { container-type:size; }
-  @supports (width:1cqh) { .canvas-zone .canvas-wrap { width:min(100cqw,100cqh); height:auto; max-width:100%; max-height:100%; } }
-  @supports (width:1cqh) { .canvas-zone.has-canvas-status .canvas-wrap { width:min(100cqw,calc(100cqh - 58px)); } }
+  @supports (width:1cqh) { .canvas-zone .canvas-wrap { width:min(100cqw,calc(100cqh * var(--paper-ratio,1))); height:auto; max-width:100%; max-height:100%; } }
+  @supports (width:1cqh) { .canvas-zone.has-canvas-status .canvas-wrap { width:min(100cqw,calc((100cqh - 58px) * var(--paper-ratio,1))); } }
   @supports not (width:1cqh) { .canvas-zone .canvas-wrap { width:auto; height:100%; max-width:100%; max-height:100%; } }
   .tool-panel { padding-right:max(7px,env(safe-area-inset-right)); padding-bottom:max(7px,env(safe-area-inset-bottom)); padding-left:max(7px,env(safe-area-inset-left)); display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-auto-flow:row dense; gap:8px; align-items:stretch; overflow:hidden; }
   .tool-panel .tool-section-label { display:none; }
@@ -694,7 +694,7 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   .lesson-step-prompt .speak-button.compact { width:40px; min-width:40px; min-height:40px; }
   .canvas-zone { order:initial; grid-column:2; padding:6px; }
   /* .studio는 100dvh인데 기본 캔버스 폭 공식은 100vh 기준이라 주소창이 보이면 그림 위아래가 잘린다. */
-  .canvas-zone .canvas-wrap { width:auto; height:100%; max-width:100%; max-height:100%; }
+  .canvas-zone .canvas-wrap { width:min(100cqw,calc(100cqh * var(--paper-ratio,1))); height:auto; max-width:100%; max-height:100%; }
   .studio-body.without-step-panel .canvas-zone { grid-column:1; }
   .tool-panel { display:flex; order:initial; grid-column:3; flex-direction:column; align-items:stretch; gap:4px; padding:4px; overflow-y:auto; overflow-x:hidden; border-left:1px solid var(--border); }
   .studio-body.without-step-panel .tool-panel { grid-column:2; }
@@ -954,8 +954,8 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   .step-panel .step-actions button { min-height:52px; font-size:15px; }
   .step-panel .lesson-step-prompt { grid-column:1/-1; grid-row:4; margin-top:0; }
   .canvas-zone { grid-row:2; min-height:380px; padding:10px; container-type:size; }
-  @supports (width:1cqh) { .canvas-zone .canvas-wrap { width:min(100cqw,100cqh); height:auto; max-width:100%; max-height:100%; } }
-  @supports (width:1cqh) { .canvas-zone.has-canvas-status .canvas-wrap { width:min(100cqw,calc(100cqh - 58px)); } }
+  @supports (width:1cqh) { .canvas-zone .canvas-wrap { width:min(100cqw,calc(100cqh * var(--paper-ratio,1))); height:auto; max-width:100%; max-height:100%; } }
+  @supports (width:1cqh) { .canvas-zone.has-canvas-status .canvas-wrap { width:min(100cqw,calc((100cqh - 58px) * var(--paper-ratio,1))); } }
   /* 도구 4행(도구/굵기·모드·히스토리/색·전체지우기/팔레트)이 스크롤 없이 다 보여야 한다.
      한 행이라도 접히면 아이는 그 기능이 없는 줄 안다 (2026-08-20 iPad 실기기 보고). */
   .tool-panel { grid-row:3; max-height:276px; padding:8px max(10px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left)); display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); grid-auto-flow:row dense; gap:6px; overflow-y:auto; border:0; border-top:1px solid var(--border); }
@@ -2485,9 +2485,9 @@ body {
 @media (min-width:900px) and (min-height:600px) {
   .studio-body,.studio-body.without-step-panel { position:relative; grid-template-columns:minmax(0,1fr); background:#f4f8fb; }
   .studio-body:has(.step-panel .observation-reference) { grid-template-columns:minmax(0,1fr); }
-  .canvas-zone { grid-column:1; grid-row:1; padding:10px; }
-  .canvas-wrap { width:min(100%,calc(100dvh - 116px)); border-radius:6px; box-shadow:0 2px 18px rgba(26,59,92,.1); }
-  .canvas-zone.has-canvas-status .canvas-wrap { width:min(100%,calc(100dvh - 168px)); }
+  .canvas-zone { grid-column:1; grid-row:1; padding:0; }
+  .canvas-wrap { width:auto; border-radius:0; box-shadow:none; }
+  .canvas-zone.has-canvas-status .canvas-wrap { width:auto; }
 
   /* 안내: 왼쪽 위에 떠 있는 카드 */
   .step-panel,.grimi-panel {
@@ -2705,13 +2705,7 @@ body {
  * 예전처럼 정사각(1/1)이라 저장된 그림이 그대로 유지되고, 새 작품만 4:3 가로 도화지다.
  * 좌표는 x·y 모두 0~1로 정규화돼 있어 화면 상자의 비율이 곧 그림의 비율이다.
  */
-.canvas-wrap {
-  width:auto;
-  height:100%;
-  max-width:100%;
-  max-height:100%;
-  aspect-ratio:var(--paper-aspect,1);
-}
+.canvas-wrap { aspect-ratio:var(--paper-aspect,1); }
 /* 지우개 자국은 가로 %로만 크기를 잡고 정사각을 유지한다(가로 도화지에서 %가 축마다 다르다). */
 .eraser-footprint { aspect-ratio:1; }
 /* 타임랩스도 같은 비율로 재생한다. */
@@ -2719,3 +2713,15 @@ body {
 /* 작품 썸네일은 잘라내지 않고 전부 보여 준다 — 가로 도화지가 정사각 칸에서 양옆이 잘리면
    아이 그림의 일부가 교사 화면에서 사라진다. */
 .student-thumb img,.teacher-artwork-history-grid img { object-fit:contain; }
+/* 새 작품의 도화지는 첫 획 전까지 화면 비율에 맞춰지므로, 그 비율 그대로 화면을 채운다.
+   기존 작품은 자기 비율을 지키며 가운데 놓인다 — 늘리면 이미 그린 선이 찌그러진다.
+   `height:100%`와 `max-width:100%`를 함께 주면 도화지가 남는 자리보다 넓을 때 상자가
+   화면 비율로 눌린다. 그래서 남는 자리(cq)에서 폭을 직접 계산하고 높이는 비율이 정하게 한다. */
+.canvas-zone { container-type:size; }
+.canvas-wrap {
+  width:min(100cqw,calc(100cqh * var(--paper-ratio,1)));
+  height:auto;
+  max-width:100%;
+  max-height:100%;
+  box-shadow:none;
+}

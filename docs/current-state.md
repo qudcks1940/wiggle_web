@@ -1,6 +1,6 @@
 # Wiggle Web 현재 상태
 
-> 마지막 갱신: 2026-08-30
+> 마지막 갱신: 2026-09-07
 > 목적: 긴 대화가 압축되거나 담당 AI가 바뀌어도 실제 구현·검증·배포 상태를 잃지 않기 위한 기준 문서
 
 ## 상태 기준
@@ -249,6 +249,43 @@
 - 외부 Canva 대신 Wiggle 내부 편집기와 MIT 라이선스 `react-moveable`을 사용한다는 점, Turso 그림책 문서와 R2 이미지 자산의 역할, 학생 화면 경로를 문서화했다.
 - 신규 정본 저장소 주소를 `wwwiggle/new_wiggle`로 바꾸고 전체 테스트 표기를 최근 검증 결과인 `291/291`로 현행화했다. Vercel이 아직 기존 저장소에 연결된 전환 상태도 README 배포 안내에 명시했다.
 - 문서 변경 뒤 typecheck·lint·production build·전체 테스트 `291/291`과 `git diff --check`를 다시 통과했다.
+
+## 2026-09-07 오리 전시관 대문 구현 (`claude/landing-gallery-20260907`, 로컬 검증)
+
+- 사용자가 고른 전시관 시안(`docs/design-assets/gallery/selected-reference.png`)대로 `app/page.tsx`를
+  다시 만들었다. 화가 오리를 앞에 세우고 우주·바다·집 그림을 액자에 담아 뒤에 걸었으며, 하단에
+  `모두 다른 답`·`AI는 대신 그리지 않아요`·`비교보다 발견` 소개 영역을 추가했다.
+- 그림은 `public/landing-gallery/`의 개별 WebP와 직접 작성한 SVG 아이콘으로 배치했고, 문구·교사 버튼·
+  4자리 코드 입력·`그리러 가기`는 모두 실제 HTML이다. 로고는 기존 `/brand/logo.png`를 그대로 쓴다.
+  전시 그림과 도형 표식은 제품 소개용 장식이며 실제 학생 작품이나 레슨 씨앗 데이터가 아니다.
+- 입장 동작은 손대지 않았다. `LandingCodeForm`(4자리 → `/join?code=`)과 `/teacher` 링크,
+  인증·API·저장 경로는 기존 구현을 그대로 재사용한다.
+- 은퇴 처리: 단일 `landing-scene-v2.png` 그림 하나에 HTML을 얹던 `1488×1057` cqw 무대를 제거했다.
+  `app/globals.css`에서 셀렉터가 전부 `.landing` 계열인 규칙 182개(513줄)를 지우고 전시관 블록 하나로
+  대체했다. `.entry-*`·`.student-*`와 섞인 규칙과 이번 저장소의 `.teacher-*` 추가분은 그대로 두었다.
+  이 무대는 세로 태블릿에서 조작 요소를 44px 아래로 줄이던 원인이므로 새 대문은 cqw를 쓰지 않는다.
+  `public/brand/landing-scene-v2.png`는 이제 어디서도 참조하지 않지만 파일은 남겨 두었다.
+- `f0615ec`의 코드 입력 수정과 합쳤다. 제출 버튼은 더 이상 `disabled`가 아니라
+  `:has(.landing-code-box:invalid)`로 흐려지며, 브라우저가 복원한 값도 그대로 제출된다.
+  대문 CSS도 이 방식을 따르고 `:disabled` 규칙은 두지 않는다.
+- 에셋: `public/landing-gallery/`(WebP 13·PNG 7·SVG 아이콘 10·조합용 CSS·매니페스트)와
+  `docs/design-assets/gallery/`의 선택 시안·README·프롬프트·검수 화면·재생성 스크립트를 커밋했다.
+  15MB 생성 원본과 검수 연락판, 배포용 zip은 커밋하지 않았다 — 재생성 경로는 `prompts.json`에 있다.
+- `tests/landing-page.test.mjs`는 은퇴한 무대 계약(1488 좌표계, 옛 서브타이틀 폭, 옛 데스크톱 타이포)
+  세 항목을 전시관 계약으로 교체했다. 코드 카드·교사 링크·제목 마크업·`/join`·복원 코드 계약은 유지했다.
+  액자 안쪽 좌표는 `public/landing-gallery/gallery-assets.css`와 값이 어긋나면 실패하도록 교차 검사한다.
+- 검증: `npm run typecheck`, `npm run lint`, `npm run build`, 두 범위의 `git diff --check` 통과.
+- 실제 브라우저 검증(로컬, headless Chrome/CDP): `npm run check:browser`(320×568·390×844·844×390)와
+  `--ipad`(768×1024·768×880·820×1180) 전 항목 통과, `--desktop`(1440×900·1920×1080)의 대문 4항목 통과.
+  스크립트 인자는 `node scripts/browser-check.mjs <baseUrl> --desktop` 순서여야 한다
+  (`npm run check:browser -- --desktop`은 `--desktop`을 주소로 읽어 실패한다).
+- 6개 폭(320·390·844×390·768·1024·1440)에서 computed box를 직접 측정해 가로 스크롤 0,
+  44px 미만 터치 목표 0, 수업 코드 네 칸 46~52×48~56px을 확인했다. 실제 브라우저에서 코드 입력·
+  초점 이동·`/join?code=` 이동·`/teacher` 이동도 확인했다.
+- 휴대전화는 `오리 → 학생 태그 → 수업 코드 → 안전 문구 → 전시 그림 → 소개` 순서로 세로 정렬하고,
+  760px 이상에서 시안 구도(액자 뒤·오리 앞·오른쪽 아래 입장 카드)로 바뀐다.
+- 남은 위험: 대문 전체 높이는 1440×900에서 약 1005px이라 소개 영역을 보려면 한 번 스크롤한다.
+  휴대전화에서는 액자 3개가 세로로 쌓여 문서가 길다(390px 기준 약 1875px).
 
 ## 다음 작업 시작 전 확인
 

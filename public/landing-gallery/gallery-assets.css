@@ -1,0 +1,25 @@
+/* Optional asset composition styles; importing this file does not change the app globally. */
+.wiggle-gallery-assets {
+  --gallery-bg: #ebf8ff;
+  --gallery-paper: #fff;
+  --gallery-ink: #0a2553;
+  --gallery-blue: #087bb9;
+  --gallery-muted: #496b89;
+  --gallery-line: #c4dfed;
+  --gallery-yellow: #ffd85a;
+  color: var(--gallery-ink);
+  font-family: "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
+  background: var(--gallery-bg) url("./paper-blue-1024.webp") center / cover;
+}
+.gallery-frame { position: relative; margin: 0; aspect-ratio: 4 / 3; }
+.gallery-frame__rim { display: block; width: 100%; height: 100%; pointer-events: none; }
+.gallery-frame__art { position: absolute; left: 14.1%; top: 18%; width: 71.7%; height: 62%; object-fit: contain; background: #fff; }
+.gallery-wire { position: absolute; left: 12%; top: -12%; width: 76%; height: 18%; pointer-events: none; }
+.gallery-wire::before, .gallery-wire::after { content: ""; position: absolute; top: 0; width: 52%; height: 1px; background: #a8c9df; }
+.gallery-wire::before { left: 0; transform-origin: right; transform: rotate(-17deg); }
+.gallery-wire::after { right: 0; transform-origin: left; transform: rotate(17deg); }
+.gallery-pin { position: absolute; left: 50%; top: -2%; transform: translate(-50%, -50%); width: 12px; height: 12px; border: 1px solid #a6c8df; border-radius: 50%; background: #d2e6f4; box-shadow: 0 2px 3px #496b8933; }
+.gallery-mascot { display: block; width: min(100%, 560px); height: auto; object-fit: contain; }
+.gallery-decoration { pointer-events: none; user-select: none; }
+.gallery-icon { display: inline-block; width: 24px; height: 24px; vertical-align: middle; }
+.gallery-paper-panel { background: #fff; border: 1px solid #c4dfed; border-radius: 14px; box-shadow: 0 5px 14px #496b891c; }

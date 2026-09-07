@@ -39,9 +39,17 @@ export const classrooms = sqliteTable("classrooms", {
   uniqueIndex("classrooms_join_token_uq").on(table.joinToken),
 ]);
 
+/* 교사가 학급을 만들 때 명단(번호 + 실명)을 미리 채운다.
+ * - seatNumber/realName: 교사 전용. 학생 화면·가족 공유·그림책·AI 요청에 실리지 않는다.
+ * - claimedAt: 그 자리에 아이가 처음 들어온 시각. null이면 아직 아무도 쓰지 않은 자리다.
+ * - nickname/animal: 아이가 첫 입장 때 직접 고른다. 아이 화면에는 이 이름만 보인다.
+ * 기존 학생 행은 seatNumber/realName이 없고 claimedAt이 채워진 것처럼 동작한다. */
 export const studentProfiles = sqliteTable("student_profiles", {
   id: text("id").primaryKey(),
   classroomId: text("classroom_id").notNull().references(() => classrooms.id),
+  seatNumber: integer("seat_number"),
+  realName: text("real_name"),
+  claimedAt: text("claimed_at"),
   nickname: text("nickname").notNull(),
   animal: text("animal").notNull(),
   lastActivityAt: text("last_activity_at").notNull(),
@@ -50,6 +58,8 @@ export const studentProfiles = sqliteTable("student_profiles", {
 }, (table) => [
   index("students_classroom_idx").on(table.classroomId, table.lastActivityAt),
   index("students_classroom_archived_idx").on(table.classroomId, table.archivedAt, table.nickname),
+  // 같은 학급에서 번호는 하나뿐이다. 빠진 학생(archived)의 번호는 다시 쓸 수 있어야 하므로 제외한다.
+  uniqueIndex("students_classroom_seat_uq").on(table.classroomId, table.seatNumber).where(sql`seat_number IS NOT NULL AND archived_at IS NULL`),
 ]);
 
 export const recoveryCredentials = sqliteTable("recovery_credentials", {

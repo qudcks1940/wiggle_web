@@ -1,8 +1,13 @@
 export type StudentEntryResponse = {
   error?: string;
-  code?: "PROFILE_EXISTS" | "PROFILE_CREDENTIALS_EXIST";
+  code?: "PROFILE_EXISTS" | "PROFILE_CREDENTIALS_EXIST" | "SEAT_CLAIMED";
   classroomName?: string;
   hasProfiles?: boolean;
+  /* 선생님이 명단을 만든 학급인지. 명단 내용(번호·이름 목록)은 서버가 절대 주지 않는다. */
+  hasRoster?: boolean;
+  seatNumber?: number;
+  /* 그 번호로 아직 아무도 들어오지 않았는지. 실명은 담지 않는다. */
+  firstTime?: boolean;
   student?: { id: string; nickname: string; animal: string; classroomName: string };
   deviceToken?: string;
   expiresAt?: string;

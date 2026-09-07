@@ -2,7 +2,7 @@
 
 import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { activeTextObjects, DrawDocument, DrawOp, drawingTextGraphemes, emptyDocument, estimateDocumentBytes, estimateStrokeBytes, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_OPS, MAX_STROKE_POINTS, MAX_TEXT_GRAPHEMES, MAX_TEXT_OBJECTS, normalizeDrawingText, roundUnit, ShapeKind, STROKE_WIDTHS, StrokeWidth, TextKind, TEXT_SIZES, TextSize, validateDrawDocument } from "@/lib/drawing-model";
+import { activeTextObjects, DOCUMENT_SIZE, documentHeight, DrawDocument, DrawOp, drawingTextGraphemes, emptyDocument, estimateDocumentBytes, estimateStrokeBytes, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_OPS, MAX_STROKE_POINTS, MAX_TEXT_GRAPHEMES, MAX_TEXT_OBJECTS, normalizeDrawingText, roundUnit, ShapeKind, STROKE_WIDTHS, StrokeWidth, TextKind, TEXT_SIZES, TextSize, validateDrawDocument } from "@/lib/drawing-model";
 import { renderDrawDocument, renderDrawOperation, resetDrawingCanvas } from "@/lib/draw-renderer";
 import { mirrorOp } from "@/lib/symmetry";
 import { clearAllDrawing, redoDrawing, undoDrawing } from "@/lib/drawing-history";
@@ -187,9 +187,15 @@ type SaveOptions = {
 };
 type LessonStepPrompt = "step-action" | "unfinished-lesson" | null;
 
-function renderDocument(canvas: HTMLCanvasElement, document: DrawDocument, size = 1024) {
-  canvas.width = size;
-  canvas.height = size;
+function documentPixels(document: Pick<DrawDocument, "height">, width: number) {
+  return { width, height: Math.round(width * documentHeight(document) / DOCUMENT_SIZE) };
+}
+
+function renderDocument(canvas: HTMLCanvasElement, document: DrawDocument, width = 1024) {
+  // size는 이제 가로·세로를 함께 담는다. 기존 정사각 문서는 height가 없어 예전과 같은 값이 나온다.
+  const size = documentPixels(document, width);
+  canvas.width = size.width;
+  canvas.height = size.height;
   const context = canvas.getContext("2d");
   if (!context) return;
   resetDrawingCanvas(context, size);
@@ -213,7 +219,7 @@ function renderLiveStroke(canvas: HTMLCanvasElement, tool: Tool, color: string, 
       smoothed: tool !== "eraser",
       squareEraser: tool === "eraser",
     },
-    canvas.width,
+    { width: canvas.width, height: canvas.height },
   );
 }
 
@@ -381,14 +387,24 @@ function drawPencil(context: CanvasRenderingContext2D, point: TracePoint, previo
   context.restore();
 }
 
-function renderGuideFrame(canvas: HTMLCanvasElement, traces: GuideTrace[], phase: GuidePhase, progress = 0) {
+/* 점선·시범 좌표는 정사각 기준으로 그려 둔 것이다. 가로 도화지에 x를 그대로 늘리면
+ * 동그라미가 타원이 되므로, 도화지 가운데의 정사각 영역 안에 넣어 모양을 지킨다. */
+function guideSquare(canvas: HTMLCanvasElement) {
+  const side = Math.min(canvas.width, canvas.height);
+  return { side, left: (canvas.width - side) / 2, top: (canvas.height - side) / 2 };
+}
+
+function renderGuideFrame(canvas: HTMLCanvasElement, traces: GuideTrace[], phase: GuidePhase, progress = 0, docHeight = 1024) {
   if (canvas.width !== 1024) canvas.width = 1024;
-  if (canvas.height !== 1024) canvas.height = 1024;
+  if (canvas.height !== docHeight) canvas.height = docHeight;
   const context = canvas.getContext("2d");
   if (!context) return;
-  context.clearRect(0, 0, 1024, 1024);
+  context.clearRect(0, 0, canvas.width, canvas.height);
   if (phase === "independent" || !traces.length) return;
+  const square = guideSquare(canvas);
   context.save();
+  context.translate(square.left, square.top);
+  context.scale(square.side / 1024, square.side / 1024);
   context.strokeStyle = "#087EA8";
   context.globalAlpha = 0.92;
   context.lineWidth = 9;
@@ -421,13 +437,15 @@ function renderGuideFrame(canvas: HTMLCanvasElement, traces: GuideTrace[], phase
 
 function imageData(canvas: HTMLCanvasElement, size: 256 | 1024) {
   const output = document.createElement("canvas");
+  // 화면 캔버스의 비율을 그대로 따른다 — 정사각으로 고정하면 가로 도화지가 찌그러진다.
+  const height = Math.max(1, Math.round(size * canvas.height / Math.max(1, canvas.width)));
   output.width = size;
-  output.height = size;
+  output.height = height;
   const context = output.getContext("2d");
   if (!context) return "";
   context.fillStyle = "#ffffff";
-  context.fillRect(0, 0, size, size);
-  context.drawImage(canvas, 0, 0, size, size);
+  context.fillRect(0, 0, size, height);
+  context.drawImage(canvas, 0, 0, size, height);
   return output.toDataURL("image/png");
 }
 
@@ -864,12 +882,12 @@ export function DrawingStudio() {
     const canvas = guideRef.current;
     if (!canvas) return;
     if (guidePhase !== "demo") {
-      renderGuideFrame(canvas, currentGuideTraces, guidePhase);
+      renderGuideFrame(canvas, currentGuideTraces, guidePhase, 0, documentHeight(documentStateRef.current));
       return;
     }
     const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (motionPreference.matches) {
-      renderGuideFrame(canvas, currentGuideTraces, "practice");
+      renderGuideFrame(canvas, currentGuideTraces, "practice", 0, documentHeight(documentStateRef.current));
       markCurrentGuideSeen();
       setGuidePhase("practice");
       return;
@@ -880,7 +898,7 @@ export function DrawingStudio() {
       if (!event.matches) return;
       if (guideAnimationRef.current !== null) cancelAnimationFrame(guideAnimationRef.current);
       guideAnimationRef.current = null;
-      renderGuideFrame(canvas, currentGuideTraces, "practice");
+      renderGuideFrame(canvas, currentGuideTraces, "practice", 0, documentHeight(documentStateRef.current));
       markCurrentGuideSeen();
       setGuidePhase("practice");
     };
@@ -888,7 +906,7 @@ export function DrawingStudio() {
     const animate = (now: number) => {
       const linear = Math.min(1, (now - startedAt) / duration);
       const eased = 1 - (1 - linear) ** 3;
-      renderGuideFrame(canvas, currentGuideTraces, "demo", eased);
+      renderGuideFrame(canvas, currentGuideTraces, "demo", eased, documentHeight(documentStateRef.current));
       if (linear < 1) {
         guideAnimationRef.current = requestAnimationFrame(animate);
         return;
@@ -1348,8 +1366,9 @@ export function DrawingStudio() {
     footprint.hidden = false;
     footprint.style.left = `${point.x * 100}%`;
     footprint.style.top = `${point.y * 100}%`;
+    // 가로 도화지에서는 가로 %와 세로 %가 다른 픽셀이 된다 — 가로 기준 폭 + aspect-ratio로 정사각을 지킨다.
     footprint.style.width = `${eraserWidth / 10.24}%`;
-    footprint.style.height = `${eraserWidth / 10.24}%`;
+    footprint.style.height = "auto";
     footprint.dataset.pressed = pressed ? "true" : "false";
   }
   function clearShapeStart() {
@@ -1634,8 +1653,9 @@ export function DrawingStudio() {
       width: drawWidth,
       points: [start, end],
     };
-    renderDrawOperation(context, preview, canvas.width);
-    if (mirror) renderDrawOperation(context, mirrorOp(preview), canvas.width);
+    const size = { width: canvas.width, height: canvas.height };
+    renderDrawOperation(context, preview, size);
+    if (mirror) renderDrawOperation(context, mirrorOp(preview), size);
   }
   function startGestureTouch(event: ReactPointerEvent<HTMLCanvasElement>) {
     event.preventDefault();
@@ -2751,7 +2771,14 @@ export function DrawingStudio() {
               </div>
             </div>
           )}
-          <div className="canvas-wrap" ref={wrapRef} onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()}>
+          <div
+            className="canvas-wrap"
+            ref={wrapRef}
+            /* 도화지 비율은 문서가 정한다. 기존 정사각 작품(height 없음)은 1/1 그대로다. */
+            style={{ "--paper-aspect": `${DOCUMENT_SIZE} / ${documentHeight(documentState)}` } as React.CSSProperties}
+            onContextMenu={(event) => event.preventDefault()}
+            onDragStart={(event) => event.preventDefault()}
+          >
             {guideChoiceOpen && (
               <div className="guide-choice-overlay" role="dialog" aria-modal="true" aria-labelledby="guide-choice-title">
                 <section className="guide-choice-card">

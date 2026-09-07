@@ -15,7 +15,6 @@ button { color:inherit; }
 .brand-mark img { width:100%; height:100%; object-fit:cover; border-radius:inherit; }
 .topbar,.app-header,.teacher-header { display:flex; align-items:center; gap:22px; min-height:74px; }
 .topbar { width:min(1180px,calc(100% - 40px)); margin:auto; justify-content:space-between; }
-.landing { min-height:100vh; overflow:hidden; }
 .eyebrow { color:var(--primary-dark); font-weight:900; font-size:14px; letter-spacing:.05em; margin:0 0 14px; }
 .button { min-height:46px; padding:11px 20px; border-radius:14px; border:2px solid transparent; display:inline-flex; justify-content:center; align-items:center; font-weight:900; cursor:pointer; transition:.16s transform,.16s box-shadow; }
 .button:hover:not(:disabled) { transform:translateY(-2px); }
@@ -26,73 +25,11 @@ button { color:inherit; }
 .button.large { min-height:60px; padding:16px 27px; font-size:18px; }
 .button.compact { min-height:44px; padding:8px 15px; }
 .button.full { width:100%; margin-top:14px; }
-
-.landing-centered { display:flex; flex-direction:column; align-items:center; background:var(--bg); }
-.landing-hero { width:min(640px,calc(100% - 40px)); margin:0 auto; padding:20px 0 48px; display:flex; flex-direction:column; align-items:center; text-align:center; }
-.landing-eyebrow { text-align:center; margin-bottom:10px; }
-.landing-headline { margin:0; font-size:clamp(28px,7vw,40px); line-height:1.22; letter-spacing:-.03em; }
-.landing-subtitle { margin:12px 0 0; width:min(100%,420px); max-width:420px; color:var(--secondary); font-size:16px; font-weight:600; line-height:1.55; }
 .teacher-link { gap:8px; white-space:nowrap; }
 .teacher-link svg { flex:0 0 auto; }
 
 @media (max-width:480px) {
   .topbar { flex-wrap:wrap; row-gap:8px; }
-}
-
-.landing-illustration-wrap { position:relative; width:min(320px,78vw); margin:24px auto 0; }
-.landing-illustration { width:100%; height:auto; display:block; filter:drop-shadow(0 14px 26px rgba(26,59,92,.18)); }
-.landing-student-tag { position:absolute; top:19%; left:50%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:2px; text-align:center; background:white; border:1px solid var(--soft-border); border-radius:16px; padding:8px 14px; box-shadow:0 10px 22px rgba(26,59,92,.16); white-space:nowrap; }
-.landing-student-tag b { font-size:12px; color:var(--primary-dark); }
-.landing-student-tag span { font-size:10px; color:var(--secondary); font-weight:700; }
-
-.landing-code-card { position:static; margin:18px auto 0; width:100%; max-width:320px; background:#fff; border:1px solid var(--soft-border); border-radius:22px; box-shadow:0 14px 32px rgba(26,59,92,.14); padding:16px 18px 20px; }
-.landing-code-card-title { margin:0 0 12px; font-size:14px; font-weight:900; color:var(--ink); text-align:center; }
-.landing-code-form { width:100%; margin:0; display:flex; flex-direction:column; align-items:center; gap:14px; }
-.landing-code-boxes { display:flex; gap:10px; }
-.landing-code-box { width:52px; height:58px; border-radius:16px; border:2px solid var(--border); background:white; text-align:center; font-size:22px; font-weight:900; color:var(--ink); }
-.landing-code-box:focus-visible { border-color:var(--primary); }
-.landing-code-submit { width:100%; margin-top:0; }
-.landing-code-form:has(.landing-code-box:invalid) .landing-code-submit { opacity:.45; cursor:not-allowed; }
-.landing-code-form:has(.landing-code-box:invalid) .landing-code-submit:hover { transform:none; }
-.landing-trust-note { margin:18px 0 0; color:var(--secondary); font-size:13px; font-weight:700; }
-/* 이 svg는 width/height 속성이 없어 CSS가 안 잡으면 100% 폭으로 커진다 — 무대(cqw) 밖 모든 화면의 기본 크기.
-   주의: `.landing-trust-note svg`(자손 선택자)로 쓰면 빌드가 뒤의 무대 블록 동일 선택자와 합치며 이 규칙을 떨어뜨린다. */
-.landing-trust-note>svg { width:16px; height:16px; flex:0 0 auto; vertical-align:-3px; }
-
-@media (min-width:520px) {
-  .landing-illustration-wrap { width:min(400px,72vw); margin-top:28px; }
-  .landing-student-tag { padding:10px 16px; }
-  .landing-student-tag b { font-size:14px; }
-  .landing-student-tag span { font-size:11px; }
-  .landing-code-box { width:56px; height:62px; font-size:24px; }
-}
-
-@media (min-width:600px) and (max-width:899px) {
-  .landing-hero { width:min(700px,calc(100% - 48px)); padding:28px 0 56px; }
-  .landing-headline { font-size:clamp(34px,5vw,46px); }
-  .landing-subtitle { font-size:17px; }
-}
-
-@media (min-width:900px) {
-  .landing-hero { width:min(1160px,calc(100% - 40px)); padding:4px 0 32px; }
-  .landing-eyebrow { margin-bottom:8px; font-size:15px; }
-  .landing-headline { font-size:clamp(38px,4vw,56px); line-height:1.14; white-space:nowrap; }
-  .landing-subtitle { margin-top:10px; font-size:18px; max-width:560px; }
-  .landing-illustration-wrap { width:540px; aspect-ratio:1195/1316; margin:16px auto 0; }
-  .landing-illustration { width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 20px 38px rgba(26,59,92,.2)); }
-  .landing-student-tag { top:18%; width:224px; padding:14px 12px; }
-  .landing-student-tag b { font-size:24px; }
-  .landing-student-tag span { font-size:13px; }
-  .landing-code-card { position:absolute; left:50%; top:63%; transform:translateX(-50%); margin:0; width:266px; max-width:none; padding:13px 17px 15px; }
-  .landing-code-card-title { font-size:13px; margin:0 0 8px; }
-  .landing-code-form { gap:10px; }
-  .landing-code-box { width:48px; height:52px; font-size:19px; }
-  .landing-trust-note { margin-top:10px; }
-}
-
-@media (max-width:340px) {
-  .landing-code-box { width:44px; height:52px; font-size:20px; }
-  .landing-code-boxes { gap:8px; }
 }
 
 /* Entry */
@@ -454,7 +391,7 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   @supports (width:1cqh) { .canvas-zone.has-canvas-status .canvas-wrap { width:min(100cqw,calc(100cqh - 58px)); } }
   @supports not (width:1cqh) { .canvas-zone .canvas-wrap { width:auto; height:100%; max-width:100%; max-height:100%; } }
   .tool-panel { padding-right:max(7px,env(safe-area-inset-right)); padding-bottom:max(7px,env(safe-area-inset-bottom)); padding-left:max(7px,env(safe-area-inset-left)); display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-auto-flow:row dense; gap:8px; align-items:stretch; overflow:hidden; }
-  .tool-panel>.tool-section-label { display:none; }
+  .tool-panel .tool-section-label { display:none; }
   .tool-panel .tool-group { grid-column:1/-1; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
   .tool-panel .tool-group button { min-width:0; min-height:48px; justify-content:center; font-size:12px; line-height:1.2; padding:6px; }
   .tool-panel .tool-group button[aria-pressed=true]:after { right:6px; top:6px; transform:none; font-size:11px; }
@@ -477,81 +414,6 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   .width-row button { width:44px; min-width:44px; height:44px; }
   .palette button { width:44px; min-width:44px; height:44px; }
   .save-conflict { top:auto; bottom:calc(72px + env(safe-area-inset-bottom)); }
-}
-
-/* 2026-08-17 picture-book PNG surfaces. Dynamic copy and controls stay as HTML. */
-.landing-centered {
-  background:#edf8ff;
-}
-.landing-hero {
-  width:100%;
-  max-width:none;
-  padding:0;
-}
-.landing-illustration-wrap {
-  position:relative;
-  width:min(1536px,100%);
-  aspect-ratio:3/2;
-  margin:0 auto;
-}
-.landing-illustration {
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  filter:none;
-}
-.landing-copy {
-  position:absolute;
-  z-index:1;
-  top:5.5%;
-  right:12%;
-  left:12%;
-  display:grid;
-  justify-items:center;
-}
-.landing-headline {
-  color:#0b2f62;
-  font-size:clamp(38px,4.6vw,70px);
-  line-height:1.12;
-  letter-spacing:-.055em;
-}
-.landing-headline::first-letter { color:#081f49; }
-.landing-eyebrow { margin-bottom:14px; font-size:clamp(14px,1.7vw,24px); }
-.landing-subtitle { max-width:none; font-size:clamp(15px,1.7vw,24px); }
-.landing-student-tag {
-  top:40%;
-  width:280px;
-  padding:13px 18px;
-  border-color:#d7e6ef;
-  border-radius:14px;
-  transform:translate(-50%,-50%) rotate(-1deg);
-}
-.landing-student-tag b { font-size:clamp(22px,2.5vw,38px); }
-.landing-student-tag span { font-size:clamp(11px,1vw,15px); }
-.landing-code-card {
-  position:absolute;
-  z-index:2;
-  top:71%;
-  left:50%;
-  width:290px;
-  max-width:none;
-  margin:0;
-  padding:14px 18px 18px;
-  transform:translateX(-50%);
-}
-.landing-code-card-title { margin-bottom:9px; text-align:left; }
-.landing-code-boxes { gap:7px; }
-.landing-code-box { width:46px; height:50px; min-height:50px; border-radius:10px; }
-.landing-trust-note {
-  position:absolute;
-  z-index:1;
-  right:0;
-  bottom:2.5%;
-  left:0;
-  margin:0;
-  font-size:clamp(12px,1.2vw,17px);
 }
 
 .entry-card.join-card {
@@ -683,19 +545,6 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
 .student-menu-card h2 { font-size:clamp(17px,2vw,28px); }
 
 @media (max-width:900px) {
-  .landing-illustration-wrap {
-    width:100%;
-    aspect-ratio:auto;
-    display:flex;
-    flex-direction:column;
-    padding:8px 16px 30px;
-  }
-  .landing-copy { position:static; order:1; padding:12px 0 0; }
-  .landing-headline { font-size:clamp(30px,8vw,48px); white-space:normal; }
-  .landing-illustration { position:relative; order:2; height:clamp(260px,75vw,470px); margin-top:-5%; object-fit:cover; object-position:center 76%; }
-  .landing-student-tag { position:static; order:3; width:min(280px,90%); margin:10px auto 0; transform:none; }
-  .landing-code-card { position:static; order:4; width:min(360px,100%); margin:12px auto 0; transform:none; }
-  .landing-trust-note { position:static; order:5; margin:16px 0 0; }
 
   .entry-card.join-card {
     width:min(720px,100%);
@@ -761,7 +610,6 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
 }
 
 @media (max-width:480px) {
-  .landing-code-box { width:46px; }
   .join-preview { min-height:390px; }
   .student-tool-shelf { padding:10px 22px; gap:5px; }
   .student-menu-card { padding:8px 2px; }
@@ -850,7 +698,7 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   .studio-body.without-step-panel .canvas-zone { grid-column:1; }
   .tool-panel { display:flex; order:initial; grid-column:3; flex-direction:column; align-items:stretch; gap:4px; padding:4px; overflow-y:auto; overflow-x:hidden; border-left:1px solid var(--border); }
   .studio-body.without-step-panel .tool-panel { grid-column:2; }
-  .tool-panel>.tool-section-label { display:none; }
+  .tool-panel .tool-section-label { display:none; }
   .tool-panel .tool-group { display:grid; grid-column:auto; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }
   .tool-panel .tool-group button { width:100%; min-width:0; min-height:44px; font-size:0; }
   .tool-panel .brush-group { grid-template-columns:repeat(4,minmax(0,1fr)); }
@@ -1111,7 +959,7 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   /* 도구 4행(도구/굵기·모드·히스토리/색·전체지우기/팔레트)이 스크롤 없이 다 보여야 한다.
      한 행이라도 접히면 아이는 그 기능이 없는 줄 안다 (2026-08-20 iPad 실기기 보고). */
   .tool-panel { grid-row:3; max-height:276px; padding:8px max(10px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left)); display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); grid-auto-flow:row dense; gap:6px; overflow-y:auto; border:0; border-top:1px solid var(--border); }
-  .tool-panel>.tool-section-label { display:none; }
+  .tool-panel .tool-section-label { display:none; }
   .tool-panel .tool-group { display:grid; gap:5px; }
   .tool-panel .tool-group button { min-width:0; min-height:50px; justify-content:center; padding:5px; font-size:12px; }
   .tool-panel .tool-group .tool-icon { font-size:28px; }
@@ -1462,14 +1310,6 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
 }
 
 @media (min-width:901px) {
-  .landing-illustration-wrap {
-    width:min(1536px,calc((100dvh - 74px) * 1.5));
-    height:calc(100dvh - 74px);
-    aspect-ratio:auto;
-  }
-}
-
-@media (min-width:901px) {
   .entry-card.join-card>.entry-title-row { top:6%; }
   .entry-card.join-card h1 { font-size:clamp(28px,2.8vw,43px); }
   .join-preview-card {
@@ -1539,32 +1379,6 @@ body {
 }
 .landing .topbar,.entry-top,.student-home-header { color:var(--picture-ink,#0a2553); }
 .landing .teacher-link,.entry-card.join-card button,.student-home-redesign :is(.small-button,.button) { letter-spacing:-.025em; }
-.landing .teacher-link {
-  color:var(--picture-ink);
-  border-color:#a9d5e9;
-  background:rgba(255,255,255,.94);
-  box-shadow:0 5px 0 #c1e2f0;
-}
-.landing-eyebrow { color:var(--picture-blue); font-weight:900; letter-spacing:-.025em; }
-.landing-headline {
-  color:var(--picture-ink);
-  font-weight:950;
-  letter-spacing:-.065em;
-  text-shadow:0 1px 0 rgba(255,255,255,.8);
-}
-.landing-headline span { color:var(--picture-ink); }
-.landing-headline strong { color:#0875b6; font:inherit; }
-.landing-subtitle {
-  color:var(--picture-muted);
-  font-weight:800;
-  letter-spacing:-.035em;
-  line-height:1.35;
-}
-.landing-student-tag,.landing-code-card { border-color:#d4e4ec; box-shadow:0 10px 24px rgba(10,37,83,.14); }
-.landing-student-tag b,.landing-code-card-title { color:var(--picture-ink); font-weight:950; }
-.landing-student-tag span,.landing-trust-note { color:#436887; font-weight:800; }
-.landing-code-box { color:var(--picture-ink); border-color:#bedcec; box-shadow:inset 0 1px 0 rgba(10,37,83,.04); }
-.landing-code-form .button.primary { background:#096bb5; box-shadow:0 6px 0 #07528b; }
 
 .entry-card.join-card>.entry-title-row .eyebrow { color:var(--picture-blue); font-weight:950; }
 .entry-card.join-card h1 {
@@ -1607,7 +1421,6 @@ body {
     white-space:nowrap;
     text-wrap:nowrap;
   }
-  .landing-subtitle { font-size:clamp(17px,1.55vw,23px); }
   .student-home-intro h1,.student-home-intro p { white-space:nowrap; text-wrap:nowrap; }
 }
 
@@ -1617,11 +1430,7 @@ body {
     white-space:normal;
     text-wrap:balance;
   }
-  .landing-subtitle { margin-inline:auto; }
 }
-
-/* 2026-08-18 classroom-scoped entry: the class code and QR share this branch screen. */
-.landing { overflow-x:hidden; overflow-y:auto; }
 .entry-loading { min-height:190px; display:grid; place-items:center; align-content:center; gap:12px; color:var(--secondary); text-align:center; }
 .entry-loading span { font-size:58px; animation:entry-paint-bob .9s ease-in-out infinite alternate; }
 @keyframes entry-paint-bob { to { transform:translateY(-7px) rotate(3deg); } }
@@ -1802,15 +1611,6 @@ body {
   .entry-choice-grid b { font-size:17px; }
   .entry-choice-grid small { font-size:10px; }
   .entry-choice-privacy { margin-top:10px!important; }
-}
-
-@media (max-width:900px) {
-  .landing-illustration-wrap { padding-right:10px; padding-left:10px; }
-  .landing-copy { padding-top:6px; }
-  .landing-illustration { height:clamp(220px,62vw,420px); margin-top:-2%; object-fit:cover; object-position:center 76%; }
-  .landing-student-tag { margin-top:6px; }
-  .landing-code-card { margin-top:9px; }
-  .landing-trust-note { margin-top:12px; padding-bottom:max(8px,env(safe-area-inset-bottom)); }
 }
 
 /*
@@ -2217,324 +2017,11 @@ body {
   }
 }
 
-/* Portrait tablet landing keeps the approved single picture-book composition.
-   기존 601~900px 구간에 더해, 무대에서 제외된 세로 901~1024px(iPad Pro 세로)도 맡는다.
-   가로 601~900px에서는 뒤의 1488 무대가 같은 속성을 전부 덮는다 (2026-08-20 이전과 동일). */
-@media (min-width:601px) and (min-height:601px) and (max-width:900px), (min-width:901px) and (max-width:1024px) and (min-height:601px) and (orientation:portrait) {
-  /* topbar 마크업은 illustration-wrap 안에 있다 — 정적 배치면 absolute 그림(img inset:0)이 위를 덮는다. */
-  .landing .topbar { position:absolute; z-index:5; top:8px; right:20px; left:20px; width:auto; min-height:54px; margin:0; }
-  .landing-hero { width:100%; padding:0; }
-  .landing-illustration-wrap {
-    position:relative;
-    width:100%;
-    aspect-ratio:3/2;
-    margin:0 auto;
-    padding:0;
-    display:block;
-    overflow:hidden;
-  }
-  .landing-copy {
-    position:absolute;
-    z-index:1;
-    top:13.5%; /* 절대배치된 topbar(≈62px) 아래에서 시작 */
-    right:3%;
-    left:3%;
-    padding:0;
-    display:grid;
-    justify-items:center;
-  }
-  .landing-eyebrow { margin-bottom:8px; font-size:clamp(14px,2vw,18px); }
-  .landing-headline {
-    width:auto;
-    max-width:none;
-    font-size:clamp(32px,4.8vw,43px);
-    line-height:1.1;
-    white-space:nowrap;
-    text-wrap:nowrap;
-  }
-  .landing-subtitle {
-    width:auto;
-    max-width:none;
-    margin-top:7px;
-    font-size:clamp(14px,2vw,18px);
-    white-space:nowrap;
-    text-wrap:nowrap;
-  }
-  .landing-illustration {
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-    margin:0;
-    object-fit:contain;
-    object-position:center;
-    transform:scaleY(1.06);
-    transform-origin:center bottom;
-  }
-  .landing-student-tag {
-    position:absolute;
-    z-index:2;
-    top:40%;
-    left:50%;
-    width:clamp(210px,31vw,260px);
-    margin:0;
-    padding:10px 14px;
-    transform:translate(-50%,-50%) rotate(-1deg);
-  }
-  .landing-student-tag b { font-size:clamp(24px,3.2vw,29px); }
-  .landing-student-tag span { font-size:clamp(10px,1.5vw,13px); }
-  .landing-code-card {
-    position:absolute;
-    z-index:2;
-    top:62%;
-    left:50%;
-    width:clamp(250px,34vw,290px);
-    max-width:none;
-    margin:0;
-    padding:11px 14px 14px;
-    transform:translateX(-50%);
-  }
-  .landing-code-card-title { margin-bottom:7px; }
-  .landing-code-form { gap:8px; }
-  .landing-code-boxes { gap:6px; }
-  .landing-code-box { width:46px; height:50px; min-height:50px; } /* 터치 목표 44px: 짧은 변 기준 */
-  .landing-code-submit { min-height:52px; padding:9px 12px; font-size:16px; }
-  .landing-trust-note {
-    position:absolute;
-    z-index:1;
-    right:0;
-    bottom:2%;
-    left:0;
-    margin:0;
-    padding:0;
-    font-size:12px;
-    text-align:center;
-  }
-}
-
-@media (min-width:901px) {
-  .landing-code-card { top:62%; }
-}
-
-/* The approved landing is one 1488×1057 stage: artwork and live HTML scale together.
-   단, 세로 태블릿(601~1024px)은 축소된 무대가 터치 목표 44px을 깨므로 위의 그림책 구도를 쓴다 (2026-08-20).
-   가로 화면 조건은 기존 601px 그대로 — 시안 검증 크기(896×634 등)의 렌더링을 바꾸지 않는다. */
-@media (min-width:601px) and (min-height:601px) and (orientation:landscape), (min-width:1025px) and (min-height:601px) {
-  .landing-centered { min-height:100dvh; display:block; }
-  .landing-hero { width:100%; max-width:none; padding:0; display:block; }
-  .landing-illustration-wrap {
-    container-type:inline-size;
-    position:relative;
-    width:min(100vw,calc(100dvh * 1.40776),1488px);
-    height:auto;
-    aspect-ratio:1488/1057;
-    margin:0 auto;
-    padding:0;
-    display:block;
-  }
-  .landing .topbar {
-    position:absolute;
-    z-index:5;
-    top:1.8cqw;
-    right:2.5cqw;
-    left:2.5cqw;
-    width:auto;
-    min-height:4.7cqw;
-    margin:0;
-    gap:1.4cqw;
-  }
-  .landing .topbar .brand { gap:1cqw; font-size:3.25cqw; }
-  .landing .topbar .brand-mark { width:4.55cqw; height:4.55cqw; border-radius:1cqw .75cqw 1.05cqw .7cqw; box-shadow:0 .32cqw 0 var(--primary-dark); }
-  .landing .topbar .teacher-link {
-    min-height:4cqw;
-    padding:.65cqw 1.3cqw;
-    gap:.55cqw;
-    border-width:.14cqw;
-    border-radius:.8cqw;
-    border-color:#0875b6;
-    color:#0a477a;
-    font-size:1.45cqw;
-    box-shadow:0 .32cqw 0 #c1e2f0;
-  }
-  .landing .topbar .teacher-link svg { width:2cqw; height:2cqw; stroke-width:1.8; }
-  .landing-illustration {
-    position:absolute;
-    z-index:0;
-    inset:0;
-    width:100%;
-    height:100%;
-    margin:0;
-    object-fit:contain;
-    object-position:center;
-  }
-  .landing-copy {
-    position:absolute;
-    z-index:2;
-    top:5.3cqw;
-    right:8cqw;
-    left:8cqw;
-    padding:0;
-    display:grid;
-    justify-items:center;
-  }
-  .landing-eyebrow { margin-bottom:.8cqw; font-size:1.55cqw; }
-  .landing-headline {
-    width:auto;
-    max-width:none;
-    font-size:4.85cqw;
-    line-height:1.08;
-    white-space:nowrap;
-    text-wrap:nowrap;
-  }
-  .landing-subtitle {
-    width:auto;
-    max-width:none;
-    margin-top:1cqw;
-    font-size:1.65cqw;
-    white-space:nowrap;
-    text-wrap:nowrap;
-  }
-  .landing-student-tag {
-    position:absolute;
-    z-index:3;
-    top:29cqw;
-    left:50%;
-    width:18.8cqw;
-    margin:0;
-    padding:.85cqw 1.2cqw;
-    gap:.15cqw;
-    border-width:.07cqw;
-    border-radius:.95cqw;
-    box-shadow:0 .68cqw 1.5cqw rgba(10,37,83,.14);
-    transform:translate(-50%,-50%) rotate(-1deg);
-  }
-  .landing-student-tag::before,.landing-student-tag::after { position:absolute; top:1.05cqw; font-weight:950; }
-  .landing-student-tag::before { content:"★"; left:1.15cqw; color:#ffc62f; font-size:1.5cqw; transform:rotate(-12deg); }
-  .landing-student-tag::after { content:"〽"; right:1.1cqw; color:#ed6a3c; font-size:1.3cqw; transform:rotate(13deg); }
-  .landing-student-tag b { color:#0875b6; font-size:2.55cqw; }
-  .landing-student-tag span { font-size:1cqw; }
-  .landing-code-card {
-    position:absolute;
-    z-index:3;
-    top:50cqw;
-    left:50%;
-    width:19.5cqw;
-    max-width:none;
-    margin:0;
-    padding:.8cqw 1.2cqw 1.05cqw;
-    border-width:.07cqw;
-    border-radius:1.15cqw;
-    box-shadow:0 .7cqw 1.65cqw rgba(10,37,83,.14);
-    transform:translateX(-50%);
-  }
-  .landing-code-card-title { margin:0 0 .55cqw; font-size:1.2cqw; }
-  .landing-code-form { gap:.68cqw; }
-  .landing-code-boxes { gap:.48cqw; }
-  .landing-code-box {
-    width:3.05cqw;
-    height:3.25cqw;
-    min-height:3.25cqw;
-    padding:0;
-    border-width:.13cqw;
-    border-radius:.68cqw;
-    font-size:1.55cqw;
-  }
-  .landing-code-form .landing-code-submit {
-    min-height:3.75cqw;
-    height:3.75cqw;
-    margin:0;
-    padding:.45cqw .8cqw;
-    border-radius:.72cqw;
-    font-size:1.45cqw;
-    box-shadow:0 .35cqw 0 #07528b!important;
-  }
-  .landing-code-form .landing-code-submit:disabled,
-  .landing-code-form:has(.landing-code-box:invalid) .landing-code-submit { opacity:1; background:#096bb5; color:#fff; }
-  .landing-trust-note {
-    position:absolute;
-    z-index:2;
-    right:0;
-    bottom:2.1cqw;
-    left:0;
-    margin:0;
-    padding:0;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    gap:.45cqw;
-    font-size:1.12cqw;
-  }
-  .landing-trust-note svg { width:1.65cqw; height:1.65cqw; }
-}
-
 @media (max-width:340px) {
   .topbar { min-height:60px; flex-wrap:nowrap; gap:5px; }
   .topbar .brand { gap:6px; font-size:20px; }
   .topbar .brand-mark { width:36px; height:36px; }
   .topbar .teacher-link { min-height:44px; padding:6px 8px; gap:4px; font-size:11px; }
-  .landing-copy { padding-top:0; }
-  .landing-eyebrow { margin-bottom:5px; font-size:12px; }
-  .landing-headline { font-size:27px; line-height:1.08; }
-  .landing-subtitle { margin-top:7px; font-size:12px; line-height:1.35; }
-  .landing-illustration { height:145px; margin-top:0; }
-  .landing-student-tag { width:min(230px,88%); padding:7px 10px; }
-  .landing-student-tag b { font-size:20px; }
-  .landing-code-card { padding:10px 12px 12px; }
-  .landing-code-card-title { margin-bottom:6px; }
-  .landing-code-form { gap:8px; }
-  .landing-code-box { width:44px; height:48px; min-height:48px; }
-  .landing-code-submit { min-height:54px; padding:10px; }
-}
-
-@media (max-width:600px) {
-  .landing .topbar { margin:0 auto; flex:none; flex-wrap:nowrap; }
-  .landing-code-submit:disabled,
-  .landing-code-form:has(.landing-code-box:invalid) .landing-code-submit { opacity:1; background:#096bb5; color:#fff; }
-}
-
-@media (min-width:601px) and (max-width:900px) and (max-height:600px) {
-  .landing .topbar { position:absolute; z-index:5; top:0; right:20px; left:20px; width:auto; min-height:54px; margin:0; }
-  .landing .topbar .brand-mark { width:38px; height:38px; }
-  .landing .topbar .teacher-link { min-height:44px; padding:7px 12px; font-size:12px; }
-  .landing-illustration-wrap {
-    position:relative;
-    width:100%;
-    height:100dvh;
-    min-height:326px;
-    padding:0;
-    display:block;
-  }
-  .landing-copy { position:absolute; top:2%; right:22%; left:22%; padding:0; }
-  .landing-eyebrow { margin-bottom:3px; font-size:11px; }
-  .landing-headline { font-size:27px; line-height:1.05; white-space:nowrap; }
-  .landing-subtitle { margin-top:4px; font-size:11px; white-space:nowrap; }
-  .landing-illustration { position:absolute; inset:0; width:100%; height:100%; margin:0; object-fit:contain; object-position:center; }
-  .landing-student-tag {
-    position:absolute;
-    top:48%;
-    left:2%;
-    width:180px;
-    margin:0;
-    padding:8px 10px;
-    transform:translateY(-50%);
-  }
-  .landing-student-tag b { font-size:20px; }
-  .landing-code-card {
-    position:absolute;
-    top:31%;
-    right:2%;
-    left:auto;
-    width:250px;
-    margin:0;
-    padding:9px 12px 11px;
-    transform:none;
-  }
-  .landing-code-card-title { margin-bottom:5px; }
-  .landing-code-form { gap:7px; }
-  .landing-code-boxes { gap:5px; }
-  .landing-code-box { width:44px; height:44px; min-height:44px; }
-  .landing-code-submit { min-height:50px; padding:8px; font-size:15px; }
-  .landing-trust-note { position:absolute; right:2%; bottom:2%; left:auto; width:250px; margin:0; padding:0; font-size:10px; }
 }
 
 /* 직접 꾸미는 그림책 작업실 */
@@ -2704,3 +2191,511 @@ body {
   .teacher-print-pages .teacher-story-page.format-square { width:min(88vw,82vh); }
   .teacher-print-pages footer { margin-top:6px; color:#526879; font-size:10px; }
 }
+/* ── 2026-09-07 오리 전시관 대문 ──────────────────────────────────────────────
+ * 기준 시안: docs/design-assets/gallery/selected-reference.png (사용자 선택 5번 시안).
+ * 이전 대문의 단일 landing-scene 무대(1488×1057 cqw 좌표계)는 이 결정으로 은퇴했다.
+ * 그림은 /landing-gallery/ 개별 에셋이고 제목·버튼·입력칸은 실제 HTML이다.
+ * 액자 안쪽 좌표(14.1%/18%/71.7%/62%)와 와이어·압정은 public/landing-gallery/gallery-assets.css에서
+ * 검증된 값을 그대로 옮긴 것이다 — 그 파일은 에셋 검수용 preview.html의 기준으로 남는다.
+ * 데스크톱·태블릿은 시안 구도(액자 뒤 / 오리 앞)를 살리고, 조작 요소는 cqw로 줄이지 않아
+ * 모든 폭에서 터치 목표 44px을 유지한다.
+ */
+.gallery-landing {
+  min-height:100dvh;
+  padding-bottom:max(8px,env(safe-area-inset-bottom));
+  overflow-x:hidden;
+  background:var(--bg) url("/landing-gallery/paper-blue-1024.webp") center / cover no-repeat;
+}
+.gallery-landing .topbar { position:relative; z-index:6; min-height:64px; }
+.gallery-landing .topbar .brand { min-height:44px; }
+.gallery-landing .teacher-link {
+  min-height:44px;
+  color:var(--picture-ink);
+  border-color:#a9d5e9;
+  background:rgba(255,255,255,.94);
+  box-shadow:0 4px 0 #c1e2f0;
+}
+
+.gallery-hero { width:min(1180px,calc(100% - 32px)); margin:0 auto; }
+.gallery-copy { text-align:center; }
+.gallery-landing .landing-eyebrow { margin:0 0 8px; color:var(--picture-blue); font-weight:900; font-size:clamp(13px,3.4vw,16px); letter-spacing:-.02em; }
+.gallery-landing .landing-headline {
+  margin:0;
+  color:var(--picture-ink);
+  font-size:clamp(27px,7.4vw,40px);
+  font-weight:950;
+  line-height:1.18;
+  letter-spacing:-.055em;
+}
+.gallery-landing .landing-headline span { color:var(--picture-ink); }
+.gallery-landing .landing-headline strong { color:#0875b6; font:inherit; }
+.gallery-landing .landing-subtitle {
+  margin:9px 0 0;
+  width:min(100%,460px);
+  margin-inline:auto;
+  color:var(--picture-muted);
+  font-size:clamp(13px,3.6vw,17px);
+  font-weight:800;
+  line-height:1.4;
+}
+
+/* 무대: 휴대전화는 읽는 순서(오리 → 수업 코드 → 전시 그림)로 세로 정렬한다. */
+.gallery-stage { position:relative; margin-top:16px; display:flex; flex-direction:column; align-items:center; gap:16px; }
+.gallery-duck { order:1; display:block; width:min(62vw,260px); height:auto; object-fit:contain; }
+.gallery-entry { order:2; width:min(360px,100%); }
+.gallery-wall { order:3; width:100%; padding-top:20px; display:grid; gap:38px; }
+.gallery-exhibit { width:min(100%,280px); margin-inline:auto; }
+.gallery-leaves { display:none; }
+
+.gallery-frame { position:relative; margin:0; aspect-ratio:4 / 3; }
+.gallery-frame__rim { display:block; width:100%; height:100%; pointer-events:none; }
+.gallery-frame__art { position:absolute; left:14.1%; top:18%; width:71.7%; height:62%; object-fit:contain; background:#fff; }
+.gallery-wire { position:absolute; left:12%; top:-12%; width:76%; height:18%; pointer-events:none; }
+.gallery-wire::before,.gallery-wire::after { content:""; position:absolute; top:0; width:52%; height:1px; background:#a8c9df; }
+.gallery-wire::before { left:0; transform-origin:right; transform:rotate(-17deg); }
+.gallery-wire::after { right:0; transform-origin:left; transform:rotate(17deg); }
+.gallery-pin { position:absolute; left:50%; top:-2%; width:12px; height:12px; border:1px solid #a6c8df; border-radius:50%; background:#d2e6f4; box-shadow:0 2px 3px #496b8933; transform:translate(-50%,-50%); }
+
+/* 도형→작품 표식은 제품 소개용 장식이다. 실제 레슨 씨앗 좌표가 아니다. */
+.gallery-shape-chip {
+  width:max-content;
+  margin:6px auto 0;
+  padding:5px 12px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  border:1px solid #d7e8f3;
+  border-radius:999px;
+  background:rgba(255,255,255,.94);
+  box-shadow:0 3px 8px rgba(10,37,83,.09);
+  color:#6d90ab;
+  font-size:13px;
+  font-weight:800;
+  line-height:1;
+}
+.gallery-shape-chip i { font-style:normal; color:#9ab8cc; }
+.gallery-shape-chip img { width:20px; height:20px; }
+
+.gallery-student-tag {
+  width:max-content;
+  max-width:100%;
+  margin:0 auto 10px;
+  padding:8px 16px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  border:1px solid #d4e4ec;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 10px 24px rgba(10,37,83,.14);
+  text-align:center;
+}
+.gallery-student-tag img { flex:0 0 auto; }
+.gallery-student-tag b { color:#0875b6; font-size:19px; font-weight:950; letter-spacing:-.03em; }
+.gallery-student-tag span { color:#436887; font-size:12px; font-weight:800; }
+
+.gallery-landing .landing-code-card {
+  position:static;
+  width:100%;
+  max-width:none;
+  margin:0;
+  padding:14px 16px 16px;
+  border:1px solid #d4e4ec;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 12px 28px rgba(10,37,83,.15);
+}
+.gallery-landing .landing-code-card-title { margin:0 0 10px; color:var(--picture-ink); font-size:15px; font-weight:950; text-align:center; }
+.gallery-landing .landing-code-form { width:100%; margin:0; display:flex; flex-direction:column; align-items:center; gap:12px; }
+.gallery-landing .landing-code-boxes { display:flex; gap:8px; }
+.gallery-landing .landing-code-box {
+  width:52px;
+  height:56px;
+  min-height:44px;
+  padding:0;
+  border:2px solid #bedcec;
+  border-radius:12px;
+  background:#fff;
+  color:var(--picture-ink);
+  font-size:22px;
+  font-weight:900;
+  text-align:center;
+}
+.gallery-landing .landing-code-box:focus-visible { border-color:var(--primary); }
+.gallery-landing .landing-code-submit { width:100%; min-height:52px; margin:0; background:#096bb5; box-shadow:0 6px 0 #07528b; }
+.gallery-landing .landing-code-form:has(.landing-code-box:invalid) .landing-code-submit { opacity:.45; cursor:not-allowed; }
+.gallery-landing .landing-code-form:has(.landing-code-box:invalid) .landing-code-submit:hover { transform:none; }
+.gallery-trust-note {
+  margin:12px 0 0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:6px;
+  color:#436887;
+  font-size:12px;
+  font-weight:800;
+  text-align:center;
+}
+.gallery-trust-note>svg { flex:0 0 auto; width:16px; height:16px; }
+
+.gallery-reasons {
+  width:min(1180px,calc(100% - 32px));
+  margin:22px auto 28px;
+  padding:18px 18px 20px;
+  border:1px solid #cfe4f0;
+  border-radius:22px;
+  background:rgba(255,255,255,.95);
+  box-shadow:0 8px 22px rgba(10,37,83,.09);
+}
+.gallery-reasons h2 { margin:0 0 14px; color:var(--picture-ink); font-size:18px; font-weight:950; line-height:1.25; letter-spacing:-.045em; }
+.gallery-reasons ul { margin:0; padding:0; list-style:none; display:grid; gap:14px; }
+.gallery-reasons li { display:grid; grid-template-columns:34px minmax(0,1fr); gap:12px; align-items:center; }
+.gallery-reasons li>img { width:26px; height:26px; justify-self:center; }
+.gallery-reasons li>div { display:grid; gap:2px; }
+.gallery-reasons b { color:var(--picture-ink); font-size:15px; font-weight:950; letter-spacing:-.035em; }
+.gallery-reasons span { color:var(--picture-muted); font-size:12px; font-weight:750; line-height:1.4; }
+
+@media (max-width:340px) {
+  .gallery-landing .landing-code-box { width:46px; height:50px; font-size:20px; }
+  .gallery-landing .landing-code-card { padding:12px 10px 14px; }
+}
+
+/* 태블릿·데스크톱: 시안 구도 — 액자 벽이 뒤, 오리가 앞, 입장 카드는 액자 아래 오른쪽.
+   조작 요소는 px로 두어 어떤 폭에서도 터치 목표 44px을 지킨다. */
+@media (min-width:760px) {
+  .gallery-stage {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 340px;
+    grid-template-rows:auto auto;
+    column-gap:30px;
+    margin-top:20px;
+    padding-top:24px;
+  }
+  .gallery-wall {
+    grid-column:1/-1;
+    grid-row:1;
+    width:96%;
+    margin-inline:auto;
+    padding-top:0;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:5%;
+  }
+  .gallery-exhibit { width:auto; margin-inline:0; }
+  .gallery-duck {
+    position:absolute;
+    z-index:2;
+    left:14%;
+    bottom:0;
+    width:min(43%,440px);
+    margin:0;
+  }
+  .gallery-entry { grid-column:2; grid-row:2; align-self:start; z-index:3; width:300px; margin-top:14px; }
+  .gallery-leaves { display:block; position:absolute; z-index:1; right:0; bottom:0; width:78px; height:auto; }
+  /* 시안처럼 표식은 액자 아래 가운데. 첫 액자만 왼쪽으로 붙여 오리 뒤로 숨지 않게 한다. */
+  .gallery-shape-chip { font-size:12px; }
+  .gallery-exhibit:first-child .gallery-shape-chip { margin-inline:4% auto; }
+  .gallery-exhibit:nth-child(2) .gallery-shape-chip { margin-inline:auto 2%; }
+
+  .gallery-reasons { display:flex; align-items:center; gap:22px; padding:20px 24px; }
+  .gallery-reasons h2 { flex:0 0 auto; margin:0; font-size:20px; }
+  .gallery-reasons ul { flex:1 1 auto; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
+  .gallery-reasons li { border-left:1px solid #dcebf4; padding-left:18px; }
+}
+
+@media (min-width:900px) {
+  .gallery-hero { padding-top:4px; }
+  .gallery-landing .landing-headline { font-size:min(4.6vw,54px); line-height:1.1; }
+  .gallery-landing .landing-subtitle { width:auto; font-size:min(1.75vw,20px); }
+  .gallery-landing .landing-eyebrow { font-size:min(1.5vw,17px); }
+  .gallery-stage { margin-top:14px; }
+  .gallery-student-tag b { font-size:24px; }
+  .gallery-student-tag span { font-size:13px; }
+  .gallery-landing .landing-code-card-title { font-size:16px; }
+  .gallery-leaves { width:92px; }
+  .gallery-reasons h2 { font-size:22px; }
+  .gallery-reasons b { font-size:16px; }
+  .gallery-reasons span { font-size:13px; }
+}
+
+/* 세로가 짧은 가로 화면(예: 844×390)은 제목과 오리를 줄여 수업 코드 카드를 첫 화면에 올린다. */
+@media (max-height:560px) and (orientation:landscape) and (min-width:760px) {
+  .gallery-landing .topbar { min-height:52px; }
+  .gallery-hero { padding-top:0; }
+  .gallery-landing .landing-headline { font-size:min(3.4vw,34px); }
+  .gallery-landing .landing-subtitle { font-size:13px; }
+  .gallery-landing .landing-eyebrow { margin-bottom:4px; font-size:12px; }
+  .gallery-stage { margin-top:6px; padding-top:8px; grid-template-rows:auto; column-gap:20px; }
+  .gallery-wall { grid-column:1; grid-row:1; width:100%; gap:4%; }
+  .gallery-exhibit { width:auto; }
+  .gallery-entry { grid-column:2; grid-row:1; margin-top:0; }
+  .gallery-duck { left:0; width:min(26%,190px); }
+  .gallery-student-tag { margin-bottom:7px; padding:6px 12px; }
+  .gallery-student-tag b { font-size:18px; }
+  .gallery-landing .landing-code-card { padding:10px 14px 12px; }
+  .gallery-landing .landing-code-card-title { margin-bottom:7px; font-size:14px; }
+  .gallery-landing .landing-code-form { gap:9px; }
+  .gallery-landing .landing-code-box { height:48px; font-size:20px; }
+  .gallery-landing .landing-code-submit { min-height:48px; }
+  .gallery-trust-note { margin-top:8px; }
+  .gallery-shape-chip { margin-left:0; margin-inline:auto; }
+  .gallery-leaves { display:none; }
+  .gallery-reasons { margin-top:14px; }
+}
+
+/* ── 2026-09-07 그리기 화면 플로팅 도구 ──────────────────────────────────────
+ * 기준 시안: docs/design-assets/drawing-toolbar/drawing-studio-selected-reference.png
+ * 넓은 화면은 도화지를 화면 전체로 두고 안내·도구·색을 그 위에 떠 있는 카드로 올린다.
+ * 좁은 화면(휴대전화·짧은 가로·세로 태블릿)은 실측으로 다듬어 둔 기존 배치를 그대로 쓴다 —
+ * 떠 있는 카드는 작은 도화지를 가리고 44px 터치 목표를 깨기 때문이다.
+ * 도구 사진은 /drawing-tools/의 56×22 슬롯 계약을 따르고, 이모지 아이콘은 좁은 화면용으로 남긴다.
+ */
+.tool-rail,.tool-sheet,.tool-colors { display:contents; }
+.panel-grip,.tool-more-button,.tool-width-popover { display:none; }
+.tool-photo { display:none; }
+
+/* 좁은 화면: 래퍼가 생기면서 바뀐 DOM 순서를 원래 보이던 차례로 되돌린다.
+   넓은 화면은 시안의 레일 순서(되돌리기 → 도구 → 지우개 → 더보기)를 쓰므로 제외한다. */
+@media (max-width:899px), (max-height:599px) {
+.tool-panel>.tool-rail>.tools-label { order:1; }
+.tool-panel>.tool-rail>.brush-group { order:2; }
+.tool-panel>.tool-rail>.width-row { order:3; }
+.tool-panel>.tool-sheet>.make-group { order:4; }
+.tool-panel>.tool-sheet>.shape-options { order:5; }
+.tool-panel>.tool-sheet>.text-options { order:6; }
+.tool-panel>.tool-rail>.edit-group { order:7; }
+.tool-panel>.tool-colors>.color-label { order:8; }
+.tool-panel>.tool-colors>.selected-color { order:9; }
+.tool-panel>.tool-colors>.more-colors-button { order:10; }
+.tool-panel>.tool-colors>.palette { order:11; }
+.tool-panel>.tool-sheet>.input-mode-control { order:12; }
+.tool-panel>.tool-rail>.history-row { order:13; }
+.tool-panel>.tool-sheet>.clear-all-button { order:14; }
+}
+
+.studio-save-state { display:inline-flex; align-items:center; gap:3px; }
+.studio-save-state>svg { flex:0 0 auto; color:#2e9e5b; }
+.studio-header>.icon-button.studio-back { color:var(--ink); }
+/* 좁은 화면 헤더는 버튼을 44px 정사각 이모지(::before)로 접는다 — 아이콘·글자는 숨긴다. */
+@media (max-width:720px) {
+  .studio-header>.button.compact>svg,.studio-header>.button.compact>span { display:none; }
+}
+
+.step-collapse { display:none; }
+
+@media (min-width:900px) and (min-height:600px) {
+  .studio-body,.studio-body.without-step-panel { position:relative; grid-template-columns:minmax(0,1fr); background:#f4f8fb; }
+  .studio-body:has(.step-panel .observation-reference) { grid-template-columns:minmax(0,1fr); }
+  .canvas-zone { grid-column:1; grid-row:1; padding:10px; }
+  .canvas-wrap { width:min(100%,calc(100dvh - 116px)); border-radius:6px; box-shadow:0 2px 18px rgba(26,59,92,.1); }
+  .canvas-zone.has-canvas-status .canvas-wrap { width:min(100%,calc(100dvh - 168px)); }
+
+  /* 안내: 왼쪽 위에 떠 있는 카드 */
+  .step-panel,.grimi-panel {
+    position:absolute;
+    z-index:4;
+    top:14px;
+    left:14px;
+    width:min(620px,calc(100% - 150px));
+    max-height:calc(100% - 28px);
+    padding:14px 52px 14px 14px;
+    border:1px solid #e4edf3;
+    border-right:1px solid #e4edf3;
+    border-radius:20px;
+    background:rgba(255,255,255,.97);
+    box-shadow:0 10px 30px rgba(26,59,92,.14);
+  }
+  .step-panel {
+    display:grid;
+    grid-template-columns:96px minmax(0,1fr) auto;
+    gap:6px 14px;
+    align-items:center;
+    align-content:start;
+    overflow:auto;
+  }
+  .step-panel>.eyebrow { grid-column:2; grid-row:1; margin:0; color:var(--primary-dark); font-size:13px; }
+  .step-panel .lesson-spoken-prompt { grid-column:2; grid-row:2; align-items:center; }
+  .step-panel .lesson-spoken-prompt h2 { margin:0; font-size:16px; line-height:1.4; }
+  .step-panel .reference-tile { grid-column:1; grid-row:1/3; margin:0; min-height:76px; border-radius:14px; }
+  .step-panel .reference-tile small { display:none; }
+  .step-panel .step-actions { grid-column:3; grid-row:1/3; margin:0; grid-template-columns:repeat(2,auto); }
+  .step-panel .step-actions button { min-width:74px; }
+  .step-panel .choice-chips,.step-panel .guide-actions,.step-panel .lesson-step-prompt,.step-panel>.text-button { grid-column:1/-1; margin:0; }
+  .step-panel>.text-button { justify-self:start; }
+  .step-collapse {
+    position:absolute;
+    top:14px;
+    right:12px;
+    display:grid;
+    place-items:center;
+    width:44px;
+    height:44px;
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:#fff;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .step-collapse[aria-expanded="false"]>svg { transform:rotate(180deg); }
+  .step-panel.collapsed { width:auto; min-height:0; padding-right:66px; }
+  .step-panel.collapsed>:not(.reference-tile):not(.step-collapse) { display:none; }
+
+  /* 도구·색: 오른쪽에 떠 있는 두 장의 카드 */
+  .tool-panel {
+    position:absolute;
+    z-index:5;
+    top:14px;
+    right:14px;
+    bottom:14px;
+    width:auto;
+    padding:0;
+    border:0;
+    background:transparent;
+    overflow:visible;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:14px;
+    pointer-events:none;
+  }
+  .tool-panel>* { pointer-events:auto; }
+  .tool-rail,.tool-colors {
+    position:relative;
+    width:108px;
+    padding:6px 8px 10px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    border:1px solid #e4edf3;
+    border-radius:22px;
+    background:rgba(255,255,255,.97);
+    box-shadow:0 10px 30px rgba(26,59,92,.16);
+  }
+  .tool-colors { margin-top:auto; }
+  .panel-grip { display:block; color:#c2d2dd; line-height:0; }
+
+  .tool-panel>.tool-rail>* { order:0; }
+  .tool-panel .tools-label,.tool-panel .color-label,.tool-panel .selected-color,.tool-panel .tool-name,.tool-panel .width-row { display:none; }
+  .tool-panel .history-row { width:100%; margin:0; display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+  .tool-panel .history-row button { min-width:44px; min-height:44px; padding:0; display:grid; place-items:center; border:0; border-radius:12px; background:#f3f8fb; color:var(--primary-dark); }
+  .tool-panel .history-row button:disabled { opacity:.35; }
+  .tool-panel .history-row b { display:none; }
+
+  .tool-panel .brush-group,.tool-panel .edit-group { width:100%; gap:2px; }
+  /* 도구는 시안처럼 한 줄에 하나씩 — 가로로 긴 도구 사진이 그대로 들어간다. */
+  .tool-panel .brush-group { display:grid; grid-template-columns:minmax(0,1fr); }
+  .tool-panel .edit-group { display:grid; grid-template-columns:repeat(2,minmax(44px,1fr)); gap:4px; }
+  .tool-panel .brush-group button,.tool-panel .edit-group button {
+    position:relative;
+    min-width:44px;
+    min-height:46px;
+    padding:0;
+    border:2px solid transparent;
+    border-radius:14px;
+    background:transparent;
+    box-shadow:none;
+  }
+  .tool-panel .brush-group button { justify-content:flex-end; }
+  /* 고른 도구는 시안처럼 테두리가 생기고 오른쪽으로 조금 나온다. */
+  .tool-panel .brush-group button[aria-pressed=true] {
+    border-color:#7fc6e4;
+    background:#fff;
+    box-shadow:0 2px 10px rgba(26,59,92,.12);
+    transform:translateX(6px);
+  }
+  .tool-panel .edit-group button[aria-pressed=true] { border-color:#7fc6e4; background:#eaf8ff; box-shadow:none; }
+  .tool-panel .brush-group button[aria-pressed=true]:after,.tool-panel .edit-group button[aria-pressed=true]:after { content:none; }
+  .tool-panel .brush-group .tool-icon { display:none; }
+  .tool-panel .tool-photo { display:block; width:56px; height:22px; object-fit:contain; }
+  .tool-panel .edit-group .tool-icon { width:26px; min-width:26px; font-size:21px; }
+  .tool-panel .edit-group .eraser-icon { height:19px; }
+
+  .tool-more-button {
+    display:grid;
+    place-items:center;
+    width:100%;
+    min-height:44px;
+    padding:0;
+    border:0;
+    border-radius:14px;
+    background:#f3f8fb;
+    color:var(--secondary);
+    cursor:pointer;
+  }
+  .tool-more-button[aria-expanded="true"] { background:#e4f4fb; color:var(--primary-dark); }
+
+  /* 굵기 슬라이더: 고른 펜을 다시 누르면 그 왼쪽에 열린다.
+     세로 위치는 고른 펜의 줄(--tool-row-top)을 따라간다. 값이 없으면 브러시 묶음 가운데. */
+  .tool-panel .brush-group { position:relative; }
+  .tool-width-popover {
+    position:absolute;
+    z-index:2;
+    top:var(--tool-row-top,50%);
+    right:calc(100% + 20px);
+    width:270px;
+    padding:10px 18px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    border:1px solid #e4edf3;
+    border-radius:999px;
+    background:#fff;
+    box-shadow:0 10px 30px rgba(26,59,92,.18);
+    transform:translateY(-50%);
+  }
+  .tool-width-preview { flex:0 0 auto; border-radius:50%; background:var(--ink); }
+  .tool-width-preview-small { width:8px; height:8px; }
+  .tool-width-preview-large { width:26px; height:26px; }
+  .tool-width-slider { flex:1 1 auto; min-width:0; height:44px; margin:0; padding:0; background:transparent; -webkit-appearance:none; appearance:none; cursor:pointer; }
+  .tool-width-slider::-webkit-slider-runnable-track { height:4px; border-radius:999px; background:#0d5c86; }
+  .tool-width-slider::-moz-range-track { height:4px; border-radius:999px; background:#0d5c86; }
+  .tool-width-slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:22px; height:22px; margin-top:-9px; border:0; border-radius:50%; background:#1e88e5; box-shadow:0 1px 4px rgba(26,59,92,.35); }
+  .tool-width-slider::-moz-range-thumb { width:22px; height:22px; border:0; border-radius:50%; background:#1e88e5; box-shadow:0 1px 4px rgba(26,59,92,.35); }
+
+  /* 색: 두 칸 원형 팔레트 */
+  .tool-panel .palette { width:100%; display:grid; grid-template-columns:1fr 1fr; gap:8px; justify-items:center; }
+  .tool-panel .palette button { width:44px; min-width:44px; height:44px; min-height:44px; border-width:1px; }
+  .tool-panel .palette button[aria-pressed=true] { outline:3px solid #0d5c86; outline-offset:2px; }
+  .tool-panel .more-colors-button {
+    width:44px;
+    min-width:44px;
+    height:44px;
+    min-height:44px;
+    margin:2px 0 0;
+    padding:0;
+    border:1px solid rgba(26,59,92,.2);
+    border-radius:50%;
+    font-size:0;
+    background:conic-gradient(#e53935,#fdd835,#43a047,#1e88e5,#8e24aa,#e53935);
+    cursor:pointer;
+  }
+
+  /* 더보기 시트: 레일 왼쪽에 열리는 나머지 도구 */
+  .tool-sheet { display:none; }
+  .tool-sheet.open {
+    position:absolute;
+    z-index:3;
+    top:0;
+    right:106px;
+    width:250px;
+    max-height:calc(100% - 8px);
+    padding:14px;
+    display:grid;
+    gap:10px;
+    align-content:start;
+    overflow:auto;
+    border:1px solid #e4edf3;
+    border-radius:20px;
+    background:#fff;
+    box-shadow:0 12px 32px rgba(26,59,92,.2);
+  }
+  .tool-sheet.open>* { order:0; margin:0; }
+  .tool-sheet.open .make-group { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
+  .tool-sheet.open .tool-name { display:block; font-size:11px; }
+  .tool-sheet.open .make-group button { min-height:60px; flex-direction:column; gap:2px; }
+}
+
+.studio-header>.grimi-button { gap:6px; }
+.grimi-button-label { line-height:1; }
+/* 버튼 안의 장식 아이콘은 히트 테스트 대상이 되지 않게 한다. */
+.studio button>svg,.studio a>svg { pointer-events:none; }

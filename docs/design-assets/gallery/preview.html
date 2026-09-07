@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Wiggle 전시관 에셋 키트</title>
+  <link rel="stylesheet" href="../../../public/landing-gallery/gallery-assets.css">
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#ebf8ff;color:#0a2553;font-family:Pretendard,"Apple SD Gothic Neo",sans-serif}main{max-width:1200px;margin:auto;padding:32px 24px}header{display:flex;align-items:center;gap:16px}header img{width:60px;height:60px;object-fit:contain}h1{font-size:26px;margin:0}p{line-height:1.7;color:#496b89}h2{margin-top:36px;font-size:20px}a{color:#067aa4;display:inline-block;min-height:44px;padding:10px 12px}code{font-size:12px;overflow-wrap:anywhere}.stage{padding:50px 24px 24px;border:1px solid #c4dfed;border-radius:20px}.frames{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.characters{display:flex;align-items:flex-end;justify-content:center;gap:40px}.characters .gallery-mascot{width:340px;max-width:72%}.characters .plant{width:78px;height:auto}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.asset{background:#fff;border:1px solid #c4dfed;border-radius:14px;padding:16px}.asset img{display:block;width:100%;height:200px;object-fit:contain;background:#ebf8ff}.asset h3{font-size:15px;margin:12px 0 2px}.asset p{font-size:13px;margin:0}.icons{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.icon{display:flex;flex-direction:column;align-items:center;background:#fff;border:1px solid #c4dfed;border-radius:12px;padding:18px 6px;font-size:12px}.icon img{width:32px;height:32px;margin-bottom:8px}.note{padding:18px;background:#fff;border-left:4px solid #087bb9}@media(max-width:700px){.frames,.grid{grid-template-columns:1fr}.frames{gap:55px}.icons{grid-template-columns:repeat(2,1fr)}main{padding:24px 16px}h1{font-size:21px}}
+  </style>
+</head>
+<body><main>
+  <header><img src="../../../public/brand/logo.png" alt="Wiggle"><div><h1>전시관 에셋 키트</h1><p>PNG 원본 · 웹용 WebP · SVG 아이콘 · 조합 규격</p></div></header>
+  <p class="note">사이트 제작에 사용할 파일의 검수 화면입니다. 실제 대문 라우트에는 아직 연결하지 않았습니다.</p>
+  <h2>액자와 캐릭터 조합</h2>
+  <section class="stage wiggle-gallery-assets">
+    <div class="frames">
+      <figure class="gallery-frame"><div class="gallery-wire" aria-hidden="true"><i class="gallery-pin"></i></div><img class="gallery-frame__rim" src="../../../public/landing-gallery/frame-blue-960.webp" alt=""><img class="gallery-frame__art" src="../../../public/landing-gallery/artwork-rocket-480.webp" alt="크레용 로켓 그림"></figure>
+      <figure class="gallery-frame"><div class="gallery-wire" aria-hidden="true"><i class="gallery-pin"></i></div><img class="gallery-frame__rim" src="../../../public/landing-gallery/frame-blue-960.webp" alt=""><img class="gallery-frame__art" src="../../../public/landing-gallery/artwork-whale-480.webp" alt="크레용 고래 그림"></figure>
+      <figure class="gallery-frame"><div class="gallery-wire" aria-hidden="true"><i class="gallery-pin"></i></div><img class="gallery-frame__rim" src="../../../public/landing-gallery/frame-blue-960.webp" alt=""><img class="gallery-frame__art" src="../../../public/landing-gallery/artwork-house-480.webp" alt="크레용 집 그림"></figure>
+    </div>
+    <div class="characters"><img class="gallery-mascot" src="../../../public/landing-gallery/duck-painter-640.webp" alt="붓과 팔레트를 든 오리 화가"><img class="plant" src="../../../public/landing-gallery/leaves-160.webp" alt=""></div>
+  </section>
+  <h2>개별 이미지</h2><div class="grid" id="assets"></div>
+  <h2>사이트 아이콘 10종</h2><div class="icons" id="icons"></div>
+  <h2>사용 파일</h2><p><a href="README.md">적용 가이드</a><a href="../../../public/landing-gallery/manifest.json">파일 매니페스트</a><a href="../../../public/landing-gallery/gallery-assets.css">CSS</a><a href="selected-reference.png">선택 시안</a><a href="prompts.json">생성 프롬프트</a></p>
+  <script>
+    const base='../../../public/landing-gallery/';
+    const list=[['duck-painter',640,'오리 화가 · 투명'],['artwork-rocket',480,'우주 그림'],['artwork-whale',480,'바다 그림'],['artwork-house',480,'집 그림'],['leaves',160,'잎 장식 · 투명'],['paper-blue',1024,'하늘색 종이 배경'],['frame-blue',480,'공용 액자 · 투명']];
+    for(const [id,width,label] of list){const card=document.createElement('article');card.className='asset';card.innerHTML=`<img src="${base}${id}-${width}.webp" alt="${label}"><h3>${label}</h3><p><code>${id}</code></p><a download href="${base}${id}-${width}.webp">WebP</a><a download href="${base}${id}.png">PNG</a>`;document.querySelector('#assets').append(card);}
+    for(const id of ['teacher','shield-check','different-ideas','question','book-discover','arrow-right','rocket','whale','house','star']){const a=document.createElement('a');a.className='icon';a.href=base+'icons/'+id+'.svg';a.download='';a.innerHTML=`<img src="${a.href}" alt=""><span>${id}</span>`;document.querySelector('#icons').append(a);}
+  </script>
+</main></body></html>

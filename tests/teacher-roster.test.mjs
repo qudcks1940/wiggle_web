@@ -90,6 +90,14 @@ test("학생 화면은 명단을 그리지 않고 자기 번호만 입력한다"
   assert.match(join, /const seatRecover = seatNumber !== null && !creating;/);
 });
 
+test("번호 재입장 화면에는 숨겨진 단계로 가는 버튼이 없다", async () => {
+  const css = await read("../app/globals.css");
+  // 동물·별명 단계를 숨겼으면 그리로 돌아가는 버튼도 숨겨야 한다. 남겨 두면 눌러도
+  // 아무 일이 없는 죽은 버튼이 되고, 아이는 자기가 잘못 눌렀다고 생각한다.
+  assert.match(css, /\.join-card\.join-seat-recover \.join-step-1,\n\.join-card\.join-seat-recover \.join-step-2 \{ display:none; \}/);
+  assert.match(css, /\.join-card\.join-seat-recover \.mobile-step-back \{ display:none; \}/);
+});
+
 test("실명은 담임 교사 화면에만 나타난다", async () => {
   const [teacherRoute, teacherUi, css] = await Promise.all([
     read("../app/api/teacher/route.ts"),

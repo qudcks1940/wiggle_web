@@ -26,7 +26,7 @@ function studentHeaders(ip) {
   return { "content-type": "application/json", "x-forwarded-for": ip };
 }
 
-test("class status, duplicate credentials, cross-device re-entry, archive and restore stay safe", async (context) => {
+test("class status, seat re-entry, archive and restore stay safe", async (context) => {
   const server = await startTestServer();
   context.after(() => server.dispose());
   const teacherHeaders = await signInTeacher(server, "profile-manager@example.com");
@@ -34,20 +34,22 @@ test("class status, duplicate credentials, cross-device re-entry, archive and re
   const createdClass = await server.fetch("/api/teacher", {
     method: "POST",
     headers: teacherHeaders,
-    body: JSON.stringify({ action: "createClassroom", displayName: "중복 점검반" }),
+    body: JSON.stringify({ action: "createClassroom", displayName: "중복 점검반", roster: [{ seatNumber: 1, realName: "김민준" }, { seatNumber: 2, realName: "이서연" }] }),
   });
   assert.equal(createdClass.status, 201);
   const classroom = (await createdClass.json()).classroom;
 
+  // 명단으로 만든 자리는 아이가 들어오기 전까지 비어 있다 — 학생 화면에는 "번호를 넣을 수 있는 반"으로만 보인다.
   const emptyStatus = await server.fetch("/api/student", {
     method: "POST", headers: studentHeaders("203.0.113.100"), body: JSON.stringify({ action: "entryStatus", entry: classroom.classCode }),
   });
   assert.equal(emptyStatus.status, 200);
-  assert.deepEqual(await emptyStatus.json(), { classroomName: "중복 점검반", hasProfiles: false, hasRoster: false });
+  assert.deepEqual(await emptyStatus.json(), { classroomName: "중복 점검반", hasProfiles: true, hasRoster: true });
 
   const joinBody = {
     action: "join",
     entry: classroom.classCode,
+    seatNumber: 1,
     nickname: "토끼화가",
     animal: "🐰",
     picturePassword: ["⭐", "⭐", "⭐"],
@@ -59,20 +61,16 @@ test("class status, duplicate credentials, cross-device re-entry, archive and re
   const joinedProfile = await joined.json();
   assert.equal(joinedProfile.personalQrToken, undefined);
 
-  const occupiedStatus = await server.fetch("/api/student", {
-    method: "POST", headers: studentHeaders("203.0.113.105"), body: JSON.stringify({ action: "entryStatus", entry: classroom.classCode }),
-  });
-  assert.equal(occupiedStatus.status, 200);
-  assert.deepEqual(await occupiedStatus.json(), { classroomName: "중복 점검반", hasProfiles: true, hasRoster: false });
-
+  // 같은 번호를 다시 차지할 수는 없다. 자리는 한 아이의 것이다.
   const duplicate = await server.fetch("/api/student", {
     method: "POST", headers: studentHeaders("203.0.113.102"), body: JSON.stringify(joinBody),
   });
   assert.equal(duplicate.status, 409);
-  assert.deepEqual(await duplicate.json(), { error: "같은 별명과 동물의 프로필이 이미 있어요.", code: "PROFILE_EXISTS" });
+  assert.equal((await duplicate.json()).code, "SEAT_CLAIMED");
 
   const DB = server.DB;
-  assert.equal((await DB.prepare("SELECT COUNT(*) AS count FROM student_profiles").first()).count, 1);
+  // 명단이 자리 두 개를 만들었고, 아이가 들어와도 프로필이 새로 늘지 않는다.
+  assert.equal((await DB.prepare("SELECT COUNT(*) AS count FROM student_profiles").first()).count, 2);
   await DB.prepare(`INSERT INTO artworks(id, student_id, classroom_id, title, topic, learning_mode) VALUES ('artwork_kept', ?, ?, '보관 그림', '선', 'practice')`)
     .bind(joinedProfile.student.id, classroom.id).run();
 
@@ -87,7 +85,7 @@ test("class status, duplicate credentials, cross-device re-entry, archive and re
   const roomAfterArchive = await server.fetch(`/api/teacher?classroomId=${classroom.id}`, { headers: teacherHeaders });
   assert.equal(roomAfterArchive.status, 200);
   const archivedRoom = await roomAfterArchive.json();
-  assert.equal(archivedRoom.students.length, 0);
+  assert.equal(archivedRoom.students.length, 1, "남은 자리는 2번 하나다");
   assert.equal(archivedRoom.archivedStudents.length, 1);
   assert.equal(archivedRoom.archivedStudents[0].artworkCount, 1);
 
@@ -105,28 +103,22 @@ test("class status, duplicate credentials, cross-device re-entry, archive and re
   });
   assert.equal(restored.status, 200);
 
+  // 다른 기기에서도 번호 + 그림 비밀번호로 자기 그림에 돌아온다.
   const recovered = await server.fetch("/api/student", {
     method: "POST",
     headers: studentHeaders("203.0.113.103"),
-    body: JSON.stringify({ action: "recover", entry: classroom.joinToken, nickname: "토끼화가", animal: "🐰", picturePassword: ["⭐", "⭐", "⭐"] }),
+    body: JSON.stringify({ action: "recover", entry: classroom.joinToken, seatNumber: 1, picturePassword: ["⭐", "⭐", "⭐"] }),
   });
   assert.equal(recovered.status, 200);
   assert.equal((await recovered.json()).student.id, joinedProfile.student.id);
 
-  const exactDuplicate = await server.fetch("/api/student", {
-    method: "POST",
-    headers: studentHeaders("203.0.113.104"),
-    body: JSON.stringify({ ...joinBody, allowDuplicate: true }),
-  });
-  assert.equal(exactDuplicate.status, 409);
-  assert.deepEqual(await exactDuplicate.json(), { error: "같은 동물, 별명, 그림 비밀번호로 만든 프로필이 이미 있어요.", code: "PROFILE_CREDENTIALS_EXIST" });
-
-  const explicitlyNew = await server.fetch("/api/student", {
+  // 별명은 아이가 고르는 표시 이름이라 겹칠 수 있다. 번호가 다르면 다른 아이이고, 교사 화면만 그 사실을 안다.
+  const sameNickname = await server.fetch("/api/student", {
     method: "POST",
     headers: studentHeaders("203.0.113.106"),
-    body: JSON.stringify({ ...joinBody, picturePassword: ["🍎", "🌈", "⚽"], allowDuplicate: true }),
+    body: JSON.stringify({ ...joinBody, seatNumber: 2, picturePassword: ["🍎", "🌈", "⚽"] }),
   });
-  assert.equal(explicitlyNew.status, 201);
+  assert.equal(sameNickname.status, 201);
   assert.equal((await DB.prepare("SELECT COUNT(*) AS count FROM student_profiles WHERE archived_at IS NULL").first()).count, 2);
 
   const roomWithDuplicateNicknames = await server.fetch(`/api/teacher?classroomId=${classroom.id}`, { headers: teacherHeaders });

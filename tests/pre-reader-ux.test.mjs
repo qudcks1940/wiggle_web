@@ -45,8 +45,8 @@ test("entry can be completed with pictures and a generated nickname instead of r
   assert.match(join, /🎲 다른 별명/);
   assert.match(join, /className="button primary full child-primary-action"/);
   assert.match(join, /<span aria-hidden="true">▶️<\/span>/);
-  assert.match(join, /새로 시작하려면 새로 시작하기를 눌러요/);
-  assert.match(join, /전에 그린 그림이 있다면 내 그림 이어가기를 눌러요/);
+  assert.match(join, /선생님이 알려 준 내 번호를 눌러요/);
+  assert.match(join, /다 눌렀으면 들어가기를 눌러요/);
   assert.match(join, /내 동물을 고르고, 그림 별명을 정한 다음, 그림 비밀번호 세 개를 순서대로 골라요/);
   assert.doesNotMatch(join, /이 기기에 저장된 내 동물 고르기/);
   assert.match(join, /className="animal-choice-portrait" data-animal-index=\{index\}/);

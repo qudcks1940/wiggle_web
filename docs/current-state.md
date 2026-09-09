@@ -538,6 +538,12 @@
 - 검증: typecheck·lint(경고 10건은 기존 것)·`git diff --check` 통과, 전체 테스트 **318/318**(Node 22.23; 이 맥의 기본 22.13은 `.ts` 로더 오류로 실행 불가). 팔레트가 바뀌어 hex를 고정하던 테스트 2건(`pre-reader-ux` 단계 구분선 `#d0e2d3`, `drawing-tools` 지우개 발자국 `#264c2e`)만 갱신. `npm run check:browser` 기본 3뷰포트 전 항목 통과(browser-check의 듣기 버튼 셀렉터에 `.entry-check .speak-button`을 추가). 실제 Chrome(CDP) 실측으로 수업 확인 실패 화면을 `1440×900`, `1280×800`, `1024×768`, `768×1024`, `1024×1366`, `844×390`, `390×844`, `320×568`에서 확인: 가로 넘침 0, 44px 미만 터치 목표 0, 본문 16px 이상(12px은 기존 듣기 버튼 캡션). 대문·교사·번호 입장 화면도 초록으로 렌더링됨을 캡처로 확인.
 - 남은 것: `public/og.png`(README 히어로)는 옛 파란 대문 캡처 그대로다. `docs/design-assets/entry-green/assets/`의 원본 PNG와 zip은 사용자 소유 자료로 커밋하지 않았다(README·PROVENANCE·manifest·tokens·reference만 커밋).
 
+## 2026-09-09 씨앗 선 커리큘럼 계획 (`claude/curriculum-seed-plan-20260909`, 문서만)
+
+- 사용자와 대화로 커리큘럼 뼈대를 확정하고 `docs/curriculum-seed-plan.md`를 새로 썼다. 12회 표에 씨앗 좌표(정규화 폴리라인), 될 수 있는 것 3가지, 안내 문장 4개, 토론 질문 3개, 40분 배분, 앱에 필요한 것 5가지를 채웠다. 기존 30개 레슨은 기준에서 제외했다.
+- `product-decisions.md`에 학습 과정 결정 2건과 "같은 학급·교사가 연 동안·이름 없이" 반 작품 보기 예외를 기록했고, 남은 확인 항목은 `pending-decisions.md` P-007에 두었다.
+- 코드는 바꾸지 않았다. 구현 순서 제안: ① `claude/seed-line-lesson` 브랜치의 `Lesson.seed`·작품 생성 시 획 심기를 최신 main으로 이식 ② 12회 데이터 ③ 반 작품 크게 보기 화면.
+
 ## 다음 작업 시작 전 확인
 
 1. 이 문서와 `product-decisions.md`, `pending-decisions.md`를 읽는다.

@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
-  DRAWING_GUIDE_INSTRUCTIONS, requestStructuredOpenAI, STUDENT_COACHING_INSTRUCTIONS,
+  requestStructuredOpenAI, STUDENT_COACHING_INSTRUCTIONS,
   TEACHER_DRAFT_INSTRUCTIONS, compactCoachingPolicyText, isChildSafeCoachingText, normalizeCoachingPolicyText,
-  validateDrawingGuide, validateStudentCoaching, validateTeacherDraft,
+  validateStudentCoaching, validateTeacherDraft,
 } from "../lib/openai-coaching.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
@@ -38,23 +38,12 @@ test("Responses request keeps image, strict schema, privacy and coaching invaria
   assert.doesNotMatch(JSON.stringify(captured.body), /student_x7k29/i);
 });
 
-test("server validation rejects malformed coaching and invalid guides", () => {
+test("server validation rejects malformed coaching", () => {
   assert.equal(validateStudentCoaching({ ...coaching, question: "질문 하나? 질문 둘?" }), null);
   assert.equal(validateStudentCoaching({ ...coaching, next_action: "생각해 봐." }), null);
   assert.equal(validateStudentCoaching({ ...coaching, growth_event: "창의력 95점" }), null);
-  const step = { instruction: "동그라미를 그려 봐.", open_choice: false, choices: [], guide_shape: "circle" };
-  assert.equal(validateDrawingGuide({ topic: "강아지", steps: Array.from({ length: 5 }, () => step) }), null);
-  assert.equal(validateDrawingGuide({ topic: "강아지", steps: [step, step, step, step, step, { ...step, instruction: "끝내 봐." }] }), null);
 });
 
-const validGuideSteps = [
-  { instruction: "큰 동그라미를 그려 봐.", open_choice: false, choices: [], guide_shape: "circle" },
-  { instruction: "귀 모양을 골라 그려 봐.", open_choice: true, choices: ["둥근 귀", "긴 귀"], guide_shape: "none" },
-  { instruction: "눈 두 개를 그려 봐.", open_choice: false, choices: [], guide_shape: "circle" },
-  { instruction: "꼬리 모양을 골라 그려 봐.", open_choice: true, choices: ["동그란 꼬리", "긴 꼬리"], guide_shape: "none" },
-  { instruction: "옆에 작은 풀을 더해 봐.", open_choice: false, choices: [], guide_shape: "none" },
-  { instruction: "마지막에는 원하는 요소를 자유롭게 추가해 봐.", open_choice: false, choices: [], guide_shape: "none" },
-];
 const teacherDraft = { body: "지붕 옆에 작은 나무가 보여요.", observation: "질문 후 새 대상을 추가했어요.", next_action: "마당에 사람 한 명을 더 그려 봐." };
 
 const unicodePolicyControls = [
@@ -96,13 +85,9 @@ test("semantic safety deny rules cover every generated coaching field", () => {
     assert.equal(validateTeacherDraft({ ...teacherDraft, body: `${phrase}. ${teacherDraft.body}` }), null, `teacher body: ${phrase}`);
     assert.equal(validateTeacherDraft({ ...teacherDraft, observation: `${phrase}. ${teacherDraft.observation}` }), null, `teacher observation: ${phrase}`);
     assert.equal(validateTeacherDraft({ ...teacherDraft, next_action: `${phrase}. ${teacherDraft.next_action}` }), null, `teacher action: ${phrase}`);
-    assert.equal(validateDrawingGuide({ topic: "강아지", steps: validGuideSteps.map((step, index) => index === 2 ? { ...step, instruction: `${phrase}. 선을 그려 봐.` } : step) }), null, `guide instruction: ${phrase}`);
-    assert.equal(validateDrawingGuide({ topic: "강아지", steps: validGuideSteps.map((step, index) => index === 1 ? { ...step, choices: [phrase, "긴 귀"] } : step) }), null, `guide choice: ${phrase}`);
-    assert.equal(validateDrawingGuide({ topic: phrase, steps: validGuideSteps }), null, `guide topic: ${phrase}`);
   }
   assert.ok(validateStudentCoaching({ ...coaching, growth_event: "질문 후 새 대상을 추가했어요." }));
   assert.ok(validateTeacherDraft(teacherDraft));
-  assert.ok(validateDrawingGuide({ topic: "강아지", steps: validGuideSteps }));
   assert.equal(normalizeCoachingPolicyText("ＰＲＡＩＳＥ\u200B—THIS   DRAWING"), "praise this drawing");
   assert.equal(compactCoachingPolicyText("P-r-a\u0301-i-s-e_😀"), "praise");
   for (const disguised of ["ｐｒａｉｓｅ this drawing", "pr\u200Baise this drawing", "evaluate—this drawing"]) assert.equal(isChildSafeCoachingText(disguised), false);
@@ -123,9 +108,6 @@ test("Unicode controls canonicalize away and Greek or Cyrillic scripts are rejec
 });
 
 test("guide final step is Korean free creation without a dotted shape", () => {
-  assert.equal(validateDrawingGuide({ topic: "강아지", steps: validGuideSteps.map((step, index) => index === 5 ? { ...step, guide_shape: "circle" } : step) }), null);
-  assert.equal(validateDrawingGuide({ topic: "강아지", steps: validGuideSteps.map((step, index) => index === 5 ? { ...step, instruction: "마지막 선을 그대로 따라 그려 봐." } : step) }), null);
-  assert.equal(validateDrawingGuide({ topic: "강아지", steps: validGuideSteps.map((step, index) => index === 5 ? { ...step, instruction: "free exact answer follow 선을 그려 봐." } : step) }), null);
 });
 
 test("refusal, malformed output, upstream errors and timeout are sanitized", async () => {
@@ -141,12 +123,11 @@ test("refusal, malformed output, upstream errors and timeout are sanitized", asy
 
 test("prompts and routes preserve child agency, teacher approval and structured storage", async () => {
   assert.match(STUDENT_COACHING_INSTRUCTIONS, /원본 선을 수정/); assert.match(STUDENT_COACHING_INSTRUCTIONS, /정답 없는 칩 2~4개/);
-  assert.match(DRAWING_GUIDE_INSTRUCTIONS, /6~15단계/); assert.match(DRAWING_GUIDE_INSTRUCTIONS, /마지막 단계는 반드시/);
   assert.match(TEACHER_DRAFT_INSTRUCTIONS, /자동 전송되지 않고/); assert.match(TEACHER_DRAFT_INSTRUCTIONS, /검토, 수정, 승인/);
   const [studentRoute, teacherRoute, coachingStore, teacherMessages, schema, runtime, studio, teacherUi, timelapse, renderer] = await Promise.all([
     read("../app/api/ai/coaching/route.ts"), read("../app/api/ai/teacher-draft/route.ts"), read("../lib/coaching-store.ts"), read("../lib/teacher-messages.ts"), read("../db/schema.ts"), read("../db/runtime.ts"), read("../app/components/DrawingStudio.tsx"), read("../app/components/TeacherApp.tsx"), read("../app/components/TimelapsePlayer.tsx"), read("../lib/draw-renderer.ts"),
   ]);
-  assert.match(studentRoute, /studentFromRequest/); assert.match(studentRoute, /WHERE id = \? AND student_id = \?/); assert.match(studentRoute, /recordCoachingBefore/); assert.match(coachingStore, /coaching_before/); assert.match(coachingStore, /coaching_after/); assert.match(studentRoute, /recentEvents/); assert.match(studentRoute, /rateLimit/); assert.match(studentRoute, /finishGuide/);
+  assert.match(studentRoute, /studentFromRequest/); assert.match(studentRoute, /WHERE id = \? AND student_id = \?/); assert.match(studentRoute, /recordCoachingBefore/); assert.match(coachingStore, /coaching_before/); assert.match(coachingStore, /coaching_after/); assert.match(studentRoute, /recentEvents/); assert.match(studentRoute, /rateLimit/); assert.doesNotMatch(studentRoute, /drawing_guide|finishGuide/);
   assert.match(teacherRoute, /requireTeacher/); assert.match(teacherRoute, /c\.teacher_id = \?/); assert.match(teacherMessages, /status = 'draft'/); assert.match(teacherMessages, /status = 'approved'/); assert.match(teacherMessages, /INSERT INTO teacher_messages/); assert.match(teacherRoute, /approveTeacherDraftMessage/);
   assert.match(schema, /coachingEventDetails/); assert.match(schema, /teacherCoachingDrafts/); assert.match(runtime, /coaching_event_details/); assert.match(runtime, /teacher_coaching_drafts/);
   assert.match(studio, /몽그리 부르기/); assert.match(studio, /그냥 내 마음대로 그릴래/); assert.match(studio, /TimelapsePlayer/); assert.match(teacherUi, /수정한 뒤 승인해서 보내기/);

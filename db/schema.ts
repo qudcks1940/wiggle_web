@@ -199,6 +199,8 @@ export const coachingEvents = sqliteTable("coaching_events", {
 
 export const coachingEventDetails = sqliteTable("coaching_event_details", {
   eventId: text("event_id").primaryKey().references(() => coachingEvents.id, { onDelete: "cascade" }),
+  // "guide"는 은퇴한 단계 가이드(2026-09-09)의 옛 행이다. 새로 쓰지는 않지만
+  // 이미 저장된 기록을 읽어야 하므로 enum에서 빼지 않는다.
   responseKind: text("response_kind", { enum: ["question", "guide"] }).notNull(),
   choicesJson: text("choices_json").notNull().default("[]"),
   guideStepsJson: text("guide_steps_json").notNull().default("[]"),

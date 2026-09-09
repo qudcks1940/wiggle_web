@@ -60,10 +60,9 @@ test("drawing, navigation and reflection retain familiar visual actions when tex
   // 시작 버튼 문구: 회차 카드(재입장 분기)와 자유 그리기 카드 양쪽 모두 ▶️ 표지를 유지한다.
   assert.match(home, /<span aria-hidden="true">▶️<\/span>/);
   assert.match(home, /"내 그림 다시 보기" : "이어 그리기"/);
+  // 회차 이동 표지. 단계 가이드 은퇴(2026-09-09) 뒤에는 수업 단계 이동만 남는다.
   assert.match(studio, /⬅️ 이전/);
-  assert.match(studio, /"➡️ 다음"/);
-  assert.match(studio, /QUICK_DRAW_TOPICS/);
-  assert.match(studio, /🚀/);
+  assert.match(studio, /step === lesson\.steps\.length - 1 \? "⭐" : "➡️"/);
   assert.match(studio, /favoritePartChoices/);
   assert.match(studio, /FAVORITE_REASON_CHOICES/);
   assert.match(studio, /className="reflection-choice-grid"/);

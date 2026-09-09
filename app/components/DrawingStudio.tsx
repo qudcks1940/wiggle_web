@@ -106,12 +106,6 @@ const SHAPE_KINDS = [
   { kind: "cloud", icon: "☁", label: "구름" },
 ] as const;
 const BASIC_SHAPE_COUNT = 4;
-const QUICK_DRAW_TOPICS = [
-  { emoji: "🚀", label: "우주" },
-  { emoji: "🐶", label: "강아지" },
-  { emoji: "🌳", label: "마법 숲" },
-  { emoji: "🚲", label: "자전거" },
-];
 type ReflectionChoice = { emoji: string; label: string; value: string };
 
 function favoritePartChoices(lesson?: Lesson): ReflectionChoice[] {
@@ -168,13 +162,8 @@ type StudentCoaching = {
 };
 /** 틀리는 해석자 — 몽그리가 먼저 짐작을 내놓고 아이가 고친다 (product-decisions 학습 과정 4항). */
 type StoryInterpretation = { guess: string; choices: CoachingChoice[] };
-type GuideStep = {
-  instruction: string;
-  openChoice: boolean;
-  choices: string[];
-  guideShape: "none" | "line" | "circle" | "triangle" | "rectangle";
-};
-type AiGuide = { topic: string; steps: GuideStep[] };
+/** 점선 시범이 쓰는 도형 종류. 수업 카탈로그가 몰던 값이라 단계 가이드 은퇴 뒤에도 남는다. */
+type GuideShape = "none" | "line" | "circle" | "triangle" | "rectangle";
 type SaveOptions = {
   complete?: boolean;
   reflection?: Record<string, string>;
@@ -262,7 +251,7 @@ function sampleCurve(points: [[number, number], [number, number], [number, numbe
   return trace;
 }
 
-function guideTraces(lesson: Lesson | undefined, lessonStep = 0, aiShape: GuideStep["guideShape"] = "none", guideVariant = 0) {
+function guideTraces(lesson: Lesson | undefined, lessonStep = 0, aiShape: GuideShape = "none", guideVariant = 0) {
   const traces: GuideTrace[] = [];
   const lessonMarks = lesson ? guideMarksForVariant(lesson, guideVariant) : [];
   for (const mark of lessonMarks.filter((item) => item.step === lessonStep + 1)) {
@@ -566,9 +555,6 @@ export function DrawingStudio() {
   const [answer, setAnswer] = useState("");
   const [answerLabel, setAnswerLabel] = useState("");
   const [answerSaved, setAnswerSaved] = useState(false);
-  const [guideTopic, setGuideTopic] = useState("");
-  const [aiGuide, setAiGuide] = useState<(AiGuide & { eventId: string }) | null>(null);
-  const [aiGuideStep, setAiGuideStep] = useState(0);
   const [childChoice, setChildChoice] = useState("");
   const [timelapseOpen, setTimelapseOpen] = useState(false);
   const [runSerial] = useState(createSerialTaskQueue);
@@ -759,15 +745,14 @@ export function DrawingStudio() {
     editSeqRef.current += 1;
     unsavedRef.current = true;
   }, []);
-  const aiGuideShape = aiGuide?.steps[aiGuideStep]?.guideShape ?? "none";
-  const currentGuideTraces = useMemo(() => guideTraces(aiGuide ? undefined : lesson, artwork?.currentStep ?? 0, aiGuideShape, artwork?.guideVariant ?? 0), [aiGuide, aiGuideShape, artwork?.currentStep, artwork?.guideVariant, lesson]);
+  const currentGuideTraces = useMemo(() => guideTraces(lesson, artwork?.currentStep ?? 0, "none", artwork?.guideVariant ?? 0), [artwork?.currentStep, artwork?.guideVariant, lesson]);
   const currentLessonActivity = lesson?.steps[artwork?.currentStep ?? 0]?.activity;
   const lessonGuideAvailable = currentGuideTraces.length > 0;
   const currentLessonStepStatus = useMemo(
     () => lessonStepActionStatus(documentState.ops, lessonStepProgress, currentGuideTraces.length, currentLessonActivity),
     [currentGuideTraces.length, currentLessonActivity, documentState.ops, lessonStepProgress],
   );
-  const guideSourceKey = aiGuide ? `ai:${aiGuide.eventId}:${aiGuideStep}` : lesson ? `lesson:${lesson.slug}:${artwork?.guideVariant ?? 0}:${artwork?.currentStep ?? 0}` : "none";
+  const guideSourceKey = lesson ? `lesson:${lesson.slug}:${artwork?.guideVariant ?? 0}:${artwork?.currentStep ?? 0}` : "none";
   const lessonArtworkId = artwork?.id;
   const lessonArtworkStep = artwork?.currentStep;
 
@@ -803,13 +788,13 @@ export function DrawingStudio() {
     if (currentLessonStepStatus.ready && lessonStepPrompt === "step-action") setLessonStepPrompt(null);
   }, [currentLessonStepStatus.ready, lessonStepPrompt]);
   const markCurrentGuideSeen = useCallback(() => {
-    if (lesson?.stage !== 1 || aiGuide || guideSourceKey === "none") return;
+    if (lesson?.stage !== 1 || guideSourceKey === "none") return;
     const profile = activeProfile();
     if (!profile) return;
     try {
       localStorage.setItem(`wiggle:guide-demo:v1:${profile.studentId}:${guideSourceKey}`, "seen");
     } catch {}
-  }, [aiGuide, guideSourceKey, lesson?.stage]);
+  }, [guideSourceKey, lesson?.stage]);
   const startGuideDemo = useCallback(() => {
     if (!lessonGuideAvailable) return;
     setGuidePracticeTried(false);
@@ -881,7 +866,7 @@ export function DrawingStudio() {
     } catch {}
     setGuideChoiceOpen(choice !== "help" && choice !== "solo");
     setGuidePhase(choice === "help" ? "practice" : "independent");
-  }, [aiGuide, artwork?.currentStep, artwork?.id, currentLessonActivity, currentLessonStepStatus.actionCount, guideSourceKey, lessonGuideAvailable]);
+  }, [artwork?.currentStep, artwork?.id, currentLessonActivity, currentLessonStepStatus.actionCount, guideSourceKey, lessonGuideAvailable]);
 
   useEffect(() => {
     if (guideAnimationRef.current !== null) cancelAnimationFrame(guideAnimationRef.current);
@@ -2241,7 +2226,6 @@ export function DrawingStudio() {
     setAnswer("");
     setAnswerLabel("");
     setAnswerSaved(false);
-    setAiGuide(null);
     setGuidePhase("independent");
     window.clearTimeout(saveTimer.current);
     // 선행 저장은 반드시 try 안에서 기다린다. 밖에서 던지면 grimiLoading이 영구히 잠긴다.
@@ -2277,49 +2261,6 @@ export function DrawingStudio() {
     }
   }
 
-  async function requestAiGuide() {
-    if (!artwork || !canvasRef.current || guideTopic.trim().length < 2 || grimiLoading) return;
-    setGrimiLoading(true);
-    setGrimiError("");
-    setCoaching(null);
-    setAnswer("");
-    setGuidePhase("independent");
-    window.clearTimeout(saveTimer.current);
-    try {
-      const saved = await save();
-      if (!saved) {
-        setGrimiError("그림을 먼저 저장한 뒤 다시 해 줘.");
-        return;
-      }
-      const response = await studentFetch("/api/ai/coaching", {
-        method: "POST",
-        body: JSON.stringify({
-          action: "guide",
-          requestId: coachingRequestId(),
-          artworkId: artwork.id,
-          expectedRevision: revisionRef.current,
-          document: documentStateRef.current,
-          imageDataUrl: imageData(canvasRef.current, 1024),
-          requestedTopic: guideTopic,
-          childChoice,
-        }),
-      });
-      const data = (await response.json()) as {
-        error?: string;
-        eventId?: string;
-        guide?: AiGuide;
-      };
-      if (!response.ok || !data.eventId || !data.guide) throw new Error(data.error ?? "가이드를 만들지 못했어요.");
-      setAiGuide({ ...data.guide, eventId: data.eventId });
-      setAiGuideStep(0);
-      setGuidePhase("independent");
-    } catch (cause) {
-      setGrimiError(cause instanceof Error ? cause.message : "가이드를 만들지 못했어요.");
-    } finally {
-      setGrimiLoading(false);
-    }
-  }
-
   async function recordCoachingAnswer() {
     if (!artwork || !canvasRef.current || !coaching || !answer.trim() || conflictDraftRef.current) return;
     setGrimiLoading(true);
@@ -2349,22 +2290,6 @@ export function DrawingStudio() {
     } finally {
       setGrimiLoading(false);
     }
-  }
-
-  function chooseGuideStep(next: number) {
-    if (!aiGuide || conflictDraftRef.current) {
-      if (conflictDraftRef.current) setSaveState("먼저 보관한 그림을 새 사본으로 저장해 주세요");
-      return;
-    }
-    const bounded = Math.max(0, Math.min(aiGuide.steps.length - 1, next));
-    setAiGuideStep(bounded);
-    setGuidePhase("independent");
-    if (artwork?.currentStep !== bounded) {
-      currentStepRef.current = bounded;
-      markEdited();
-      setEditVersion((value) => value + 1);
-    }
-    setArtwork((value) => value && { ...value, currentStep: bounded });
   }
 
   function saveLessonStepProgress(next: LessonStepProgress) {
@@ -2459,44 +2384,11 @@ export function DrawingStudio() {
     setGrimiOpen(false);
     setGrimiCollapsed(false);
     setCoaching(null);
-    setAiGuide(null);
     setGuidePhase("independent");
     setGrimiError("");
   }
 
-  async function finishGuide(outcome: "completed" | "free_exit") {
-    if (!aiGuide || !artwork || !canvasRef.current || grimiLoading || conflictDraftRef.current) return;
-    setGrimiLoading(true);
-    setGrimiError("");
-    try {
-      const response = await studentFetch("/api/ai/coaching", {
-        method: "POST",
-        body: JSON.stringify({
-          action: "finishGuide",
-          outcome,
-          artworkId: artwork.id,
-          eventId: aiGuide.eventId,
-          currentStep: aiGuideStep,
-          document: documentState,
-          imageDataUrl: imageData(canvasRef.current, 1024),
-        }),
-      });
-      const data = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(data.error ?? "가이드 과정을 남기지 못했어요.");
-      closeGrimiState();
-      void save(undefined, { currentStep: currentStepRef.current });
-    } catch (cause) {
-      setGrimiError(cause instanceof Error ? cause.message : "가이드 과정을 남기지 못했어요.");
-    } finally {
-      setGrimiLoading(false);
-    }
-  }
-
   function dismissGrimi() {
-    if (aiGuide) {
-      void finishGuide("free_exit");
-      return;
-    }
     if (coaching?.eventId && artwork)
       void studentFetch("/api/ai/coaching", {
         method: "POST",
@@ -2511,7 +2403,7 @@ export function DrawingStudio() {
 
   function guideControls() {
     if (!lessonGuideAvailable) return null;
-    if (lesson?.mode === "observe" && !aiGuide) {
+    if (lesson?.mode === "observe") {
       return (
         <div className="guide-actions observation-guide-actions" aria-label="관찰 그리기 점선 힌트">
           <button className="guide-toggle" type="button" aria-pressed={guidePhase === "practice"} disabled={Boolean(conflictDraft)} onClick={() => setGuidePhase((phase) => (phase === "practice" ? "independent" : "practice"))}>
@@ -2569,7 +2461,7 @@ export function DrawingStudio() {
           <b>{artwork.title}</b>
           <small className="studio-save-state">{saveState === "저장됨" && <CheckIcon size={14} />}{saveState}</small>
         </div>
-        {lesson && !aiGuide && (
+        {lesson && (
           <span className="step-count">
             {step + 1}/{lesson.steps.length}
           </span>
@@ -2713,53 +2605,6 @@ export function DrawingStudio() {
                     )}
                   </div>
                 )}
-                {aiGuide && !grimiLoading && (
-                  <div className="ai-guide">
-                    <p className="eyebrow">
-                      {aiGuide.topic} · {aiGuideStep + 1}/{aiGuide.steps.length}
-                    </p>
-                    <div className="spoken-prompt">
-                      <h2>{aiGuide.steps[aiGuideStep].instruction}</h2>
-                    </div>
-                    {aiGuide.steps[aiGuideStep].openChoice && (
-                      <div className="grimi-chips">
-                        {aiGuide.steps[aiGuideStep].choices.map((choice) => (
-                          <button aria-pressed={childChoice === choice} onClick={() => chooseChildChoice(choice)} key={choice}>
-                            {choice}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {guideControls()}
-                    <div className="step-actions">
-                      <button disabled={Boolean(conflictDraft) || aiGuideStep === 0} onClick={() => chooseGuideStep(aiGuideStep - 1)}>
-                        ⬅️ 이전
-                      </button>
-                      <button disabled={Boolean(conflictDraft)} onClick={() => (aiGuideStep === aiGuide.steps.length - 1 ? void finishGuide("completed") : chooseGuideStep(aiGuideStep + 1))}>
-                        {aiGuideStep === aiGuide.steps.length - 1 ? "🎨 이제 내 마음대로" : "➡️ 다음"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {!aiGuide && !grimiLoading && (
-                  <div className="guide-request">
-                    <label>
-                      그리고 싶은 게 있어?
-                      <div className="quick-topic-row">
-                        {QUICK_DRAW_TOPICS.map((topic) => (
-                          <button type="button" aria-pressed={guideTopic === topic.label} onClick={() => setGuideTopic(topic.label)} key={topic.label}>
-                            <span>{topic.emoji}</span>
-                            {topic.label}
-                          </button>
-                        ))}
-                      </div>
-                      <input maxLength={60} value={guideTopic} onChange={(event) => setGuideTopic(event.target.value)} placeholder="예: 우주 자전거" />
-                    </label>
-                    <button className="button secondary full child-primary-action" disabled={guideTopic.trim().length < 2} onClick={requestAiGuide}>
-                      <span aria-hidden="true">🪄</span>단계 가이드 만들기
-                    </button>
-                  </div>
-                )}
               </div>
             )}
             {!grimiCollapsed && (
@@ -2870,7 +2715,7 @@ export function DrawingStudio() {
                 </section>
               </div>
             )}
-            {!lesson && !aiGuide && !documentState.ops.length && !shapeStartPoint && (
+            {!lesson && !documentState.ops.length && !shapeStartPoint && (
               <div className="canvas-start-hint" role="status">
                 ✏️ 하얀 종이에 그어 봐!
               </div>

@@ -664,7 +664,6 @@ async function main() {
             closeReachable: close ? window.__wiggle.reachable(close) : null,
             exitReachable: exit ? window.__wiggle.reachable(exit) : null,
             errorText: panel.querySelector('.error-box')?.textContent?.slice(0, 60) ?? '',
-            guideRequestVisible: Boolean(panel.querySelector('.guide-request')) && window.__wiggle.visible(panel.querySelector('.guide-request')),
           };
         })()`);
         check(!grimi.error, `${viewport.name} 몽그리 패널 열림`, grimi.error);

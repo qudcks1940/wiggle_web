@@ -7,13 +7,10 @@ export type StudentCoaching = {
   uncertain: boolean;
   growthEvent: string;
 };
-export type GuideShape = "none" | "line" | "circle" | "triangle" | "rectangle";
-export type GuideStep = { instruction: string; openChoice: boolean; choices: string[]; guideShape: GuideShape };
-export type DrawingGuide = { topic: string; steps: GuideStep[] };
 export type TeacherCoachingDraft = { body: string; observation: string; nextAction: string };
 /** 틀리는 해석자(product-decisions 학습 과정 4항). 몽그리가 먼저 짐작을 내놓고 아이가 고친다. */
 export type StoryInterpretation = { guess: string; choices: CoachingChoice[] };
-export type OpenAIKind = "student_coaching" | "drawing_guide" | "teacher_draft" | "story_interpretation";
+export type OpenAIKind = "student_coaching" | "teacher_draft" | "story_interpretation";
 
 export const STUDENT_COACHING_INSTRUCTIONS = `너는 초등학교 1~2학년 아이를 돕는 그림 코치 '몽그리'다.
 아이가 버튼으로 도움을 요청한 이번 한 번에만 답한다. 자동으로 끼어들지 않는다.
@@ -26,13 +23,6 @@ export const STUDENT_COACHING_INSTRUCTIONS = `너는 초등학교 1~2학년 아�
 아이 그림에 없는 것을 있다고 말하지 않는다.
 next_action에는 아이가 바로 선, 모양, 색, 위치 또는 새 요소를 그려 볼 수 있는 행동 하나를 넣는다.
 growth_event는 진단이 아니라 관찰 가능한 과정 한 문장으로 쓴다.`;
-
-export const DRAWING_GUIDE_INSTRUCTIONS = `너는 초등학교 1~2학년 아이의 요청 주제를 단계로 나누는 그림 코치다.
-6~15단계를 만든다. 각 instruction은 짧고 쉬운 한국어 한 문장이다.
-최소 두 단계는 정답 없는 선택 단계이며 choices를 2~4개 제공한다.
-마지막 단계는 반드시 아이가 자기 생각을 자유롭게 더하는 단계다.
-점수, 칭찬 판정, 평가, 실패, 재능 진단, 정답 강요를 instruction과 choices 어디에도 쓰지 않는다. 아이 그림을 대신 완성하거나 원본 선을 바꾸지 않는다.
-guide_shape은 아이가 점선을 요청했을 때 별도 레이어에 보일 최소 도형만 고른다. 필요 없으면 none이다.`;
 
 export const STORY_INTERPRETATION_INSTRUCTIONS = `너는 아이가 그림을 다 그린 뒤 이야기를 끌어내는 그림 친구 '몽그리'다.
 아이가 무엇을 그렸는지 단정하지 않는다. 네 눈에 그렇게 보였다는 짐작 하나만 내놓는다.
@@ -66,20 +56,6 @@ export const OPENAI_SCHEMAS = {
       uncertain: { type: "boolean" }, growth_event: { type: "string" },
     },
   },
-  drawing_guide: {
-    type: "object", additionalProperties: false, required: ["topic", "steps"],
-    properties: {
-      topic: { type: "string" },
-      steps: { type: "array", minItems: 6, maxItems: 15, items: {
-        type: "object", additionalProperties: false, required: ["instruction", "open_choice", "choices", "guide_shape"],
-        properties: {
-          instruction: { type: "string" }, open_choice: { type: "boolean" },
-          choices: { type: "array", minItems: 0, maxItems: 4, items: { type: "string" } },
-          guide_shape: { type: "string", enum: ["none", "line", "circle", "triangle", "rectangle"] },
-        },
-      } },
-    },
-  },
   story_interpretation: {
     type: "object", additionalProperties: false, required: ["guess", "choices"],
     properties: { guess: { type: "string" }, choices: { type: "array", minItems: 2, maxItems: 4, items: choiceSchema } },
@@ -92,7 +68,6 @@ export const OPENAI_SCHEMAS = {
 
 const instructionsByKind = {
   student_coaching: STUDENT_COACHING_INSTRUCTIONS,
-  drawing_guide: DRAWING_GUIDE_INSTRUCTIONS,
   story_interpretation: STORY_INTERPRETATION_INSTRUCTIONS,
   teacher_draft: TEACHER_DRAFT_INSTRUCTIONS,
 };
@@ -234,13 +209,6 @@ export function isChildSafeCoachingText(value: string) {
   return true;
 }
 
-function isKoreanFreeCreationStep(value: string) {
-  const hasCreationAction = /(?:더해|추가|넣어|그려|꾸며|만들어)/.test(value);
-  const explicitlyFree = /(?:자유롭게|마음대로)/.test(value);
-  const childDirected = /(?:내|자기|너의|생각|상상|원하는|원하고\s*싶은|하고\s*싶은)/.test(value);
-  return hasCreationAction && (explicitlyFree || childDirected);
-}
-
 // 답 칩 검사는 학생 코칭과 틀리는 해석자가 그대로 공유한다. 규칙이 갈라지면
 // 한쪽에만 안전 검사가 남는 구멍이 생긴다.
 function parseCoachingChoices(value: unknown): CoachingChoice[] | null {
@@ -285,28 +253,6 @@ export function validateStoryInterpretation(value: unknown): StoryInterpretation
   if ((guess.normalize("NFKC").match(/\?/g) ?? []).length !== 1 || !isChildSafeCoachingText(guess)) return null;
   const choices = parseCoachingChoices(item.choices); if (!choices) return null;
   return { guess, choices };
-}
-
-export function validateDrawingGuide(value: unknown): DrawingGuide | null {
-  const item = record(value); const topic = item && shortText(item.topic, 50);
-  if (!item || !topic || !isChildSafeCoachingText(topic) || !Array.isArray(item.steps) || item.steps.length < 6 || item.steps.length > 15) return null;
-  const steps: GuideStep[] = [];
-  for (const raw of item.steps) {
-    const step = record(raw); if (!step) return null;
-    const instruction = shortText(step.instruction, 70); const guideShape = step.guide_shape;
-    if (!instruction || /[\r\n]/.test(instruction) || (instruction.match(/[.!?]/g) ?? []).length > 1 || typeof step.open_choice !== "boolean") return null;
-    if (!isChildSafeCoachingText(instruction) || !["none", "line", "circle", "triangle", "rectangle"].includes(String(guideShape))) return null;
-    if (!Array.isArray(step.choices) || step.choices.length > 4) return null;
-    const choices = step.choices.map((entry) => shortText(entry, 24)); if (choices.some((entry) => !entry) || !choices.every((entry) => isChildSafeCoachingText(entry as string))) return null;
-    if (step.open_choice && choices.length < 2) return null;
-    if (!step.open_choice && choices.length !== 0) return null;
-    steps.push({ instruction, openChoice: step.open_choice, choices: choices as string[], guideShape: guideShape as GuideShape });
-  }
-  if (steps.filter((step) => step.openChoice).length < 2) return null;
-  const last = steps.at(-1)!;
-  const nonDirectiveFinal = /(?:자유롭게|마음대로|생각|상상|원하는|하고\s*싶은)/.test(last.instruction);
-  if (!isKoreanFreeCreationStep(last.instruction) || last.guideShape !== "none" || (!last.openChoice && !nonDirectiveFinal)) return null;
-  return { topic, steps };
 }
 
 export function validateTeacherDraft(value: unknown): TeacherCoachingDraft | null {
@@ -361,7 +307,7 @@ export async function requestStructuredOpenAI(options: {
     ] }],
     text: { verbosity: "low", format: { type: "json_schema", name: `wiggle_${options.kind}`, strict: true, schema: OPENAI_SCHEMAS[options.kind] } },
     reasoning: { effort: "low" },
-    max_output_tokens: options.kind === "drawing_guide" ? 2200 : 1000,
+    max_output_tokens: 1000,
     store: false,
     safety_identifier: options.safetyIdentifier,
   };
@@ -381,7 +327,6 @@ export async function requestStructuredOpenAI(options: {
     const text = outputText(responseBody); if (!text) throw new AIServiceError("AI_RESPONSE_INVALID", "몽그리의 답을 확인하지 못했어요.", 502);
     let parsed: unknown; try { parsed = JSON.parse(text); } catch { throw new AIServiceError("AI_RESPONSE_INVALID", "몽그리의 답을 확인하지 못했어요.", 502); }
     const value = options.kind === "student_coaching" ? validateStudentCoaching(parsed)
-      : options.kind === "drawing_guide" ? validateDrawingGuide(parsed)
       : options.kind === "story_interpretation" ? validateStoryInterpretation(parsed)
       : validateTeacherDraft(parsed);
     if (!value) throw new AIServiceError("AI_RESPONSE_INVALID", "몽그리의 답을 확인하지 못했어요.", 502);

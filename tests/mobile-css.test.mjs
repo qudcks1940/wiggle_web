@@ -21,7 +21,7 @@ test("mobile forms, actions and overlays honor iPhone zoom, touch and safe-area 
   assert.match(layout, /export const viewport: Viewport = \{ width: "device-width", initialScale: 1, viewportFit: "cover" \}/);
   assert.match(css, /input,textarea,select \{ font-size:16px; \}/);
   assert.match(css, /button \{ min-height:44px; touch-action:manipulation; \}/);
-  assert.match(css, /\.direct-answer input,\.guide-request input \{ font-size:16px; \}/);
+  assert.match(css, /\.direct-answer input \{ font-size:16px; \}/);
   assert.match(css, /\.entry-shell \{ min-height:100dvh; padding:[^}]*safe-area-inset-bottom/);
   assert.match(css, /\.entry-card>\.button\.primary\.full \{ position:sticky; bottom:calc\(8px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(css, /\.modal-backdrop \{ padding:[^}]*safe-area-inset-top[^}]*safe-area-inset-bottom/);

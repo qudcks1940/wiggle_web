@@ -3,7 +3,7 @@ import { bindings } from "@/db/runtime";
 import { findOwnedCoachingEvent, recordCoachingAfter, recordCoachingBefore } from "@/lib/coaching-store";
 import { validateDrawDocument } from "@/lib/drawing-model";
 import { parseImageDataUrl } from "@/lib/image-data";
-import { AIServiceError, DrawingGuide, requestStructuredOpenAI, StoryInterpretation, StudentCoaching } from "@/lib/openai-coaching";
+import { AIServiceError, requestStructuredOpenAI, StoryInterpretation, StudentCoaching } from "@/lib/openai-coaching";
 import { cleanText, jsonError, noStoreJson, rateLimit, sameOrigin, sha256, studentFromRequest } from "@/lib/security";
 
 const MAX_BODY_CHARS = 5_200_000;
@@ -71,21 +71,21 @@ export async function POST(request: Request) {
     const eventId = cleanText(payload.eventId, 80);
     const event = await findOwnedCoachingEvent(db, eventId, artworkId, student.id);
     if (!event) return jsonError("이 도움 기록을 찾을 수 없어요.", 404);
-    if (event.responseKind === "guide") return noStoreJson({ error: "현재 그림을 과정에 남긴 뒤 가이드를 닫아 주세요.", code: "GUIDE_AFTER_REQUIRED" }, { status: 409 });
+    // 단계 가이드는 은퇴했다(2026-09-09). 남아 있는 옛 guide 이벤트는 아래 UPDATE가
+    // response_kind = 'question'으로 좁혀 두므로 그대로 통과하지 않는다.
     const dismissed = await db.prepare(`UPDATE coaching_event_details SET status = 'dismissed', updated_at = CURRENT_TIMESTAMP WHERE event_id = ? AND response_kind = 'question' AND status = 'open' AND EXISTS (SELECT 1 FROM coaching_events e JOIN artworks a ON a.id = e.artwork_id WHERE e.id = coaching_event_details.event_id AND a.student_id = ? AND a.id = ?)`).bind(eventId, student.id, artworkId).run();
     if (!dismissed.meta.changes) return noStoreJson({ error: "이미 처리한 도움 기록이에요.", code: "COACHING_ALREADY_HANDLED" }, { status: 409 });
     return noStoreJson({ ok: true });
   }
 
-  if (action === "answer" || action === "finishGuide") {
+  if (action === "answer") {
     if (!(await rateLimit(`ai-answer:${student.id}`, 30, 60))) return jsonError("잠깐 쉬었다가 다시 눌러 주세요.", 429);
     const eventId = cleanText(payload.eventId, 80); const answer = cleanText(payload.answer, 80); const newElements = stringList(payload.newElements, 4, 40);
     const document = validateDrawDocument(payload.document); const image = parseImageDataUrl(payload.imageDataUrl);
-    const outcome = cleanText(payload.outcome, 24);
-    if (!eventId || !document || !image || (action === "answer" && (!answer || !newElements)) || (action === "finishGuide" && !["completed", "free_exit"].includes(outcome))) return jsonError("그린 뒤 답과 그림을 다시 확인해 주세요.");
+    if (!eventId || !document || !image || !answer || !newElements) return jsonError("그린 뒤 답과 그림을 다시 확인해 주세요.");
     const result = await recordCoachingAfter({
       DB: db, ARTWORKS: bindings().ARTWORKS, studentId: student.id, artworkId, eventId,
-      kind: action === "answer" ? "question_answer" : outcome === "completed" ? "guide_completed" : "guide_free_exit",
+      kind: "question_answer",
       document, image, currentStep: Math.max(0, Math.min(30, Number(payload.currentStep) || 0)), answer,
       newElements: newElements ?? [],
     });
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
     }
   }
 
-  if (action !== "ask" && action !== "guide") return jsonError("지원하지 않는 몽그리 요청이에요.");
+  if (action !== "ask") return jsonError("지원하지 않는 몽그리 요청이에요.");
   const requestId = cleanText(payload.requestId, 80);
   if (!/^coaching_[a-zA-Z0-9_-]{12,70}$/.test(requestId)) return jsonError("몽그리 요청 번호를 확인해 주세요.");
   const existingRequest = await db.prepare(`SELECT e.artwork_id AS artworkId, a.student_id AS studentId FROM coaching_events e JOIN artworks a ON a.id = e.artwork_id WHERE e.id = ?`).bind(requestId).first<{ artworkId: string; studentId: string }>();
@@ -126,33 +126,25 @@ export async function POST(request: Request) {
   const expectedRevision = Number(payload.expectedRevision); const document = validateDrawDocument(payload.document); const image = parseImageDataUrl(payload.imageDataUrl);
   if (!Number.isInteger(expectedRevision) || expectedRevision !== artwork.revision) return noStoreJson({ error: "그림을 먼저 저장한 뒤 다시 불러 주세요.", code: "REVISION_CONFLICT", serverRevision: artwork.revision }, { status: 409 });
   if (!document || JSON.stringify(document).length > 1_250_000 || !image) return jsonError("현재 그림을 확인하지 못했어요.", 413);
-  const childChoice = cleanText(payload.childChoice, 80); const requestedTopic = cleanText(payload.requestedTopic, 60);
-  if (action === "guide" && requestedTopic.length < 2) return jsonError("그리고 싶은 것을 두 글자 이상 말해 주세요.");
+  const childChoice = cleanText(payload.childChoice, 80);
   const context = { artworkIntent: artwork.intent, artworkTopic: artwork.topic, childChoice, currentStep: artwork.currentStep, story: storyContext(artwork), recentEvents: await recentContext(artworkId) };
-  const prompt = action === "guide"
-    ? `아이의 요청 주제: ${requestedTopic}\n현재 작품 맥락(JSON): ${JSON.stringify(context)}\n단계별 가이드만 만들어 줘.`
-    : `현재 작품 맥락(JSON): ${JSON.stringify(context)}\n그림을 관찰하고, 아이가 이미 그린 것을 이어 가는 질문 하나와 실제 다음 그리기 행동을 제안해 줘.`;
+  const prompt = `현재 작품 맥락(JSON): ${JSON.stringify(context)}\n그림을 관찰하고, 아이가 이미 그린 것을 이어 가는 질문 하나와 실제 다음 그리기 행동을 제안해 줘.`;
   try {
     const result = await requestStructuredOpenAI({
-      kind: action === "guide" ? "drawing_guide" : "student_coaching",
+      kind: "student_coaching",
       prompt, imageDataUrl: String(payload.imageDataUrl), safetyIdentifier: await sha256(`wiggle-ai-safety-v1:${student.id}`),
     });
-    const coaching = action === "ask" ? result.value as StudentCoaching : null;
-    const guide = action === "guide" ? result.value as DrawingGuide : null;
-    const question = coaching?.question ?? `${guide!.topic}을 어떤 순서로 그려 볼까?`;
-    const hint = coaching?.nextAction ?? guide!.steps[0].instruction;
-    const choices = coaching?.choices ?? [];
-    const guideSteps = guide?.steps ?? [];
+    const coaching = result.value as StudentCoaching;
     const saved = await recordCoachingBefore({
       DB: db, ARTWORKS: bindings().ARTWORKS, studentId: student.id, artworkId, eventId: requestId, expectedRevision,
-      responseKind: action === "ask" ? "question" : "guide", document, image, question, hint, choices, guideSteps,
-      growthEvent: coaching?.growthEvent ?? null, currentStep: artwork.currentStep,
+      responseKind: "question", document, image, question: coaching.question, hint: coaching.nextAction, choices: coaching.choices,
+      growthEvent: coaching.growthEvent, currentStep: artwork.currentStep,
     });
     if (!saved.ok && saved.reason === "not_found") return jsonError("내 그림이 아니거나 찾을 수 없어요.", 404);
     if (!saved.ok && saved.reason === "already_recorded") return noStoreJson({ error: "이미 처리한 몽그리 요청이에요.", code: "COACHING_ALREADY_HANDLED" }, { status: 409 });
     if (!saved.ok && (saved.reason === "revision_conflict" || saved.reason === "artwork_complete")) return noStoreJson({ error: "그림이 바뀌었어요. 다시 불러 주세요.", code: "REVISION_CONFLICT", serverRevision: saved.serverRevision }, { status: 409 });
     if (!saved.ok) return noStoreJson({ error: "몽그리 과정을 저장하지 못했어요.", code: "COACHING_SAVE_FAILED" }, { status: 503 });
-    return noStoreJson({ eventId: saved.eventId, coaching, guide, meta: { model: result.model, schemaValid: result.schemaValid } }, { status: 201 });
+    return noStoreJson({ eventId: saved.eventId, coaching, meta: { model: result.model, schemaValid: result.schemaValid } }, { status: 201 });
   } catch (error) {
     return aiError(error);
   }

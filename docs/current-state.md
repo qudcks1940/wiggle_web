@@ -661,3 +661,18 @@ typecheck·lint(오류 0) 통과, `npm test` 324/325(실패 1은 Node 22.13에 `
 - 몽그리 패널의 빠른 주제 칩(우주·강아지·마법 숲·자전거)과 `단계 가이드 만들기`는 옛 자유 그리기 시절 잔재로 그대로 있다. 아크가 이미 회차별 힌트 세 개를 주므로 역할이 겹친다. 정리 여부는 미결정.
 - 틀리는 해석자 문안은 글로만 나온다. 글을 못 읽는 1학년에게 짐작을 어떻게 전달할지는 미결정(답 칩 이모지가 1차 채널).
 - 운영 실측은 하지 않았다. 저장 경로 중 소감의 `storyText` 값만 바뀌므로 배포 후 완성 저장을 한 번 확인하는 편이 좋다.
+
+## 2026-09-09 단계 가이드·빠른 주제 칩 은퇴 (`claude/mongri-role-20260909`)
+
+사용자 지시로 몽그리의 `단계 가이드 만들기`와 빠른 주제 칩(우주·강아지·마법 숲·자전거)을 걷어냈다. 결정은 `docs/product-decisions.md` 학습 과정 4-1항.
+
+**제거한 것.** `drawing_guide` 종류 전체 — 지시문·JSON 스키마·`validateDrawingGuide`·`isKoreanFreeCreationStep`·`DrawingGuide`/`GuideStep` 타입. API의 `guide`·`finishGuide` 액션과 `requestedTopic`. 스튜디오의 `aiGuide`·`aiGuideStep`·`guideTopic` 상태, `requestAiGuide`·`chooseGuideStep`·`finishGuide`, 가이드 진행 화면과 주제 입력 화면. 죽은 CSS(`.ai-guide`·`.guide-request`·`.quick-topic-row`).
+
+**남긴 것과 이유.**
+- 점선 시범(`guideTraces`·`renderGuideFrame`·`guidePhase`)은 수업 카탈로그가 몰던 별개 기능이고 제품 결정 5~7항이 보조 수단으로 유지하기로 한 것이라 남겼다. 다만 `LESSONS`가 비어 있어 지금은 도달할 수 없는 상태다.
+- `coaching_event_details.guide_steps_json` 열과 `response_kind`의 `guide` 값은 이미 저장된 옛 기록이 있어 지우지 않았다. 새 행은 항상 빈 배열과 `question`이다.
+- `childChoice`·`CHOICE_DRAWING_SETUP`은 수업 단계 선택지도 쓰므로 남겼다.
+
+**옛 기록 안전장치.** `recordCoachingAfter`의 종류가 `question_answer` 하나로 줄었지만 `response_kind`·`status` 조건은 그대로 좁혀서 건다. 남아 있는 `guide` 행을 질문-답 경로가 집어 상태를 바꾸지 않는다는 것을 `tests/mvp2-storage.test.mjs`가 실제 DB로 검증한다. 옛 guide 이벤트를 닫으려던 `GUIDE_AFTER_REQUIRED` 분기는 제거했다 — 이제 만들 수 없는 상태를 요구하는 안내였고, 삭제 UPDATE는 원래부터 `question`으로 좁혀져 있다.
+
+**검증.** typecheck·lint(오류 0), `npm test` 308/309(실패 1은 Node 22.13 `registerHooks` 환경 문제로 무관), `browser-check` 세 뷰포트 전부 통과. 검증 서버는 빈 포트를 찾아 띄우고 LISTEN 프로세스의 cwd가 이 워크트리인지 확인한 뒤 돌렸다.

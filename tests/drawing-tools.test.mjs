@@ -205,7 +205,7 @@ test("pointer cancel discards shapes and pending fills instead of committing the
 });
 
 test("an empty free canvas tells a first-time child what to do", () => {
-  assert.match(studio, /!lesson && !aiGuide && !documentState\.ops\.length/);
+  assert.match(studio, /!lesson && !documentState\.ops\.length/);
   assert.match(studio, /✏️ 하얀 종이에 그어 봐!/);
   assert.match(css, /\.guide-notice,\.canvas-start-hint \{[^}]*pointer-events:none/);
   // tool-options-open: 도형·글씨 옵션이 열리면 태블릿 세로에서 패널이 커지고 캔버스가

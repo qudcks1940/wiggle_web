@@ -6,9 +6,10 @@ import { Logo } from "./Logo";
 import { QrCode } from "./QrCode";
 import { VoiceWhisperButton } from "./VoiceWhisper";
 import { useModalDialog } from "./useModalDialog";
-import { CURRICULUM_STAGES, FREE_ACTIVITY_KEY, lessonsForStage } from "@/lib/lesson-content";
 
-type Classroom = { id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; currentActivityKey: string; currentActivityLabel: string; studentCount: number };
+type ClassroomArc = { arcId: string; title: string; episodeId: string; episodeTitle: string; episodeIndex: number | null; episodeCount: number };
+type ArcOption = { arcId: string; title: string; episodes: Array<{ episodeId: string; title: string }> };
+type Classroom = { id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; currentActivityKey: string; currentActivityLabel: string; arc: ClassroomArc | null; studentCount: number };
 type Student = { id: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null; claimedAt: string | null; createdAt: string; lastActivityAt: string; artworkId: string | null; completedArtworkId: string | null; artworkTitle: string | null; status: string | null; currentStep: number | null; revision: number | null; thumbnail: string | null; artworkUpdatedAt: string | null; artworkCount: number; drawingArtworkCount: number; completedArtworkCount: number; duplicateNickname: boolean };
 type ArchivedStudent = { id: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null; lastActivityAt: string; archivedAt: string; artworkCount: number };
 function RosterField({ value, onChange, label }: { value: string; onChange: (next: string) => void; label: string }) {
@@ -59,14 +60,62 @@ function ClassroomCard({ item, deleting, onDelete }: { item: Classroom; deleting
 async function teacherPost<T = Record<string, unknown>>(payload: Record<string, unknown>): Promise<T> { const response = await fetch("/api/teacher", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" }); const data = await response.json() as T & { error?: string }; if (!response.ok) throw new Error(data.error ?? "요청을 처리하지 못했어요."); return data; }
 async function teacherAiPost<T = Record<string, unknown>>(payload: Record<string, unknown>): Promise<T> { const response = await fetch("/api/ai/teacher-draft", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" }); const data = await response.json() as T & { error?: string }; if (!response.ok) throw new Error(data.error ?? "AI 코칭 초안을 처리하지 못했어요."); return data; }
 
-function TeacherActivitySelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  return <select value={value} onChange={(event) => onChange(event.target.value)}>
-    {CURRICULUM_STAGES.filter((stage) => stage.stage <= 3).map((stage) => <optgroup label={`${stage.stage}단계 · ${stage.title}`} key={stage.stage}>
-      {lessonsForStage(stage.stage as 1 | 2 | 3).map((lesson) => <option value={`lesson:${lesson.slug}`} key={lesson.slug}>{lesson.order}. {lesson.title}</option>)}
-    </optgroup>)}
-    <optgroup label="4단계 · 자유 창작"><option value={FREE_ACTIVITY_KEY}>AI 가이드 자유 창작</option></optgroup>
-  </select>;
+/**
+ * 수업 조종석 (FR-34, EXPERIENCE.md): 학급 화면 맨 위 — 교사의 실제 순서(회차 열기→QR→입장)와
+ * 화면 순서를 일치시킨다. 학급 포인터(아크·현재 회차)만 보여준다.
+ * 아이별 진행·집계·정렬은 여기에 두지 않는다(AD-15).
+ */
+function ArcCockpit({ room, onOpenEpisode }: { room: Classroom; onOpenEpisode: (arcId: string, episodeId: string) => void }) {
+  const [arcs, setArcs] = useState<ArcOption[]>([]);
+  const [selectedArc, setSelectedArc] = useState<string>(room.arc?.arcId ?? "");
+  useEffect(() => {
+    let alive = true;
+    teacherPost<{ arcs: ArcOption[] }>({ action: "listArcs", classroomId: room.id })
+      .then((data) => { if (alive) setArcs(data.arcs); })
+      .catch(() => { /* 목록 실패는 조종석만 비운다 — 수업 흐름을 막지 않는다(FR-33) */ });
+    return () => { alive = false; };
+  }, [room.id]);
+  const arc = arcs.find((entry) => entry.arcId === (selectedArc || room.arc?.arcId));
+  const currentIndex = room.arc && arc && arc.arcId === room.arc.arcId
+    ? arc.episodes.findIndex((episode) => episode.episodeId === room.arc?.episodeId)
+    : -1;
+  const nextEpisode = arc ? arc.episodes[currentIndex + 1] : undefined;
+  return (
+    <section className="arc-cockpit" aria-label="수업 조종석">
+      <div className="arc-cockpit-now">
+        <small>오늘의 이야기</small>
+        {room.arc
+          ? <b>{room.arc.title} · {room.arc.episodeIndex}회차 「{room.arc.episodeTitle}」</b>
+          : <b>아직 여는 회차가 없어요 — 아이들은 자유 그리기로 시작해요</b>}
+      </div>
+      <div className="arc-cockpit-actions">
+        <label>이야기 고르기
+          <select value={selectedArc || room.arc?.arcId || ""} onChange={(event) => setSelectedArc(event.target.value)}>
+            <option value="" disabled>이야기를 골라 주세요</option>
+            {arcs.map((entry) => <option value={entry.arcId} key={entry.arcId}>{entry.title} ({entry.episodes.length}회차)</option>)}
+          </select>
+        </label>
+        {arc && nextEpisode && (
+          <button className="button primary" onClick={() => onOpenEpisode(arc.arcId, nextEpisode.episodeId)}>
+            {currentIndex < 0 ? `1회차 열기 「${nextEpisode.title}」` : `다음 회차 열기 「${nextEpisode.title}」`}
+          </button>
+        )}
+        {arc && !nextEpisode && currentIndex >= 0 && <span className="arc-cockpit-done">이 이야기의 회차를 모두 열었어요 🎉</span>}
+        {arc && currentIndex >= 0 && (
+          <details className="arc-cockpit-jump">
+            <summary>다른 회차 다시 열기</summary>
+            {arc.episodes.map((episode, index) => (
+              <button key={episode.episodeId} className="button ghost" onClick={() => onOpenEpisode(arc.arcId, episode.episodeId)}>
+                {index + 1}회차 「{episode.title}」{room.arc?.episodeId === episode.episodeId ? " · 지금" : ""}
+              </button>
+            ))}
+          </details>
+        )}
+      </div>
+    </section>
+  );
 }
+
 
 function TeacherHistoryDrawer({ student, artworks, loading, error, hasMore, onMore }: { student: Student | null; artworks: TeacherArtworkHistory[]; loading: boolean; error: string; hasMore: boolean; onMore: () => void }) {
   const [selectedArtworkId, setSelectedArtworkId] = useState("");
@@ -195,7 +244,7 @@ export function TeacherApp({ classroomId = "" }: { classroomId?: string }) {
     finally { setRosterBusy(false); }
   }
   async function deleteClassroom(item: Classroom) {
-  const confirmed = confirm(`${item.displayName} 학급(학생 ${item.studentCount}명)을 삭제할까요?\n\n목록에서 삭제되고 학생 입장과 기존 로그인, 가족 공유가 즉시 종료됩니다. 내부 데이터는 복구를 위해 안전하게 보관됩니다.`);
+  const confirmed = confirm(`${item.displayName} 학급(학생 ${item.studentCount}명)을 삭제할까요?\n\n되돌릴 수 없어요. 학생 입장과 기존 로그인, 가족 공유가 즉시 끝나고 이 학급 아이들은 자기 그림과 동화책을 다시 열 수 없어요.`);
     if (!confirmed) return;
     setDeletingClassroom(item.id); setError("");
     try { await teacherPost({ action: "deleteClassroom", classroomId: item.id }); await load(); }
@@ -306,8 +355,9 @@ export function TeacherApp({ classroomId = "" }: { classroomId?: string }) {
   if (!classroomData) return <main className="teacher-shell"><div className="loading-card">{error || "학급을 불러오는 중…"}</div></main>;
   const room = classroomData.classroom;
   return <main className="teacher-room"><header className="teacher-header"><Logo /><a className="small-button" href="/teacher">← 학급 목록</a><div className="room-heading"><b>{room.displayName}</b><span>{room.currentActivity}</span></div><button className="subscription-pill" disabled title="결제 제공자와 가격이 정해진 뒤 연결됩니다.">구독 연결 전</button><div className={room.admissionOpen ? "live-pill" : "closed-pill"}>{room.admissionOpen ? "● 입장 열림" : "입장 닫힘"}</div></header>
-    <nav className="teacher-primary-menu" aria-label="교사 수업 메뉴"><button type="button" onClick={() => document.querySelector(".student-monitor")?.scrollIntoView({ behavior: "smooth" })}><span aria-hidden="true">✏️</span><b>진행 중인 그림</b><small>지금 그리는 학생을 봐요</small></button><button type="button" onClick={() => document.querySelector(".student-grid")?.scrollIntoView({ behavior: "smooth" })}><span aria-hidden="true">🖼️</span><b>학생 그림</b><small>작품을 눌러 자세히 봐요</small></button><a href={`/teacher/class/${room.id}/books`}><span aria-hidden="true">📚</span><b>완성 그림책</b><small>책을 넘겨 보고 PDF로 저장해요</small></a><button type="button" onClick={() => document.querySelector(".control-stack select")?.scrollIntoView({ behavior: "smooth", block: "center" })}><span aria-hidden="true">🎨</span><b>활동 고르기</b><small>오늘 활동을 바꿔요</small></button></nav>
-    <section className="room-controls"><div className="qr-panel"><QrCode value={joinUrl} label={`${room.displayName} 입장 QR`} variant="teacher" /><div><small>수업 코드</small><strong>{room.classCode}</strong><div className="qr-panel-actions"><button ref={qrOpenButtonRef} onClick={() => setQrExpanded(true)}>QR 크게 보기</button><button onClick={() => navigator.clipboard?.writeText(joinUrl)}>입장 주소 복사</button></div></div></div><div className="control-stack"><label>오늘의 활동<TeacherActivitySelect value={room.currentActivityKey} onChange={(activity) => void classAction("setActivity", { activity })} /></label><div><button className="button secondary" onClick={() => void classAction("toggleAdmission", { open: !room.admissionOpen })}>{room.admissionOpen ? "입장 닫기" : "입장 열기"}</button><button className="button ghost" onClick={() => confirm("기존 코드와 QR은 더 이상 쓸 수 없어요. 바꿀까요?") && void classAction("rotateCode")}>코드 바꾸기</button></div></div><form className="message-compose" onSubmit={sendMessage}><label>짧은 도움말<select value={targetStudent} onChange={(event) => setTargetStudent(event.target.value)}><option value="">우리 반 모두</option>{classroomData.students.map((student) => <option value={student.id} key={student.id}>{student.animal} {student.nickname}</option>)}</select></label><textarea maxLength={180} value={messageBody} onChange={(event) => setMessageBody(event.target.value)} placeholder="예: 다음에는 배경을 하나 더 그려볼까?" /><button className="button primary">보내기</button></form></section>
+    <nav className="teacher-primary-menu" aria-label="교사 수업 메뉴"><button type="button" onClick={() => document.querySelector(".student-monitor")?.scrollIntoView({ behavior: "smooth" })}><span aria-hidden="true">✏️</span><b>진행 중인 그림</b><small>지금 그리는 학생을 봐요</small></button><button type="button" onClick={() => document.querySelector(".student-grid")?.scrollIntoView({ behavior: "smooth" })}><span aria-hidden="true">🖼️</span><b>학생 그림</b><small>작품을 눌러 자세히 봐요</small></button><a href={`/teacher/class/${room.id}/books`}><span aria-hidden="true">📚</span><b>완성 그림책</b><small>책을 넘겨 보고 PDF로 저장해요</small></a><button type="button" onClick={() => document.querySelector(".arc-cockpit")?.scrollIntoView({ behavior: "smooth", block: "center" })}><span aria-hidden="true">🎨</span><b>이야기 고르기</b><small>오늘 회차를 열어요</small></button></nav>
+    <ArcCockpit room={room} onOpenEpisode={(arcId, episodeId) => void classAction("setEpisode", { arcId, episodeId })} />
+    <section className="room-controls"><div className="qr-panel"><QrCode value={joinUrl} label={`${room.displayName} 입장 QR`} variant="teacher" /><div><small>수업 코드</small><strong>{room.classCode}</strong><div className="qr-panel-actions"><button ref={qrOpenButtonRef} onClick={() => setQrExpanded(true)}>QR 크게 보기</button><button onClick={() => navigator.clipboard?.writeText(joinUrl)}>입장 주소 복사</button></div></div></div><div className="control-stack"><div><button className="button secondary" onClick={() => void classAction("toggleAdmission", { open: !room.admissionOpen })}>{room.admissionOpen ? "입장 닫기" : "입장 열기"}</button><button className="button ghost" onClick={() => confirm("기존 코드와 QR은 더 이상 쓸 수 없어요. 바꿀까요?") && void classAction("rotateCode")}>코드 바꾸기</button></div></div><form className="message-compose" onSubmit={sendMessage}><label>짧은 도움말<select value={targetStudent} onChange={(event) => setTargetStudent(event.target.value)}><option value="">우리 반 모두</option>{classroomData.students.map((student) => <option value={student.id} key={student.id}>{student.animal} {student.nickname}</option>)}</select></label><textarea maxLength={180} value={messageBody} onChange={(event) => setMessageBody(event.target.value)} placeholder="예: 다음에는 배경을 하나 더 그려볼까?" /><button className="button primary">보내기</button></form></section>
     {error && <p className="error-box room-error">{error}</p>}{familyShareUrl && <div className="family-link-ready" role="status"><b>보호자 동의 확인 기록과 함께 10분짜리 1회용 입장 링크를 만들었어요.</b><span>이 초대는 처음 열린 뒤 다시 쓸 수 없어요.</span><input readOnly value={familyShareUrl} aria-label="새 가족 공유 1회용 입장 링크" /><button onClick={() => navigator.clipboard?.writeText(familyShareUrl)}>다시 복사</button><button onClick={() => setFamilyShareUrl("")}>닫기</button></div>}<section className="student-monitor"><div className="section-title"><div><h1>학생 진행</h1><p>점수나 순위 없이 별명 순서로 보여요.</p></div><span>6초마다 새로 확인 · {classroomData.students.length}명</span></div><div className="student-grid">{classroomData.students.map((student) => <article className="student-tile" key={student.id}><button className="student-thumb" onClick={() => { openPreview(student); void classAction("viewStudent", { studentId: student.id }); }}>{student.thumbnail ? <img src={student.thumbnail} alt={`${student.nickname} 그림 썸네일`} /> : <span>{student.animal}</span>}<i>눌러서 자세히 보기</i></button><div className="student-info"><div>{student.seatNumber !== null && <span className="student-roster-name"><b>{student.seatNumber}번</b> {student.realName}</span>}<b>{student.claimedAt ? `${student.animal} ${student.nickname}` : "아직 안 들어옴"}</b><small>{student.artworkTitle ?? "아직 시작 전"}</small></div><span className={student.status === "complete" ? "status-complete" : "status-drawing"}>{student.status === "complete" ? "완성" : student.artworkId ? "그리는 중" : "대기"}</span></div><StudentProfileFacts student={student} /><button onClick={() => { setTargetStudent(student.id); document.querySelector<HTMLTextAreaElement>(".message-compose textarea")?.focus(); }}>이 학생에게 메시지</button><button className="ai-draft-button" disabled={!student.artworkId || !student.thumbnail || draftLoading} onClick={() => requestTeacherDraft(student)}>✨ AI 코칭 초안</button><button disabled={!student.completedArtworkId} onClick={() => openPreview(student, true)}>🔒 가족 링크 준비</button><button onClick={() => setEditingStudent(student.id)}>✏️ 번호·이름 고치기</button><button className="student-delete-button" disabled={deletingStudent === student.id} onClick={() => void archiveStudent(student)}>{deletingStudent === student.id ? "삭제 중…" : "학생 삭제"}</button></article>)}</div>{editingStudent && (() => {
       const target = classroomData.students.find((item) => item.id === editingStudent);
       if (!target) return null;

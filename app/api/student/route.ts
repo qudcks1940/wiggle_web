@@ -1,6 +1,7 @@
 import { bindings, ensureSchema } from "@/db/runtime";
 import { cleanText, clearRateLimit, clientIp, deriveSecret, id, isLocalDemoRequest, jsonError, noStoreJson, normalizePicturePassword, picturePasswordLength, randomToken, rateLimit, sameOrigin, sha256, studentFromRequest, verifySecret } from "@/lib/security";
 import { activityLabel, normalizeActivityKey } from "@/lib/lesson-content";
+import { resolveTodayEpisode } from "@/lib/arc-session";
 import { ensureLocalStorybookStudent } from "@/lib/dev-only/demo-seed";
 
 type RecoveredStudent = { id: string; nickname: string; animal: string; classroomName: string; pictureHash: string; pictureSalt: string };
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
   const now = new Date().toISOString();
   const [artworkRows, classroom, latestUnfinishedArtwork, artworkTotalRow, messages, teacherView] = await Promise.all([
     db.prepare(`SELECT id, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, revision, CASE WHEN thumbnail_key IS NOT NULL OR final_image_key IS NOT NULL THEN 1 ELSE 0 END AS hasImage, updated_at AS updatedAt, completed_at AS completedAt FROM artworks WHERE student_id = ? ORDER BY updated_at DESC, id DESC LIMIT ? OFFSET ?`).bind(student.id, artworkPageSize + 1, artworkOffset).all(),
-    db.prepare(`SELECT current_activity AS currentActivity FROM classrooms WHERE id = ?`).bind(student.classroomId).first<{ currentActivity: string }>(),
+    db.prepare(`SELECT current_activity AS currentActivity, current_arc_id AS currentArcId, current_episode_id AS currentEpisodeId FROM classrooms WHERE id = ?`).bind(student.classroomId).first<{ currentActivity: string; currentArcId: string | null; currentEpisodeId: string | null }>(),
     db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND status <> 'complete' ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id).first(),
     db.prepare(`SELECT COUNT(*) AS count FROM artworks WHERE student_id = ?`).bind(student.id).first<{ count: number }>(),
     db.prepare(`SELECT id, body, createdAt, audience, seenAt FROM (SELECT m.id, m.body, m.created_at AS createdAt, CASE WHEN m.student_id IS NULL THEN 'all' ELSE 'student' END AS audience, r.seen_at AS seenAt FROM teacher_messages m LEFT JOIN message_receipts r ON r.message_id = m.id AND r.student_id = ? WHERE m.classroom_id = ? AND (m.student_id IS NULL OR m.student_id = ?) ORDER BY m.created_at DESC, m.id DESC LIMIT 50) recent ORDER BY createdAt ASC, id ASC`).bind(student.id, student.classroomId, student.id).all<{ id: string; body: string; createdAt: string; audience: string; seenAt: string | null }>(),
@@ -60,13 +61,19 @@ export async function GET(request: Request) {
   ]);
   const artworks = artworkRows.results.slice(0, artworkPageSize);
   const currentActivityKey = normalizeActivityKey(classroom?.currentActivity);
-  const currentLessonSlug = currentActivityKey.startsWith("lesson:") ? currentActivityKey.slice(7) : null;
-  const currentActivityArtwork = currentLessonSlug
-    ? await db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND lesson_slug = ? ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id, currentLessonSlug).first()
-    : await db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND learning_mode = 'free' ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id).first();
+  // 레슨 카탈로그 은퇴(Story 2.3) — 활동은 free 하나이므로 최근 자유 그림만 조회한다.
+  // 아크 회차 작품은 todayEpisodeArtwork가 따로 나른다(회차 귀속 조회, AD-10).
+  const currentActivityArtwork = await db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND learning_mode = 'free' AND arc_id IS NULL ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id).first();
   const artworkTotal = Number(artworkTotalRow?.count ?? 0);
   const teacherViewing = Boolean(teacherView);
-  return noStoreJson({ student, artworks, artworkTotal, currentActivityArtwork, latestUnfinishedArtwork, artworkHasMore: artworkRows.results.length > artworkPageSize, artworkNextOffset: artworkOffset + artworks.length, messages: messages.results, teacherViewing, currentActivityKey, currentActivityLabel: activityLabel(currentActivityKey) });
+  // 접속 맥락 판별(AD-14): current_episode_id 유효성 하나만 보고, 요청당 한 번 계산해 응답에 싣는다.
+  // 포인터가 없으면 todayEpisode는 null — 화면은 자유 그리기로 흐른다(기본값은 교실, 대기 화면 금지).
+  const todayEpisode = resolveTodayEpisode(classroom?.currentArcId, classroom?.currentEpisodeId);
+  // 재입장 대응(Story 2.2): 이미 이 회차를 그렸다면 그 작품을 함께 내려 이어 열게 한다.
+  const todayEpisodeArtwork = todayEpisode
+    ? await db.prepare(`SELECT id, title, status, revision, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND arc_id = ? AND episode_id = ? ORDER BY CASE status WHEN 'complete' THEN 0 ELSE 1 END, created_at ASC LIMIT 1`).bind(student.id, todayEpisode.arcId, todayEpisode.episodeId).first()
+    : null;
+  return noStoreJson({ student, artworks, artworkTotal, todayEpisode, todayEpisodeArtwork, currentActivityArtwork, latestUnfinishedArtwork, artworkHasMore: artworkRows.results.length > artworkPageSize, artworkNextOffset: artworkOffset + artworks.length, messages: messages.results, teacherViewing, currentActivityKey, currentActivityLabel: activityLabel(currentActivityKey) });
 }
 
 async function studentPost(request: Request) {

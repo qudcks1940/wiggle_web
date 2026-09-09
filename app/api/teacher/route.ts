@@ -6,15 +6,25 @@ import { issueTeacherSession } from "@/lib/auth/teacher-session";
 import { cleanText, clientIp, id, isLocalDemoRequest, jsonError, noStoreJson, randomToken, rateLimit, requireTeacher, revokeTeacherSession, sameOrigin, sha256 } from "@/lib/security";
 import { prepareTeacherMessageInsert, validateTeacherMessageTarget } from "@/lib/teacher-messages";
 import { createFamilyShare, revokeFamilyShare } from "@/lib/family-sharing";
-import { activityLabel, DEFAULT_ACTIVITY_KEY, isActivityKey, normalizeActivityKey } from "@/lib/lesson-content";
+import { activityLabel, DEFAULT_ACTIVITY_KEY, normalizeActivityKey } from "@/lib/lesson-content";
 import { nicknameKeySql } from "@/lib/nickname";
-import { resetActiveStudentRecovery, rotateClassroomEntry, updateClassroomActivity, updateClassroomAdmission, upsertTeacherView } from "@/lib/teacher-classroom-mutations";
+import { resetActiveStudentRecovery, rotateClassroomEntry, setClassroomEpisode, updateClassroomAdmission, upsertTeacherView } from "@/lib/teacher-classroom-mutations";
+import { arcById, ARCS, episodeById, isValidArcEpisode } from "@/lib/arc-content";
 
-type ClassroomRow = { id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; studentCount: number; updatedAt: string };
+type ClassroomRow = { id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; currentArcId: string | null; currentEpisodeId: string | null; studentCount: number; updatedAt: string };
 
-function presentClassroom<T extends { currentActivity: string }>(classroom: T) {
+function presentClassroom<T extends { currentActivity: string; currentArcId?: string | null; currentEpisodeId?: string | null }>(classroom: T) {
   const currentActivityKey = normalizeActivityKey(classroom.currentActivity);
-  return { ...classroom, currentActivity: activityLabel(currentActivityKey), currentActivityKey, currentActivityLabel: activityLabel(currentActivityKey) };
+  // 수업 조종석(FR-34): 학급 포인터가 가리키는 아크·회차의 이름을 함께 내려준다.
+  // 아이별 쪽 목록·집계는 내려주지 않는다 — 응답 형상 금지(AD-15).
+  const arc = arcById(classroom.currentArcId);
+  const episode = episodeById(classroom.currentArcId, classroom.currentEpisodeId);
+  const episodeIndex = arc && episode ? arc.episodes.findIndex((entry) => entry.episodeId === episode.episodeId) + 1 : null;
+  return {
+    ...classroom,
+    currentActivity: activityLabel(currentActivityKey), currentActivityKey, currentActivityLabel: activityLabel(currentActivityKey),
+    arc: arc && episode ? { arcId: arc.arcId, title: arc.title, episodeId: episode.episodeId, episodeTitle: episode.title, episodeIndex, episodeCount: arc.episodes.length } : null,
+  };
 }
 
 function clientKey(request: Request, scope: string) {
@@ -46,7 +56,7 @@ async function uniqueClassCode() {
 }
 
 async function ownedClassroom(teacherId: string, classroomId: string) {
-  const classroom = await bindings().DB.prepare(`SELECT id, display_name AS displayName, class_code AS classCode, join_token AS joinToken, admission_open AS admissionOpen, current_activity AS currentActivity FROM classrooms WHERE id = ? AND teacher_id = ? AND active = 1`).bind(classroomId, teacherId).first<{ id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string }>();
+  const classroom = await bindings().DB.prepare(`SELECT id, display_name AS displayName, class_code AS classCode, join_token AS joinToken, admission_open AS admissionOpen, current_activity AS currentActivity, current_arc_id AS currentArcId, current_episode_id AS currentEpisodeId FROM classrooms WHERE id = ? AND teacher_id = ? AND active = 1`).bind(classroomId, teacherId).first<{ id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; currentArcId: string | null; currentEpisodeId: string | null }>();
   return classroom ? presentClassroom(classroom) : null;
 }
 
@@ -67,7 +77,7 @@ export async function GET(request: Request) {
   const classroomId = cleanText(url.searchParams.get("classroomId"), 40);
   const db = bindings().DB;
   if (!classroomId) {
-    const result = await db.prepare(`SELECT c.id, c.display_name AS displayName, c.class_code AS classCode, c.join_token AS joinToken, c.admission_open AS admissionOpen, c.current_activity AS currentActivity, c.updated_at AS updatedAt, COUNT(s.id) AS studentCount FROM classrooms c LEFT JOIN student_profiles s ON s.classroom_id = c.id AND s.archived_at IS NULL WHERE c.teacher_id = ? AND c.active = 1 GROUP BY c.id ORDER BY c.created_at DESC`).bind(teacher.id).all<ClassroomRow>();
+    const result = await db.prepare(`SELECT c.id, c.display_name AS displayName, c.class_code AS classCode, c.join_token AS joinToken, c.admission_open AS admissionOpen, c.current_activity AS currentActivity, c.current_arc_id AS currentArcId, c.current_episode_id AS currentEpisodeId, c.updated_at AS updatedAt, COUNT(s.id) AS studentCount FROM classrooms c LEFT JOIN student_profiles s ON s.classroom_id = c.id AND s.archived_at IS NULL WHERE c.teacher_id = ? AND c.active = 1 GROUP BY c.id ORDER BY c.created_at DESC`).bind(teacher.id).all<ClassroomRow>();
     return noStoreJson({ teacher, classrooms: result.results.map(presentClassroom) });
   }
 
@@ -260,12 +270,19 @@ export async function POST(request: Request) {
     if (!updated) return jsonError("활성 학급을 다시 확인해 주세요.", 403);
     return noStoreJson({ classCode, joinToken });
   }
-  if (action === "setActivity") {
-    const activity = cleanText(payload.activity, 50);
-    if (!isActivityKey(activity)) return jsonError("목록에 있는 활동을 골라 주세요.");
-    const updated = await updateClassroomActivity(db, { teacherId: teacher.id, classroomId, activity });
+  if (action === "setEpisode") {
+    // 오늘 회차 지정 (FR-2·FR-3). 알 수 없는 아크·회차는 400으로 거부하고
+    // 기본값으로 조용히 대체하지 않는다 — normalizeActivityKey의 폴백 사고를 반복하지 않는다.
+    const arcId = cleanText(payload.arcId, 60);
+    const episodeId = cleanText(payload.episodeId, 60);
+    if (!isValidArcEpisode(arcId, episodeId)) return jsonError("목록에 있는 아크와 회차를 골라 주세요.");
+    const updated = await setClassroomEpisode(db, { teacherId: teacher.id, classroomId, arcId, episodeId });
     if (!updated) return jsonError("활성 학급을 다시 확인해 주세요.", 403);
-    return noStoreJson({ activity });
+    return noStoreJson({ arcId, episodeId });
+  }
+  if (action === "listArcs") {
+    // 조종석의 아크·회차 선택지. 콘텐츠는 코드 상수(AD-8)이므로 그대로 내려준다.
+    return noStoreJson({ arcs: ARCS.map((arc) => ({ arcId: arc.arcId, title: arc.title, episodes: arc.episodes.map(({ episodeId, title }) => ({ episodeId, title })) })) });
   }
   if (action === "viewStudent") {
     const studentId = cleanText(payload.studentId, 40);

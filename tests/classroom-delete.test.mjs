@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { createTestDb } from "./harness/db.mjs";
-import { resetActiveStudentRecovery, rotateClassroomEntry, updateClassroomActivity, updateClassroomAdmission, upsertTeacherView } from "../lib/teacher-classroom-mutations.ts";
+import { resetActiveStudentRecovery, rotateClassroomEntry, setClassroomEpisode, updateClassroomAdmission, upsertTeacherView } from "../lib/teacher-classroom-mutations.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
 test("teacher classroom cards separate navigation from the accessible delete action", async () => {
   const [teacher, css] = await Promise.all([read("../app/components/TeacherApp.tsx"), read("../app/globals.css")]);
   const start = teacher.indexOf("function ClassroomCard");
-  const end = teacher.indexOf("function TeacherActivitySelect");
+  const end = teacher.indexOf("function ArcCockpit");
   const card = teacher.slice(start, end);
   const link = card.match(/<a className="class-card-link"[\s\S]*?<\/a>/)?.[0] ?? "";
 
@@ -21,8 +21,12 @@ test("teacher classroom cards separate navigation from the accessible delete act
   assert.match(card, /aria-label=\{`\$\{item\.displayName\} 학급 삭제`\}/);
   assert.match(teacher, /item\.displayName/);
   assert.match(teacher, /학생 \$\{item\.studentCount\}명/);
-  assert.match(teacher, /목록에서 삭제되고 학생 입장과 기존 로그인, 가족 공유가 즉시 종료됩니다/);
-  assert.match(teacher, /내부 데이터는 복구를 위해 안전하게 보관됩니다/);
+  // 학급 삭제는 restoreClassroom이 없어 교사 화면에서 되돌릴 수 없다.
+  // 아이가 자기 그림·동화책을 다시 열 수 없다는 사실을 문구가 숨기지 않아야 한다.
+  assert.match(teacher, /되돌릴 수 없어요/);
+  assert.match(teacher, /학생 입장과 기존 로그인, 가족 공유가 즉시 끝나고/);
+  assert.match(teacher, /자기 그림과 동화책을 다시 열 수 없어요/);
+  assert.doesNotMatch(teacher, /복구를 위해 안전하게 보관/);
   assert.match(teacher, /await teacherPost\(\{ action: "deleteClassroom", classroomId: item\.id \}\); await load\(\)/);
   assert.match(css, /\.class-delete-button \{[^}]*min-height:44px;[^}]*white-space:normal;[^}]*overflow-wrap:break-word;/);
 });
@@ -61,7 +65,7 @@ test("every post-delete teacher mutation rechecks active ownership at its SQL bo
   assert.equal((mutations.match(/\$\{activeStudent\}/g) ?? []).length, 2);
   assert.match(route, /updateClassroomAdmission[\s\S]*if \(!updated\) return jsonError\("활성 학급을 다시 확인해 주세요\.", 403\)/);
   assert.match(route, /rotateClassroomEntry[\s\S]*if \(!updated\) return jsonError\("활성 학급을 다시 확인해 주세요\.", 403\)/);
-  assert.match(route, /updateClassroomActivity[\s\S]*if \(!updated\) return jsonError\("활성 학급을 다시 확인해 주세요\.", 403\)/);
+  assert.match(route, /setClassroomEpisode[\s\S]*if \(!updated\) return jsonError\("활성 학급을 다시 확인해 주세요\.", 403\)/);
   assert.match(route, /upsertTeacherView[\s\S]*if \(!viewed\) return jsonError\("활성 학급의 학생을 다시 확인해 주세요\.", 403\)/);
   assert.match(route, /resetActiveStudentRecovery[\s\S]*if \(!reset\) return jsonError\("활성 학급의 학생을 다시 확인해 주세요\.", 403\)/);
   assert.match(familySharing, /revokeFamilyShare[\s\S]*c\.teacher_id = \? AND c\.active = 1/);
@@ -74,7 +78,7 @@ test("a committed delete prevents stale teacher actions from changing class stat
   context.after(() => handle.dispose());
   const DB = handle.DB;
   await DB.exec(`
-    CREATE TABLE classrooms (id TEXT PRIMARY KEY, teacher_id TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, admission_open INTEGER NOT NULL DEFAULT 1, class_code TEXT NOT NULL, join_token TEXT NOT NULL, current_activity TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE classrooms (id TEXT PRIMARY KEY, teacher_id TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, admission_open INTEGER NOT NULL DEFAULT 1, class_code TEXT NOT NULL, join_token TEXT NOT NULL, current_activity TEXT NOT NULL, current_arc_id TEXT, current_episode_id TEXT, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE student_profiles (id TEXT PRIMARY KEY, classroom_id TEXT NOT NULL, archived_at TEXT);
     CREATE TABLE teacher_views (teacher_id TEXT NOT NULL, classroom_id TEXT NOT NULL, student_id TEXT NOT NULL, expires_at TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(teacher_id, student_id));
     CREATE TABLE recovery_credentials (student_id TEXT PRIMARY KEY, personal_qr_hash TEXT NOT NULL, reset_at TEXT);
@@ -99,7 +103,7 @@ test("a committed delete prevents stale teacher actions from changing class stat
 
   assert.equal(await updateClassroomAdmission(DB, { teacherId: "teacher_a", classroomId: "class_a", open: true }), false);
   assert.equal(await rotateClassroomEntry(DB, { teacherId: "teacher_a", classroomId: "class_a", classCode: "9876", joinToken: "join_new" }), false);
-  assert.equal(await updateClassroomActivity(DB, { teacherId: "teacher_a", classroomId: "class_a", activity: "practice_line" }), false);
+  assert.equal(await setClassroomEpisode(DB, { teacherId: "teacher_a", classroomId: "class_a", arcId: "bicycle-story", episodeId: "bicycle-begin" }), false);
   assert.equal(await upsertTeacherView(DB, { teacherId: "teacher_a", classroomId: "class_a", studentId: "student_a", expiresAt: "2099-02-01T00:00:00.000Z" }), false);
   assert.equal(await resetActiveStudentRecovery(DB, { teacherId: "teacher_a", classroomId: "class_a", studentId: "student_a", personalQrHash: "qr_new" }), false);
 

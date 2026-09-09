@@ -19,7 +19,8 @@
 
 - 작업 저장소는 `C:\Users\user\Desktop\Project\wiggle_web`이다.
 - `C:\Users\user\Desktop\Project\wiggle_draw`는 읽기 전용 참고 자료다. 수정하거나 통째로 복사하지 않는다.
-- `wiggle_web`은 독립 Git 저장소이며 원격은 `https://github.com/yonghwan86/wiggle_web.git`이다.
+- `wiggle_web`의 정본 원격은 `https://github.com/wwwiggle/new_wiggle.git`(원격 이름 `wwwiggle`)이다 — 2026-09-07 사용자 확정.
+  `origin`(`yonghwan86/wiggle_web`)은 구 저장소로, 새 push 대상이 아니다.
 - `.openai/hosting.json`은 은퇴한 Sites 연결의 이력이다. 삭제하거나 프로젝트 ID를 바꾸지 않는다.
 - `.env.local`, API 키, 토큰, 쿠키 등 비밀값을 읽어 출력하거나 커밋하지 않는다.
 - 운영 자격증명(TURSO_*, R2_S3_*)은 `.env.local`에 `# vercel-only: KEY=value` 주석으로만 보관한다. 활성 줄로 두면 Next dev가 env를 핫리로드해 로컬 개발·테스트가 운영 DB·버킷에 그대로 쓴다(2026-08-19 실제 사고). 원격 검증이 필요할 때만 잠깐 활성화하고 즉시 되돌린다.
@@ -50,7 +51,11 @@ git diff --check
 git diff --check main...HEAD
 ```
 
-5. 모바일 UI는 최소 `320×568`, `390×844`, `844×390`에서 실제 브라우저로 확인한다 (`npm.cmd run check:browser`).
+5. 모바일 UI는 최소 `320×568`, `390×844`, `844×390`에서 실제 브라우저로 확인한다.
+   ⚠️ `browser-check.mjs`는 자기 서버를 띄우지 않는다 — 인자가 없으면 `localhost:3000`의
+   **아무 서버나** 검사한다(다른 워크트리 서버를 검사한 실사고, 2026-09-07).
+   반드시 현재 트리를 빌드해 띄우고 주소를 명시한다:
+   `npm run build && npx next start -p 3299 & node scripts/browser-check.mjs http://localhost:3299`
 6. 소스 문자열이나 CSS 정규식 검사만으로 UX 통과를 주장하지 않는다. computed size, 잘림, 스크롤, 초점, 연속 탭, 오류 복구를 실제 동작으로 검증한다.
 7. 작업 결과에는 변경 파일, 재현한 문제, 실행한 검증, 남은 위험을 사실대로 기록한다.
 8. Claude는 GitHub `main`에 직접 push하지 않는다. 기능 브랜치에 커밋·push까지 마친 뒤, 사용자가 실행할 `git push origin <브랜치>:main` 명령을 제시한다. `main` push가 곧 운영 배포다.

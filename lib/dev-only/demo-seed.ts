@@ -41,7 +41,7 @@ export async function ensureLocalTeacher(email: string, pin: string, displayName
   const classCode = String(1000 + Math.floor(Math.random() * 9000));
   await db.batch([
     db.prepare(`INSERT INTO teachers(id, email, display_name, credential_hash, credential_salt) VALUES (?, ?, ?, ?, ?)`).bind(teacherId, email, displayName, credentialHash, salt),
-    db.prepare(`INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token, admission_open, active, current_activity) VALUES (?, ?, ?, ?, ?, 1, 1, ?)`).bind(classroomId, teacherId, "로컬 연습반", classCode, randomToken(18), "자유롭게 그리기"),
+    db.prepare(`INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token, admission_open, active, current_activity, current_arc_id, current_episode_id) VALUES (?, ?, ?, ?, ?, 1, 1, 'free', 'bicycle-story', 'bicycle-begin')`).bind(classroomId, teacherId, "로컬 연습반", classCode, randomToken(18)),
   ]);
   return teacherId;
 }

@@ -26,12 +26,87 @@
   6. 5단계 실왕복 완료(2026-08-19): 사용자 OAuth 클라이언트(`wiggle` 프로젝트) 생성, 로컬 3001에서 구글 동의→콜백→교사 세션 실측. 원격 테스트 행은 사용자 승인 후 삭제(전 테이블 0행 복원).
   7. **6단계(Vercel 연결) 완료(2026-08-19)**: 사용자 repo import(프로젝트 `wiggle-web`)·env 9종·보호 해제·서울 리전(icn1), 공개 주소 `https://wiggleweb.vercel.app`(무료 서브도메인 — wiggle-web.vercel.app은 타인 선점). 운영 버그 3건을 실측으로 발견·수정: ① `"type": "module"`이 Vercel 함수 런처의 require를 깨서 전 요청 500 → 제거(50a7965) ② 교사 세션 쿠키 strict가 구글발 리디렉션 연쇄에서 탈락해 로그인 무한 루프 → 콜백만 lax(e2df6de) ③ Next 런타임 fetch가 aws4fetch 스트림 본문을 chunked로 보내 R2가 411 → 서명·전송 분리로 버퍼 본문 유지(ef80e31). **최종 운영 E2E 통과**: 실제 학급(코드 9315) 학생 입장→작품 생성→3.4MB 바이너리 업로드(1.6초)→완성 저장(435B)→R2 회수 340만 바이트 전수 일치→남의 키·유령 키 413. 구글 리디렉션 URI는 localhost 3000·3001 + wiggleweb.vercel.app 3종 등록.
   8. **7단계(문서·파이프라인 재정의) 완료(2026-08-19) — 재플랫폼 전 단계 종료.** CLAUDE.md·AGENTS.md·README·agent-pipeline(은퇴 공지)·product-decisions를 GitHub+Vercel 흐름으로 교체, `pipeline:ready` 제거, 운영 실측 게이트 `npm run check:deployed` 신설.
-  9. 사용자 선택으로 남은 것: `wiggleweb.app` 도메인 구매(미등록·구매 가능 확인됨), 구글 앱 게시(타 교사 로그인 허용 — 게시 전에는 테스트 사용자만), 교사 화면에서 검증용 학생(검증화가·업로드탐색·헤더탐색) 정리, 인쇄물 QR 새 주소로 재출력.
+  9. 사용자 선택으로 남은 것: `wiggleweb.app` 도메인 구매(미등록·구매 가능 확인됨), 구글 OAuth 클라이언트를 프로덕션으로 전환(타 교사 로그인 허용 — 전환 전에는 테스트 사용자만. 콘솔 등록의 게시 상태이며 모바일 앱이 아니다), 교사 화면에서 검증용 학생(검증화가·업로드탐색·헤더탐색) 정리, 인쇄물 QR 새 주소로 재출력.
 
 - 커밋되지 않은 파일은 사용자 소유 참고 자료(`examples/*.jpg`, 시안 원본)와 로컬 도구 설정(`.claude/`)뿐이다. 임의로 삭제하지 않는다.
 - `git reset --hard`, `git checkout --`, 광범위한 삭제를 사용하지 않는다.
 - 새 작업을 시작하기 전에 `git status --short`와 최근 커밋을 확인한다.
 - 로컬·브랜치 커밋은 게이트를 통과했어도 `main` 반영(사용자 push) 전까지 배포 상태로 간주하지 않는다.
+
+## 2026-09-09 3차 병합 — 명단 입장 모델 합류, 반 번호 기능 은퇴
+
+- main의 PR #8~#10(도화지 풀블리드, 교사 명단 번호+실명, 자기 등록 입장 제거)을 아크
+  브랜치에 병합. 충돌 8개 해소 원칙: **명단 입장 모델(저쪽)이 이긴다** — 2026-09-07 사용자
+  결정으로 실명 금지 원칙 자체가 바뀌었고, 자기 등록과 명단이 공존하면 아이가 두 프로필로
+  갈라지기 때문. 이틀 전의 "선택 입력 반 번호(class_number)" 기능은 **구현째 제거**
+  (컬럼·API·입력 UI·테스트, pending-decisions에 대체 사유 기록).
+- 유지한 것: 아크 전체(포인터·조종석·오늘 회차·서랍), DESIGN.md Sunshine 팔레트
+  (저쪽의 독자 초록 hex 팔레트 대신 토큰 정본 유지, 은퇴한 teacher-activity-book 블록만 저쪽),
+  전시관 대문의 교사 로그인 안내·정책 링크.
+- 개인정보처리방침 1절을 명단 모델에 맞게 다시 씀(이름은 담임 화면에만, 학급 삭제 시 명단 삭제).
+- 아크 실서버 테스트는 명단 자리(seat 7)를 시드해 번호 입장으로 갱신.
+- 게이트: typecheck ✓ · lint 0 오류(경고 13 기존) · 테스트 **319/319** · build ·
+  browser-check(:3299 명시) 전 항목 통과.
+
+## 2026-09-07 정본 저장소 이동·병합 (브랜치 wpdbs1229/bmad-product-planning)
+
+- 반 번호(출석번호) 선택 수집 구현(2026-09-07 사용자 결정, 이름은 계속 수집 안 함):
+  `student_profiles.class_number`(DDL+조건부 ALTER), join API 선택 파싱(1~99 외는 저장 생략,
+  입장 안 막음), 신규 프로필 화면 `내 번호` 입력(선택, 생성 모드만), 교사 학생 타일·미리보기에
+  `· n번` 표시, 개인정보처리방침 갱신. 인증·중복 판정에는 쓰지 않는다(테스트가 소스 계약으로 잠금).
+  `tests/class-number.test.mjs` 3건 추가. 게이트: typecheck·lint·311/311·browser-check(:3299) 통과.
+- 2차 병합(같은 날, PR 충돌 해소 요청): main에 새로 합류한 PR 4건(몽그리 개명 #7, 4:3 도화지 #5,
+  오리 전시관 대문 #3, 플로팅 도구 #4)을 아크 브랜치에 병합. 충돌 4개 해소 —
+  레슨 카탈로그 은퇴 유지(`lib/lesson-content.ts` 빈 카탈로그), 학생 홈은 아크 카드 유지 +
+  몽그리 개명 반영, 대문은 main의 전시관을 채택하고 우리 쪽 `teacherAuth=failed` 안내와
+  정책 페이지 링크를 이식, product-decisions는 양쪽 신규 결정 모두 보존(4:3 항은
+  「캔버스와 입력」 9항으로 이동). 게이트: typecheck·lint(경고 11 기존)·테스트 308/308·
+  browser-check(:3299 명시) 전 항목 통과.
+- 타 팀 교사 화면 시안(파랑 「내 학급」) 피드백을 `docs/design-feedback-teacher-mockup-2026-09-07.md`로
+  정리 — 필수 4건(팔레트, 학교명 수집, 삭제 문구, 아크 조종석 부재) + 정본 문서 목록.
+
+- 정본 원격을 `wwwiggle/new_wiggle`로 확정하고 그 main(교사 그림책 열람·피드백, 가이드 변형,
+  next 16.3.3 독자 패치)을 아크 브랜치에 병합. 충돌 17개 해소 — 교사 그림책은 전부 보존,
+  레슨 은퇴는 유지(가이드 변형은 무력화), guide_variant 컬럼은 스키마에 유지(AD-2).
+- dev 스크립트도 `--webpack`으로(저쪽 보안 회귀 테스트 채택), eslint-config-next 16.3.3 정합.
+- ⚠️ 검증 사고 기록: browser-check가 localhost:3000의 타 워크트리 서버를 검사한 사례 발견.
+  이제 대상 주소 명시가 규칙(CLAUDE.md 개발 절차 5항).
+- 타 브랜치 발견: `claude/drawing-studio-floating-20260907`(플로팅 도구 재배치, 다른 세션 작업)에
+  '다른 도구 더 보기' 버튼이 헤더에 가리는 실결함 있음 — 그 브랜치 합류 시 수정 필요.
+- **미해결**: Vercel 프로젝트가 어느 저장소의 main을 빌드하는지 확인 필요 — 새 저장소로
+  재연결 전에는 wwwiggle main push가 운영 배포로 이어지지 않을 수 있다.
+
+## 2026-08-30~31 이야기 아크 재기획·구현 (브랜치 wpdbs1229/bmad-product-planning, main 미반영)
+
+- **기획 정본 신설**: BMAD 브라운필드 재기획으로 PRD(`docs/bmad/planning-artifacts/prds/prd-wiggle-web-2026-08-30/`),
+  아키텍처 스파인(AD 19개, `.../architecture/architecture-wiggle-web-2026-08-30/`),
+  에픽·스토리 12개(`.../epics.md`), UX 스파인(DESIGN.md·EXPERIENCE.md, `.../ux-designs/ux-wiggle-web-2026-08-31/`)이 확정됐다.
+  `product-decisions.md` 「학습 과정」이 회차 누적 이야기 아크(정본: See-Think-Wonder + Studio Thinking + Storyline Method)로 개정됐다.
+- **보안**: next 16.2.6→16.3.3(CVSS 10.0 RCE 2건 수정). 16.3.3 Turbopack이 한글 소스에서 패닉해
+  `build`는 `--webpack`(dev는 Turbopack 유지). `agentRules: false`. ws 8.21.1 override로 운영 의존성 취약점 0.
+  `engines`를 실측에 맞춰 `>=22.18.0`으로 정정(22.13에서는 테스트 하네스가 돌지 않는다 — registerHooks·타입 스트리핑).
+- **에픽 1 일부**: `/privacy`·`/terms` 정책 페이지(초안 — 게시 전 사용자 검토 필요), 랜딩 링크,
+  구글 콜백 실패 시 `/?teacherAuth=failed` 안내(학교 Workspace 차단 대응 — Story 1.3).
+  **OAuth 클라이언트 프로덕션 전환(Story 1.2)과 운영 잔여 정리(1.4)는 사용자 작업으로 남음.**
+- **에픽 2·3 구현 완료** (모두 이 브랜치, main 미반영):
+  - `lib/arc-content.ts`(자전거 아크 2회차, 안정 episodeId, 체크섬 버전 감시) + `lib/arc-session.ts`(AD-14 판별).
+  - `classrooms.current_arc_id/current_episode_id`, `artworks.arc_id/episode_id/arc_version` —
+    schemaStatements·schema.ts 양쪽 + `provisionSchema()` 조건부 ALTER(기존 운영 테이블 대응),
+    `(student, arc, episode)` 완성작 부분 UNIQUE.
+  - 교사 수업 조종석(학급 화면 맨 위, setEpisode/listArcs), 학생 홈 오늘 회차 카드(A안),
+    재사용 우선 작품 생성(두 태블릿 경합 대응), 오프라인 flush 귀속 불변,
+    지난 이야기 서랍(보기 전용, 귀속 컬럼 조회).
+  - 레슨 카탈로그 은퇴: 활동 30개·화면 5종·라우트 4종 삭제, `normalizeActivityKey` 조용한 폴백 제거
+    (알 수 없는 키는 free로, 한 곳에서만 처리). 레거시 lesson_slug 작품은 자유 모드로 열린다.
+  - 책 팀 계약: 저장 경로의 옛 완성 키 삭제 제거(AD-6 — storybook_assets 스냅샷 보호),
+    UNIQUE 위반 409 매핑, `docs/arc-book-contract.md` 신설.
+- **검증**: Node 22.23.2에서 typecheck·lint·`npm test`(294개)·`check:browser` 전 항목 통과 —
+  이 워크트리에서 전 게이트가 완주된 최초 상태. 신규 회귀 테스트: 아크 체크섬, classrooms ALTER,
+  두 태블릿 경합, flush 귀속, AD-15 응답 형상, 완성 키 비삭제, 서랍 계약.
+- **남은 사용자 작업**: ① 구글 OAuth 클라이언트 In production 전환(콘솔 — 정책 URL은 준비됨, main push 후)
+  ② 정책 페이지 문안·연락처 검토 ③ 검증용 학생 3명 정리 승인 ④ QR 재출력 ⑤ main push.
+- **알려진 잔여**: 장면 삽화(sceneImage)가 null — 현장 투입 전 제작 필요(21항).
+  reopen(재완성) 미구현이라 관련 회귀 테스트 이연. 수업 닫힘 홈 최종 구성은 P-004 잔여.
 
 ## 현재 구현된 핵심 흐름
 

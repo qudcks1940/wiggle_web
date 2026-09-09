@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>위글 색 테마 2차 — 꽉 찬 화면 · 3D 캐릭터용</title>
+<style>
+/* ============================================================
+   위글(Wiggle Web) 색 테마 2차 시안
+   1차(cream/여백형)는 폐기 방향. 2차는 Study.Pilot의 "꽉 찬 화면 +
+   3D 캐릭터", Learnify/EduLearn의 "중성 따뜻한 색감 + 어른스러운
+   교사 화면"을 합친다.
+   - 하늘색(#1AB8E8) 지배 금지, 분홍 지배 금지 (성별 코드 회피)
+   - 빨강=틀림 / 초록=맞음 의미 없음. 점수·등수 없음
+   - 아이 그림(흰 도화지)이 언제나 주인공
+   ============================================================ */
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Segoe UI",Roboto,"Noto Sans KR",sans-serif;
+  background:#20222A;              /* 페이지 지지대(시안 대지) #20222A */
+  color:#E8E6E1;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1280px;margin:0 auto;padding:34px 22px 90px}
+
+/* ---------- 문서 머리 ---------- */
+.doc-head{
+  background:linear-gradient(135deg,#2C2F3A 0%,#3A2E40 100%);
+  border:1px solid #444858;border-radius:22px;padding:26px 28px;margin-bottom:30px;
+}
+.doc-head h1{margin:0 0 8px;font-size:26px;letter-spacing:-.4px;color:#FFFFFF}
+.doc-head p{margin:0 0 6px;font-size:14px;color:#C3C0CC;max-width:78ch}
+.doc-head .kbd{
+  display:inline-block;background:#4A4356;border:1px solid #5D5670;border-radius:6px;
+  padding:1px 7px;font-size:12px;color:#EDEAF2
+}
+.rule-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.rule{
+  background:#242732;border:1px solid #414553;border-radius:12px;
+  padding:9px 13px;font-size:12.5px;color:#CFCCD6;flex:1 1 220px
+}
+.rule b{color:#FFD79A;font-weight:700}
+
+/* ---------- 변형 카드 껍데기 ---------- */
+.v{
+  border-radius:24px;padding:24px 24px 26px;margin-bottom:34px;
+  border:1px solid rgba(255,255,255,.14);
+  background:var(--bg);
+  color:var(--on-bg);
+}
+.v-head{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:4px}
+.v-num{
+  flex:0 0 auto;width:44px;height:44px;border-radius:14px;
+  background:var(--primary);color:var(--primary-ink);
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;font-weight:800;letter-spacing:-.5px;
+  box-shadow:0 4px 0 var(--primary-deep);
+}
+.v-name{margin:0;font-size:23px;letter-spacing:-.5px;color:var(--on-bg);font-weight:800}
+.v-reg{margin:2px 0 0;font-size:13.5px;color:var(--on-bg-dim)}
+.v-src{margin:6px 0 0;font-size:12px;color:var(--on-bg-dim);opacity:.85}
+
+/* ---------- 토큰 칩 ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 18px}
+.chip{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.20);
+  border-radius:11px;padding:6px 10px 6px 6px;
+}
+.chip .sw{width:26px;height:26px;border-radius:7px;border:1px solid rgba(0,0,0,.25);flex:0 0 auto}
+.chip .tx{font-size:11px;line-height:1.25;color:var(--on-bg)}
+.chip .tx b{display:block;font-weight:700;font-size:11.5px}
+.chip .tx span{opacity:.72;font-variant-numeric:tabular-nums;letter-spacing:.2px}
+
+/* ---------- 스니펫 3열 ---------- */
+.snips{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.snip{
+  background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  padding:14px;color:var(--ink);overflow:hidden;
+}
+.snip-tag{
+  font-size:10.5px;font-weight:800;letter-spacing:.6px;color:var(--muted);
+  text-transform:uppercase;margin:0 0 10px
+}
+
+/* (a) 아이 — 오늘 회차 카드 */
+.ep-top{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.ep-badge{
+  background:var(--accent);color:var(--accent-ink);border-radius:999px;
+  padding:4px 11px;font-size:12px;font-weight:800
+}
+.ep-arc{font-size:11.5px;color:var(--muted);font-weight:600}
+.ep-title{margin:0 0 7px;font-size:20px;font-weight:800;letter-spacing:-.5px;color:var(--ink)}
+.ep-scene{
+  margin:0 0 13px;font-size:13px;color:var(--ink);opacity:.86;
+  background:var(--tint);border-radius:13px;padding:10px 12px
+}
+.btn-big{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--primary);color:var(--primary-ink);
+  border-radius:16px;padding:15px;font-size:18px;font-weight:800;letter-spacing:-.3px;
+  box-shadow:0 5px 0 var(--primary-deep);margin-bottom:15px
+}
+.strip-label{font-size:11px;color:var(--muted);font-weight:700;margin:0 0 7px}
+.strip{display:flex;gap:8px}
+.page{
+  flex:1;border-radius:11px;height:74px;position:relative;
+  display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px
+}
+.page.drawn{background:#FFFFFF;border:1px solid var(--border);box-shadow:0 2px 5px rgba(0,0,0,.10)}
+.page.blank{background:var(--blank);border:2px dashed var(--blank-line)}
+.page .no{
+  position:absolute;top:5px;left:6px;font-size:9.5px;font-weight:800;
+  color:var(--muted);background:rgba(255,255,255,.75);border-radius:5px;padding:0 4px
+}
+.page.blank .no{color:var(--blank-ink);background:rgba(255,255,255,.55)}
+.page .cap{font-size:9px;font-weight:700;color:var(--blank-ink);text-align:center;line-height:1.2}
+/* 그려진 쪽 안의 가짜 크레용 선 — 아이 그림 자리 */
+.doodle{position:absolute;inset:14px 8px 16px}
+.doodle i{position:absolute;display:block;border-radius:99px;background:#C9C7C2}
+.d1 i:nth-child(1){left:4%;top:38%;width:52%;height:4px;background:#B9B6B0}
+.d1 i:nth-child(2){left:12%;top:8%;width:26px;height:26px;border-radius:50%;background:none;border:4px solid #BFBCB6}
+.d1 i:nth-child(3){right:6%;top:20%;width:4px;height:60%;background:#C6C3BD}
+.d2 i:nth-child(1){left:6%;bottom:6%;width:80%;height:4px;background:#BAB7B1}
+.d2 i:nth-child(2){left:22%;top:14%;width:34px;height:22px;border-radius:6px;background:#CDCAC5}
+.d2 i:nth-child(3){left:60%;top:6%;width:4px;height:44%;background:#C2BFB9}
+
+/* (b) 아이 — 그리기 화면 */
+.draw-shell{background:var(--draw-chrome);border-radius:15px;padding:9px}
+.draw-bar{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.draw-bar .t{font-size:11.5px;font-weight:700;color:var(--draw-chrome-ink);opacity:.95}
+.draw-bar .pill{
+  background:rgba(255,255,255,.22);color:var(--draw-chrome-ink);
+  border-radius:999px;padding:2px 8px;font-size:10.5px;font-weight:800
+}
+.canvas{
+  background:#FFFFFF;border-radius:11px;height:186px;position:relative;
+  box-shadow:0 6px 16px rgba(0,0,0,.22);overflow:hidden
+}
+.canvas .paper-tag{
+  position:absolute;right:7px;top:6px;font-size:9.5px;color:#9A9791;font-weight:700
+}
+.canvas .art{position:absolute;left:0;right:0;bottom:0;top:0}
+.canvas .art i{position:absolute;display:block;background:#C8C5BF;border-radius:99px}
+.canvas .art i:nth-child(1){left:10%;bottom:22%;width:66%;height:5px}
+.canvas .art i:nth-child(2){left:16%;bottom:27%;width:44px;height:44px;border-radius:50%;background:none;border:5px solid #C8C5BF}
+.canvas .art i:nth-child(3){left:44%;bottom:27%;width:44px;height:44px;border-radius:50%;background:none;border:5px solid #C8C5BF}
+.canvas .art i:nth-child(4){left:34%;bottom:44%;width:5px;height:56px;transform:rotate(-18deg)}
+.canvas .art i:nth-child(5){left:30%;top:22%;width:30px;height:30px;border-radius:50%;background:none;border:5px solid #CFCCC6}
+.tools{display:flex;align-items:center;gap:7px;margin-top:9px}
+.tool{
+  width:32px;height:32px;border-radius:10px;flex:0 0 auto;
+  border:2px solid rgba(255,255,255,.35);position:relative
+}
+.tool.on{
+  border:3px solid #FFFFFF;box-shadow:0 0 0 3px var(--draw-focus);
+}
+.tool.on::after{
+  content:"";position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);
+  width:6px;height:6px;border-radius:50%;background:#FFFFFF
+}
+.tool-tx{font-size:10.5px;font-weight:800;color:var(--draw-chrome-ink);margin-left:2px}
+.draw-note{font-size:10.5px;color:var(--muted);margin:9px 2px 0;line-height:1.4}
+
+/* (c) 교사 — 학급 줄 */
+.t-shell{background:var(--teacher);border-radius:15px;padding:12px;color:var(--teacher-ink)}
+.t-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.t-bar .h{font-size:12px;font-weight:700;letter-spacing:.2px;opacity:.9}
+.t-bar .who{font-size:10.5px;opacity:.65}
+.t-row{
+  background:var(--teacher-surface);border:1px solid var(--teacher-border);
+  border-radius:11px;padding:12px 13px;display:flex;align-items:center;
+  justify-content:space-between;gap:10px;color:var(--teacher-row-ink)
+}
+.t-cls{font-size:15.5px;font-weight:700;letter-spacing:-.3px;margin:0 0 3px}
+.t-meta{font-size:11.5px;color:var(--teacher-meta);display:flex;gap:7px;align-items:center}
+.t-meta .sep{opacity:.4}
+.t-meta .ep{font-weight:700;color:var(--teacher-row-ink)}
+.t-btn{
+  flex:0 0 auto;background:var(--teacher-btn);color:var(--teacher-btn-ink);
+  border:1px solid var(--teacher-btn-line);border-radius:9px;
+  padding:9px 13px;font-size:12.5px;font-weight:700;letter-spacing:-.2px
+}
+.t-foot{display:flex;gap:6px;margin-top:9px;font-size:10.5px;opacity:.72}
+.t-foot span{background:rgba(255,255,255,.10);border-radius:6px;padding:2px 7px}
+
+/* ---------- 그리미 자리 + 정직한 평가 ---------- */
+.bottom{display:grid;grid-template-columns:230px 1fr;gap:16px;margin-top:16px;align-items:stretch}
+.grimi{
+  background:var(--mid);border:1px solid rgba(0,0,0,.18);border-radius:20px;
+  padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;color:var(--mid-ink);min-height:150px
+}
+.grimi .ph{
+  width:76px;height:76px;border-radius:22px;background:var(--mid-2);
+  border:2px dashed var(--mid-line);margin-bottom:9px
+}
+.grimi b{font-size:14px;font-weight:800;letter-spacing:-.2px}
+.grimi small{font-size:10.5px;opacity:.8;line-height:1.4;margin-top:3px}
+.verdict{
+  background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.20);
+  border-radius:20px;padding:14px 16px;color:var(--on-bg);font-size:12.5px
+}
+.verdict h4{margin:0 0 8px;font-size:12.5px;letter-spacing:.3px;color:var(--on-bg)}
+.verdict ul{margin:0;padding-left:17px}
+.verdict li{margin-bottom:5px;line-height:1.5;color:var(--on-bg-dim)}
+.verdict li b{color:var(--on-bg)}
+.flag{
+  display:inline-block;border-radius:6px;padding:1px 7px;font-size:10.5px;font-weight:800;
+  background:var(--primary);color:var(--primary-ink);margin-right:5px
+}
+
+/* ---------- 비교표 ---------- */
+.cmp{background:#282B36;border:1px solid #454A5A;border-radius:22px;padding:24px 26px}
+.cmp h2{margin:0 0 14px;font-size:20px;color:#FFF}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #3D4150;vertical-align:top}
+th{color:#9EA3B4;font-weight:700;font-size:11.5px;letter-spacing:.3px}
+td{color:#DAD8E0}
+td b{color:#FFF}
+.dot{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px;border:1px solid rgba(0,0,0,.3)}
+.cmp p{font-size:12.5px;color:#B9BDCB;margin:14px 0 0;max-width:88ch}
+.cmp p b{color:#FFD79A}
+
+@media (max-width:1000px){
+  .snips{grid-template-columns:1fr}
+  .bottom{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="doc-head">
+  <h1>위글 색 테마 · 2차 시안 (1번 ~ 5번)</h1>
+  <p>1차(크림·여백형)는 폐기. 2차는 <b>Study.Pilot</b>에서 <b>캐릭터 마스코트 · 꽉 찬 화면 · 입체(3D) 질감</b>을 가져오고,
+     <b>Learnify / EduLearn</b>에서 <b>중성적이고 따뜻한 색감</b>과 <b>교사 화면의 어른스러운 톤</b>을 가져왔습니다.
+     Study.Pilot의 채도 높은 파란 배경은 가져오지 않았습니다.</p>
+  <p>다섯 안은 <b>색상만 다른 게 아니라 화면의 성격(레지스터)이 다릅니다.</b>
+     조용한 크림 안은 1차에서 이미 봤으므로 여기에는 없습니다. 다섯 안 모두 "꽉 차고 활기찬" 쪽입니다.
+     의견 주실 땐 <span class="kbd">3번의 교사 화면</span> 처럼 번호로 불러 주세요.</p>
+  <div class="rule-row">
+    <div class="rule"><b>성별 중립</b> — 지배색이 하늘색도 분홍도 아닙니다. 자두·숲·테라코타·가지·먹빛을 앵커로 씁니다.</div>
+    <div class="rule"><b>아이 그림이 주인공</b> — (b) 그리기 화면은 흰 도화지가 화면 대부분입니다. 이게 이번 시안의 진짜 시험입니다.</div>
+    <div class="rule"><b>점수·등수 없음</b> — 빨강=틀림, 초록=맞음 의미를 만들지 않습니다.</div>
+    <div class="rule"><b>안 그린 쪽</b> — 빠진 회차는 경고색이 아니라 전용 중립 토큰으로 "아직 안 그린 쪽"이 됩니다.</div>
+  </div>
+</div>
+
+
+<!-- ==================================================================
+     1번 · 자두 잼과 옥수수
+     bg #6D3350 자두   surface #FFF7F1   ink #2B1522   muted #8A6E7C
+     border #ECDCE4   primary #FFC24B 옥수수   accent #2FB89A 제이드
+     blank #9C7C8C   teacher #3D1D2E
+     ================================================================== -->
+<section class="v" style="
+  --bg:#6D3350; --on-bg:#FFF3F8; --on-bg-dim:#E3C4D3;
+  --surface:#FFF7F1; --ink:#2B1522; --muted:#8A6E7C; --border:#ECDCE4; --tint:#FBEDE3;
+  --primary:#FFC24B; --primary-ink:#3A2410; --primary-deep:#D69A24;
+  --accent:#2FB89A; --accent-ink:#06251E;
+  --blank:#9C7C8C; --blank-line:#B9A0AC; --blank-ink:#33202B;
+  --draw-chrome:#57263F; --draw-chrome-ink:#FFEDF5; --draw-focus:#FFC24B;
+  --teacher:#3D1D2E; --teacher-ink:#EBD9E2; --teacher-surface:#FFFBF8;
+  --teacher-border:#D9C6CF; --teacher-row-ink:#2B1522; --teacher-meta:#7A6270;
+  --teacher-btn:#FFFFFF; --teacher-btn-ink:#5C2942; --teacher-btn-line:#C9AEBB;
+  --mid:#A85B78; --mid-2:#C9899F; --mid-line:#F3D5E0; --mid-ink:#FFF2F7;
+">
+  <div class="v-head">
+    <div class="v-num">1</div>
+    <div>
+      <h2 class="v-name">자두 잼과 옥수수</h2>
+      <p class="v-reg">달콤하고 시끌시끌한 축제 — 방과후 교실에 불이 켜진 느낌</p>
+      <p class="v-src">자두(플럼) 지배색 + 옥수수 노랑 주행동 + 제이드 강조. 분홍이 아니라 갈색기가 도는 베리라 성별 코드가 붙지 않습니다.</p>
+    </div>
+  </div>
+
+  <div class="chips">
+    <div class="chip"><div class="sw" style="background:#6D3350"></div><div class="tx"><b>배경</b><span>#6D3350</span></div></div>
+    <div class="chip"><div class="sw" style="background:#FFF7F1"></div><div class="tx"><b>카드</b><span>#FFF7F1</span></div></div>
+    <div class="chip"><div class="sw" style="background:#2B1522"></div><div class="tx"><b>글자(잉크)</b><span>#2B1522</span></div></div>
+    <div class="chip"><div class="sw" style="background:#8A6E7C"></div><div class="tx"><b>보조 글자</b><span>#8A6E7C</span></div></div>
+    <div class="chip"><div class="sw" style="background:#ECDCE4"></div><div class="tx"><b>테두리</b><span>#ECDCE4</span></div></div>
+    <div class="chip"><div class="sw" style="background:#FFC24B"></div><div class="tx"><b>주 행동</b><span>#FFC24B</span></div></div>
+    <div class="chip"><div class="sw" style="background:#2FB89A"></div><div class="tx"><b>강조</b><span>#2FB89A</span></div></div>
+    <div class="chip"><div class="sw" style="background:#9C7C8C"></div><div class="tx"><b>아직 안 그린 쪽</b><span>#9C7C8C</span></div></div>
+    <div class="chip"><div class="sw" style="background:#3D1D2E"></div><div class="tx"><b>교사 화면 앵커</b><span>#3D1D2E</span></div></div>
+  </div>
+
+  <div class="snips">
+    <!-- (a) 아이 · 오늘 회차 -->
+    <div class="snip">
+      <p class="snip-tag">아이 — 오늘 회차</p>
+      <div class="ep-top"><span class="ep-badge">3회차</span><span class="ep-arc">자전거 이야기</span></div>
+      <h3 class="ep-title">친구들과 자전거 타기</h3>
+      <p class="ep-scene">자전거를 타고 친구들과 함께 달리는 모습을 그려 봐요</p>
+      <div class="btn-big">그리기 시작</div>
+      <p class="strip-label">내 동화책</p>
+      <div class="strip">
+        <div class="page drawn"><span class="no">1</span><span class="doodle d1"><i></i><i></i><i></i></span></div>
+        <div class="page drawn"><span class="no">2</span><span class="doodle d2"><i></i><i></i><i></i></span></div>
+        <div class="page blank"><span class="no">3</span><span class="cap">아직<br>안 그린 쪽</span></div>
+      </div>
+    </div>
+
+    <!-- (b) 아이 · 그리기 화면 -->
+    <div class="snip">
+      <p class="snip-tag">아이 — 그리기 화면 (흰 도화지 시험)</p>
+      <div class="draw-shell">
+        <div class="draw-bar"><span class="pill">3회차</span><span class="t">친구들과 자전거 타기</span></div>
+        <div class="canvas">
+          <span class="paper-tag">도화지</span>
+          <span class="art"><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
+        <div class="tools">
+          <div class="tool on" style="background:#2B1522"></div>
+          <div class="tool" style="background:#FFC24B"></div>
+          <div class="tool" style="background:#2FB89A"></div>
+          <div class="tool" style="background:#FFFFFF"></div>
+          <span class="tool-tx">검정 · 선택됨</span>
+        </div>
+      </div>
+      <p class="draw-note">선택된 도구는 색뿐 아니라 흰 테두리 + 아래 점 + "선택됨" 글자로도 구분됩니다.</p>
+    </div>
+
+    <!-- (c) 교사 -->
+    <div class="snip">
+      <p class="snip-tag">교사 — 학급 목록</p>
+      <div class="t-shell">
+        <div class="t-bar"><span class="h">우리 반</span><span class="who">김선생님</span></div>
+        <div class="t-row">
+          <div>
+            <p class="t-cls">햇살 2반</p>
+            <div class="t-meta"><span>자전거 이야기</span><span class="sep">·</span><span class="ep">3회차</span></div>
+          </div>
+          <div class="t-btn">다음 회차 열기</div>
+        </div>
+        <div class="t-foot"><span>학생 21명</span><span>오늘 수업 열림</span></div>
+      </div>
+      <p class="draw-note">교사 화면은 같은 자두 계열이되 채도를 낮추고 노랑 버튼을 쓰지 않습니다. 글자 크기·간격도 어른 기준.</p>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="grimi">
+      <div class="ph"></div>
+      <b>그리미</b>
+      <small>캐릭터가 앉을 중간톤<br>#A85B78 / #C9889F</small>
+    </div>
+    <div class="verdict">
+      <h4>정직한 평가</h4>
+      <ul>
+        <li><b>작품 눌림 위험: 낮음.</b> 어두운 자두 위에서 흰 도화지가 가장 세게 튑니다. 다섯 안 중 그림이 제일 잘 뜨는 축.</li>
+        <li><b>캐릭터 적합: 좋음.</b> 자두-옥수수-제이드는 3D 렌더 캐릭터의 살구·갈색 피부톤과 부딪히지 않습니다.</li>
+        <li><b>위험:</b> 자두를 더 밝히면 분홍으로 미끄러집니다. #6D3350보다 밝게 가지 말 것.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================================================================
+     2번 · 숲 그늘과 라임
+     bg #2F6B4E 숲   surface #F8FBF5   ink #14261C   muted #5F7A68
+     border #DCE8DA   primary #D8EC5C 라임   accent #FF8A3D 감귤
+     blank #7C9686   teacher #1D4536
+     ================================================================== -->
+<section class="v" style="
+  --bg:#2F6B4E; --on-bg:#F1FBEE; --on-bg-dim:#C4DCC9;
+  --surface:#F8FBF5; --ink:#14261C; --muted:#5F7A68; --border:#DCE8DA; --tint:#EAF3E2;
+  --primary:#D8EC5C; --primary-ink:#1F2E12; --primary-deep:#AEC33A;
+  --accent:#FF8A3D; --accent-ink:#2E1200;
+  --blank:#7C9686; --blank-line:#9CB3A5; --blank-ink:#152A20;
+  --draw-chrome:#255741; --draw-chrome-ink:#E7F6E9; --draw-focus:#D8EC5C;
+  --teacher:#1D4536; --teacher-ink:#D5E7DA; --teacher-surface:#FBFDF9;
+  --teacher-border:#C7D8C9; --teacher-row-ink:#14261C; --teacher-meta:#6A8474;
+  --teacher-btn:#FFFFFF; --teacher-btn-ink:#245741; --teacher-btn-line:#AEC4B3;
+  --mid:#5C9B6F; --mid-2:#86BC93; --mid-line:#E6F5E4; --mid-ink:#F2FBF0;
+">
+  <div class="v-head">
+    <div class="v-num">2</div>
+    <div>
+      <h2 class="v-name">숲 그늘과 라임</h2>
+      <p class="v-reg">밖에서 뛰다 들어온 오후 — 시원하고 씩씩한 활기</p>
+      <p class="v-src">깊은 숲 지배색 + 라임 주행동 + 감귤 강조. 초록은 "잘함" 신호가 아니라 화면 전체의 땅색이라 정답/오답으로 안 읽힙니다.</p>
+    </div>
+  </div>
+
+  <div class="chips">
+    <div class="chip"><div class="sw" style="background:#2F6B4E"></div><div class="tx"><b>배경</b><span>#2F6B4E</span></div></div>
+    <div class="chip"><div class="sw" style="background:#F8FBF5"></div><div class="tx"><b>카드</b><span>#F8FBF5</span></div></div>
+    <div class="chip"><div class="sw" style="background:#14261C"></div><div class="tx"><b>글자(잉크)</b><span>#14261C</span></div></div>
+    <div class="chip"><div class="sw" style="background:#5F7A68"></div><div class="tx"><b>보조 글자</b><span>#5F7A68</span></div></div>
+    <div class="chip"><div class="sw" style="background:#DCE8DA"></div><div class="tx"><b>테두리</b><span>#DCE8DA</span></div></div>
+    <div class="chip"><div class="sw" style="background:#D8EC5C"></div><div class="tx"><b>주 행동</b><span>#D8EC5C</span></div></div>
+    <div class="chip"><div class="sw" style="background:#FF8A3D"></div><div class="tx"><b>강조</b><span>#FF8A3D</span></div></div>
+    <div class="chip"><div class="sw" style="background:#7C9686"></div><div class="tx"><b>아직 안 그린 쪽</b><span>#7C9686</span></div></div>
+    <div class="chip"><div class="sw" style="background:#1D4536"></div><div class="tx"><b>교사 화면 앵커</b><span>#1D4536</span></div></div>
+  </div>
+
+  <div class="snips">
+    <div class="snip">
+      <p class="snip-tag">아이 — 오늘 회차</p>
+      <div class="ep-top"><span class="ep-badge">3회차</span><span class="ep-arc">자전거 이야기</span></div>
+      <h3 class="ep-title">친구들과 자전거 타기</h3>
+      <p class="ep-scene">자전거를 타고 친구들과 함께 달리는 모습을 그려 봐요</p>
+      <div class="btn-big">그리기 시작</div>
+      <p class="strip-label">내 동화책</p>
+      <div class="strip">
+        <div class="page drawn"><span class="no">1</span><span class="doodle d1"><i></i><i></i><i></i></span></div>
+        <div class="page drawn"><span class="no">2</span><span class="doodle d2"><i></i><i></i><i></i></span></div>
+        <div class="page blank"><span class="no">3</span><span class="cap">아직<br>안 그린 쪽</span></div>
+      </div>
+    </div>
+
+    <div class="snip">
+      <p class="snip-tag">아이 — 그리기 화면 (흰 도화지 시험)</p>
+      <div class="draw-shell">
+        <div class="draw-bar"><span class="pill">3회차</span><span class="t">친구들과 자전거 타기</span></div>
+        <div class="canvas">
+          <span class="paper-tag">도화지</span>
+          <span class="art"><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
+        <div class="tools">
+          <div class="tool on" style="background:#14261C"></div>
+          <div class="tool" style="background:#D8EC5C"></div>
+          <div class="tool" style="background:#FF8A3D"></div>
+          <div class="tool" style="background:#FFFFFF"></div>
+          <span class="tool-tx">검정 · 선택됨</span>
+        </div>
+      </div>
+      <p class="draw-note">도구 띠가 얇아 도화지가 스니펫 높이의 약 70%를 차지합니다.</p>
+    </div>
+
+    <div class="snip">
+      <p class="snip-tag">교사 — 학급 목록</p>
+      <div class="t-shell">
+        <div class="t-bar"><span class="h">우리 반</span><span class="who">김선생님</span></div>
+        <div class="t-row">
+          <div>
+            <p class="t-cls">햇살 2반</p>
+            <div class="t-meta"><span>자전거 이야기</span><span class="sep">·</span><span class="ep">3회차</span></div>
+          </div>
+          <div class="t-btn">다음 회차 열기</div>
+        </div>
+        <div class="t-foot"><span>학생 21명</span><span>오늘 수업 열림</span></div>
+      </div>
+      <p class="draw-note">EduLearn의 딥그린 + 종이색 조합에 가장 가까운 교사 톤. 다섯 안 중 가장 "학교 문서"처럼 읽힙니다.</p>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="grimi">
+      <div class="ph"></div>
+      <b>그리미</b>
+      <small>캐릭터가 앉을 중간톤<br>#5C9B6F / #86BC93</small>
+    </div>
+    <div class="verdict">
+      <h4>정직한 평가</h4>
+      <ul>
+        <li><b>작품 눌림 위험: 낮음.</b> 숲색이 어두워 흰 도화지가 확실히 앞으로 나옵니다.</li>
+        <li><b>캐릭터 적합: 매우 좋음.</b> 초록 배경은 3D 동물 캐릭터(여우·악어·고양이류)를 가장 자연스럽게 받습니다.</li>
+        <li><b>위험:</b> 라임 버튼이 초록 위에 있어 "정답" 느낌이 날 수 있습니다. 라임은 <b>주 행동 버튼에만</b> 쓰고 상태 표시에는 절대 쓰지 말 것.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================================================================
+     3번 · 테라코타와 청록
+     bg #B4562F 테라코타   surface #FFF7F0   ink #3B1C10   muted #8C6553
+     border #F0DCCB   primary #0A7C86 청록   accent #F7C948 호박
+     blank #C79279   teacher #6B3A22
+     ================================================================== -->
+<section class="v" style="
+  --bg:#B4562F; --on-bg:#FFF3E9; --on-bg-dim:#F3D3BE;
+  --surface:#FFF7F0; --ink:#3B1C10; --muted:#8C6553; --border:#F0DCCB; --tint:#FBE9DA;
+  --primary:#0A7C86; --primary-ink:#FFFFFF; --primary-deep:#065B63;
+  --accent:#F7C948; --accent-ink:#3A2A05;
+  --blank:#C79279; --blank-line:#DDB49E; --blank-ink:#3B1C10;
+  --draw-chrome:#8E4222; --draw-chrome-ink:#FFEEE2; --draw-focus:#F7C948;
+  --teacher:#6B3A22; --teacher-ink:#EFDACB; --teacher-surface:#FFFBF7;
+  --teacher-border:#DFC9B8; --teacher-row-ink:#3B1C10; --teacher-meta:#84685A;
+  --teacher-btn:#FFFFFF; --teacher-btn-ink:#7A4025; --teacher-btn-line:#CDB2A0;
+  --mid:#D3855C; --mid-2:#E8AC88; --mid-line:#FFF0E4; --mid-ink:#331608;
+">
+  <div class="v-head">
+    <div class="v-num">3</div>
+    <div>
+      <h2 class="v-name">테라코타와 청록</h2>
+      <p class="v-reg">흙과 미술실 — 손으로 만지는 따뜻하고 진한 활기</p>
+      <p class="v-src">따뜻한 붉은 흙이 지배색인데 청록 버튼이 균형을 잡아 "여자아이 분홍"으로 안 갑니다. 다섯 안 중 가장 채도가 높습니다.</p>
+    </div>
+  </div>
+
+  <div class="chips">
+    <div class="chip"><div class="sw" style="background:#B4562F"></div><div class="tx"><b>배경</b><span>#B4562F</span></div></div>
+    <div class="chip"><div class="sw" style="background:#FFF7F0"></div><div class="tx"><b>카드</b><span>#FFF7F0</span></div></div>
+    <div class="chip"><div class="sw" style="background:#3B1C10"></div><div class="tx"><b>글자(잉크)</b><span>#3B1C10</span></div></div>
+    <div class="chip"><div class="sw" style="background:#8C6553"></div><div class="tx"><b>보조 글자</b><span>#8C6553</span></div></div>
+    <div class="chip"><div class="sw" style="background:#F0DCCB"></div><div class="tx"><b>테두리</b><span>#F0DCCB</span></div></div>
+    <div class="chip"><div class="sw" style="background:#0A7C86"></div><div class="tx"><b>주 행동</b><span>#0A7C86</span></div></div>
+    <div class="chip"><div class="sw" style="background:#F7C948"></div><div class="tx"><b>강조</b><span>#F7C948</span></div></div>
+    <div class="chip"><div class="sw" style="background:#C79279"></div><div class="tx"><b>아직 안 그린 쪽</b><span>#C79279</span></div></div>
+    <div class="chip"><div class="sw" style="background:#6B3A22"></div><div class="tx"><b>교사 화면 앵커</b><span>#6B3A22</span></div></div>
+  </div>
+
+  <div class="snips">
+    <div class="snip">
+      <p class="snip-tag">아이 — 오늘 회차</p>
+      <div class="ep-top"><span class="ep-badge">3회차</span><span class="ep-arc">자전거 이야기</span></div>
+      <h3 class="ep-title">친구들과 자전거 타기</h3>
+      <p class="ep-scene">자전거를 타고 친구들과 함께 달리는 모습을 그려 봐요</p>
+      <div class="btn-big">그리기 시작</div>
+      <p class="strip-label">내 동화책</p>
+      <div class="strip">
+        <div class="page drawn"><span class="no">1</span><span class="doodle d1"><i></i><i></i><i></i></span></div>
+        <div class="page drawn"><span class="no">2</span><span class="doodle d2"><i></i><i></i><i></i></span></div>
+        <div class="page blank"><span class="no">3</span><span class="cap">아직<br>안 그린 쪽</span></div>
+      </div>
+    </div>
+
+    <div class="snip">
+      <p class="snip-tag">아이 — 그리기 화면 (흰 도화지 시험)</p>
+      <div class="draw-shell">
+        <div class="draw-bar"><span class="pill">3회차</span><span class="t">친구들과 자전거 타기</span></div>
+        <div class="canvas">
+          <span class="paper-tag">도화지</span>
+          <span class="art"><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
+        <div class="tools">
+          <div class="tool on" style="background:#3B1C10"></div>
+          <div class="tool" style="background:#0A7C86"></div>
+          <div class="tool" style="background:#F7C948"></div>
+          <div class="tool" style="background:#FFFFFF"></div>
+          <span class="tool-tx">검정 · 선택됨</span>
+        </div>
+      </div>
+      <p class="draw-note">여기서는 그리기 화면 껍데기를 배경보다 어둡게(#8E4222) 눌러야 도화지가 삽니다. 배경색 그대로 쓰면 그림이 흐려집니다.</p>
+    </div>
+
+    <div class="snip">
+      <p class="snip-tag">교사 — 학급 목록</p>
+      <div class="t-shell">
+        <div class="t-bar"><span class="h">우리 반</span><span class="who">김선생님</span></div>
+        <div class="t-row">
+          <div>
+            <p class="t-cls">햇살 2반</p>
+            <div class="t-meta"><span>자전거 이야기</span><span class="sep">·</span><span class="ep">3회차</span></div>
+          </div>
+          <div class="t-btn">다음 회차 열기</div>
+        </div>
+        <div class="t-foot"><span>학생 21명</span><span>오늘 수업 열림</span></div>
+      </div>
+      <p class="draw-note">교사 화면은 밝은 테라코타를 버리고 구운 벽돌색(#6B3A22)으로 내려앉힙니다.</p>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="grimi">
+      <div class="ph"></div>
+      <b>그리미</b>
+      <small>캐릭터가 앉을 중간톤<br>#D3855C / #E8AC88</small>
+    </div>
+    <div class="verdict">
+      <h4>정직한 평가</h4>
+      <ul>
+        <li><b>작품 눌림 위험: 중간.</b> 배경이 밝고 뜨거워 흰 도화지와의 명도차가 다섯 안 중 가장 작습니다. 그리기 화면만 어두운 껍데기를 쓰는 예외 규칙이 필요합니다(위 (b)에 그렇게 넣었습니다).</li>
+        <li><b>캐릭터 적합: 주의.</b> 살구빛 피부톤 캐릭터가 배경에 묻힙니다. 캐릭터에 흰 외곽선이나 밝은 옷이 반드시 필요합니다.</li>
+        <li><b>위험:</b> 붉은 계열이 지배색이라 "경고"로 읽힐 여지. 실제 안내 문구는 청록/호박으로만 쓰고 빨강 계열 텍스트를 만들지 말 것.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================================================================
+     4번 · 가지밭 저녁과 망고
+     bg #33203F 가지   surface #FDF9F3   ink #241733   muted #7A6A88
+     border #E4DCEA   primary #FF9F1C 망고   accent #57D6C4 민트
+     blank #6A5B7A   teacher #241733
+     ================================================================== -->
+<section class="v" style="
+  --bg:#33203F; --on-bg:#F6EEFB; --on-bg-dim:#C9BAD6;
+  --surface:#FDF9F3; --ink:#241733; --muted:#7A6A88; --border:#E4DCEA; --tint:#F1EAF6;
+  --primary:#FF9F1C; --primary-ink:#2E1800; --primary-deep:#CC7A08;
+  --accent:#57D6C4; --accent-ink:#04322C;
+  --blank:#6A5B7A; --blank-line:#8B7C9A; --blank-ink:#F2ECF7;
+  --draw-chrome:#241733; --draw-chrome-ink:#EFE6F6; --draw-focus:#FF9F1C;
+  --teacher:#241733; --teacher-ink:#DCD2E6; --teacher-surface:#FCFAFD;
+  --teacher-border:#CFC5DA; --teacher-row-ink:#241733; --teacher-meta:#6F6180;
+  --teacher-btn:#FFFFFF; --teacher-btn-ink:#3E2A54; --teacher-btn-line:#B9AEC7;
+  --mid:#6E4F87; --mid-2:#9B7CB5; --mid-line:#EDE2F5; --mid-ink:#F7F1FB;
+">
+  <div class="v-head">
+    <div class="v-num">4</div>
+    <div>
+      <h2 class="v-name">가지밭 저녁과 망고</h2>
+      <p class="v-reg">불 끈 교실의 이야기 시간 — 어둡고 깊은데 심장은 뛰는</p>
+      <p class="v-src">가장 어두운 안. 망고 주황과 민트가 무대 조명처럼 튑니다. 3D 캐릭터가 가장 입체적으로 보이는 배경이기도 합니다.</p>
+    </div>
+  </div>
+
+  <div class="chips">
+    <div class="chip"><div class="sw" style="background:#33203F"></div><div class="tx"><b>배경</b><span>#33203F</span></div></div>
+    <div class="chip"><div class="sw" style="background:#FDF9F3"></div><div class="tx"><b>카드</b><span>#FDF9F3</span></div></div>
+    <div class="chip"><div class="sw" style="background:#241733"></div><div class="tx"><b>글자(잉크)</b><span>#241733</span></div></div>
+    <div class="chip"><div class="sw" style="background:#7A6A88"></div><div class="tx"><b>보조 글자</b><span>#7A6A88</span></div></div>
+    <div class="chip"><div class="sw" style="background:#E4DCEA"></div><div class="tx"><b>테두리</b><span>#E4DCEA</span></div></div>
+    <div class="chip"><div class="sw" style="background:#FF9F1C"></div><div class="tx"><b>주 행동</b><span>#FF9F1C</span></div></div>
+    <div class="chip"><div class="sw" style="background:#57D6C4"></div><div class="tx"><b>강조</b><span>#57D6C4</span></div></div>
+    <div class="chip"><div class="sw" style="background:#6A5B7A"></div><div class="tx"><b>아직 안 그린 쪽</b><span>#6A5B7A</span></div></div>
+    <div class="chip"><div class="sw" style="background:#241733"></div><div class="tx"><b>교사 화면 앵커</b><span>#241733</span></div></div>
+  </div>
+
+  <div class="snips">
+    <div class="snip">
+      <p class="snip-tag">아이 — 오늘 회차</p>
+      <div class="ep-top"><span class="ep-badge">3회차</span><span class="ep-arc">자전거 이야기</span></div>
+      <h3 class="ep-title">친구들과 자전거 타기</h3>
+      <p class="ep-scene">자전거를 타고 친구들과 함께 달리는 모습을 그려 봐요</p>
+      <div class="btn-big">그리기 시작</div>
+      <p class="strip-label">내 동화책</p>
+      <div class="strip">
+        <div class="page drawn"><span class="no">1</span><span class="doodle d1"><i></i><i></i><i></i></span></div>
+        <div class="page drawn"><span class="no">2</span><span class="doodle d2"><i></i><i></i><i></i></span></div>
+        <div class="page blank"><span class="no">3</span><span class="cap">아직<br>안 그린 쪽</span></div>
+      </div>
+    </div>
+
+    <div class="snip">
+      <p class="snip-tag">아이 — 그리기 화면 (흰 도화지 시험)</p>
+      <div class="draw-shell">
+        <div class="draw-bar"><span class="pill">3회차</span><span class="t">친구들과 자전거 타기</span></div>
+        <div class="canvas">
+          <span class="paper-tag">도화지</span>
+          <span class="art"><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
+        <div class="tools">
+          <div class="tool on" style="background:#241733"></div>
+          <div class="tool" style="background:#FF9F1C"></div>
+          <div class="tool" style="background:#57D6C4"></div>
+          <div class="tool" style="background:#FFFFFF"></div>
+          <span class="tool-tx">검정 · 선택됨</span>
+        </div>
+      </div>
+      <p class="draw-note">다섯 안 중 도화지가 가장 강하게 떠오릅니다. 대신 밝은 교실에서 화면 반사가 잘 보일 수 있습니다(태블릿 실측 필요).</p>
+    </div>
+
+    <div class="snip">
+      <p class="snip-tag">교사 — 학급 목록</p>
+      <div class="t-shell">
+        <div class="t-bar"><span class="h">우리 반</span><span class="who">김선생님</span></div>
+        <div class="t-row">
+          <div>
+            <p class="t-cls">햇살 2반</p>
+            <div class="t-meta"><span>자전거 이야기</span><span class="sep">·</span><span class="ep">3회차</span></div>
+          </div>
+          <div class="t-btn">다음 회차 열기</div>
+        </div>
+        <div class="t-foot"><span>학생 21명</span><span>오늘 수업 열림</span></div>
+      </div>
+      <p class="draw-note">아이 화면과 같은 색인데도 망고를 빼고 흰 버튼만 남기면 바로 업무 도구로 읽힙니다.</p>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="grimi">
+      <div class="ph"></div>
+      <b>그리미</b>
+      <small>캐릭터가 앉을 중간톤<br>#6E4F87 / #9B7CB5</small>
+    </div>
+    <div class="verdict">
+      <h4>정직한 평가</h4>
+      <ul>
+        <li><b>작품 눌림 위험: 가장 낮음.</b> 어두운 무대 위 흰 종이라 그림이 액자에 든 것처럼 보입니다.</li>
+        <li><b>캐릭터 적합: 최고.</b> Study.Pilot식 광택 있는 3D 캐릭터의 하이라이트가 가장 잘 살아납니다.</li>
+        <li><b>위험:</b> 어두운 화면이 저학년에게 "무겁다"고 느껴질 수 있고, 공용 태블릿 밝기가 낮으면 더 어둡게 보입니다. 5개 중 유일하게 <b>실기기 확인이 필수</b>인 안.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================================================================
+     5번 · 먹빛 화방과 색종이
+     bg #262A33 먹빛   surface #FFFFFF   ink #1B1E25   muted #6E7482
+     border #E2E4E9   primary #FF6B4A 산호   accent 4색 색종이
+     (#FF6B4A 산호 / #FFC94A 노랑 / #3ECFA0 초록 / #A87BE8 보라)
+     blank #4A4F5C   teacher #1B1E25
+     ================================================================== -->
+<section class="v" style="
+  --bg:#262A33; --on-bg:#F3F4F7; --on-bg-dim:#B6BAC6;
+  --surface:#FFFFFF; --ink:#1B1E25; --muted:#6E7482; --border:#E2E4E9; --tint:#F2F3F6;
+  --primary:#FF6B4A; --primary-ink:#FFFFFF; --primary-deep:#CC4A2C;
+  --accent:#FFC94A; --accent-ink:#37280A;
+  --blank:#4A4F5C; --blank-line:#6E7482; --blank-ink:#EDEEF2;
+  --draw-chrome:#1B1E25; --draw-chrome-ink:#EDEEF2; --draw-focus:#FFC94A;
+  --teacher:#1B1E25; --teacher-ink:#D6D9E0; --teacher-surface:#FFFFFF;
+  --teacher-border:#D3D6DD; --teacher-row-ink:#1B1E25; --teacher-meta:#6E7482;
+  --teacher-btn:#FFFFFF; --teacher-btn-ink:#2B303A; --teacher-btn-line:#B6BAC6;
+  --mid:#4E5563; --mid-2:#7C8494; --mid-line:#E6E8ED; --mid-ink:#F5F6F8;
+">
+  <div class="v-head">
+    <div class="v-num">5</div>
+    <div>
+      <h2 class="v-name">먹빛 화방과 색종이</h2>
+      <p class="v-reg">전시장 벽에 걸린 내 그림 — 차분한 배경, 튀는 색종이</p>
+      <p class="v-src">지배색이 중성 먹빛이라 성별 코드가 아예 없습니다. 색은 산호·노랑·초록·보라 4색이 회차 태그처럼 흩뿌려져 활기를 만듭니다.</p>
+    </div>
+  </div>
+
+  <div class="chips">
+    <div class="chip"><div class="sw" style="background:#262A33"></div><div class="tx"><b>배경</b><span>#262A33</span></div></div>
+    <div class="chip"><div class="sw" style="background:#FFFFFF"></div><div class="tx"><b>카드</b><span>#FFFFFF</span></div></div>
+    <div class="chip"><div class="sw" style="background:#1B1E25"></div><div class="tx"><b>글자(잉크)</b><span>#1B1E25</span></div></div>
+    <div class="chip"><div class="sw" style="background:#6E7482"></div><div class="tx"><b>보조 글자</b><span>#6E7482</span></div></div>
+    <div class="chip"><div class="sw" style="background:#E2E4E9"></div><div class="tx"><b>테두리</b><span>#E2E4E9</span></div></div>
+    <div class="chip"><div class="sw" style="background:#FF6B4A"></div><div class="tx"><b>주 행동</b><span>#FF6B4A</span></div></div>
+    <div class="chip"><div class="sw" style="background:linear-gradient(90deg,#FFC94A 0 33%,#3ECFA0 33% 66%,#A87BE8 66%)"></div><div class="tx"><b>강조 3색</b><span>#FFC94A #3ECFA0 #A87BE8</span></div></div>
+    <div class="chip"><div class="sw" style="background:#4A4F5C"></div><div class="tx"><b>아직 안 그린 쪽</b><span>#4A4F5C</span></div></div>
+    <div class="chip"><div class="sw" style="background:#1B1E25"></div><div class="tx"><b>교사 화면 앵커</b><span>#1B1E25</span></div></div>
+  </div>
+
+  <div class="snips">
+    <div class="snip">
+      <p class="snip-tag">아이 — 오늘 회차</p>
+      <div class="ep-top"><span class="ep-badge">3회차</span><span class="ep-arc">자전거 이야기</span></div>
+      <h3 class="ep-title">친구들과 자전거 타기</h3>
+      <p class="ep-scene">자전거를 타고 친구들과 함께 달리는 모습을 그려 봐요</p>
+      <div class="btn-big">그리기 시작</div>
+      <p class="strip-label">내 동화책</p>
+      <div class="strip">
+        <div class="page drawn"><span class="no">1</span><span class="doodle d1"><i></i><i></i><i></i></span></div>
+        <div class="page drawn"><span class="no">2</span><span class="doodle d2"><i></i><i></i><i></i></span></div>
+        <div class="page blank"><span class="no">3</span><span class="cap">아직<br>안 그린 쪽</span></div>
+      </div>
+    </div>
+
+    <div class="snip">
+      <p class="snip-tag">아이 — 그리기 화면 (흰 도화지 시험)</p>
+      <div class="draw-shell">
+        <div class="draw-bar"><span class="pill">3회차</span><span class="t">친구들과 자전거 타기</span></div>
+        <div class="canvas">
+          <span class="paper-tag">도화지</span>
+          <span class="art"><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
+        <div class="tools">
+          <div class="tool on" style="background:#1B1E25"></div>
+          <div class="tool" style="background:#FF6B4A"></div>
+          <div class="tool" style="background:#3ECFA0"></div>
+          <div class="tool" style="background:#A87BE8"></div>
+          <div class="tool" style="background:#FFFFFF"></div>
+          <span class="tool-tx">검정 · 선택됨</span>
+        </div>
+      </div>
+      <p class="draw-note">카드도 흰색이라 도화지 경계가 약합니다. 도화지에 그림자를 더 넣어 종이를 띄워야 합니다.</p>
+    </div>
+
+    <div class="snip">
+      <p class="snip-tag">교사 — 학급 목록</p>
+      <div class="t-shell">
+        <div class="t-bar"><span class="h">우리 반</span><span class="who">김선생님</span></div>
+        <div class="t-row">
+          <div>
+            <p class="t-cls">햇살 2반</p>
+            <div class="t-meta"><span>자전거 이야기</span><span class="sep">·</span><span class="ep">3회차</span></div>
+          </div>
+          <div class="t-btn">다음 회차 열기</div>
+        </div>
+        <div class="t-foot"><span>학생 21명</span><span>오늘 수업 열림</span></div>
+      </div>
+      <p class="draw-note">교사 화면이 가장 어른스러운 안. 다만 아이 화면과의 차이가 작아 "같은 앱"이라는 느낌은 5개 중 가장 약합니다.</p>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="grimi">
+      <div class="ph"></div>
+      <b>그리미</b>
+      <small>캐릭터가 앉을 중간톤<br>#4E5563 / #7C8494</small>
+    </div>
+    <div class="verdict">
+      <h4>정직한 평가</h4>
+      <ul>
+        <li><b>작품 눌림 위험: 낮음</b>(배경 기준). 대신 흰 카드와 흰 도화지가 섞여 "어디가 내 그림인지"가 흐려지는 다른 위험이 있습니다.</li>
+        <li><b>캐릭터 적합: 중간.</b> 중간톤이 회색이라 캐릭터는 잘 뜨지만, 배경 자체는 캐릭터에 색을 보태 주지 않습니다. 캐릭터가 화면 활기의 100%를 책임져야 합니다.</li>
+        <li><b>위험:</b> 캐릭터 없이 보면 다섯 안 중 가장 밋밋합니다. <b>그리미 일러스트가 늦어지면 이 안만 무너집니다.</b></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================= 비교표 ================= -->
+<div class="cmp">
+  <h2>한눈에 비교</h2>
+  <table>
+    <tr>
+      <th style="width:15%">번호 · 이름</th>
+      <th style="width:14%">지배색</th>
+      <th style="width:13%">주 행동</th>
+      <th style="width:16%">성격(레지스터)</th>
+      <th style="width:14%">아이 그림 보호</th>
+      <th style="width:14%">3D 캐릭터</th>
+      <th>가장 큰 위험</th>
+    </tr>
+    <tr>
+      <td><b>1번</b> 자두 잼과 옥수수</td>
+      <td><span class="dot" style="background:#6D3350"></span>#6D3350</td>
+      <td><span class="dot" style="background:#FFC24B"></span>#FFC24B</td>
+      <td>달콤한 축제</td>
+      <td><b>강함</b></td>
+      <td>좋음</td>
+      <td>더 밝히면 분홍으로 미끄러짐</td>
+    </tr>
+    <tr>
+      <td><b>2번</b> 숲 그늘과 라임</td>
+      <td><span class="dot" style="background:#2F6B4E"></span>#2F6B4E</td>
+      <td><span class="dot" style="background:#D8EC5C"></span>#D8EC5C</td>
+      <td>씩씩한 야외</td>
+      <td><b>강함</b></td>
+      <td>매우 좋음</td>
+      <td>라임이 "정답" 신호로 오해될 수 있음</td>
+    </tr>
+    <tr>
+      <td><b>3번</b> 테라코타와 청록</td>
+      <td><span class="dot" style="background:#B4562F"></span>#B4562F</td>
+      <td><span class="dot" style="background:#0A7C86"></span>#0A7C86</td>
+      <td>흙과 미술실</td>
+      <td>보통 (예외 규칙 필요)</td>
+      <td>주의 (외곽선 필수)</td>
+      <td>밝고 뜨거워 흰 도화지와 명도차가 작음</td>
+    </tr>
+    <tr>
+      <td><b>4번</b> 가지밭 저녁과 망고</td>
+      <td><span class="dot" style="background:#33203F"></span>#33203F</td>
+      <td><span class="dot" style="background:#FF9F1C"></span>#FF9F1C</td>
+      <td>이야기 시간</td>
+      <td><b>가장 강함</b></td>
+      <td><b>최고</b></td>
+      <td>저학년에게 무겁게 느껴질 수 있음</td>
+    </tr>
+    <tr>
+      <td><b>5번</b> 먹빛 화방과 색종이</td>
+      <td><span class="dot" style="background:#262A33"></span>#262A33</td>
+      <td><span class="dot" style="background:#FF6B4A"></span>#FF6B4A</td>
+      <td>전시장</td>
+      <td>낮음~보통 (흰 카드와 겹침)</td>
+      <td>중간</td>
+      <td>캐릭터가 없으면 활기가 0이 됨</td>
+    </tr>
+  </table>
+  <p><b>다섯 안이 공통으로 지킨 것</b> — 지배색이 하늘색도 분홍도 아님 / 빨강·초록에 정답·오답 의미 없음 /
+     "아직 안 그린 쪽"은 전용 중립 토큰으로 경고색 아님 / 선택 상태는 색 + 테두리 + 아래 점 + 글자 4중 표시 /
+     교사 화면은 같은 색 가족의 더 어두운 앵커 + 흰 버튼으로 어른 톤을 만듦 / 흰 도화지는 어떤 안에서도 화면에서 가장 밝은 면.</p>
+  <p><b>고르실 때 기준</b> — 아이 그림 보호만 보면 4번 &gt; 1번 = 2번 &gt; 5번 &gt; 3번,
+     교사 화면의 어른스러움만 보면 5번 &gt; 2번 &gt; 4번 &gt; 1번 &gt; 3번,
+     그리미 캐릭터가 가장 살아나는 건 4번과 2번입니다.</p>
+</div>
+
+</div>
+</body>
+</html>

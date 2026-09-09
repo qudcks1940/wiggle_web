@@ -4,8 +4,6 @@ import test from "node:test";
 import { startTestServer } from "./harness/server.mjs";
 import { sha256 } from "../lib/token-crypto.ts";
 import { emptyStorybookDocument } from "../lib/storybook-model.ts";
-import { GUIDED_LESSON_VARIANT_COUNT, guideMarksForVariant } from "../lib/lesson-guide-variants.ts";
-import { LESSONS } from "../lib/lesson-content.ts";
 
 function token(prefix) {
   return `${prefix}_${randomUUID().replaceAll("-", "")}`;
@@ -22,45 +20,7 @@ async function expectStatus(response, status) {
   return response;
 }
 
-test("모든 따라 그리기 활동은 네 가지 고정 가이드를 안전한 좌표로 제공한다", () => {
-  const guided = LESSONS.filter((lesson) => lesson.mode === "guided");
-  assert.equal(GUIDED_LESSON_VARIANT_COUNT, 4);
-  assert.ok(guided.length >= 10);
-  for (const lesson of guided) {
-    const variants = Array.from({ length: GUIDED_LESSON_VARIANT_COUNT }, (_, index) => guideMarksForVariant(lesson, index));
-    assert.equal(new Set(variants.map((value) => JSON.stringify(value))).size, GUIDED_LESSON_VARIANT_COUNT, `${lesson.slug}: variants`);
-    for (const marks of variants) {
-      assert.equal(marks.length, lesson.guide.length, `${lesson.slug}: mark count`);
-      assert.deepEqual([...new Set(marks.map((mark) => mark.step))], [...new Set(lesson.guide.map((mark) => mark.step))], `${lesson.slug}: steps`);
-      for (const coordinate of marks.flatMap(allCoordinates)) {
-        assert.ok(Number.isFinite(coordinate) && coordinate >= 0 && coordinate <= 1, `${lesson.slug}: ${coordinate}`);
-      }
-    }
-  }
-});
-
-test("강아지 가이드는 얼굴 특징을 겹치지 않고 귀를 머리 바깥에 둔다", () => {
-  const lesson = LESSONS.find((item) => item.slug === "friendly-dog");
-  for (let variant = 0; variant < GUIDED_LESSON_VARIANT_COUNT; variant += 1) {
-    const marks = guideMarksForVariant(lesson, variant);
-    const eyes = marks.filter((mark) => mark.step === 3 && mark.kind === "ellipse").slice(0, 2);
-    assert.equal(eyes.length, 2, `variant ${variant}: 두 눈`);
-    assert.ok(eyes.every((eye) => eye.rx <= 0.025 && eye.ry <= 0.03), `variant ${variant}: 작은 눈`);
-    assert.ok(Math.abs(eyes[0].x - eyes[1].x) >= 0.12, `variant ${variant}: 눈이 겹치지 않음`);
-    assert.ok(eyes.every((eye) => eye.x >= 0.36 && eye.x <= 0.64 && eye.y >= 0.25 && eye.y <= 0.37), `variant ${variant}: 눈이 얼굴 안에 위치`);
-
-    const faceEllipses = marks.filter((mark) => mark.step === 3 && mark.kind === "ellipse");
-    assert.equal(faceEllipses.length, 3, `variant ${variant}: 눈 두 개와 코만 타원`);
-    assert.ok(faceEllipses.every((mark) => mark.rx < 0.04 && mark.ry < 0.04), `variant ${variant}: 큰 주둥이 원 금지`);
-
-    const earMarks = marks.filter((mark) => mark.step === 2 && mark.kind === "curve");
-    assert.equal(earMarks.length, 6, `variant ${variant}: 양쪽 귀 윤곽`);
-    const earPoints = earMarks.flatMap((mark) => mark.points);
-    assert.ok(earPoints.every(([x]) => x <= 0.45 || x >= 0.55), `variant ${variant}: 귀가 얼굴 중앙을 침범하지 않음`);
-  }
-});
-
-test("새 그림은 같은 활동의 가이드를 순환하고 교사는 자기 반 완성 그림책만 열고 피드백 요청한다", async (context) => {
+test("교사는 자기 반 완성 그림책만 열고 피드백을 요청한다", async (context) => {
   const server = await startTestServer();
   context.after(() => server.dispose());
   // 첫 요청이 실제 런타임 프로비저닝을 수행한다.
@@ -87,17 +47,8 @@ test("새 그림은 같은 활동의 가이드를 순환하고 교사는 자기 
     server.DB.prepare("INSERT INTO device_sessions(token_hash, student_id, expires_at, last_used_at) VALUES (?, ?, ?, ?)").bind(await sha256(studentSession), studentId, expires, now.toISOString()),
   ]);
 
-  const studentHeaders = { authorization: `Bearer ${studentSession}`, "content-type": "application/json" };
-  const seenVariants = [];
-  for (let index = 0; index < GUIDED_LESSON_VARIANT_COUNT; index += 1) {
-    const response = await server.fetch("/api/artworks", {
-      method: "POST",
-      headers: studentHeaders,
-      body: JSON.stringify({ learningMode: "guided", lessonSlug: "friendly-dog", clientArtworkId: `artwork_variant_${index}_123456789012` }),
-    });
-    seenVariants.push((await (await expectStatus(response, 201)).json()).artwork.guideVariant);
-  }
-  assert.deepEqual(seenVariants, [0, 1, 2, 3]);
+  // 가이드 변형 순환은 레슨 카탈로그 은퇴(2026-08-30 제품 결정)와 함께 제거됐다 —
+  // guide_variant 컬럼은 스키마에 남지만(파괴적 변경 금지, AD-2) 항상 0이다.
 
   const completedId = "storybook_completed_12345678";
   const draftId = "storybook_draft_123456789012";

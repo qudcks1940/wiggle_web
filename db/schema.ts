@@ -30,6 +30,9 @@ export const classrooms = sqliteTable("classrooms", {
   admissionOpen: integer("admission_open", { mode: "boolean" }).notNull().default(true),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
   currentActivity: text("current_activity").notNull().default("자유롭게 그리기"),
+  // 학급 포인터 — 지금 어떤 아크의 어느 회차인가 (AD-9). 아이의 진행 상태는 넣지 않는다.
+  currentArcId: text("current_arc_id"),
+  currentEpisodeId: text("current_episode_id"),
   startsAt: text("starts_at"),
   endsAt: text("ends_at"),
   createdAt: createdAt(),
@@ -88,6 +91,10 @@ export const artworks = sqliteTable("artworks", {
   topic: text("topic").notNull(),
   learningMode: text("learning_mode", { enum: ["practice", "guided", "observe", "free"] }).notNull(),
   lessonSlug: text("lesson_slug"),
+  // 회차 귀속 — 생성 시점에 고정, 어떤 쓰기도 학급 포인터로 재결정하지 않는다 (AD-10)
+  arcId: text("arc_id"),
+  episodeId: text("episode_id"),
+  arcVersion: integer("arc_version"),
   guideVariant: integer("guide_variant").notNull().default(0),
   intent: text("intent").notNull().default(""),
   opsJson: text("ops_json").notNull().default("[]"),

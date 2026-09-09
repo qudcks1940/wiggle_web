@@ -10,7 +10,10 @@ export async function GET(request: Request) {
   const stored = decodeOAuthCookie(cookieStore.get("wiggle_google_oauth")?.value ?? "");
   cookieStore.delete("wiggle_google_oauth");
   // 실패는 전부 랜딩으로 보낸다 — /teacher로 보내면 다시 구글로 튕겨 루프가 된다.
-  const fallback = () => NextResponse.redirect(new URL("/", url.origin));
+  // ?teacherAuth=failed 표시로 랜딩이 안내를 띄운다(Story 1.3): 학교 Workspace 관리자가
+  // 서드파티 앱을 차단하면 구글 화면에서 인증이 실패하는데, 그건 앱 게시 상태와 무관하고
+  // 그 학교 관리자만 풀 수 있다. 설명 없이 버려진 교사는 여기서 포기한다.
+  const fallback = () => NextResponse.redirect(new URL("/?teacherAuth=failed", url.origin));
 
   const config = googleOAuthConfig(url.origin);
   const code = url.searchParams.get("code") ?? "";

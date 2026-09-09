@@ -7,7 +7,7 @@ import { SpeakButton } from "./SpeakButton";
 import { StudentMessageCenter, StudentTeacherMessage } from "./StudentMessageCenter";
 
 type HomeArtwork = { id: string; title: string; learningMode: string; lessonSlug: string | null; status: string; currentStep: number; updatedAt: string };
-type TodayEpisode = { arcId: string; arcTitle: string; arcVersion: number; episodeId: string; title: string; sceneText: string; sceneImage: string | null; episodeIndex: number; episodeCount: number };
+type TodayEpisode = { arcId: string; arcTitle: string; arcVersion: number; episodeId: string; title: string; sceneText: string; sceneImage: string | null; prompts?: string[]; episodeIndex: number; episodeCount: number };
 type TodayEpisodeArtwork = { id: string; title: string; status: string; revision: number; updatedAt: string };
 type HomeData = { student: { id: string; nickname: string; animal: string; classroomName: string }; artworks: HomeArtwork[]; artworkTotal: number; todayEpisode: TodayEpisode | null; todayEpisodeArtwork: TodayEpisodeArtwork | null; currentActivityArtwork: HomeArtwork | null; latestUnfinishedArtwork: HomeArtwork | null; messages: StudentTeacherMessage[]; currentActivityKey: string; currentActivityLabel: string };
 
@@ -107,7 +107,7 @@ export function StudentHome() {
         <p>{data.todayEpisode.episodeIndex}번째 이야기 시간이에요.</p>
       </div>
       {/* 음성은 페이지당 1개(학생UI-7). 장면 문장은 확정 시나리오 문장이므로 그대로 읽는다. */}
-      <SpeakButton text={`${data.todayEpisode.arcTitle}. ${data.todayEpisode.title}. ${data.todayEpisode.sceneText}`} />
+      <SpeakButton text={[data.todayEpisode.arcTitle, data.todayEpisode.title, data.todayEpisode.sceneText, ...(data.todayEpisode.prompts ?? [])].join(" ")} />
     </section>
 
     <section className="today-episode-card" aria-labelledby="today-episode-title">
@@ -116,6 +116,8 @@ export function StudentHome() {
       <p className="teacher-activity-pill">⭐ {data.todayEpisode.episodeIndex}회차</p>
       <h2 id="today-episode-title">{data.todayEpisode.title}</h2>
       <p className="today-episode-scene-text">{data.todayEpisode.sceneText}</p>
+      {/* 씨앗 선 회차의 이어지는 안내(계획서의 안내 2~4). 정답이 없는 질문형이라 그대로 보여 준다. */}
+      {(data.todayEpisode.prompts?.length ?? 0) > 0 && <ol className="today-episode-prompts">{data.todayEpisode.prompts!.map((prompt) => <li key={prompt}>{prompt}</li>)}</ol>}
       <button className="button primary child-primary-action" onClick={() => void startTodayEpisode()} disabled={startingEpisode}>
         <span aria-hidden="true">▶️</span>
         {startingEpisode ? "여는 중…" : data.todayEpisodeArtwork ? (data.todayEpisodeArtwork.status === "complete" ? "내 그림 다시 보기" : "이어 그리기") : "그리기 시작"}

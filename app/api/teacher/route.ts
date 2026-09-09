@@ -23,7 +23,7 @@ function presentClassroom<T extends { currentActivity: string; currentArcId?: st
   return {
     ...classroom,
     currentActivity: activityLabel(currentActivityKey), currentActivityKey, currentActivityLabel: activityLabel(currentActivityKey),
-    arc: arc && episode ? { arcId: arc.arcId, title: arc.title, episodeId: episode.episodeId, episodeTitle: episode.title, episodeIndex, episodeCount: arc.episodes.length } : null,
+    arc: arc && episode ? { arcId: arc.arcId, title: arc.title, episodeId: episode.episodeId, episodeTitle: episode.title, episodeIndex, episodeCount: arc.episodes.length, discussion: episode.discussion ?? [] } : null,
   };
 }
 

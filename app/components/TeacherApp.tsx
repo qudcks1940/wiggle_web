@@ -7,7 +7,7 @@ import { QrCode } from "./QrCode";
 import { VoiceWhisperButton } from "./VoiceWhisper";
 import { useModalDialog } from "./useModalDialog";
 
-type ClassroomArc = { arcId: string; title: string; episodeId: string; episodeTitle: string; episodeIndex: number | null; episodeCount: number };
+type ClassroomArc = { arcId: string; title: string; episodeId: string; episodeTitle: string; episodeIndex: number | null; episodeCount: number; discussion?: string[] };
 type ArcOption = { arcId: string; title: string; episodes: Array<{ episodeId: string; title: string }> };
 type Classroom = { id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; currentActivityKey: string; currentActivityLabel: string; arc: ClassroomArc | null; studentCount: number };
 type Student = { id: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null; claimedAt: string | null; createdAt: string; lastActivityAt: string; artworkId: string | null; completedArtworkId: string | null; artworkTitle: string | null; status: string | null; currentStep: number | null; revision: number | null; thumbnail: string | null; artworkUpdatedAt: string | null; artworkCount: number; drawingArtworkCount: number; completedArtworkCount: number; duplicateNickname: boolean };
@@ -87,6 +87,13 @@ function ArcCockpit({ room, onOpenEpisode }: { room: Classroom; onOpenEpisode: (
         {room.arc
           ? <b>{room.arc.title} · {room.arc.episodeIndex}회차 「{room.arc.episodeTitle}」</b>
           : <b>아직 여는 회차가 없어요 — 아이들은 자유 그리기로 시작해요</b>}
+        {(room.arc?.discussion?.length ?? 0) > 0 && (
+          <details className="arc-cockpit-discussion">
+            <summary>교실 토론 질문 · 40분 배분</summary>
+            <ol>{room.arc!.discussion!.map((question) => <li key={question}>{question}</li>)}</ol>
+            <p>씨앗 5분 · 그리기 20분 · 이야기 한 줄 5분 · 친구 그림 보기와 토론 10분. 토론은 교실에서 말로 하고 앱은 그림만 크게 띄워요.</p>
+          </details>
+        )}
       </div>
       <div className="arc-cockpit-actions">
         <label>이야기 고르기

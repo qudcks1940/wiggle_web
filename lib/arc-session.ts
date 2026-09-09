@@ -19,6 +19,8 @@ export type TodayEpisode = {
   title: string;
   sceneText: string;
   sceneImage: string | null;
+  /** sceneText 뒤에 이어지는 안내 문장. 씨앗 선 회차에만 있다. */
+  prompts: string[];
   /** 1부터 시작하는 회차 번호 — 화면 표기용. 귀속에는 episodeId만 쓴다. */
   episodeIndex: number;
   episodeCount: number;
@@ -41,6 +43,7 @@ export function resolveTodayEpisode(
     title: episode.title,
     sceneText: episode.sceneText,
     sceneImage: episode.sceneImage,
+    prompts: episode.prompts ?? [],
     episodeIndex: index + 1,
     episodeCount: arc.episodes.length,
   };

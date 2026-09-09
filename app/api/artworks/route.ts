@@ -1,5 +1,5 @@
 import { bindings } from "@/db/runtime";
-import { emptyDocument } from "@/lib/drawing-model";
+import { DrawOp, emptyDocument } from "@/lib/drawing-model";
 import { lessonBySlug } from "@/lib/lesson-content";
 import { arcById, episodeById } from "@/lib/arc-content";
 import { GUIDED_LESSON_VARIANT_COUNT } from "@/lib/lesson-guide-variants";
@@ -10,6 +10,25 @@ export async function GET(request: Request) {
   if (!student) return jsonError("학생 로그인이 필요해요.", 401);
   const rows = await bindings().DB.prepare(`SELECT id, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, guide_variant AS guideVariant, intent, current_step AS currentStep, revision, status, updated_at AS updatedAt, completed_at AS completedAt FROM artworks WHERE student_id = ? ORDER BY updated_at DESC, id DESC LIMIT 50`).bind(student.id).all();
   return noStoreJson({ artworks: rows.results });
+}
+
+// 씨앗 선 회차는 빈 도화지가 아니라 미리 그어 둔 선으로 시작한다(docs/curriculum-seed-plan.md).
+// 점선 힌트와 달리 보통의 획이라 아이가 지울 수 있고 저장 이미지에도 그대로 남는다.
+function seededDocument(seed: Array<Array<[number, number]>> | undefined) {
+  const document = emptyDocument();
+  if (!seed?.length) return document;
+  const seededAt = new Date().toISOString();
+  document.ops = seed.map((points): DrawOp => ({
+    opId: id("op"),
+    clientOpId: id("seed"),
+    type: "stroke",
+    at: seededAt,
+    tool: "pencil",
+    color: "#2B4A33",
+    width: 8,
+    points: points.map(([x, y]) => ({ x, y, pressure: 0.5 })),
+  }));
+  return document;
 }
 
 export async function POST(request: Request) {
@@ -36,7 +55,7 @@ export async function POST(request: Request) {
     if (existing) return noStoreJson({ artwork: existing, reused: true });
     await bindings().DB.prepare(
       `INSERT INTO artworks(id, student_id, classroom_id, title, topic, learning_mode, arc_id, episode_id, arc_version, intent, ops_json) VALUES (?, ?, ?, ?, ?, 'free', ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`,
-    ).bind(artworkId, student.id, student.classroomId, episode.title, arc.title, arcId, episodeId, arc.version, cleanText(payload.intent, 160), JSON.stringify(emptyDocument())).run();
+    ).bind(artworkId, student.id, student.classroomId, episode.title, arc.title, arcId, episodeId, arc.version, cleanText(payload.intent, 160), JSON.stringify(seededDocument(episode.seed))).run();
     // INSERT가 경합에서 졌어도(같은 clientArtworkId 재전송) 아래 재조회가 기존 행을 돌려준다 — 유실 없음.
     const artwork = await bindings().DB.prepare(
       `SELECT id, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, intent, revision, status FROM artworks WHERE student_id = ? AND arc_id = ? AND episode_id = ? ORDER BY CASE status WHEN 'complete' THEN 0 ELSE 1 END, created_at ASC LIMIT 1`,

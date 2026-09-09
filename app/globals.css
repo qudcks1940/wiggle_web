@@ -2157,6 +2157,12 @@ body {
 .today-episode-card>h2 { margin:0; font-size:26px; color:var(--ink); }
 .today-episode-scene { max-width:280px; border-radius:14px; }
 .today-episode-scene-text { margin:0; font-size:17px; color:var(--secondary); font-weight:700; line-height:1.6; }
+.today-episode-prompts { margin:0; padding-left:22px; font-size:16px; font-weight:700; line-height:1.7; color:var(--secondary); text-align:left; }
+.today-episode-prompts li::marker { color:var(--primary-dark); }
+.arc-cockpit-discussion { margin-top:6px; font-size:14px; }
+.arc-cockpit-discussion>summary { cursor:pointer; font-weight:800; color:var(--primary-dark); }
+.arc-cockpit-discussion ol { margin:6px 0 0; padding-left:20px; line-height:1.6; }
+.arc-cockpit-discussion p { margin:6px 0 0; color:var(--secondary); }
 .today-episode-card>.child-primary-action { min-height:56px; min-width:220px; font-size:19px; }
 @media (max-width:480px) { .today-episode-card>h2 { font-size:22px; } .today-episode-card>.child-primary-action { width:100%; } }
 

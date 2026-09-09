@@ -67,7 +67,8 @@ test("교사 완성 그림책 화면은 소유권·완성 상태·개별 및 일
   assert.match(library, /피드백 요청/);
   assert.match(preview, /window\.print\(\)/);
   assert.match(preview, /PDF로 저장 · 인쇄/);
-  assert.match(teacherApp, /완성 그림책/);
+  assert.match(teacherApp, /TeacherWorkspace/);
+  assert.match(await read("../app/components/TeacherWorkArchive.tsx"), /완성 그림책/);
 });
 
 test("학생 화면에 실제 그림책 진입·편집·가져오기·미리보기가 연결된다", async () => {

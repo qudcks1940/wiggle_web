@@ -26,7 +26,7 @@ test("teacher classroom rows separate navigation from the accessible delete acti
   assert.match(teacher, /학생 입장과 기존 로그인, 가족 공유가 즉시 끝나고/);
   assert.match(teacher, /자기 그림과 동화책을 다시 열 수 없어요/);
   assert.doesNotMatch(teacher, /복구를 위해 안전하게 보관/);
-  assert.match(teacher, /await teacherPost\(\{ action: "deleteClassroom", classroomId: item\.id \}\); await load\(\)/);
+  assert.match(teacher, /await teacherPost\(\{ action: "deleteClassroom", classroomId: item\.id \}\); if \(classroomId\) location\.href = "\/teacher"; else await load\(\)/);
   assert.match(css, /\.class-delete-button \{[^}]*min-height:44px;[^}]*white-space:normal;[^}]*overflow-wrap:break-word;/);
 });
 

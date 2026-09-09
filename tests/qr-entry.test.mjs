@@ -35,7 +35,7 @@ test("QR rendering keeps a standard quiet zone, high contrast, large dialog and 
   assert.match(css, /\.qr-code-large \{ width:min\(360px/);
   assert.match(css, /image-rendering:pixelated/);
   assert.doesNotMatch(css, /\.qr-code\s*\{[^}]*112px/i);
-  assert.match(teacher, /QR 크게 보기/);
+  assert.match(await read("../app/components/TeacherWorkspace.tsx"), /입장 안내/);
   assert.match(teacher, /event\.key === "Escape"/);
   assert.match(teacher, /role="dialog" aria-modal="true" aria-labelledby="large-qr-title"/);
   assert.match(teacher, /aria-label="큰 입장 QR 닫기"/);
@@ -49,7 +49,7 @@ test("large QR dialog traps keyboard focus and restores the opener without chang
   ]);
   assert.match(teacher, /qrOpenButtonRef = useRef<HTMLButtonElement>/);
   assert.match(teacher, /qrDialogRef = useRef<HTMLDialogElement>/);
-  assert.match(teacher, /<button ref=\{qrOpenButtonRef\}/);
+  assert.match(teacher, /onQr=\{\(opener\) => \{ qrOpenButtonRef\.current = opener; setQrExpanded\(true\); \}\}/);
   assert.match(teacher, /<dialog ref=\{qrDialogRef\}/);
   assert.match(teacher, /dialog\.showModal\(\)/);
   assert.match(teacher, /dialog\.querySelectorAll<HTMLElement>\(focusableSelector\)/);

@@ -15,16 +15,12 @@ const join = (await readFile(new URL("../app/components/JoinClient.tsx", import.
   "\n",
 );
 
-test("a wrong class code is classified for code-field recovery, wrong pictures for password recovery", () => {
-  assert.equal(classifyEntryError({ status: 404, action: "join", hasPersonalQrToken: false }), "code");
-  assert.equal(classifyEntryError({ status: 401, action: "switchProfile", hasPersonalQrToken: false }), "password");
-  assert.equal(classifyEntryError({ status: 401, action: "recover", hasPersonalQrToken: false }), "password");
-  // 개인 QR 복구 실패는 그림을 다시 고른다고 해결되지 않는다.
-  assert.equal(classifyEntryError({ status: 401, action: "recover", hasPersonalQrToken: true }), "general");
-  // join의 401은 비밀번호 검증이 아니므로 일반 오류다.
-  assert.equal(classifyEntryError({ status: 401, action: "join", hasPersonalQrToken: false }), "general");
-  assert.equal(classifyEntryError({ status: 429, action: "switchProfile", hasPersonalQrToken: false }), "general");
-  assert.equal(classifyEntryError({ status: 500, action: "join", hasPersonalQrToken: false }), "general");
+test("a wrong class code or participation code is classified for teacher-call recovery, everything else is general", () => {
+  assert.equal(classifyEntryError(404), "code");
+  assert.equal(classifyEntryError(401), "general");
+  assert.equal(classifyEntryError(409), "general");
+  assert.equal(classifyEntryError(429), "general");
+  assert.equal(classifyEntryError(500), "general");
 });
 
 test("errors are shown with a warning picture", () => {
@@ -33,37 +29,24 @@ test("errors are shown with a warning picture", () => {
   assert.doesNotMatch(join, /SpeakButton/);
 });
 
-test("one big reset clears every picked picture and highlights after a wrong password", () => {
-  assert.match(join, /function resetPictures\(\) \{\s*clearEntryError\(\);\s*setPictures\(\[\]\);/);
-  assert.match(join, /reset-pictures-button\$\{errorKind === "password" \? " attention" : ""\}/);
-  assert.match(join, /🔄<\/span> 다시 골라요/);
-});
-
-test("the first correction clears the previous error for nickname, animal and pictures (the classroom code has no visible field to correct — it comes from the landing page or QR)", () => {
-  assert.match(join, /setNickname\(event\.target\.value\); setNicknameAuto\(false\); clearEntryError\(\);/);
+test("the first correction clears the previous error — every key press, erase and animal pick", () => {
+  assert.match(join, /const pressKey = \(digit: string\) => \{ clearEntryError\(\);/);
+  assert.match(join, /onClick=\{\(\) => \{ clearEntryError\(\); setCodeInput\(\(current\) => current\.slice\(0, -1\)\); \}\}/);
   assert.match(join, /setAnimal\(value\); clearEntryError\(\);/);
-  assert.match(join, /function appendPicture\(value: string\) \{\s*clearEntryError\(\);/);
-  assert.match(join, /function removeLastPicture\(\) \{\s*clearEntryError\(\);/);
 });
 
-test("existing students hear an unlock instruction, not a creation instruction", () => {
-  assert.match(join, /같은 그림도 괜찮아요\. 순서대로/);
-  assert.match(join, /만들 때 고른 순서 그대로 눌러요\./);
-  assert.match(join, /const creating = mode === "join";/);
-});
-
-test("a wrong class code offers calling the teacher (there is no visible code field to highlight since the code is entered only on the landing page or via QR)", () => {
+test("a wrong code offers calling the teacher (there is no visible class-code field — it comes from the landing page or QR)", () => {
   assert.match(join, /errorKind === "code" && !teacherCallOpen/);
   assert.match(join, /🙋<\/span>선생님 불러요/);
   assert.match(join, /손을 들고 선생님을 불러요\./);
+  assert.match(join, /참여 코드를 다시 알려 주실 거예요\./);
 });
 
-test("join/recover keeps the code hidden and only the approved phone/short-screen step guide is rendered", () => {
-  assert.match(join, /className="mobile-entry-progress"/);
-  assert.match(join, /data-mobile-step=\{seatRecover \? 3 : mobileStep\}/);
-  assert.doesNotMatch(join, /1️⃣ 수업 코드/);
-  assert.match(join, /<legend>1️⃣ 내 동물<\/legend>/);
-  assert.match(join, /<span>2️⃣ 그림 별명<\/span>/);
+test("the code screen submits only six digits and the animal screen only after a pick", () => {
+  assert.match(join, /export const ENTRY_CODE_LENGTH = 6;/);
+  assert.match(join, /disabled=\{busy \|\| codeInput\.length !== ENTRY_CODE_LENGTH\}/);
+  assert.match(join, /disabled=\{busy \|\| !animal\}/);
+  assert.match(join, /autoComplete="one-time-code"/);
 });
 
 test("animal buttons carry Korean names for assistive tech", () => {

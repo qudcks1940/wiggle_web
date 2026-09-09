@@ -14,40 +14,38 @@ test("class code and QR resolve the same private classroom entry status without 
   assert.match(route, /hasProfiles: Boolean\(existing\)/);
   assert.doesNotMatch(route.slice(route.indexOf('action === "entryStatus"'), route.indexOf('action === "join"')), /nickname|studentCount|\.all</);
   assert.match(join, /action: "entryStatus", entry/);
-  // 입장은 명단 번호로만 한다. 명단이 없으면 아이가 할 수 있는 일이 없어 안내 화면으로 간다.
-  assert.match(join, /setMode\(data\.hasRoster \? "seat" : "noRoster"\)/);
-  assert.match(join, /내 번호를 눌러요/);
+  // 입장은 명단의 참여 코드로만 한다. 명단이 없으면 아이가 할 수 있는 일이 없어 안내 화면으로 간다.
+  assert.match(join, /setMode\(data\.hasRoster \? "code" : "noRoster"\)/);
+  assert.match(join, /내 참여 코드를 눌러요/);
   assert.doesNotMatch(join, /profile-grid|deviceProfiles|activeProfile/);
 });
 
-test("normal re-entry uses classroom-scoped animal, nickname and three pictures on every device", async () => {
+test("re-entry on every device uses the same participation code — no pictures, no nickname typing", async () => {
   const [route, join] = await Promise.all([
     read("../app/api/student/route.ts"),
     read("../app/components/JoinClient.tsx"),
   ]);
-  assert.match(join, /\{ action, entry, nickname, animal, picturePassword: pictures, \.\.\.seat \}/);
-  assert.match(route, /payload\.entry \?\? payload\.classCode/);
-  // 재입장 후보는 별명·동물이 아니라 번호 하나로 정해진다.
-  assert.match(route, /WHERE s\.classroom_id = \? AND s\.seat_number = \? AND s\.archived_at IS NULL AND c\.active = 1/);
-  assert.match(route, /code: "SEAT_CLAIMED"/);
-  assert.doesNotMatch(join, /개인 QR|새 개인 QR|복구 카드 재발급|다른 기기에서 그렸다면 선생님/);
-  const normalSubmit = join.slice(join.indexOf('const payload = action === "join"'), join.indexOf('const response = await fetch', join.indexOf('const payload = action === "join"')));
-  assert.match(normalSubmit, /\{ action, entry, nickname, animal, picturePassword: pictures, \.\.\.seat \}/);
+  assert.match(join, /action: "join", entry, entryCode: codeInput/);
+  // 재입장 후보는 별명·동물이 아니라 학급 + 참여 코드로 정해진다.
+  assert.match(route, /WHERE classroom_id = \? AND entry_code = \? AND archived_at IS NULL/);
+  assert.match(route, /code: "ENTRY_CODE"/);
+  assert.doesNotMatch(join, /개인 QR|새 개인 QR|복구 카드 재발급|다른 기기에서 그렸다면 선생님|picturePassword/);
 });
 
-test("wide/tablet entry stays one screen and only phones or short viewports use three guided steps", async () => {
+test("the code and animal screens reuse the keypad notebook and never scroll sideways", async () => {
   const [join, css] = await Promise.all([
     read("../app/components/JoinClient.tsx"),
-    read("../app/globals.css"),
+    read("../app/components/EntryCheck.module.css"),
   ]);
-  assert.match(join, /type MobileStep = 1 \| 2 \| 3/);
-  assert.match(join, /mobile-entry-progress/);
-  // 한 화면 2열 입장 카드: 기존 601~900px에 더해 무대에서 제외된 세로 901~1024px도 맡는다 (2026-08-20 iPad 44px 실측).
-  assert.match(css, /@media \(min-width:601px\) and \(min-height:601px\) and \(max-width:900px\), \(min-width:901px\) and \(max-width:1024px\) and \(min-height:601px\) and \(orientation:portrait\)/);
-  assert.match(css, /grid-template-columns:minmax\(245px,42%\) minmax\(0,1fr\)/);
-  assert.match(css, /@media \(max-width:600px\), \(max-height:600px\)/);
-  assert.match(css, /\.join-step \{ display:none; \}/);
-  assert.match(css, /\.join-step\.active \{ display:block; \}/);
+  assert.match(join, /type Mode = "checking" \| "code" \| "animal" \| "noRoster"/);
+  assert.match(join, /className=\{`code-card \$\{check\.pad\}`\}/);
+  assert.match(join, /className=\{`animal-card \$\{check\.pad\}`\}/);
+  assert.match(css, /\.pad \.display :global\(\.entry-code-input\)/);
+  // 넓으면 5열, 좁은 수첩에서는 4열로 접혀 칩이 44px 아래로 내려가지 않는다.
+  assert.match(css, /\.pad :global\(\.animal-choice-grid\) \{ display: grid; grid-template-columns: repeat\(auto-fit, minmax\(max\(44px, 18%\), 1fr\)\)/);
+  // 좁은 화면 무대는 width:auto면 내용 폭으로 줄어든다 — 100%로 못 박는다.
+  assert.match(css, /\.seatStage \{ width: 100%; aspect-ratio: auto; background: none; \}/);
+  assert.match(css, /\.pad \{ position: relative; inset: auto; \}/);
 });
 
 test("teacher cards expose only the approved read-only profile facts", async () => {

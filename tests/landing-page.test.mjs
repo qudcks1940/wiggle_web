@@ -85,20 +85,6 @@ test("/join never redirects server-side; it always hands the sanitized code to J
   assert.doesNotMatch(joinPage, /next\/navigation/);
 });
 
-test("the join/recover control card numbers exactly 1 animal, 2 nickname, 3 picture password, and does not duplicate the picture-password slots already shown in the left preview", async () => {
-  const joinClient = await read("../app/components/JoinClient.tsx");
-  assert.match(joinClient, /<legend>1️⃣ 내 동물<\/legend>/);
-  assert.match(joinClient, /<span>2️⃣ 그림 별명<\/span>/);
-  assert.match(joinClient, /picturePasswordPicker\(\{ numbered: true, showSlots: false \}\)/);
-  assert.match(joinClient, /const legendLabel = numbered \? "3️⃣ 그림 비밀번호" : /);
-  assert.match(joinClient, /\{showSlots && <div className="password-slots"/);
-});
-
-test("the join preview card keeps the live picture-password slots so the right column doesn't need to repeat them", async () => {
-  const joinClient = await read("../app/components/JoinClient.tsx");
-  assert.match(joinClient, /className="join-preview-slots"/);
-});
-
 test("landing subtitle has an explicit width so it wraps instead of overflowing as a centered item", async () => {
   const css = await read("../app/globals.css");
   // 대문 카피는 가운데 정렬 컨테이너 안에 있다. max-width만 주면 렌더러에 따라 보이는 상자 밖으로
@@ -120,11 +106,9 @@ test("desktop (min-width:900px) landing typography reads as a strong headline wi
   assert.ok(Number(tagLabelSize[1]) >= 20, `expected 학생 label size >= 20px, got ${tagLabelSize[1]}px`);
 });
 
-test("wide picture-book screens keep short landing and join copy on one line", async () => {
+test("wide picture-book screens keep short landing copy on one line", async () => {
   const css = await read("../app/globals.css");
-  // 개행을 `\n`으로 고정하면 CRLF 체크아웃(Windows)에서 이 블록을 영영 찾지 못해
-  // CSS가 멀쩡해도 실패한다. 줄바꿈은 개행 종류와 무관하게 본다.
-  const wide = css.match(/@media \(min-width:901px\) \{\s*\.landing-headline,\.landing-subtitle,\.entry-card\.join-card h1,\.entry-card\.join-card \.join-subtitle \{([\s\S]*?)\}/)?.[1] ?? "";
+  const wide = css.match(/@media \(min-width:901px\) \{\s*\.landing-headline,\.landing-subtitle \{([\s\S]*?)\}/)?.[1] ?? "";
   assert.match(wide, /width:auto;/);
   assert.match(wide, /max-width:none;/);
   assert.match(wide, /white-space:nowrap;/);

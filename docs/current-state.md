@@ -136,9 +136,9 @@
 - 대문에서 4자리 수업 코드 입력 또는 학급 QR로 입장
 - QR로 이미 학급이 정해진 경우 프로필 화면에서 수업 코드를 다시 입력하지 않음
 - 수업 코드와 QR 모두 서버의 같은 학급 상태 확인을 거쳐 동일한 입장 흐름 사용
-- 입장은 **번호 하나로만** 한다(2026-09-07). 학급을 확인하면 바로 번호 입력 화면(`.seat-input`)이 열리고, 아직 아무도 쓰지 않은 번호면 동물·별명·그림 비밀번호를 만들고, 이미 쓰는 번호면 그림 비밀번호만 확인한다. 명단이 없는 학급은 "아직 준비 중이에요" 화면에서 멈춘다(`NO_ROSTER`)
+- 입장은 **수업 코드 → 아이 참여 코드 6자리** 두 단계다(2026-09-09, 브랜치 `claude/entry-code-20260909`). 학급을 확인하면 바로 참여 코드 수첩(`.entry-code-input`, 숫자판)이 열리고, 코드가 맞는데 처음이면 동물 하나만 고르는 화면(`.animal-card`)이 뜬 뒤 들어간다. 이미 쓰던 코드면 바로 자기 홈이다. 번호 입력·그림 비밀번호·별명 타이핑은 제거했다. 명단이 없는 학급은 "아직 준비 중이에요" 화면에서 멈춘다(`NO_ROSTER`)
 - 옛 자기 등록 흐름(`새로 시작하기 / 내 그림 이어가기` 갈림길, 별명·동물 재입장, `allowDuplicate` 중복 프로필)은 예비 경로도 남기지 않고 제거했다 (`PROFILE_EXISTS`·`PROFILE_CREDENTIALS_EXIST`는 `SEAT_CLAIMED`로 대체)
-- 그림 비밀번호 3개로 어느 태블릿에서나 기존 익명 학생 ID 재입장 (번호 + 그림 비밀번호)
+- 참여 코드 하나로 어느 태블릿에서나 기존 익명 학생 ID 재입장(코드가 곧 자리). 교사는 명단·설정 탭에서 코드를 보고 복사·새로 뽑기·코드표 인쇄를 한다(`rotateEntryCode`)
 - 별명 표시는 띄어쓰기를 유지하되, 신규 중복 검사·동일 자격정보 검사·재입장·관련 rate-limit 대상 키는 모든 공백 차이를 무시한다 (`lib/nickname.ts`)
 - 그림 별명 후보는 동물별 10개(전체 100개, 공백 무시 기준으로도 중복 없음)이며 `다른 별명` 주사위는 현재 별명을 반복하지 않는다 (`lib/nickname-ideas.ts`)
 - 공유 태블릿 학생 전환 시 기존 활성 세션을 해지하고, 최근 학생 목록은 입장 화면에 표시하지 않음
@@ -536,6 +536,19 @@
 - 남은 위험: 학부모 동의·보관 기간·삭제 요청 처리 절차는 아직 제품에 없다. 지금은
   "담임만 열람 / 학급 삭제 시 함께 삭제 / AI 미전송"을 기본값으로 잡았을 뿐이다.
   명단이 없는 기존 학급은 예전 흐름(동물·별명·그림 비밀번호로 스스로 만들기)을 그대로 쓴다.
+
+## 2026-09-09 아이 참여 코드 입장 (`claude/entry-code-20260909`, 로컬 검증)
+
+- 사용자 결정: 번호 + 그림 비밀번호 입장이 1~2학년에게 너무 어려워, **명단을 만들 때 자리마다 무작위 참여 코드 6자리**를 붙이고 아이는 수업 코드(또는 QR) 다음에 그 코드 하나만 누르면 들어온다. 수업 코드·QR은 유지. 처음 들어올 때 동물 하나만 고르고 별명은 자동(`NICKNAME_IDEAS[animal][0]`).
+- 스키마(`db/runtime.ts`): `student_profiles.entry_code TEXT` + 부분 유니크 인덱스 `(classroom_id, entry_code)`. `provisionSchema`가 코드 없는 활성 학생(코드 도입 전 명단, 옛 자기 등록 프로필)에 코드를 채운다(`backfillEntryCodes`).
+- 학생 API(`app/api/student/route.ts`): `join { entry, entryCode, animal? }` 하나만 남았다. 학급 + 코드로 자리를 찾고, 미차지면 `animal` 없이는 `{ firstTime: true }`(세션 없음), `animal`이 오면 자리 차지 + 세션을 한 배치로(같은 코드 동시 입장은 먼저 성공한 쪽이 차지하고 늦은 쪽은 재입장). 차지된 자리는 세션만 새로 발급. 틀린 코드는 404 `ENTRY_CODE`. `seatStatus`·`switchProfile`·`recover`(개인 QR 복구 포함)와 `lib/picture-password.ts`, `/join/recover`는 제거. 무차별 대입은 기존 학급 + IP 버킷(60회/10분)이 막는다(대상 버킷 없음).
+- 교사 API(`app/api/teacher/route.ts`): `createClassroom`·`addStudents`가 학급 안에서 겹치지 않는 코드를 붙여 넣고, `createClassroom` 응답에 `entryCodes[{seatNumber, entryCode}]`. 학급 GET 학생 행에 `entryCode`. `rotateEntryCode { studentId }` 추가, `resetStudentRecovery`와 `resetActiveStudentRecovery` 제거.
+- 화면: `JoinClient.tsx`는 `checking | code | animal | noRoster` 네 모드. 코드·동물 화면은 번호 수첩(`EntryCheck.module.css` `.pad`)을 그대로 쓴다(`.code-card`, `.animal-card`). 교사 명단·설정 탭(`TeacherRosterSettings.tsx`)에 참여 코드 열(복사·새로 뽑기)과 `코드표 인쇄`(새 창에 번호·이름·코드 표, 실명이 있으니 잘라서 나눠 주라는 안내). `globals.css`에서 그림 비밀번호·별명 카드·1488 무대 등 죽은 규칙 약 770줄 제거.
+- 검증 스크립트: `scripts/browser-check.mjs`는 코드 화면(숫자판 10키·44px·틀린 코드 → 선생님 불러요·동물 화면)을 실측한다. `check-deployed.mjs`는 인자가 `<주소> <수업코드> <참여코드>`로 바뀌었고, `check-large-save.mjs`는 명단과 함께 학급을 만들어 첫 학생 코드로 들어간다.
+- 테스트: `tests/entry-code.test.mjs` 신설(첫 입장·재입장·틀린 코드·삭제 학생·교사 코드 발급/새로 뽑기·스키마 백필·소스 계약). `picture-password`·`join-nickname-default` 테스트 삭제, 12개 테스트 파일을 코드 흐름으로 고침.
+- 수첩 레이아웃 결함 2건 수정(번호 수첩 때부터 있던 것, 이번 실측에서 발견): 좁은 화면에서 `.pad`가 `position: relative`로 바뀌어도 넓은 화면의 `left/top/bottom`이 상대 오프셋으로 살아 카드가 47% 오른쪽으로 밀려 잘리던 것(`inset: auto`), 넓은 화면에서 고정 높이 키가 종이 아래로 넘쳐 「수업 코드 다시 입력하기」가 들어가기 위에 겹치던 것(키 행이 남는 높이를 나눠 갖게 `flex: 1` + `grid-auto-rows: minmax(44px, 1fr)`). 좁은 화면 무대는 `width: 100%`로 못 박았다(동물 화면에서 내용 폭 221px로 줄던 문제).
+- 검증(2026-09-09, 자체 빌드 :3299): typecheck 0 · lint 0 errors(12 기존 경고) · `git diff --check` · `npm test` 317/317 · browser-check 기본(320×568·390×844·844×390)·`--desktop`·`--ipad` 전부 통과 · CDP 스크린샷으로 코드 수첩·틀린 코드·동물 고르기·학생 홈·교사 명단 탭(코드 열·복사·새로 뽑기·코드표 인쇄)을 390×844/1280×800/844×390/320×568에서 눈으로 확인, 터치 목표 44px 미달 0건·가로 스크롤 0.
+- 남은 위험: 아직 미병합 브랜치 `claude/prep-sketchbook-20260909`(준비 중 화면)는 `JoinClient.tsx`의 `noRoster` 분기를 고치므로 이 브랜치 뒤에 다시 리베이스해야 한다. 코드는 평문 저장이라 DB가 새면 코드도 샌다(수업 코드와 같은 등급, 교사가 새로 뽑으면 무효). 옛 학생 행의 백필 코드는 교사가 명단 탭에서 확인하기 전까지 아무도 모른다.
 
 ## 2026-09-09 초록 팔레트 전환·수업 확인 화면 교실 시안 (`claude/green-entry-20260909`, 로컬 검증)
 

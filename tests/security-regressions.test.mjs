@@ -67,8 +67,9 @@ test("hosted teachers use verified Google OAuth and fixed demo credentials are a
 test("shared tablet profiles never reactivate a stored raw token", async () => {
   const [session, join, studentApi] = await Promise.all([read("../lib/client-session.ts"), read("../app/components/JoinClient.tsx"), read("../app/api/student/route.ts")]);
   assert.match(session, /sessionStorage\.setItem\(ACTIVE_SESSION_KEY/); assert.match(session, /LEGACY_PROFILES_KEY/); assert.doesNotMatch(session, /function activateProfile/);
-  assert.match(join, /picturePassword/); assert.doesNotMatch(join, /switchProfile|deviceProfiles|activeProfile|activateProfile/);
-  assert.match(studentApi, /action === "switchProfile"/); assert.match(studentApi, /verifySecret\(picture/); assert.match(studentApi, /2 \* 60 \* 60 \* 1000/);
+  assert.match(join, /entryCode: codeInput/); assert.doesNotMatch(join, /switchProfile|deviceProfiles|activeProfile|activateProfile|picturePassword/);
+  // 재입장도 서버가 참여 코드를 다시 확인하고 새 세션을 발급한다 — 저장된 토큰을 되살리는 길은 없다.
+  assert.match(studentApi, /const device = await issueDeviceSession\(seat\.id\)/); assert.doesNotMatch(studentApi, /action === "switchProfile"/); assert.match(studentApi, /2 \* 60 \* 60 \* 1000/);
 });
 
 test("save conflicts remain queued and require an explicit copy", async () => {
@@ -92,9 +93,8 @@ test("artwork CAS, idempotency, completion and R2 keys are race safe", async () 
 
 test("duplicate recovery, logout and protected response regressions stay fixed", async () => {
   const [student, teacher, security] = await Promise.all([read("../app/api/student/route.ts"), read("../app/api/teacher/route.ts"), read("../lib/security.ts")]);
-  assert.match(student, /\.first<RecoveredStudent>/); assert.match(student, /verifySecret\(picture, seatStudent\.pictureSalt, seatStudent\.pictureHash\)/);
-  // 후보가 여럿이라 고르지 못하는 옛 별명 조회는 사라졌다. 번호는 학급 안에서 유일하므로 후보는 항상 0개나 1개다.
-  assert.doesNotMatch(student, /matches\.length/); assert.match(student, /WHERE s\.classroom_id = \? AND s\.seat_number = \? AND s\.archived_at IS NULL AND c\.active = 1/);
+  // 후보가 여럿이라 고르지 못하는 옛 별명 조회는 사라졌다. 참여 코드는 학급 안에서 유일하므로 후보는 항상 0개나 1개다.
+  assert.doesNotMatch(student, /matches\.length|RecoveredStudent|verifySecret/); assert.match(student, /WHERE classroom_id = \? AND entry_code = \? AND archived_at IS NULL/);
   assert.match(teacher, /revokeTeacherSession/); assert.match(security, /DELETE FROM teacher_sessions/); assert.match(security, /cache-control", "no-store/);
   assert.match(student, /ORDER BY m\.created_at DESC, m\.id DESC LIMIT 50/); assert.match(student, /ORDER BY createdAt ASC, id ASC/);
   assert.match(student, /LEFT JOIN message_receipts r ON r\.message_id = m\.id AND r\.student_id = \?/);
@@ -108,7 +108,7 @@ test("P1 operational safeguards are wired", async () => {
   // 로컬 초기화는 앱과 같은 정본 스키마 경로를 쓴다 — 따로 관리되는 DDL 사본이 생기면 안 된다.
   assert.match(init, /provisionSchema/); assert.doesNotMatch(init, /CREATE TABLE/);
   assert.match(schema, /primaryKey\(\{ columns: \[table\.messageId, table\.studentId\]/); assert.match(schema, /teacherViews/);
-  assert.match(teacherApi, /action === "viewStudent"/); assert.match(teacherApi, /action === "resetStudentRecovery"/); assert.doesNotMatch(teacherUi, /복구 카드 재발급/);
+  assert.match(teacherApi, /action === "viewStudent"/); assert.match(teacherApi, /action === "rotateEntryCode"/); assert.doesNotMatch(teacherUi, /복구 카드 재발급/);
   assert.match(studio, /new Map<number/); assert.match(studio, /event\.pointerId/);
 });
 

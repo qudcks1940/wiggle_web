@@ -37,7 +37,8 @@ test("class status, seat re-entry, archive and restore stay safe", async (contex
     body: JSON.stringify({ action: "createClassroom", displayName: "중복 점검반", roster: [{ seatNumber: 1, realName: "김민준" }, { seatNumber: 2, realName: "이서연" }] }),
   });
   assert.equal(createdClass.status, 201);
-  const classroom = (await createdClass.json()).classroom;
+  const createdPayload = await createdClass.json();
+  const classroom = createdPayload.classroom;
 
   // 명단으로 만든 자리는 아이가 들어오기 전까지 비어 있다 — 학생 화면에는 "번호를 넣을 수 있는 반"으로만 보인다.
   const emptyStatus = await server.fetch("/api/student", {
@@ -46,27 +47,23 @@ test("class status, seat re-entry, archive and restore stay safe", async (contex
   assert.equal(emptyStatus.status, 200);
   assert.deepEqual(await emptyStatus.json(), { classroomName: "중복 점검반", hasProfiles: true, hasRoster: true });
 
-  const joinBody = {
-    action: "join",
-    entry: classroom.classCode,
-    seatNumber: 1,
-    nickname: "토끼화가",
-    animal: "🐰",
-    picturePassword: ["⭐", "⭐", "⭐"],
-  };
+  // 입장은 수업 코드 → 참여 코드다. 코드는 교사 응답(createClassroom)에만 실린다.
+  const codeFor = (seatNumber) => createdPayload.entryCodes.find((row) => row.seatNumber === seatNumber).entryCode;
+  const joinBody = { action: "join", entry: classroom.classCode, entryCode: codeFor(1), animal: "🐰" };
   const joined = await server.fetch("/api/student", {
     method: "POST", headers: studentHeaders("203.0.113.101"), body: JSON.stringify(joinBody),
   });
   assert.equal(joined.status, 201);
   const joinedProfile = await joined.json();
   assert.equal(joinedProfile.personalQrToken, undefined);
+  assert.equal(joinedProfile.student.nickname, "토끼 화가");
 
-  // 같은 번호를 다시 차지할 수는 없다. 자리는 한 아이의 것이다.
+  // 같은 코드로 다시 오면 같은 학생이다. 자리는 한 아이의 것이고 두 번 차지되지 않는다.
   const duplicate = await server.fetch("/api/student", {
     method: "POST", headers: studentHeaders("203.0.113.102"), body: JSON.stringify(joinBody),
   });
-  assert.equal(duplicate.status, 409);
-  assert.equal((await duplicate.json()).code, "SEAT_CLAIMED");
+  assert.equal(duplicate.status, 200);
+  assert.equal((await duplicate.json()).student.id, joinedProfile.student.id);
 
   const DB = server.DB;
   // 명단이 자리 두 개를 만들었고, 아이가 들어와도 프로필이 새로 늘지 않는다.
@@ -103,20 +100,20 @@ test("class status, seat re-entry, archive and restore stay safe", async (contex
   });
   assert.equal(restored.status, 200);
 
-  // 다른 기기에서도 번호 + 그림 비밀번호로 자기 그림에 돌아온다.
+  // 다른 기기에서도 참여 코드 하나로 자기 그림에 돌아온다(학급 QR 토큰으로 들어와도 같다).
   const recovered = await server.fetch("/api/student", {
     method: "POST",
     headers: studentHeaders("203.0.113.103"),
-    body: JSON.stringify({ action: "recover", entry: classroom.joinToken, seatNumber: 1, picturePassword: ["⭐", "⭐", "⭐"] }),
+    body: JSON.stringify({ action: "join", entry: classroom.joinToken, entryCode: codeFor(1) }),
   });
   assert.equal(recovered.status, 200);
   assert.equal((await recovered.json()).student.id, joinedProfile.student.id);
 
-  // 별명은 아이가 고르는 표시 이름이라 겹칠 수 있다. 번호가 다르면 다른 아이이고, 교사 화면만 그 사실을 안다.
+  // 별명은 동물의 기본 별명이라 겹칠 수 있다. 코드가 다르면 다른 아이이고, 교사 화면만 그 사실을 안다.
   const sameNickname = await server.fetch("/api/student", {
     method: "POST",
     headers: studentHeaders("203.0.113.106"),
-    body: JSON.stringify({ ...joinBody, seatNumber: 2, picturePassword: ["🍎", "🌈", "⚽"] }),
+    body: JSON.stringify({ ...joinBody, entryCode: codeFor(2) }),
   });
   assert.equal(sameNickname.status, 201);
   assert.equal((await DB.prepare("SELECT COUNT(*) AS count FROM student_profiles WHERE archived_at IS NULL").first()).count, 2);

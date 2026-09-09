@@ -51,6 +51,7 @@ export const studentProfiles = sqliteTable("student_profiles", {
   id: text("id").primaryKey(),
   classroomId: text("classroom_id").notNull().references(() => classrooms.id),
   seatNumber: integer("seat_number"),
+  entryCode: text("entry_code"),
   realName: text("real_name"),
   claimedAt: text("claimed_at"),
   nickname: text("nickname").notNull(),

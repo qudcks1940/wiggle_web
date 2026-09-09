@@ -45,7 +45,7 @@ const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS teachers (id TEXT PRIMARY KEY NOT NULL, email TEXT NOT NULL UNIQUE, display_name TEXT NOT NULL, credential_hash TEXT, credential_salt TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS teacher_sessions (token_hash TEXT PRIMARY KEY NOT NULL, teacher_id TEXT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE, expires_at TEXT NOT NULL, last_used_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS classrooms (id TEXT PRIMARY KEY NOT NULL, teacher_id TEXT NOT NULL REFERENCES teachers(id), display_name TEXT NOT NULL, class_code TEXT NOT NULL UNIQUE, join_token TEXT NOT NULL UNIQUE, admission_open INTEGER NOT NULL DEFAULT 1, active INTEGER NOT NULL DEFAULT 1, current_activity TEXT NOT NULL DEFAULT '자유롭게 그리기', current_arc_id TEXT, current_episode_id TEXT, starts_at TEXT, ends_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
-  `CREATE TABLE IF NOT EXISTS student_profiles (id TEXT PRIMARY KEY NOT NULL, classroom_id TEXT NOT NULL REFERENCES classrooms(id), seat_number INTEGER, real_name TEXT, claimed_at TEXT, nickname TEXT NOT NULL, animal TEXT NOT NULL, last_activity_at TEXT NOT NULL, archived_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS student_profiles (id TEXT PRIMARY KEY NOT NULL, classroom_id TEXT NOT NULL REFERENCES classrooms(id), seat_number INTEGER, real_name TEXT, entry_code TEXT, claimed_at TEXT, nickname TEXT NOT NULL, animal TEXT NOT NULL, last_activity_at TEXT NOT NULL, archived_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS recovery_credentials (student_id TEXT PRIMARY KEY NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, picture_hash TEXT NOT NULL, picture_salt TEXT NOT NULL, personal_qr_hash TEXT NOT NULL, reset_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS device_sessions (token_hash TEXT PRIMARY KEY NOT NULL, student_id TEXT NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, expires_at TEXT NOT NULL, last_used_at TEXT NOT NULL, revoked_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS artworks (id TEXT PRIMARY KEY NOT NULL, student_id TEXT NOT NULL REFERENCES student_profiles(id), classroom_id TEXT NOT NULL REFERENCES classrooms(id), title TEXT NOT NULL, topic TEXT NOT NULL, learning_mode TEXT NOT NULL, lesson_slug TEXT, guide_variant INTEGER NOT NULL DEFAULT 0, arc_id TEXT, episode_id TEXT, arc_version INTEGER, intent TEXT NOT NULL DEFAULT '', ops_json TEXT NOT NULL DEFAULT '[]', schema_version INTEGER NOT NULL DEFAULT 1, renderer_version INTEGER NOT NULL DEFAULT 1, revision INTEGER NOT NULL DEFAULT 0, current_step INTEGER NOT NULL DEFAULT 0, version_count INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'drawing', thumbnail_key TEXT, final_image_key TEXT, last_mutation_id TEXT, completed_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
@@ -187,7 +187,32 @@ export async function provisionSchema(DB: D1Database) {
   await DB.prepare(`CREATE INDEX IF NOT EXISTS students_classroom_archived_idx ON student_profiles(classroom_id, archived_at, nickname)`).run();
   // 같은 학급 안에서 번호는 하나뿐. 빠진 학생의 번호는 다시 쓸 수 있게 archived는 제외한다.
   await DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS students_classroom_seat_uq ON student_profiles(classroom_id, seat_number) WHERE seat_number IS NOT NULL AND archived_at IS NULL`).run();
+  // 아이별 참여 코드(2026-09-09). 수업 코드 → 참여 코드 6자리로 바로 자기 도화지에 들어온다.
+  // 교사 화면에 그대로 보여 줘야 하므로 해시가 아니라 평문이다(수업 코드와 같은 등급의 값).
+  if (!studentColumns.results.some((column) => column.name === "entry_code")) await DB.prepare(`ALTER TABLE student_profiles ADD COLUMN entry_code TEXT`).run();
+  await backfillEntryCodes(DB);
+  await DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS students_classroom_entry_code_uq ON student_profiles(classroom_id, entry_code) WHERE entry_code IS NOT NULL AND archived_at IS NULL`).run();
   await ensureArtworkMutationPrimaryKey(DB);
+}
+
+export function randomEntryCode() {
+  return String(100000 + Math.floor(Math.random() * 900000));
+}
+
+// 코드가 없는 활성 학생(코드 도입 전 명단, 예전 자기 등록 프로필)에 코드를 채운다.
+// 학급 안에서만 겹치지 않으면 된다 — 아이는 수업 코드를 먼저 넣고 참여 코드를 넣는다.
+async function backfillEntryCodes(DB: D1Database) {
+  const missing = await DB.prepare(`SELECT id, classroom_id AS classroomId FROM student_profiles WHERE entry_code IS NULL AND archived_at IS NULL`).all<{ id: string; classroomId: string }>();
+  if (!missing.results.length) return;
+  const taken = await DB.prepare(`SELECT classroom_id AS classroomId, entry_code AS entryCode FROM student_profiles WHERE entry_code IS NOT NULL AND archived_at IS NULL`).all<{ classroomId: string; entryCode: string }>();
+  const used = new Set(taken.results.map((row) => `${row.classroomId}:${row.entryCode}`));
+  const statements = missing.results.map((row) => {
+    let code = randomEntryCode();
+    while (used.has(`${row.classroomId}:${code}`)) code = randomEntryCode();
+    used.add(`${row.classroomId}:${code}`);
+    return DB.prepare(`UPDATE student_profiles SET entry_code = ? WHERE id = ? AND entry_code IS NULL`).bind(code, row.id);
+  });
+  for (let offset = 0; offset < statements.length; offset += 50) await DB.batch(statements.slice(offset, offset + 50));
 }
 
 let ready: Promise<void> | undefined;

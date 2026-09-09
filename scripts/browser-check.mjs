@@ -184,8 +184,10 @@ async function seed(cdp, session) {
     if (!created.data.classroom) return { error: 'classroom', detail: created };
     const classroomId = created.data.classroom.id;
     await post({ action: 'toggleAdmission', classroomId, open: true });
+    // 입장은 수업 코드 → 아이 참여 코드(6자리)다. 첫 입장은 동물 하나만 고른다.
+    const codes = Object.fromEntries((created.data.entryCodes ?? []).map((row) => [row.seatNumber, row.entryCode]));
     const joined = await fetch('/api/student', { method: 'POST', headers: { 'content-type': 'application/json' }, cache: 'no-store', body: JSON.stringify({
-      action: 'join', entry: created.data.classroom.classCode, seatNumber: 1, nickname: '점검 화가 ' + Math.floor(Math.random() * 100000), animal: '🐰', picturePassword: ['⭐', '🍎', '⭐'],
+      action: 'join', entry: created.data.classroom.classCode, entryCode: codes[1], animal: '🐰',
     }) });
     const student = await joined.json();
     if (!student.deviceToken) return { error: 'join', detail: student };
@@ -194,7 +196,7 @@ async function seed(cdp, session) {
     }) });
     const artworkData = await artwork.json();
     if (!artworkData.artwork) return { error: 'artwork', detail: artworkData };
-    return { classroomId, classCode: created.data.classroom.classCode, joinToken: created.data.classroom.joinToken, studentId: student.student.id, deviceToken: student.deviceToken, expiresAt: student.expiresAt,
+    return { classroomId, classCode: created.data.classroom.classCode, joinToken: created.data.classroom.joinToken, entryCodes: codes, studentId: student.student.id, deviceToken: student.deviceToken, expiresAt: student.expiresAt,
       nickname: student.student.nickname, animal: student.student.animal, classroomName: student.student.classroomName, artworkId: artworkData.artwork.id };
   })()`);
   if (seeded.error) throw new Error(`데이터 준비 실패: ${JSON.stringify(seeded)}`);
@@ -273,121 +275,95 @@ async function main() {
         }
         check(restoredCode.inputs === 4 && restoredCode.valid && !restoredCode.disabled && restoredUrl.includes(`/join?code=${seeded.classCode}`), `${viewport.name} 브라우저가 복원한 네 자리 코드로 입장 가능`, { restoredCode, restoredUrl });
 
-        // 2) QR 입장: 명단 학급은 번호 입력 화면이 먼저 나온다
+        // 2) QR 입장: 명단 학급은 참여 코드 입력 화면이 먼저 나온다
         await navigate(cdp, session, `${BASE}/join/${seeded.joinToken}`);
         await evaluate(cdp, session, MEASURE_HELPERS);
         const choice = await evaluate(cdp, session, `(async () => {
           const wait = (ms) => new Promise((done) => setTimeout(done, ms));
-          for (let attempt = 0; attempt < 60 && !document.querySelector('.seat-input'); attempt += 1) await wait(120);
-          const input = document.querySelector('.seat-input');
-          if (!input) return { error: 'no-seat-input', text: document.body.innerText.slice(0, 120) };
+          for (let attempt = 0; attempt < 60 && !document.querySelector('.entry-code-input'); attempt += 1) await wait(120);
+          const input = document.querySelector('.entry-code-input');
+          if (!input) return { error: 'no-code-input', text: document.body.innerText.slice(0, 120) };
           const hasCodeInput = Boolean([...document.querySelectorAll('label span, legend')].find((item) => item.textContent.includes('수업 코드')));
-          const submit = document.querySelector('.seat-card .child-primary-action');
-          return { hasCodeInput, inputBox: window.__wiggle.box(input), submitBox: submit ? window.__wiggle.box(submit) : null,
+          const submit = document.querySelector('.code-card .child-primary-action');
+          const keys = [...document.querySelectorAll('.code-card button')].filter((button) => /^[0-9]$/.test(button.textContent.trim())).length;
+          return { hasCodeInput, keys, inputBox: window.__wiggle.box(input), submitBox: submit ? window.__wiggle.box(submit) : null,
             overflow: window.__wiggle.horizontalOverflow().overflow, small: window.__wiggle.smallTargets(44) };
         })()`);
-        check(!choice.error, `${viewport.name} QR 입장 번호 화면 재현`, choice.error);
+        check(!choice.error, `${viewport.name} QR 입장 참여 코드 화면 재현`, choice.error);
         if (!choice.error) {
           check(!choice.hasCodeInput, `${viewport.name} QR 입장이 수업 코드 입력을 건너뜀`);
-          check(Math.min(choice.inputBox.w, choice.inputBox.h) >= 44, `${viewport.name} 번호 입력 칸이 44px 이상`, choice.inputBox);
+          check(choice.keys === 10, `${viewport.name} 숫자판 10키`, choice.keys);
+          check(Math.min(choice.inputBox.w, choice.inputBox.h) >= 44, `${viewport.name} 참여 코드 칸이 44px 이상`, choice.inputBox);
           check(Boolean(choice.submitBox) && Math.min(choice.submitBox.w, choice.submitBox.h) >= 44, `${viewport.name} 들어가기 버튼이 44px 이상`, choice.submitBox);
-          check(choice.overflow <= 0, `${viewport.name} 번호 화면 가로 스크롤 없음`, choice.overflow);
-          check(choice.small.length === 0, `${viewport.name} 번호 화면 터치 목표 44px 이상`, choice.small);
+          check(choice.overflow <= 0, `${viewport.name} 코드 화면 가로 스크롤 없음`, choice.overflow);
+          check(choice.small.length === 0, `${viewport.name} 코드 화면 터치 목표 44px 이상`, choice.small);
         }
 
-        // 2-b) 처음 들어오는 번호: 휴대전화·짧은 화면은 3단계, 넓은 화면은 한 화면 폼
+        // 2-b) 처음 들어오는 코드: 동물 하나만 고르는 화면. 틀린 코드는 선생님 불러요로 이어진다
         const createFlow = await evaluate(cdp, session, `(async () => {
           const wait = (ms) => new Promise((done) => setTimeout(done, ms));
           const setValue = (element, value) => { const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(element, value); element.dispatchEvent(new Event('input', { bubbles: true })); };
-          const seat = document.querySelector('.seat-input');
-          if (!seat) return { error: 'no-seat-input' };
-          setValue(seat, '2'); await wait(120);
-          const enter = document.querySelector('.seat-card .child-primary-action');
-          if (!enter) return { error: 'no-seat-submit' };
+          const input = document.querySelector('.entry-code-input');
+          if (!input) return { error: 'no-code-input' };
+          setValue(input, '000000'); await wait(120);
+          let enter = document.querySelector('.code-card .child-primary-action');
+          if (!enter) return { error: 'no-code-submit' };
           enter.click();
-          for (let attempt = 0; attempt < 60 && !document.querySelector('.join-card'); attempt += 1) await wait(120);
-          const card = document.querySelector('.join-card');
-          if (!card) return { error: 'no-join-card', text: document.body.innerText.slice(0, 120) };
-          if (card.className.includes('join-seat-recover')) return { error: 'seat-already-claimed' };
-          const progress = document.querySelector('.mobile-entry-progress');
-          const stepped = progress ? getComputedStyle(progress).display !== 'none' : false;
-          const snapshots = [];
-          const snap = (name) => snapshots.push({ name, overflow: window.__wiggle.horizontalOverflow().overflow, small: window.__wiggle.smallTargets(44) });
+          for (let attempt = 0; attempt < 60 && !document.querySelector('.teacher-call-button'); attempt += 1) await wait(120);
+          const wrongCode = Boolean(document.querySelector('.teacher-call-button'));
+          const wrongSmall = window.__wiggle.smallTargets(44);
+          setValue(document.querySelector('.entry-code-input'), ${JSON.stringify(seeded.entryCodes[2])}); await wait(120);
+          enter = document.querySelector('.code-card .child-primary-action');
+          enter.click();
+          for (let attempt = 0; attempt < 60 && !document.querySelector('.animal-card'); attempt += 1) await wait(120);
+          const card = document.querySelector('.animal-card');
+          if (!card) return { error: 'no-animal-card', text: document.body.innerText.slice(0, 160) };
           const animals = document.querySelectorAll('.animal-choice-grid .emoji-chip').length;
-          snap('동물 단계');
           const rabbit = [...document.querySelectorAll('.animal-choice-grid .emoji-chip')].find((button) => button.getAttribute('aria-label') === '토끼 고르기');
           if (!rabbit) return { error: 'no-rabbit' };
+          const submit = document.querySelector('.animal-card .child-primary-action');
+          const disabledBefore = submit ? submit.disabled : null;
           rabbit.click(); await wait(150);
-          if (stepped) {
-            const next1 = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('별명 고르기'));
-            if (!next1) return { error: 'no-step2-button' };
-            next1.click(); await wait(200);
-            snap('별명 단계');
-          }
-          const nickname = document.querySelector('.nickname-row input');
-          if (!nickname || nickname.value.trim().length < 2) return { error: 'no-auto-nickname', value: nickname ? nickname.value : null };
-          if (stepped) {
-            const next2 = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('비밀번호 고르기'));
-            if (!next2) return { error: 'no-step3-button' };
-            next2.click(); await wait(200);
-            snap('비밀번호 단계');
-          }
-          const chips = document.querySelectorAll('.picture-chip').length;
+          const disabledAfter = submit ? submit.disabled : null;
           const cardBottom = Math.round(card.getBoundingClientRect().bottom);
-          return { stepped, animals, chips, snapshots, cardBottom, viewportHeight: innerHeight };
+          return { wrongCode, wrongSmall, animals, disabledBefore, disabledAfter, overflow: window.__wiggle.horizontalOverflow().overflow, small: window.__wiggle.smallTargets(44), cardBottom, viewportHeight: innerHeight, pageHeight: document.documentElement.scrollHeight };
         })()`);
-        check(!createFlow.error, `${viewport.name} 빈 번호 입장 흐름 재현`, createFlow.error);
+        check(!createFlow.error, `${viewport.name} 첫 입장 흐름 재현`, createFlow.error);
         if (!createFlow.error) {
+          check(createFlow.wrongCode, `${viewport.name} 틀린 참여 코드가 선생님 불러요로 이어짐`);
+          check(createFlow.wrongSmall.length === 0, `${viewport.name} 오류 화면 터치 목표 44px 이상`, createFlow.wrongSmall);
           check(createFlow.animals === 10, `${viewport.name} 동물 선택이 10개`, createFlow.animals);
-          check(createFlow.chips === 10, `${viewport.name} 그림 비밀번호 선택이 10개`, createFlow.chips);
-          const smallDuringSteps = createFlow.snapshots.flatMap((snapshot) => snapshot.small.map((item) => ({ step: snapshot.name, ...item })));
-          check(smallDuringSteps.length === 0, `${viewport.name} 입장 단계 터치 목표 44px 이상`, smallDuringSteps);
-          check(createFlow.snapshots.every((snapshot) => snapshot.overflow <= 0), `${viewport.name} 입장 단계 가로 스크롤 없음`, createFlow.snapshots.map((snapshot) => snapshot.overflow));
-          if (!createFlow.stepped) check(createFlow.cardBottom <= createFlow.viewportHeight, `${viewport.name} 한 화면 입장 폼이 첫 화면 안에 있음`, { cardBottom: createFlow.cardBottom, viewportHeight: createFlow.viewportHeight });
+          check(createFlow.disabledBefore === true && createFlow.disabledAfter === false, `${viewport.name} 동물을 고르면 들어가기가 열림`, { before: createFlow.disabledBefore, after: createFlow.disabledAfter });
+          check(createFlow.small.length === 0, `${viewport.name} 동물 화면 터치 목표 44px 이상`, createFlow.small);
+          check(createFlow.overflow <= 0, `${viewport.name} 동물 화면 가로 스크롤 없음`, createFlow.overflow);
         }
 
-        // 3) 내 그림 이어가기: 틀린 그림 비밀번호에서 아이 스스로 복구
+        // 3) 재입장: 이미 쓰던 참여 코드는 동물을 다시 묻지 않고 바로 내 홈으로 간다
         await navigate(cdp, session, `${BASE}/join/${seeded.joinToken}`);
         await evaluate(cdp, session, MEASURE_HELPERS);
-        const unlockError = await evaluate(cdp, session, `(async () => {
+        const reentry = await evaluate(cdp, session, `(async () => {
           const wait = (ms) => new Promise((done) => setTimeout(done, ms));
           const setValue = (element, value) => { const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(element, value); element.dispatchEvent(new Event('input', { bubbles: true })); };
-          for (let attempt = 0; attempt < 60 && !document.querySelector('.seat-input'); attempt += 1) await wait(120);
-          const seat = document.querySelector('.seat-input');
-          if (!seat) return { error: 'no-seat-input' };
-          setValue(seat, '1'); await wait(120);
-          const enter = document.querySelector('.seat-card .child-primary-action');
-          if (!enter) return { error: 'no-seat-submit' };
-          enter.click();
-          for (let attempt = 0; attempt < 60 && !document.querySelector('.join-card.join-seat-recover'); attempt += 1) await wait(120);
-          if (!document.querySelector('.join-card.join-seat-recover')) return { error: 'no-recover-card', text: document.body.innerText.slice(0, 120) };
-          // 이미 쓰는 번호는 동물·별명을 다시 묻지 않는다. 그 단계로 가는 버튼도 보이면 안 된다.
-          const stray = [...document.querySelectorAll('.join-card .mobile-step-back, .join-card .join-step-1, .join-card .join-step-2')].filter((element) => element.getClientRects().length > 0);
-          if (stray.length) return { error: 'stray-animal-step' };
-          const chips = [...document.querySelectorAll('.picture-chip')];
-          if (chips.length < 3) return { error: 'no-chips' };
-          for (let index = 0; index < 3; index += 1) { chips[1].click(); await wait(90); }
-          const submit = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('내 그림 이어가기') && button.className.includes('child-primary-action'));
-          if (!submit) return { error: 'no-submit' };
-          submit.click();
-          for (let attempt = 0; attempt < 60 && !document.querySelector('.child-error'); attempt += 1) await wait(120);
-          const box = document.querySelector('.child-error');
-          if (!box) return { error: 'no-error-box' };
-          const reset = document.querySelector('.reset-pictures-button');
-          const before = { icon: box.querySelector('.child-error-icon') ? box.querySelector('.child-error-icon').textContent : '', resetAttention: reset ? reset.className.includes('attention') : false, resetBox: reset ? window.__wiggle.box(reset) : null, errorVisible: window.__wiggle.reachable(box) };
-          if (reset) { reset.click(); await wait(200); }
-          const submitAfter = [...document.querySelectorAll('button')].find((button) => button.className.includes('child-primary-action'));
-          const after = { errorStillThere: Boolean(document.querySelector('.child-error')), chipsEnabled: [...document.querySelectorAll('.picture-chip')].every((chip) => !chip.disabled), submitDisabled: submitAfter ? submitAfter.disabled : null };
-          return { before, after };
+          for (let attempt = 0; attempt < 60 && !document.querySelector('.entry-code-input'); attempt += 1) await wait(120);
+          const input = document.querySelector('.entry-code-input');
+          if (!input) return { error: 'no-code-input' };
+          setValue(input, ${JSON.stringify(seeded.entryCodes[1])}); await wait(120);
+          const enter = document.querySelector('.code-card .child-primary-action');
+          if (!enter) return { error: 'no-code-submit' };
+          setTimeout(() => enter.click(), 0);
+          return { clicked: true };
         })()`);
-        check(!unlockError.error, `${viewport.name} 이어가기 오류 흐름 재현`, unlockError.error);
-        if (!unlockError.error) {
-          check(unlockError.before.icon === "⚠️", `${viewport.name} 틀린 비밀번호가 그림(⚠️)으로 표시됨`, unlockError.before.icon);
-          check(unlockError.before.resetAttention, `${viewport.name} 다시 골라요 버튼이 강조됨`);
-          check(unlockError.before.resetBox && Math.min(unlockError.before.resetBox.w, unlockError.before.resetBox.h) >= 44, `${viewport.name} 다시 골라요 버튼 44px 이상`, unlockError.before.resetBox);
-          check(!unlockError.after.errorStillThere, `${viewport.name} 다시 고르면 이전 오류 문구가 사라짐`);
-          check(unlockError.after.chipsEnabled, `${viewport.name} 초기화 뒤 그림 버튼을 다시 누를 수 있음`);
-          check(unlockError.after.submitDisabled === true, `${viewport.name} 초기화 뒤에는 세 칸을 다시 골라야 제출 가능`, unlockError.after.submitDisabled);
+        check(!reentry.error, `${viewport.name} 재입장 흐름 재현`, reentry.error);
+        if (!reentry.error) {
+          let reentryUrl = ""; let askedAnimal = false;
+          for (let attempt = 0; attempt < 80; attempt += 1) {
+            await new Promise((done) => setTimeout(done, 120));
+            // 내 홈으로 넘어가는 순간 보낸 evaluate는 응답 없이 사라질 수 있어 시간 제한을 둔다.
+            const settle = (expression) => Promise.race([evaluate(cdp, session, expression), new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 1500))]);
+            try { reentryUrl = await settle("location.href"); askedAnimal = await settle("Boolean(document.querySelector('.animal-card'))"); } catch { continue; }
+            if (reentryUrl.includes("/student") || askedAnimal) break;
+          }
+          check(reentryUrl.includes("/student") && !askedAnimal, `${viewport.name} 쓰던 코드는 동물을 다시 묻지 않고 내 홈으로 감`, { reentryUrl, askedAnimal });
         }
 
         // 4) 잘못된 수업 코드: 글자 없이도 복구 행동이 보인다
@@ -415,44 +391,6 @@ async function main() {
           check(codeError.overflow <= 0 && codeError.small.length === 0, `${viewport.name} 코드 오류 화면 레이아웃 안전`, { overflow: codeError.overflow, small: codeError.small });
         }
 
-        // 4-b) 빈 번호 입장 폼: 세 칸을 다 고른 상태에서도 그림 버튼·다시 골라요가 가리지 않는다
-        await navigate(cdp, session, `${BASE}/join/${seeded.joinToken}`);
-        await evaluate(cdp, session, MEASURE_HELPERS);
-        const stickyOverlap = await evaluate(cdp, session, `(async () => {
-          const wait = (ms) => new Promise((done) => setTimeout(done, ms));
-          const setValue = (element, value) => { const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(element, value); element.dispatchEvent(new Event('input', { bubbles: true })); };
-          for (let attempt = 0; attempt < 60 && !document.querySelector('.seat-input'); attempt += 1) await wait(120);
-          const seat = document.querySelector('.seat-input');
-          if (!seat) return { error: 'no-seat-input' };
-          setValue(seat, '2'); await wait(120);
-          const enter = document.querySelector('.seat-card .child-primary-action');
-          if (!enter) return { error: 'no-seat-submit' };
-          enter.click();
-          for (let attempt = 0; attempt < 60 && !document.querySelector('.join-card'); attempt += 1) await wait(120);
-          const progress = document.querySelector('.mobile-entry-progress');
-          const stepped = progress ? getComputedStyle(progress).display !== 'none' : false;
-          if (stepped) {
-            const firstAnimal = [...document.querySelectorAll('.animal-choice-grid .emoji-chip')][0];
-            if (firstAnimal) firstAnimal.click(); await wait(120);
-            const next1 = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('별명 고르기')); if (next1) next1.click(); await wait(150);
-            const next2 = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('비밀번호 고르기')); if (next2) next2.click(); await wait(150);
-          }
-          const chips = [...document.querySelectorAll('.picture-chip')];
-          if (!chips.length) return { error: 'no-chips' };
-          chips[chips.length - 1].scrollIntoView({ block: 'end' });
-          await wait(300);
-          const blocked = chips.map((chip) => ({ label: window.__wiggle.label(chip), ...window.__wiggle.reachable(chip) })).filter((item) => item.onScreen && !item.hitsSelf);
-          for (let index = 0; index < 3; index += 1) { chips[index].click(); await wait(80); }
-          const reset = document.querySelector('.reset-pictures-button');
-          if (reset) reset.scrollIntoView({ block: 'center' }); await wait(250);
-          const resetReach = reset ? window.__wiggle.reachable(reset) : null;
-          return { blocked, resetReach };
-        })()`);
-        check(!stickyOverlap.error, `${viewport.name} 빈 번호 입장 화면 재현`, stickyOverlap.error);
-        if (!stickyOverlap.error) {
-          check(stickyOverlap.blocked.length === 0, `${viewport.name} 그림 비밀번호 버튼이 고정 버튼에 가리지 않음`, stickyOverlap.blocked);
-          check(stickyOverlap.resetReach && stickyOverlap.resetReach.hitsSelf, `${viewport.name} 세 칸을 다 고른 뒤에도 다시 골라요를 누를 수 있음`, stickyOverlap.resetReach);
-        }
 
         // 5) 그리기 화면과 몽그리 패널
         await installSession(cdp, session, seeded);

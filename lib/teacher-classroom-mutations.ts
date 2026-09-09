@@ -30,14 +30,3 @@ export async function upsertTeacherView(DB: D1Database, input: { teacherId: stri
     .bind(input.teacherId, input.expiresAt, input.classroomId, input.teacherId, input.studentId).run();
   return Boolean(result.meta.changes);
 }
-
-export async function resetActiveStudentRecovery(DB: D1Database, input: { teacherId: string; classroomId: string; studentId: string; personalQrHash: string }) {
-  const activeStudent = `EXISTS (SELECT 1 FROM student_profiles s JOIN classrooms c ON c.id = s.classroom_id WHERE s.id = ? AND s.classroom_id = ? AND s.archived_at IS NULL AND c.teacher_id = ? AND c.active = 1)`;
-  const results = await DB.batch([
-    DB.prepare(`UPDATE recovery_credentials SET personal_qr_hash = ?, reset_at = CURRENT_TIMESTAMP WHERE student_id = ? AND ${activeStudent}`)
-      .bind(input.personalQrHash, input.studentId, input.studentId, input.classroomId, input.teacherId),
-    DB.prepare(`UPDATE device_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE student_id = ? AND revoked_at IS NULL AND ${activeStudent}`)
-      .bind(input.studentId, input.studentId, input.classroomId, input.teacherId),
-  ]);
-  return Boolean(results[0]?.meta.changes);
-}

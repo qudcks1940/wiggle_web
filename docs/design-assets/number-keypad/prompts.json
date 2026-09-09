@@ -1,0 +1,14 @@
+{
+  "tool": "image_gen.imagegen",
+  "reference": "reference/selected-option-2.png",
+  "assets": [
+    {
+      "file": "assets/number-keypad-scene.png",
+      "prompt": "Use case: precise-object-edit.\nAsset type: production textless background for selected children's roster-number keypad UI.\nInput image 1 is the EDIT TARGET and exact layout reference. Preserve this entire 1690:931 wide classroom composition, soft plush yellow duck identity and proportions on left, its BLUE beret and BLUE scarf, BOTH hands naturally resting on wooden table, green crayon cup, loose crayons and drawings, sage green walls and plants, right-hand tall cream spiral notebook, camera and warm light.\nRemove ALL UI lettering and controls from the image: top-left logo and wordmark, top-right sound button and its outline/icon, big left headline and subtitle, notebook class lettering (retain blank wooden plaque), '내 번호', the number display including its fill/border/shadow/12/번, ALL keypad tiles including blank tile and their shadows/digits/delete icon, yellow CTA including shadow, and footer link. Seamlessly fill with the underlying sage wall or cream paper texture. Notebook's page should now be spacious blank uninterrupted cream paper below the empty wood plaque. Keep spiral rings and notebook edge. No numerals, letters, icons, watermarks or button-shaped ghosts anywhere. Do not move the notebook or duck, do not add a palette, do not recolor duck clothes. This is one clean full scene asset, not a mockup, collage, or sheet."
+    },
+    {
+      "file": "assets/mongri-keypad-ivory.png",
+      "prompt": "Use case: precise-object-edit. Asset type: standalone mobile illustration derived from the selected roster keypad UI.\nInput image 1 is the identity, pose and material reference. Recreate ONLY the SAME yellow plush duck on the left, its head tilted slightly, bright black eyes, pink cheeks, blue painter beret and blue scarf, both hands planted naturally on a short warm wooden tabletop. Keep the SAME green flower-decorated crayon cup to its left containing green yellow and orange crayons, plus two loose green and yellow crayons on the tabletop. Duck and cup must be fully contained, no clipped hat or hands.\nRemove the notebook, all lettering, numbers, buttons, logos, plants, posters and room. Behind duck use a uniform warm ivory #FFF8E7 background. OPAQUE ivory illustration, not transparent; no checkerboard. A short wood desk spans the bottom with generous ivory negative space above. Landscape 4:3 frame, subject fills about 80% of width with safe margin. Preserve character identity and same fluffy handcrafted texture, bright warm gentle light. Do not add palette or paintbrush; two hands remain visibly attached to body and resting on tabletop. No text, no collage."
+    }
+  ]
+}

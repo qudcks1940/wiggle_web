@@ -210,12 +210,16 @@
   justify-content: flex-start;
   gap: clamp(5px, 0.8cqw, 11px);
 }
-.pad form { display: flex; flex-direction: column; gap: clamp(5px, 0.8cqw, 11px); min-height: 0; }
+/* 종이 높이가 고정이라 키 행이 남는 높이를 나눠 갖는다. 고정 높이 키는 1280×800에서 종이 아래로
+ * 넘쳐 「수업 코드 다시 입력하기」가 들어가기 위에 겹쳤다(번호 수첩 때부터 있던 결함, 2026-09-09 실측). */
+.pad form { display: flex; flex: 1; flex-direction: column; gap: clamp(5px, 0.8cqw, 11px); min-height: 0; }
 .padLabel { align-self: center; margin: 0; color: var(--ink); font-size: clamp(14px, 1.5cqw, 22px); font-weight: 900; }
 .display { position: relative; }
-.pad .display :global(.seat-input) {
-  min-height: clamp(52px, 6cqw, 86px);
-  padding-right: clamp(44px, 4.4cqw, 66px);
+.pad .display :global(.entry-code-input) {
+  min-height: clamp(48px, 5cqw, 72px);
+  padding: 2px clamp(8px, 1cqw, 14px);
+  letter-spacing: 0.12em;
+  line-height: 1.1;
   border: 3px solid #b9cba4;
   border-radius: clamp(12px, 1.4cqw, 20px);
   background: #e8f1dc;
@@ -223,9 +227,9 @@
   font-size: clamp(32px, 3.8cqw, 56px);
 }
 .display b { position: absolute; right: clamp(12px, 1.6cqw, 24px); top: 50%; transform: translateY(-50%); font-size: clamp(16px, 1.8cqw, 27px); font-weight: 900; color: var(--ink); pointer-events: none; }
-.keys { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(5px, 0.8cqw, 11px); }
+.keys { display: grid; flex: 1; min-height: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(44px, 1fr); gap: clamp(5px, 0.8cqw, 11px); }
 .key {
-  min-height: clamp(44px, 5cqw, 72px);
+  min-height: 44px;
   border: 1px solid #ddd5b4;
   border-radius: clamp(10px, 1.3cqw, 18px);
   background: #fffdf4;
@@ -241,14 +245,24 @@
 .keyErase { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: clamp(12px, 1.3cqw, 19px); }
 .keyErase span { font-size: clamp(17px, 1.9cqw, 28px); line-height: 1; }
 .keyBlank { border-radius: clamp(10px, 1.3cqw, 18px); background: #f5efdb; }
-.enter { composes: primary; width: 100%; min-height: clamp(48px, 5.2cqw, 72px); }
+.enter { composes: primary; width: 100%; min-height: clamp(48px, 4.5cqw, 64px); flex: none; }
 .again { align-self: center; min-height: 44px; display: inline-flex; align-items: center; padding: 4px 10px; color: var(--accent); font-size: clamp(14px, 1.4cqw, 20px); font-weight: 800; text-decoration: underline; text-underline-offset: 4px; }
 .again:focus-visible { outline: 4px solid var(--accent); outline-offset: 3px; }
+/* 첫 입장의 동물 고르기: 같은 수첩 안에 5×2 격자. 칩은 그림 위·이름 아래. */
+.pad :global(.animal-choice-fieldset) { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: clamp(5px, 0.8cqw, 11px); }
+/* 넓으면 5열, 좁은 수첩(200px 남짓)에서는 4열로 접혀 칩이 44px 아래로 내려가지 않는다. */
+.pad :global(.animal-choice-grid) { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(44px, 18%), 1fr)); gap: clamp(5px, 0.7cqw, 10px); }
+.pad :global(.emoji-chip) { min-width: 0; min-height: clamp(48px, 5.4cqw, 80px); display: grid; grid-template-rows: auto auto; place-items: center; gap: 2px; padding: 4px 2px; border: 1px solid #ddd5b4; border-radius: clamp(10px, 1.3cqw, 18px); background: #fffdf4; box-shadow: 0 4px 0 #e2d8b4; }
+.pad :global(.emoji-chip.selected) { background: #e5f9e7; border-color: var(--primary); box-shadow: 0 4px 0 var(--border); transform: none; }
+.pad :global(.emoji-chip small) { font-size: clamp(10px, 1.05cqw, 15px); font-weight: 850; color: var(--ink); line-height: 1; }
+.pad :global(.animal-choice-portrait) { width: clamp(30px, 3.2cqw, 48px); height: clamp(27px, 2.9cqw, 44px); }
+.pad button:global(.again) { border: 0; background: transparent; font: inherit; cursor: pointer; }
 .pad :global(.entry-error-block) { margin: 0; }
 .pad :global(.child-error) { margin: 0; padding: 8px 10px; font-size: clamp(13px, 1.4cqw, 18px); }
 
 @media (max-width: 760px), (max-height: 520px), (max-aspect-ratio: 5/4) {
-  .seatStage { width: auto; aspect-ratio: auto; background: none; }
+  /* width:auto면 동물 고르기 화면에서 무대가 내용 폭(221px)으로 줄어 가운데 뭉쳤다(2026-09-09 실측). 100%로 못 박는다. */
+  .seatStage { width: 100%; aspect-ratio: auto; background: none; }
   .seatTitle { position: static; width: auto; margin: 8px auto 0; text-align: center; }
   .seatTitle h1 { font-size: 28px; }
   .seatTitle p { font-size: 16px; }
@@ -293,8 +307,10 @@
     background-position: center;
     pointer-events: none;
   }
-  .pad { position: relative; }
-  .pad .display :global(.seat-input) { min-height: 68px; font-size: 40px; }
+  /* ::before 스프링 고리 때문에 relative가 필요한데, 넓은 화면의 left/top/bottom이 상대 오프셋으로 살아남아 카드가 오른쪽으로 밀렸다. */
+  .pad { position: relative; inset: auto; }
+  .pad form,.keys { flex: none; }
+  .pad .display :global(.entry-code-input) { min-height: 68px; font-size: 40px; }
   .key { min-height: 56px; font-size: 24px; }
   .keyErase { font-size: 14px; }
   /* 키패드 화면에서는 오리를 줄여 키가 화면 안에 남게 한다 */

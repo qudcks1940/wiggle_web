@@ -3,12 +3,13 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [join, home, studio, css, messageCenter] = await Promise.all([
+const [join, home, studio, css, messageCenter, entryCss] = await Promise.all([
   read("../app/components/JoinClient.tsx"),
   read("../app/components/StudentHome.tsx"),
   read("../app/components/DrawingStudio.tsx"),
   read("../app/globals.css"),
   read("../app/components/StudentMessageCenter.tsx"),
+  read("../app/components/EntryCheck.module.css"),
 ]);
 const animalPortraits = await readFile(new URL("../public/brand/animal-portraits-v2.png", import.meta.url));
 
@@ -23,27 +24,15 @@ test("child prompts stay readable as text — the listen button was removed on 2
   assert.doesNotMatch(messageCenter, /📬/);
 });
 
-test("entry can be completed with pictures and a generated nickname instead of reading and typing every field", () => {
-  assert.match(join, /\{ value: "꽃", picture: "🌸", name: "꽃" \}/);
-  assert.match(join, /\{ value: "집", picture: "🏠", name: "집" \}/);
-  assert.match(join, /className="password-slots"/);
-  assert.match(join, /pictures\[index\] \? pictureFor\(pictures\[index\]\) : "\?"/);
-  assert.match(join, /function suggestNickname\(\)/);
-  assert.match(join, /🎲 다른 별명/);
-  assert.match(join, /className="button primary full child-primary-action"/);
-  assert.match(join, /<span aria-hidden="true">▶️<\/span>/);
-  assert.doesNotMatch(join, /이 기기에 저장된 내 동물 고르기/);
+test("entry can be completed with a number pad and one animal picture instead of reading and typing every field", () => {
+  assert.match(join, /<h1>내 참여 코드를 눌러요<\/h1>/);
+  assert.match(join, /<p>선생님이 준 여섯 자리 숫자예요\.<\/p>/);
+  assert.match(join, /<h1>내 동물을 골라요<\/h1>/);
+  assert.match(join, /<p>처음 왔구나! 하나만 고르면 돼요\.<\/p>/);
+  assert.match(join, /className=\{`\$\{check\.enter\} child-primary-action`\}/);
   assert.match(join, /className="animal-choice-portrait" data-animal-index=\{index\}/);
-  assert.match(join, /className="join-preview-animal" data-animal-index=\{ANIMALS\.indexOf\(animal\)\}/);
-  assert.match(join, /className="join-preview-password-title" aria-hidden="true">그림 비밀번호<\/span>/);
-  assert.match(join, /<span className=\{pictures\[index\] \? "filled" : ""\} key=\{index\}><i>/);
+  assert.doesNotMatch(join, /이 기기에 저장된 내 동물 고르기|picturePassword|nickname-row/);
   assert.match(css, /background-image:url\('\/brand\/animal-portraits-v2\.png'\)/);
-  assert.match(css, /\.entry-join-shell>\.join-card \.join-preview-card>b \{[\s\S]*?display:grid;[\s\S]*?place-items:center;/);
-  assert.match(css, /\.entry-join-shell>\.join-card \.join-preview-slots span \{[\s\S]*?border:0;[\s\S]*?background:transparent;/);
-  assert.match(css, /\.entry-join-shell>\.join-card \.join-preview-slots span>i \{[\s\S]*?place-items:center;[\s\S]*?transform:none;/);
-  assert.match(css, /\.entry-join-shell \.join-controls \.picture-password-picker \{[\s\S]*?position:static;[\s\S]*?display:grid;/);
-  assert.match(css, /\.entry-join-shell \.join-controls \.join-step-2::before,[\s\S]*?\.join-step-3::before \{[\s\S]*?background:#d0e2d3;/);
-  assert.match(css, /\.entry-join-shell \.join-controls \.picture-password-picker \.password-actions \{[\s\S]*?position:static;[\s\S]*?grid-column:2;[\s\S]*?grid-row:2;/);
   const portraitSheetWidth = animalPortraits.readUInt32BE(16);
   const portraitSheetHeight = animalPortraits.readUInt32BE(20);
   assert.equal(portraitSheetWidth, 2560);
@@ -73,7 +62,8 @@ test("drawing, navigation and reflection retain familiar visual actions when tex
 
 test("picture slots and choice controls remain large and visible on small screens", () => {
   assert.match(css, /\.student-message-button \.teacher-message-icon \{[^}]*font-size:26px/);
-  assert.match(css, /\.password-slots span \{[^}]*width:52px; height:52px/);
+  // 그림 비밀번호 슬롯(.password-slots)은 참여 코드 입장(2026-09-09)과 함께 사라졌다. 코드 수첩의 키는 EntryCheck.module.css가 44px 이상으로 잡는다.
+  assert.match(entryCss, /\.key \{ min-height: 56px; font-size: 24px; \}/);
   assert.match(css, /\.reflection-choice-grid button \{[^}]*min-height:84px/);
   // `.welcome-title-row` 규칙은 어떤 화면도 렌더링하지 않는 죽은 CSS라 함께 제거했다.
   assert.match(css, /@media \(max-width:460px\) and \(orientation:portrait\)[\s\S]*\.lesson-spoken-prompt \{ grid-column:1; grid-row:1; grid-template-columns:minmax\(0,1fr\)/);

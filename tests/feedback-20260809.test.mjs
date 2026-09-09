@@ -117,19 +117,13 @@ test("teacher artwork history is ownership-scoped, newest-first, and paginated",
     body: JSON.stringify({ action: "createClassroom", displayName: "작품 기록반", roster: [{ seatNumber: 1, realName: "김민준" }] }),
   });
   assert.equal(created.status, 201);
-  const classroom = (await created.json()).classroom;
+  const createdPayload = await created.json();
+  const classroom = createdPayload.classroom;
 
   const joined = await server.fetch("/api/student", {
     method: "POST",
     headers: studentHeaders,
-    body: JSON.stringify({
-      action: "join",
-      entry: classroom.classCode,
-      seatNumber: 1,
-      nickname: "기록 화가",
-      animal: "🐻",
-      picturePassword: ["⭐", "⭐", "⭐"],
-    }),
+    body: JSON.stringify({ action: "join", entry: classroom.classCode, entryCode: createdPayload.entryCodes[0].entryCode, animal: "🐻" }),
   });
   assert.equal(joined.status, 201);
   const joinedData = await joined.json();

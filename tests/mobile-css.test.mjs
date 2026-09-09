@@ -12,7 +12,7 @@ test("Korean text wraps by word while code, passwords, emoji and canvas surfaces
   assert.match(css, /\.landing-headline,\.landing-subtitle,[\s\S]*?\.student-tool-shelf \.student-menu-card h2 \{[\s\S]*?word-break:keep-all;[\s\S]*?overflow-wrap:break-word;[\s\S]*?word-wrap:break-word;[\s\S]*?text-wrap:balance;/);
   // `.personal-card`, `.password-preview`는 옛 입장 흐름과 함께 제거된 죽은 클래스라 단언에서 뺐다.
   assert.match(css, /code,pre \{[^}]*white-space:nowrap;[^}]*word-break:normal;[^}]*overflow-wrap:normal;[^}]*word-wrap:normal;/);
-  assert.match(css, /\.emoji-chip,\.picture-chip,\.class-code strong,\.qr-panel strong,\.large-qr-code strong,\.draw-canvas,\.guide-canvas \{ word-break:normal; overflow-wrap:normal; word-wrap:normal; \}/);
+  assert.match(css, /\.emoji-chip,\.class-code strong,\.qr-panel strong,\.large-qr-code strong,\.draw-canvas,\.guide-canvas \{ word-break:normal; overflow-wrap:normal; word-wrap:normal; \}/);
   assert.match(css, /@supports \(overflow-wrap:anywhere\) \{[^}]*overflow-wrap:anywhere;/);
 });
 

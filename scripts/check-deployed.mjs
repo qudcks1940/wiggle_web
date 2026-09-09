@@ -2,9 +2,10 @@
 // 학생 입장 → 작품 생성 → 3.4MB 완성 PNG 바이너리 업로드(Vercel 4.5MB 한도 실증) →
 // 완성 저장(키 참조) → 완성본 회수(바이트 전수 일치) → 경계(남의 키·유령 키 413).
 //
-// 사용법: npm run check:deployed -- https://wiggleweb.vercel.app 1234
-//   - 두 번째 인자는 입장이 열린 실제 학급의 4자리 수업 코드다.
-//   - 실행하면 그 학급에 검증용 학생("검증화가…")과 작품이 생긴다.
+// 사용법: npm run check:deployed -- https://wiggleweb.vercel.app 1234 483921
+//   - 두 번째 인자는 입장이 열린 실제 학급의 4자리 수업 코드, 세 번째는 그 반 명단의 6자리 참여 코드다
+//     (교사 화면 명단·설정에서 본다). 검증용으로 명단에 자리를 하나 더 만들어 그 코드를 쓰는 것을 권한다.
+//   - 실행하면 그 자리의 학생에게 검증용 작품이 생긴다.
 //     끝나면 교사 화면에서 지우거나, 남겨서 시연용으로 써도 된다.
 import assert from "node:assert/strict";
 import { webcrypto } from "node:crypto";
@@ -12,9 +13,10 @@ import { emptyDocument } from "../lib/drawing-model.ts";
 
 const rawBase = process.argv[2] ?? "";
 const CLASS_CODE = process.argv[3] ?? "";
-if (!/^https?:\/\//.test(rawBase) || !/^\d{4}$/.test(CLASS_CODE)) {
-  console.error("사용법: npm run check:deployed -- <운영주소> <4자리 수업코드>");
-  console.error("예:     npm run check:deployed -- https://wiggleweb.vercel.app 1234");
+const ENTRY_CODE = process.argv[4] ?? "";
+if (!/^https?:\/\//.test(rawBase) || !/^\d{4}$/.test(CLASS_CODE) || !/^\d{6}$/.test(ENTRY_CODE)) {
+  console.error("사용법: npm run check:deployed -- <운영주소> <4자리 수업코드> <6자리 참여코드>");
+  console.error("예:     npm run check:deployed -- https://wiggleweb.vercel.app 1234 483921");
   process.exit(1);
 }
 const BASE = new URL(rawBase).origin;
@@ -48,12 +50,15 @@ function bigPng() {
 
 try {
   step = "학생 입장";
-  const nickname = `검증화가${Date.now() % 100000}`;
-  const join = await expectStatus(await fetch(`${BASE}/api/student`, {
+  // 입장은 수업 코드 → 참여 코드다. 아직 아무도 안 쓴 자리의 코드를 넘기면 첫 입장(201), 쓰던 자리면 재입장(200).
+  const joinResponse = await fetch(`${BASE}/api/student`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ action: "join", entry: CLASS_CODE, nickname, animal: "🐰", picturePassword: ["별", "달", "꽃"], allowDuplicate: true }),
-  }), 201, step);
+    body: JSON.stringify({ action: "join", entry: CLASS_CODE, entryCode: ENTRY_CODE, animal: "🐰" }),
+  });
+  if (![200, 201].includes(joinResponse.status)) await expectStatus(joinResponse, 201, step);
+  const join = await readJson(joinResponse);
+  const nickname = join.student?.nickname ?? "";
   assert.ok(join.deviceToken, "deviceToken");
   const auth = { authorization: `Bearer ${join.deviceToken}` };
   log(`${step} (${nickname}, 코드 ${CLASS_CODE})`);

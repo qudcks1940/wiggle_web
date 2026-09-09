@@ -216,18 +216,18 @@
         "path": "/landing-gallery/paper-blue.png",
         "width": 1024,
         "height": 1024,
-        "bytes": 1427730,
+        "bytes": 1338399,
         "hasAlpha": false,
-        "sha256": "b07590991fefe2c9e5a36498bea50f3a4dfd6793dd0199f5d390e9eda985fbc4"
+        "sha256": "6d2bd7b2708f808848432c2805d8e1fd937823bf91228890a2b29418083f60ad"
       },
       "variants": [
         {
           "path": "/landing-gallery/paper-blue-1024.webp",
           "width": 1024,
           "height": 1024,
-          "bytes": 77582,
+          "bytes": 40428,
           "hasAlpha": false,
-          "sha256": "389a552b0974456c12609e5a4bc007b7334f602d7c4f7b52163f6b75e7ca3002"
+          "sha256": "ecdfab7710bc671e00a1dc2f84c027df40974b92639a71973d6d5933178ee18c"
         }
       ],
       "srcSet": "/landing-gallery/paper-blue-1024.webp 1024w"
@@ -247,26 +247,26 @@
         "path": "/landing-gallery/frame-blue.png",
         "width": 960,
         "height": 720,
-        "bytes": 721249,
+        "bytes": 641486,
         "hasAlpha": true,
-        "sha256": "2b679bfe60ae2f8ce1402247d8683a84fb7547ae1a0ea7e25f05a2313015a5c2"
+        "sha256": "ccad7439f1a96a651d9792d302a9e424b4460af2cae07db57a53b651d0ffa5cc"
       },
       "variants": [
         {
           "path": "/landing-gallery/frame-blue-480.webp",
           "width": 480,
           "height": 360,
-          "bytes": 34674,
+          "bytes": 31986,
           "hasAlpha": true,
-          "sha256": "eb91147ff17b7d3f01d708102d226eb26ff73060cf287dc7e6a741043020d39c"
+          "sha256": "1a479781d58b0f26f48500509055bb01a011d2995c248e34d668dca72e27f29c"
         },
         {
           "path": "/landing-gallery/frame-blue-960.webp",
           "width": 960,
           "height": 720,
-          "bytes": 128178,
+          "bytes": 118970,
           "hasAlpha": true,
-          "sha256": "f5a4e33cfe2023b85231e1d5c2a46a865b8e5fb5c4a97f65b349e746c90b2b4a"
+          "sha256": "cf3e88800e43ae9db4093c648ed5d99770aeb3ea6a2f3e035c0df1825d7b9350"
         }
       ],
       "srcSet": "/landing-gallery/frame-blue-480.webp 480w, /landing-gallery/frame-blue-960.webp 960w",

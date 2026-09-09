@@ -58,7 +58,7 @@ test("entry can be completed with pictures and a generated nickname instead of r
   assert.match(css, /\.entry-join-shell>\.join-card \.join-preview-slots span \{[\s\S]*?border:0;[\s\S]*?background:transparent;/);
   assert.match(css, /\.entry-join-shell>\.join-card \.join-preview-slots span>i \{[\s\S]*?place-items:center;[\s\S]*?transform:none;/);
   assert.match(css, /\.entry-join-shell \.join-controls \.picture-password-picker \{[\s\S]*?position:static;[\s\S]*?display:grid;/);
-  assert.match(css, /\.entry-join-shell \.join-controls \.join-step-2::before,[\s\S]*?\.join-step-3::before \{[\s\S]*?background:#cbdde7;/);
+  assert.match(css, /\.entry-join-shell \.join-controls \.join-step-2::before,[\s\S]*?\.join-step-3::before \{[\s\S]*?background:#d0e2d3;/);
   assert.match(css, /\.entry-join-shell \.join-controls \.picture-password-picker \.password-actions \{[\s\S]*?position:static;[\s\S]*?grid-column:2;[\s\S]*?grid-row:2;/);
   const portraitSheetWidth = animalPortraits.readUInt32BE(16);
   const portraitSheetHeight = animalPortraits.readUInt32BE(20);

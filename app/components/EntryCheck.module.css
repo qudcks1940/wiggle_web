@@ -1,0 +1,177 @@
+/* 수업 확인(대기·실패) 화면 — docs/design-assets/entry-green/README-CLAUDE.md, reference/approved-green-palette-fixed.png (1672×941) 기준.
+   넓은 화면: 교실 장면(classroom-with-mongri.webp)을 비율 그대로 한 무대로 두고 문구·버튼은 HTML로 올린다.
+   좁은 화면·낮은 화면: 크림 단색 배경 + 독립 오리 + 일반 문서 흐름. */
+.shell {
+  --ink: #123f23;
+  --accent: #426d34;
+  --outline: #245834;
+  --paper: #fff5d9;
+  --note: #fff9e9;
+  --action: #ffcf37;
+  --action-border: #c48d12;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+  color: var(--ink);
+}
+.stage {
+  position: relative;
+  width: min(100vw, calc(100dvh * 1672 / 941));
+  aspect-ratio: 1672 / 941;
+  container-type: inline-size;
+  background: url("/entry-green/classroom-with-mongri.webp") center / 100% 100% no-repeat;
+  overflow: hidden;
+}
+.logo { position: absolute; left: 2.4%; top: 3.2%; }
+.logo :global(.brand) { min-height: 44px; color: var(--ink); font-size: clamp(20px, 2.2cqw, 34px); }
+.logo :global(.brand-mark) { width: clamp(36px, 3.4cqw, 52px); height: clamp(36px, 3.4cqw, 52px); }
+.speak { position: absolute; right: 2.4%; top: 3.3%; }
+.sign {
+  position: absolute;
+  left: 21.3%;
+  top: 20.5%;
+  width: 12%;
+  height: 7%;
+  display: grid;
+  place-items: center;
+  font-size: clamp(14px, 2cqw, 30px);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #5a3d1e;
+  pointer-events: none;
+}
+.panel {
+  position: absolute;
+  left: 50%;
+  top: 13%;
+  width: 46%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 1.6cqw, 22px);
+  text-align: center;
+}
+.panel h1 {
+  margin: 0;
+  font-size: clamp(24px, 4.4cqw, 62px);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+  color: var(--ink);
+  text-shadow: 0 2px 0 #fff8;
+}
+.lead { margin: 0; font-size: clamp(16px, 1.6cqw, 24px); font-weight: 700; color: var(--accent); }
+.note {
+  position: relative;
+  width: 62%;
+  margin: clamp(4px, 1cqw, 14px) 0 0;
+  padding: clamp(12px, 1.4cqw, 20px) 16px;
+  border-radius: 6px;
+  background: var(--note);
+  box-shadow: 0 3px 0 #e9dcb8, 0 8px 18px rgba(74, 58, 20, .14);
+  transform: rotate(-.6deg);
+  font-size: clamp(16px, 1.7cqw, 25px);
+  font-weight: 800;
+  color: var(--ink);
+}
+.note::before {
+  /* 압정 */
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -9px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #8fbe6a, #3f6f36);
+  transform: translateX(-50%);
+  box-shadow: 0 2px 2px rgba(0, 0, 0, .25);
+}
+.note :global(.child-error) { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
+.note :global(.child-error) p { margin: 0; font-size: inherit; color: inherit; }
+.note :global(.child-error-icon) { font-size: 1.2em; }
+.note :global(.entry-loading) { min-height: 0; gap: 6px; color: inherit; }
+.note :global(.entry-loading) span { font-size: 2em; }
+.actions { width: 62%; display: flex; flex-direction: column; align-items: stretch; gap: clamp(8px, 1cqw, 14px); }
+.primary, .help, .retry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 16px;
+  border-radius: 16px;
+  font: inherit;
+  font-weight: 900;
+  text-decoration: none;
+  cursor: pointer;
+  line-height: 1.3;
+}
+.primary {
+  min-height: clamp(48px, 5.6cqw, 76px);
+  font-size: clamp(17px, 1.9cqw, 27px);
+  color: #3d2b00;
+  background: linear-gradient(#ffd84a, var(--action));
+  border: 2px solid var(--action-border);
+  box-shadow: 0 5px 0 var(--action-border);
+}
+.primary:hover { transform: translateY(-2px); }
+.help {
+  min-height: clamp(48px, 5cqw, 68px);
+  font-size: clamp(16px, 1.7cqw, 24px);
+  color: var(--ink);
+  background: #fffdf4;
+  border: 2px solid var(--outline);
+}
+.help:hover { background: #f4f7e4; }
+.retry {
+  min-height: 44px;
+  font-size: clamp(15px, 1.4cqw, 20px);
+  font-weight: 800;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.primary:disabled, .help:disabled, .retry:disabled { opacity: .55; cursor: default; transform: none; }
+.primary:focus-visible, .help:focus-visible, .retry:focus-visible, .speak :global(.speak-button):focus-visible { outline: 4px solid var(--accent); outline-offset: 3px; }
+.actions :global(.teacher-call-note) {
+  margin: 0;
+  padding: 12px 14px;
+  border: 2px solid #e1c14d;
+  border-radius: 14px;
+  background: #fffbe6;
+  font-size: clamp(15px, 1.4cqw, 20px);
+  text-align: left;
+}
+.duck { display: none; }
+
+/* 좁은 화면(휴대전화)·낮은 가로 화면: 교실 장면을 잘라 쓰지 않고 문서 흐름으로 */
+@media (max-width: 760px), (max-height: 520px), (max-aspect-ratio: 5/4) {
+  .shell {
+    display: block;
+    padding: 12px max(16px, env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+  .stage { width: auto; aspect-ratio: auto; background: none; overflow: visible; container-type: normal; }
+  .logo, .speak { position: static; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .logo :global(.brand) { font-size: 22px; gap: 7px; }
+  .logo :global(.brand-mark) { width: 36px; height: 36px; }
+  .sign { display: none; }
+  .duck { display: block; width: clamp(140px, 42vw, 220px); height: auto; margin: 8px auto 0; }
+  .panel { position: static; width: min(100%, 460px); margin: 6px auto 0; padding: 20px 18px 22px; border-radius: 22px; background: #fffdf4; border: 1px solid #e5dcbf; box-shadow: 0 8px 0 #eee4c8; gap: 12px; }
+  .panel h1 { font-size: 28px; }
+  .lead { font-size: 16px; }
+  .note { width: 100%; font-size: 16px; }
+  .actions { width: 100%; }
+  .primary { font-size: 18px; min-height: 56px; }
+  .help { font-size: 16px; }
+}
+@media (max-height: 520px) and (min-width: 761px) {
+  .stage { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 20px; align-items: center; }
+  .head { grid-column: 1 / -1; }
+  .duck { width: clamp(120px, 30vh, 200px); margin: 0; }
+  .panel { margin: 0; }
+}

@@ -1,0 +1,11 @@
+/* 화면 전용 제안. 기존 전역 :root를 덮어쓰지 않는다. */
+.entry-green {
+  --entry-ink: #123f23;
+  --entry-accent: #426d34;
+  --entry-sage: #a4b979;
+  --entry-paper: #fff5d9;
+  --entry-note: #fff9e9;
+  --entry-action: #ffcf37;
+  --entry-action-border: #c48d12;
+  --entry-outline: #245834;
+}

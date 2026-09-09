@@ -153,7 +153,7 @@ test("eraser footprint matches the square area removed from the document", () =>
   assert.match(renderer, /function eraseWithSquareFootprint/);
   assert.match(renderer, /globalCompositeOperation = "destination-out"/);
   assert.match(renderer, /fillRect\(x \* size - half, y \* docH - half, footprint, footprint\)/);
-  assert.match(css, /\.eraser-footprint \{[^}]*border:2px solid #1b3a57/);
+  assert.match(css, /\.eraser-footprint \{[^}]*border:2px solid #264c2e/);
 });
 
 test("도화지 비율은 문서가 정하고, 화면·래스터·저장 이미지가 같은 비율을 쓴다", () => {

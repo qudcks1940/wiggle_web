@@ -1,6 +1,6 @@
 # Wiggle Web 현재 상태
 
-> 마지막 갱신: 2026-09-07
+> 마지막 갱신: 2026-09-09
 > 목적: 긴 대화가 압축되거나 담당 AI가 바뀌어도 실제 구현·검증·배포 상태를 잃지 않기 위한 기준 문서
 
 ## 상태 기준
@@ -440,6 +440,16 @@
 - 남은 위험: 학부모 동의·보관 기간·삭제 요청 처리 절차는 아직 제품에 없다. 지금은
   "담임만 열람 / 학급 삭제 시 함께 삭제 / AI 미전송"을 기본값으로 잡았을 뿐이다.
   명단이 없는 기존 학급은 예전 흐름(동물·별명·그림 비밀번호로 스스로 만들기)을 그대로 쓴다.
+
+## 2026-09-09 초록 팔레트 전환·수업 확인 화면 교실 시안 (`claude/green-entry-20260909`, 로컬 검증)
+
+- 사용자 결정(2026-09-07 "파란 화면을 초록으로")을 최신 main(명단 입장 이후) 위에 다시 적용했다. 이전 시도(`wpdbs1229/storybook-design-sync-green`, 8월 23일 main 기준)는 `새로 시작하기 / 내 그림 이어가기` 갈림길에 붙어 있었는데 그 화면 자체가 명단 입장으로 사라졌으므로 리베이스하지 않고 폐기 대상으로 둔다(브랜치는 남아 있음).
+- 팔레트: `app/globals.css`의 `:root`를 시안 색(주 `#4f9a58`, 진한 `#2f6b3d`, 배경 크림 `#f4f3ea`, 잉크 `#2b4a33`)으로 바꾸고, 하드코딩된 파란 계열 hex·rgba 346곳과 `public/landing-gallery/gallery-assets.css`의 토큰 9곳을 색상(hue) 회전 스크립트로 일괄 초록화했다(채도 62%, 명도 유지). 그리기 팔레트의 물감 색(`DrawingStudio.tsx`)과 브랜드 로고·앱 아이콘·오리 마스코트(파란 모자·스카프)는 건드리지 않았다.
+- 그림 안에 파란색이 있던 래스터 7종은 파란 화소만 같은 방식으로 초록으로 돌려 제자리 교체했다: 대문 `paper-blue`(png+1024 webp)·`frame-blue`(png+480/960 webp), 입장 `student-entry-scene-v3`·`student-entry-arch`, 학생 홈 `student-home-book-v2/-left/-right`. `public/landing-gallery/manifest.json`의 해당 5개 파일 sha256·bytes를 갱신했다(원본 `source` 해시는 그대로).
+- 수업 확인 화면(`/join` 대기·실패)을 `docs/design-assets/entry-green/`의 교실 시안(1672×941)으로 구현했다(`app/components/EntryCheck.module.css`). 넓은 화면은 `public/entry-green/classroom-with-mongri.webp`(오리가 팔레트를 잡은 완성 장면, 219KB)를 비율 그대로 한 무대로 두고 로고·듣기·`우리 반` 간판·제목·상태 쪽지·버튼을 HTML로 올린다. 760px 이하·높이 520px 이하·세로 비율(5:4 이하)은 크림 배경 + 독립 오리(`/landing-gallery/duck-painter-640.webp` 재사용) + 문서 흐름으로 바뀐다. 코드 오류(404)는 `수업 코드 다시 입력하기`(노란 주 버튼)·`선생님 불러요`(손 들기 안내 토글)·`다시 확인하기`(밑줄) 순서, 연결 오류는 `다시 확인하기`가 주 버튼이고 코드 재입력은 보조다. 인증·API·저장 로직은 무수정.
+- 시안 문구와 다른 곳 하나: 도움 버튼은 시안의 `선생님, 도와주세요` 대신 기존 확정 문구 `🙋 선생님 불러요`를 유지했다(`tests/entry-error-recovery`·browser-check가 이 문구를 계약으로 잡고 있고, 음성 안내 문장을 바꾸지 않는 결정과도 맞춘다).
+- 검증: typecheck·lint(경고 10건은 기존 것)·`git diff --check` 통과, 전체 테스트 **318/318**(Node 22.23; 이 맥의 기본 22.13은 `.ts` 로더 오류로 실행 불가). 팔레트가 바뀌어 hex를 고정하던 테스트 2건(`pre-reader-ux` 단계 구분선 `#d0e2d3`, `drawing-tools` 지우개 발자국 `#264c2e`)만 갱신. `npm run check:browser` 기본 3뷰포트 전 항목 통과(browser-check의 듣기 버튼 셀렉터에 `.entry-check .speak-button`을 추가). 실제 Chrome(CDP) 실측으로 수업 확인 실패 화면을 `1440×900`, `1280×800`, `1024×768`, `768×1024`, `1024×1366`, `844×390`, `390×844`, `320×568`에서 확인: 가로 넘침 0, 44px 미만 터치 목표 0, 본문 16px 이상(12px은 기존 듣기 버튼 캡션). 대문·교사·번호 입장 화면도 초록으로 렌더링됨을 캡처로 확인.
+- 남은 것: `public/og.png`(README 히어로)는 옛 파란 대문 캡처 그대로다. `docs/design-assets/entry-green/assets/`의 원본 PNG와 zip은 사용자 소유 자료로 커밋하지 않았다(README·PROVENANCE·manifest·tokens·reference만 커밋).
 
 ## 다음 작업 시작 전 확인
 

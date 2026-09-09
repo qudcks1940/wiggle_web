@@ -384,7 +384,7 @@ async function main() {
           const box = document.querySelector('.child-error');
           if (!box) return { error: 'no-error', text: document.body.innerText.slice(0, 120) };
           const icon = box.querySelector('.child-error-icon') ? box.querySelector('.child-error-icon').textContent : '';
-          const speak = Boolean(document.querySelector('.entry-card .speak-button'));
+          const speak = Boolean(document.querySelector('.entry-card .speak-button, .entry-check .speak-button'));
           const callButton = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('선생님 불러요'));
           const callBox = callButton ? window.__wiggle.box(callButton) : null;
           const retry = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('다시 확인하기'));

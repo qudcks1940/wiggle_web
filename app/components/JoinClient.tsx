@@ -6,6 +6,7 @@ import { FALLBACK_NICKNAME, NICKNAME_IDEAS, pickDifferentNickname } from "@/lib/
 import { PICTURE_PASSWORD_LENGTH } from "@/lib/picture-password";
 import { classifyEntryError, EntryErrorKind, readStudentEntryResponse, StudentEntryResponseError } from "@/lib/student-entry-client";
 import { Logo } from "./Logo";
+import check from "./EntryCheck.module.css";
 import { SpeakButton } from "./SpeakButton";
 
 const ANIMALS = ["🐰", "🐻", "🦊", "🐯", "🐼", "🐶", "🐱", "🐨", "🦁", "🐸"];
@@ -195,7 +196,38 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
   }
 
   if (mode === "checking") {
-    return <main className="entry-shell"><div className="entry-top"><Logo /></div><section className="entry-card entry-check-card"><div className="entry-title-row"><div><p className="eyebrow">수업에 들어가요</p><h1>{error ? "수업을 찾지 못했어요" : "우리 반을 확인하고 있어요"}</h1></div>{error && <SpeakButton text="수업 코드를 확인하지 못했어요. 화면의 안내를 보고 다시 시도하거나 선생님을 불러요." />}</div>{error ? <>{errorNotice()}<button type="button" className="button primary full" disabled={busy} onClick={() => void checkEntry()}>{busy ? "확인 중…" : "다시 확인하기"}</button><a className="text-button" href="/">수업 코드 다시 입력하기</a></> : <div className="entry-loading" role="status"><span aria-hidden="true">🎨</span><b>잠깐만 기다려 주세요</b></div>}</section></main>;
+    const codeError = errorKind === "code";
+    // 문구는 docs/design-assets/entry-green/README-CLAUDE.md의 확정 문구. 선생님 도움 버튼은 실제 메시지를 보내지 않고 손을 드는 안내다.
+    const guidance = error ? (codeError ? "수업 코드가 맞는지 한 번만 더 확인해 줘." : "잠깐 연결이 어려운가 봐. 한 번 더 해 보자.") : "몽그리랑 조금만 기다려 줘.";
+    return <main className={`entry-check ${check.shell}`}>
+      <div className={check.stage}>
+        <div className={check.head}>
+          <div className={check.logo}><Logo /></div>
+          {error && <div className={check.speak}><SpeakButton text={`${codeError ? "몽그리랑 다시 찾아보자! 수업 코드가 맞는지 한 번만 더 확인해 줘. 수업 코드 다시 입력하기를 눌러요. 도움이 필요하면 손을 들고 선생님을 불러요." : `우리 반을 찾는 중에 연결이 끊겼어요. ${error} 다시 확인하기를 눌러요.`}`} /></div>}
+        </div>
+        <span className={check.sign} aria-hidden="true">우리 반</span>
+        <img className={check.duck} src="/landing-gallery/duck-painter-640.webp" alt="" aria-hidden="true" width="640" height="640" />
+        <section className={check.panel} aria-labelledby="entry-check-title">
+          <h1 id="entry-check-title">{error ? "몽그리랑 다시 찾아보자!" : "우리 반으로 가는 중이야!"}</h1>
+          <p className={check.lead}>{guidance}</p>
+          <div className={check.note}>
+            {error
+              ? <div className="error-box child-error" role="alert"><span className="child-error-icon" aria-hidden="true">⚠️</span><p>{codeError ? "수업을 아직 찾지 못했어요" : error}</p></div>
+              : <div className="entry-loading" role="status"><span aria-hidden="true">🎨</span><b>잠깐만 기다려 주세요</b></div>}
+          </div>
+          {error && <div className={check.actions}>
+            {codeError
+              ? <a className={check.primary} href="/">수업 코드 다시 입력하기</a>
+              : <button type="button" className={check.primary} disabled={busy} onClick={() => void checkEntry()}>{busy ? "확인 중…" : "다시 확인하기"}</button>}
+            {codeError && !teacherCallOpen && <button type="button" className={`${check.help} teacher-call-button`} onClick={() => setTeacherCallOpen(true)}><span aria-hidden="true">🙋</span>선생님 불러요</button>}
+            {codeError && teacherCallOpen && <div className="teacher-call-note" role="status"><span className="teacher-call-emoji" aria-hidden="true">🙋</span><p>손을 들고 선생님을 불러요.<br />수업 코드를 다시 알려 주실 거예요.</p></div>}
+            {codeError
+              ? <button type="button" className={check.retry} disabled={busy} onClick={() => void checkEntry()}>{busy ? "확인 중…" : "다시 확인하기"}</button>
+              : <a className={check.retry} href="/">수업 코드 다시 입력하기</a>}
+          </div>}
+        </section>
+      </div>
+    </main>;
   }
 
   if (mode === "seat") {

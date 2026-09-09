@@ -1134,7 +1134,6 @@ body {
 }
 .landing .topbar,.entry-top,.student-home-header { color:var(--picture-ink,#184523); }
 .landing .teacher-link,.student-home-redesign :is(.small-button,.button) { letter-spacing:-.025em; }
-label>span) { color:var(--picture-ink); font-weight:950; }
 
 .student-home-intro h1,.teacher-activity-copy h2,.student-tool-shelf .student-menu-card h2 {
   color:var(--picture-ink);

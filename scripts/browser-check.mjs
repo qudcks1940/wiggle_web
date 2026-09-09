@@ -374,8 +374,7 @@ async function main() {
           const box = document.querySelector('.child-error');
           if (!box) return { error: 'no-error-box' };
           const reset = document.querySelector('.reset-pictures-button');
-          const pageSpeak = document.querySelector('.entry-card .speak-button');
-          const before = { icon: box.querySelector('.child-error-icon') ? box.querySelector('.child-error-icon').textContent : '', pageSpeak: Boolean(pageSpeak), resetAttention: reset ? reset.className.includes('attention') : false, resetBox: reset ? window.__wiggle.box(reset) : null, errorVisible: window.__wiggle.reachable(box) };
+          const before = { icon: box.querySelector('.child-error-icon') ? box.querySelector('.child-error-icon').textContent : '', resetAttention: reset ? reset.className.includes('attention') : false, resetBox: reset ? window.__wiggle.box(reset) : null, errorVisible: window.__wiggle.reachable(box) };
           if (reset) { reset.click(); await wait(200); }
           const submitAfter = [...document.querySelectorAll('button')].find((button) => button.className.includes('child-primary-action'));
           const after = { errorStillThere: Boolean(document.querySelector('.child-error')), chipsEnabled: [...document.querySelectorAll('.picture-chip')].every((chip) => !chip.disabled), submitDisabled: submitAfter ? submitAfter.disabled : null };
@@ -384,7 +383,6 @@ async function main() {
         check(!unlockError.error, `${viewport.name} 이어가기 오류 흐름 재현`, unlockError.error);
         if (!unlockError.error) {
           check(unlockError.before.icon === "⚠️", `${viewport.name} 틀린 비밀번호가 그림(⚠️)으로 표시됨`, unlockError.before.icon);
-          check(unlockError.before.pageSpeak, `${viewport.name} 안내를 소리로 들을 수 있음`);
           check(unlockError.before.resetAttention, `${viewport.name} 다시 골라요 버튼이 강조됨`);
           check(unlockError.before.resetBox && Math.min(unlockError.before.resetBox.w, unlockError.before.resetBox.h) >= 44, `${viewport.name} 다시 골라요 버튼 44px 이상`, unlockError.before.resetBox);
           check(!unlockError.after.errorStillThere, `${viewport.name} 다시 고르면 이전 오류 문구가 사라짐`);
@@ -401,18 +399,16 @@ async function main() {
           const box = document.querySelector('.child-error');
           if (!box) return { error: 'no-error', text: document.body.innerText.slice(0, 120) };
           const icon = box.querySelector('.child-error-icon') ? box.querySelector('.child-error-icon').textContent : '';
-          const speak = Boolean(document.querySelector('.entry-card .speak-button, .entry-check .speak-button'));
           const callButton = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('선생님 불러요'));
           const callBox = callButton ? window.__wiggle.box(callButton) : null;
           const retry = [...document.querySelectorAll('button')].find((button) => button.textContent.includes('다시 확인하기'));
           const backHome = [...document.querySelectorAll('a')].find((link) => link.textContent.includes('수업 코드 다시 입력하기'));
           if (callButton) { callButton.click(); await wait(200); }
-          return { icon, speak, hadCallButton: Boolean(callButton), callBox, noteShown: Boolean(document.querySelector('.teacher-call-note')), hadRetry: Boolean(retry), hadBackHome: Boolean(backHome), overflow: window.__wiggle.horizontalOverflow().overflow, small: window.__wiggle.smallTargets(44) };
+          return { icon, hadCallButton: Boolean(callButton), callBox, noteShown: Boolean(document.querySelector('.teacher-call-note')), hadRetry: Boolean(retry), hadBackHome: Boolean(backHome), overflow: window.__wiggle.horizontalOverflow().overflow, small: window.__wiggle.smallTargets(44) };
         })()`);
         check(!codeError.error, `${viewport.name} 잘못된 수업 코드 흐름 재현`, codeError.error);
         if (!codeError.error) {
           check(codeError.icon === "⚠️", `${viewport.name} 코드 오류가 그림(⚠️)으로 표시됨`, codeError.icon);
-          check(codeError.speak, `${viewport.name} 코드 오류를 소리로 들을 수 있음`);
           check(codeError.hadCallButton && codeError.callBox && Math.min(codeError.callBox.w, codeError.callBox.h) >= 44, `${viewport.name} 선생님 불러요 버튼 44px 이상`, codeError.callBox);
           check(codeError.noteShown, `${viewport.name} 선생님 부르기 안내가 표시됨`);
           check(codeError.hadRetry && codeError.hadBackHome, `${viewport.name} 다시 확인·코드 재입력 행동이 함께 보임`, { retry: codeError.hadRetry, backHome: codeError.hadBackHome });

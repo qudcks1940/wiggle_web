@@ -2,7 +2,6 @@
 
 import { useMemo, useRef, useState } from "react";
 import { studentFetch } from "@/lib/client-session";
-import { SpeakButton } from "./SpeakButton";
 import { useModalDialog } from "./useModalDialog";
 
 export type StudentTeacherMessage = {
@@ -42,7 +41,7 @@ export function StudentMessageCenter({ messages, floating = false, compact = fal
 
   return <>
     {latestUnread && <aside className={floating ? "canvas-message" : "teacher-message"} role="status">
-      <b>👩‍🏫 선생님</b><p>{latestUnread.body}</p><SpeakButton text={`선생님이 말했어요. ${latestUnread.body}`} compact />
+      <b>👩‍🏫 선생님</b><p>{latestUnread.body}</p>
       <button type="button" className="canvas-message-close" onClick={dismissUnread} aria-label="새 선생님 말씀 모두 닫기">×</button>
     </aside>}
     {/* .floating은 비컴팩트 버튼에서는 화면 고정(fixed) 배치 규칙이라, 헤더 안 인라인 버튼에는
@@ -58,7 +57,6 @@ export function StudentMessageCenter({ messages, floating = false, compact = fal
         <div>{[...messages].reverse().map((message) => <article key={message.id}>
           <div><b>👩‍🏫 선생님</b><small>{message.audience === "all" ? "우리 반 모두" : "나에게"}</small></div>
           <p>{message.body}</p>
-          <SpeakButton text={`선생님이 말했어요. ${message.body}`} compact />
           <time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" })}</time>
         </article>)}</div>
         {!messages.length && <div className="empty-state">아직 선생님 말씀이 없어요.</div>}

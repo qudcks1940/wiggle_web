@@ -585,6 +585,32 @@
 - 검증: typecheck, lint(기존 경고만), production build, 전체 테스트 **325/325**, `git diff --check`를 통과했다. `npm run check:browser`의 320×568·390×844·844×390 전 항목도 통과했다(390px 핀치 1건은 하네스 환경 SKIP이며 기존 단위·형제 뷰포트가 검사). 실제 로컬 브라우저에서 세 탭, 학생·회차 작품 필터, 저장 작품 미리보기, 전체 메시지, 큰 QR, 명단 표, 학생 추가 모달의 Escape 닫기와 초점 복귀를 확인했다. 세 시안과 최종 1536×1024 캡처를 비교한 `design-qa.md`는 `Final result: passed`다.
 - 사용자 요청으로 검증 커밋을 로컬 `main`에 fast-forward 병합했다. GitHub `main` push와 Vercel 운영 배포는 저장소 경계에 따라 사용자가 실행한다.
 
+## 2026-09-09 들어 보기(읽어 주기) 기능 전부 제거 (`claude/remove-speak-20260909`, 로컬 검증)
+
+- 사용자 지시("들어보기 기능은 전부 제거")로 브라우저 `speechSynthesis` 기반 읽어 주기 버튼을 코드베이스에서 완전히 뺐다. 삭제: `app/components/SpeakButton.tsx`, `lib/speech.ts`, `tests/speak-button.test.mjs`. 사용처 24곳 정리: `DrawingStudio`(코칭·AI 가이드·레슨 단계·시작 선택·종이 가득·글씨 넣기·소개), `StudentHome`(오늘 회차·자유 그리기 인트로), `StudentMessageCenter`(배너·이력), `JoinClient`(수업 확인 오류·번호 화면·명단 없음·재입장·프로필 화면). 교사 목소리 귓속말(`VoiceWhisper`, 오디오 재생)은 별개 기능이라 그대로 둔다.
+- CSS: `.speak-button*`·`speaker-pulse` 규칙 전부 삭제, 버튼 자리를 비워 두던 열(`spoken-prompt`·`lesson-spoken-prompt`·`text-composer-title-row`·`canvas-message`·`guide-choice-heading`)을 제거해 빈 칸이 남지 않게 했다. `EntryCheck.module.css`의 `.speak` 자리 규칙 삭제.
+- 테스트·스크립트: `pre-reader-ux`(SpeakButton 부재를 단언), `entry-error-recovery`, `mobile-css`(canvas-message 2열), `browser-check.mjs`의 "소리로 들을 수 있음" 2항목 삭제.
+- 문서: `CLAUDE.md` 제품 원칙의 "그림, 음성, 큰 터치 목표"에서 음성을 뺐고, `docs/product-decisions.md` 교사와 메시지 8항에 결정을 적었다.
+- 검증: typecheck·lint(경고 14는 기존)·`npm test` 309/309·`git diff --check`·`git diff --check main...HEAD` 통과. `next build && next start -p 3399` 후 `browser-check.mjs http://localhost:3399` EXIT 0(알려진 SKIP 1).
+- 남은 위험: 비문해 아이가 안내 문장을 소리로 들을 수단이 없어졌다. 필요해지면 서버 TTS 등 다른 방식으로 다시 논의한다.
+
+## 2026-09-09 수업 확인 대기 화면 시안 반영 (`claude/remove-speak-20260909`, 로컬 검증)
+
+- 사용자 시안(1693×929): 크림 배경(#f8f8f3) 가운데에 초록 선 너머로 고개 내민 몽그리 + `잠깐만 기다려 줘!` + `수업실을 준비하고 있어요`. 로고·버튼 없음. `JoinClient`의 `checking` 모드에서 오류가 없는 대기 상태만 이 화면으로 바꿨고, 수업 코드 오류·연결 오류 상태는 종전 교실 장면 화면(`몽그리랑 다시 찾아보자!`)을 그대로 쓴다.
+- 에셋: 시안에서 몽그리와 선만 잘라 `public/entry-green/wait-mongri.png`(476×340, PNG 214KB — 이 맥에 cwebp가 없어 webp로 못 바꿨다. 있으면 webp로 바꿔 무게를 줄인다). 스타일은 `EntryCheck.module.css`의 `.waitShell`/`.waitMongri`. 구 `.entry-loading` 규칙과 `entry-paint-bob` 키프레임은 사용처가 없어져 삭제.
+- 검증: typecheck·lint(경고 14 기존)·`npm test` 309/309·`git diff --check` 통과. `next build && next start -p 3399` 후 CDP로 `/api/student` 요청을 멈춰 대기 화면을 고정해 320×568·390×844·844×390·1440×900·1693×929 실측: 가로·세로 넘침 0, 1693×929에서 몽그리 위치·폭(x609 w474)과 제목 52px·부제 28px이 시안과 일치. browser-check(3399) 통과.
+
+## 2026-09-09 그리기 팔레트 무스크롤 + 무지개 버튼 색 고르기 대화상자 (`claude/remove-speak-20260909`, 로컬 검증)
+
+- 사용자 요청: 색 카드 안의 색이 스크롤 없이 다 보이고, 무지개 버튼을 누르면 색을 상세하게 고르는 화면이 뜬다.
+- 팔레트(넓은 화면 떠 있는 카드, `min-width:900px and min-height:600px`): `max-height:250px; overflow:auto`를 걷어 12색이 두 칸 6줄로 다 보인다. 화면 높이 880px 이하에서는 색 카드를 156px로 넓혀 세 칸 4줄로 바꿔 1024×768·1280×800에서도 카드가 화면 안에 들어간다(종전에는 12색 중 2색이 스크롤 뒤에 있었고 카드 자체가 768·800 화면 아래로 62px 넘쳤다). 900×600(블록 최소 높이)에서는 도구 카드 383px + 색 카드 278px이 본문 534px보다 커서 여전히 넘친다 — 종전에도 같았고 이번 범위 밖.
+- 색 고르기 대화상자 `app/components/ColorPickerDialog.tsx`(+ `lib/color.ts` HSV↔HEX): 밝기·진하기 면(포인터 드래그, 화살표 키), 무지개(색상) 슬라이더, 현재 색 이름, 고운 색 모음(종전 `MORE_PALETTE` 22색이 여기로 이동), 「닫기 / 이 색으로 그리기」. 기존 `useModalDialog`로 초점 가둠·Escape·배경 inert. 팔레트 밖 색을 쓰는 동안 무지개 버튼이 눌린 상태(초록 테두리)가 되고 안쪽 테두리로 그 색을 보여 준다. 종전 「🎨 색 더보기」 펼침(`colorsExpanded`)은 제거.
+- 주의: 색 적용 네 줄(setColor·글씨 색·지우개 복귀)을 헬퍼 함수로 빼면 React Compiler가 `DrawingStudio` 전체를 컴파일 대상으로 삼아 기존 `performance.now()` 호출 3곳을 lint 오류로 잡는다(현재는 컴파일 제외 상태). 그래서 팔레트 원과 대화상자 `onPick`에 같은 네 줄을 인라인으로 두었다. 컴포넌트를 컴파일 대상으로 바꿀 때는 그 3곳부터 고친다.
+- 대화상자 크기: 세로 flex라 화면이 낮으면 색 모음만 안에서 스크롤하고 면·무지개·버튼은 항상 보인다. 가로 낮은 화면(≤520px)은 면 왼쪽 / 나머지 오른쪽 2열, 세로 낮은 화면(≤640px)은 면을 20vh로 줄인다.
+- 검증: typecheck·lint(경고 14 기존)·`npm test` 309/309(`drawing-tools`에 HSV 왕복·CSS 단언, `guide-demonstration` 갱신)·`git diff --check` 통과. `next build && next start -p 3399` 후 CDP 실측(교사 로그인→학급→학생 입장→작품 생성 시드): 팔레트 scrollHeight 초과 0, 12색 44px, 색 카드 아래끝 1024×768=755·1280×800=786·1440×900=886(모두 화면 안); 대화상자 320×568·390×844·844×390·1024×768·1440×900에서 화면 안, 내부 스크롤 0, 44px 미만 목표 0, 배경 inert, 초점 안쪽. browser-check(3399) 통과.
+- 알려진 결함: `scripts/browser-check.mjs`가 간헐적으로 멈춘다(2026-09-09 두 번). 정상 실행은 45초에 끝나고 결과는 마지막에 한 번에 출력하므로, 로그가 비어 있는 상태로 몇 분이 지나면 멈춘 것이다. 죽이고 다시 돌리면 통과했다. 원인은 아직 안 봤다.
+- 실측 스크립트: 세션 스크래치 `studio-panel.mjs`(포트·뷰포트 env, 세 번째 인자로 열기 동작). 검증용 교사 `studio-measure@local.test`·학급 「팔레트 실측반」이 로컬 `.data`에 남는다.
+
 ## 다음 작업 시작 전 확인
 
 1. 이 문서와 `product-decisions.md`, `pending-decisions.md`를 읽는다.

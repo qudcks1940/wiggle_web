@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { activeProfile, deactivateProfile, flushSaves, studentFetch } from "@/lib/client-session";
 import { Logo } from "./Logo";
-import { SpeakButton } from "./SpeakButton";
 import { StudentMessageCenter, StudentTeacherMessage } from "./StudentMessageCenter";
 
 type HomeArtwork = { id: string; title: string; learningMode: string; lessonSlug: string | null; status: string; currentStep: number; updatedAt: string };
@@ -106,8 +105,6 @@ export function StudentHome() {
         <h1>{data.todayEpisode.arcTitle}</h1>
         <p>{data.todayEpisode.episodeIndex}번째 이야기 시간이에요.</p>
       </div>
-      {/* 음성은 페이지당 1개(학생UI-7). 장면 문장은 확정 시나리오 문장이므로 그대로 읽는다. */}
-      <SpeakButton text={[data.todayEpisode.arcTitle, data.todayEpisode.title, data.todayEpisode.sceneText, ...(data.todayEpisode.prompts ?? [])].join(" ")} />
     </section>
 
     <section className="today-episode-card" aria-labelledby="today-episode-title">
@@ -129,7 +126,6 @@ export function StudentHome() {
         <h1>오늘은 무엇을 그릴까?</h1>
         <p>선생님이 고른 활동부터 시작해 봐요.</p>
       </div>
-      <SpeakButton text="오늘은 무엇을 그릴까? 선생님이 고른 활동부터 시작해 봐요." />
     </section>
 
     <section className="today-episode-card" aria-labelledby="free-draw-title">

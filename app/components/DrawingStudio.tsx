@@ -18,19 +18,13 @@ import { activeProfile, clearQueuedArtworkSaves, createSerialTaskQueue, deleteQu
 
 import type { QueuedArtworkDraft } from "@/lib/client-session";
 import { Logo } from "./Logo";
-import { SpeakButton } from "./SpeakButton";
 import { TimelapsePlayer } from "./TimelapsePlayer";
 import { VoiceWhisperStatus } from "./VoiceWhisper";
 import { useModalDialog } from "./useModalDialog";
+import { ColorPickerDialog } from "./ColorPickerDialog";
 import { StudentMessageCenter, StudentTeacherMessage } from "./StudentMessageCenter";
 
 const PALETTE = ["#1B3A57", "#E53935", "#FB8C00", "#FDD835", "#43A047", "#1E88E5", "#8E24AA", "#8D6E63", "#F06292", "#4DD0E1", "#FFCC80", "#FFFFFF"];
-const MORE_PALETTE = [
-  "#000000", "#455A64", "#9AA7B1", "#D7DEE3",
-  "#5D4037", "#795548", "#A1887F", "#D7CCC8", "#F5E0C3", "#FFE0B2",
-  "#B71C1C", "#FF7043", "#C0CA33", "#00897B", "#80CBC4", "#26C6DA",
-  "#64B5F6", "#3949AB", "#7E57C2", "#EC407A", "#F8BBD0", "#FFF0A6",
-];
 const CHOICE_DRAWING_SETUP: Record<string, { color?: string; shade?: "base" | "light"; tool: BrushTool; width: StrokeWidth; feedback: string }> = {
   "초록 눈": { color: "#43A047", shade: "base", tool: "pencil", width: 16, feedback: "초록 연필을 골랐어요. 눈 안쪽을 초록색으로 그려요." },
   "파란 눈": { color: "#1E88E5", shade: "base", tool: "pencil", width: 16, feedback: "파란 연필을 골랐어요. 눈 안쪽을 파란색으로 그려요." },
@@ -506,7 +500,7 @@ export function DrawingStudio() {
   // 아이가 고른 그리기 굵기가 말없이 리셋된다.
   const [drawWidth, setDrawWidth] = useState<StrokeWidth>(16);
   const [eraserWidth, setEraserWidth] = useState<StrokeWidth>(48);
-  const [colorsExpanded, setColorsExpanded] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   // 시안의 좁은 세로 레일에는 브러시·지우개만 남기고 나머지 도구는 더보기 시트로 접는다.
   const [toolSheetOpen, setToolSheetOpen] = useState(false);
   // 선택된 펜을 다시 누르면 그 펜 왼쪽에 굵기 슬라이더가 열린다 (2026-08-30 결정).
@@ -992,7 +986,6 @@ export function DrawingStudio() {
     if (!setup) return;
     setStudioTool(setup.tool);
     lastBrushRef.current = setup.tool;
-    if (setup.shade === "light") setColorsExpanded(true);
     if (setup.color) setColor(setup.color);
     drawWidthRef.current = setup.width;
     setDrawWidth(setup.width);
@@ -2562,7 +2555,9 @@ export function DrawingStudio() {
         ? "점이나 선을 조금 더 그려 볼까?"
         : "점이나 선을 한 번 더 그려 볼까?";
   const selectedColor = studioTool === "text" && selectedText ? selectedText.color : pendingText?.color ?? color;
-  const visibleColors = colorsExpanded ? [...new Set([...PALETTE, ...MORE_PALETTE])] : PALETTE;
+  // 색 적용은 팔레트 원과 색 고르기 대화상자(onPick)에 같은 네 줄이 인라인으로 있다. 헬퍼로 빼면
+  // React Compiler가 이 컴포넌트 전체를 컴파일 대상으로 삼아 기존 performance.now() 호출을 오류로 잡는다.
+  const customColor = !PALETTE.includes(selectedColor);
   return (
     <main className="studio">
       <header className="studio-header">
@@ -2652,7 +2647,6 @@ export function DrawingStudio() {
                 <small>이제 그려 볼 일</small>
                 <div className="spoken-prompt">
                   <b>{coaching.nextAction}</b>
-                  <SpeakButton text={coaching.nextAction} compact />
                 </div>
                 <button className="button primary full child-primary-action" disabled={grimiLoading || answerSaved || !answer} onClick={recordCoachingAnswer}>
                   <span aria-hidden="true">✅</span>
@@ -2675,7 +2669,6 @@ export function DrawingStudio() {
                     <p className="eyebrow">몽그리가 궁금해요</p>
                     <div className="spoken-prompt">
                       <h2>{coaching.question}</h2>
-                      <SpeakButton text={`${coaching.question} 고를 수 있어요. ${coaching.choices.map((choice) => choice.label).join(", ")}`} compact />
                     </div>
                     <div className="grimi-chips">
                       {coaching.choices.map((choice) => (
@@ -2711,7 +2704,6 @@ export function DrawingStudio() {
                         <small>이제 그려 볼 일</small>
                         <div className="spoken-prompt">
                           <b>{coaching.nextAction}</b>
-                          <SpeakButton text={coaching.nextAction} compact />
                         </div>
                         <button className="button primary full child-primary-action" disabled={grimiLoading || answerSaved} onClick={recordCoachingAnswer}>
                           <span aria-hidden="true">✅</span>
@@ -2728,7 +2720,6 @@ export function DrawingStudio() {
                     </p>
                     <div className="spoken-prompt">
                       <h2>{aiGuide.steps[aiGuideStep].instruction}</h2>
-                      <SpeakButton text={`${aiGuide.steps[aiGuideStep].instruction}${aiGuide.steps[aiGuideStep].choices.length ? ` 고를 수 있어요. ${aiGuide.steps[aiGuideStep].choices.join(", ")}` : ""}`} compact />
                     </div>
                     {aiGuide.steps[aiGuideStep].openChoice && (
                       <div className="grimi-chips">
@@ -2796,7 +2787,6 @@ export function DrawingStudio() {
               <p className="eyebrow">지금 할 일</p>
               <div className="spoken-prompt lesson-spoken-prompt">
                 <h2>{lesson.steps[step].instruction}</h2>
-                <SpeakButton text={`${lesson.steps[step].instruction}${lesson.steps[step].choices?.length ? ` 고를 수 있어요. ${lesson.steps[step].choices.join(", ")}` : ""}`} compact />
               </div>
               {lesson.steps[step].choices?.length && (
                 <>
@@ -2824,10 +2814,6 @@ export function DrawingStudio() {
                 <div className="lesson-step-prompt" role="status" aria-live="polite">
                   <div className="spoken-prompt">
                     <b>{lessonStepPrompt === "unfinished-lesson" ? "아직 그릴 순서가 남았어. 다음을 눌러 천천히 이어 가자." : lessonStepPromptText}</b>
-                    <SpeakButton
-                      text={lessonStepPrompt === "unfinished-lesson" ? "아직 그릴 순서가 남았어. 다음을 눌러 천천히 이어 가자." : lessonStepPromptText}
-                      compact
-                    />
                   </div>
                   <div className="lesson-step-prompt-actions">
                     <button type="button" onClick={() => setLessonStepPrompt(null)}>
@@ -2876,7 +2862,6 @@ export function DrawingStudio() {
                   <div className="guide-choice-heading">
                     <span aria-hidden="true">🖍️</span>
                     <div><p className="eyebrow">그리기 시작</p><h2 id="guide-choice-title">어떻게 시작할까?</h2></div>
-                    <SpeakButton text="연필 시범과 점선 도움을 받을지, 내 생각대로 먼저 그릴지 골라요." compact />
                   </div>
                   <div className="guide-choice-buttons">
                     <button type="button" onClick={chooseGuideHelp}><span>✏️</span><b>도움받을래</b><small>연필 시범 뒤 점선을 따라 해요</small></button>
@@ -2903,7 +2888,6 @@ export function DrawingStudio() {
             {canvasFull && (
               <div className="canvas-full-hint" role="alert">
                 <span aria-hidden="true">🌟</span> 종이가 가득 찼어! ‘완성’을 눌러 완성하자.
-                <SpeakButton text="종이가 가득 찼어요. 위에 있는 완성을 눌러 작품을 완성해요." compact />
               </div>
             )}
             <div
@@ -3217,7 +3201,7 @@ export function DrawingStudio() {
             <p className="tool-section-label color-label">색</p>
             <div className="selected-color" role="status" aria-live="polite"><i style={{ background: selectedColor }} aria-hidden="true" /><span>현재 색 · <b>{COLOR_NAMES[selectedColor] ?? "고른 색"}</b></span></div>
             <div className="palette" role="group" aria-label="색 고르기">
-              {visibleColors.map((value) => (
+              {PALETTE.map((value) => (
                 <button
                   type="button"
                   aria-label={COLOR_NAMES[value]}
@@ -3234,7 +3218,8 @@ export function DrawingStudio() {
                 />
               ))}
             </div>
-            <button type="button" className="more-colors-button" aria-expanded={colorsExpanded} onClick={() => setColorsExpanded((value) => !value)}>{colorsExpanded ? "기본 색만 보기" : "🎨 색 더보기"}</button>
+            {/* 무지개 버튼: 상세 색 고르기 대화상자. 팔레트 밖의 색을 쓰는 동안은 눌린 상태로 두고 고른 색을 안쪽 테두리로 보여 준다. */}
+            <button type="button" className="more-colors-button" aria-label="다른 색 고르기" title="다른 색 고르기" aria-haspopup="dialog" aria-expanded={colorPickerOpen} aria-pressed={customColor} style={customColor ? { boxShadow: `inset 0 0 0 6px ${selectedColor}` } : undefined} onClick={() => setColorPickerOpen(true)}>🎨 색 더보기</button>
           </div>
         </aside>
       </div>
@@ -3251,6 +3236,13 @@ export function DrawingStudio() {
           </section>
         </div>
       )}
+      {colorPickerOpen && <ColorPickerDialog color={selectedColor} names={COLOR_NAMES} onPick={(value) => {
+        setColor(value);
+        if (studioTool === "text" && selectedText) updateTextObject(selectedText, { color: value });
+        if (studioTool === "text" && pendingText) setPendingText({ ...pendingText, color: value });
+        if (studioTool === "eraser") chooseStudioTool(lastBrushRef.current);
+        setColorPickerOpen(false);
+      }} onClose={() => setColorPickerOpen(false)} />}
       {timelapseOpen && <TimelapsePlayer document={documentState} onClose={() => setTimelapseOpen(false)} />}
       {textComposerOpen && (
         <div className="modal-backdrop" ref={textDialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="text-composer-title">
@@ -3259,7 +3251,6 @@ export function DrawingStudio() {
             <div className="text-composer-title-row">
               <span aria-hidden="true">🔤</span>
               <div><p className="eyebrow">그림에 글씨 넣기</p><h2 id="text-composer-title">무슨 말을 쓸까?</h2></div>
-              <SpeakButton text="그림에 넣을 짧은 말을 써 봐요. 키보드의 마이크로 말해도 돼요." compact />
             </div>
             <div className="text-kind-grid" role="group" aria-label="글씨 모양">
               {TEXT_KIND_OPTIONS.map((option) => (
@@ -3320,7 +3311,6 @@ export function DrawingStudio() {
             <span className="modal-emoji">🌟</span>
             <div className="reflection-title-row">
               <h2 id="reflection-title">네 그림을 소개해 줘!</h2>
-              <SpeakButton text="정답은 없어요. 네가 그림을 보고, 제일 마음에 드는 곳과 그 이유를 직접 골라요." />
             </div>
             <p className="reflection-choice-note">정답이 아니에요. 네가 보고 직접 골라요.</p>
             {(interpretLoading || interpretation) && (

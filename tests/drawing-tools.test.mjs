@@ -60,12 +60,19 @@ test("all tools have recognizable visual icons and child-readable size labels", 
   assert.match(studio, /aria-label=\{COLOR_NAMES\[value\]\}/);
 });
 
-test("palette offers named basic and expanded colors without shrinking buttons", () => {
-  assert.match(studio, /const MORE_PALETTE =/);
-  assert.match(studio, /colorsExpanded \? \[\.\.\.new Set\(\[\.\.\.PALETTE, \.\.\.MORE_PALETTE\]\)\] : PALETTE/);
+test("palette shows every basic color without scrolling and the rainbow button opens a detailed picker", async () => {
+  assert.doesNotMatch(studio, /colorsExpanded|MORE_PALETTE/);
+  assert.match(studio, /import \{ ColorPickerDialog \} from "\.\/ColorPickerDialog"/);
+  assert.match(studio, /className="more-colors-button"[^>]*aria-haspopup="dialog"/);
+  assert.match(studio, /<ColorPickerDialog color=\{selectedColor\} names=\{COLOR_NAMES\}/);
   assert.match(studio, /className="selected-color"/);
-  assert.match(studio, /aria-expanded=\{colorsExpanded\}/);
   assert.match(css, /\.palette button \{ min-width:44px; min-height:44px;/);
+  assert.match(css, /\.tool-panel \.palette \{[^}]*max-height:none; overflow:visible;/);
+  assert.match(css, /@media \(max-height:880px\) \{\s*\.tool-panel \.tool-colors \{ width:156px; \}\s*\.tool-panel \.palette \{ grid-template-columns:repeat\(3,1fr\)/);
+  const { hexToHsv, hsvToHex } = await import("../lib/color.ts");
+  for (const hex of ["#1B3A57", "#E53935", "#FFFFFF", "#000000", "#43A047", "#F8BBD0"]) assert.equal(hsvToHex(...hexToHsv(hex)), hex);
+  assert.deepEqual(hexToHsv("#FF0000"), [0, 1, 1]);
+  assert.equal(hsvToHex(120, 1, 1), "#00FF00");
 });
 
 test("strokes render during pointer input instead of waiting for pointer up", () => {

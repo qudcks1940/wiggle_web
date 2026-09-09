@@ -60,8 +60,8 @@ test("mobile studio and teacher layouts finish in two rows without horizontal te
   const finalMobile = css.slice(finalMobileStart, css.indexOf("@media (max-width:460px) and (orientation:portrait)", finalMobileStart));
   assert.ok(css.lastIndexOf("grid-template-rows:calc(60px + env(safe-area-inset-top)) minmax(0,1fr)") > css.lastIndexOf("grid-template-rows:60px 1fr 92px"));
   assert.match(css, /\.canvas-message,\.save-conflict,\.teacher-viewing,\.voice-speaking \{[^}]*max-width:calc\(100vw - max\(12px,env\(safe-area-inset-left\)\) - max\(12px,env\(safe-area-inset-right\)\)\);[^}]*overflow-wrap:break-word;/);
-  assert.match(css, /\.canvas-message \{[^}]*grid-template-columns:minmax\(0,1fr\) 44px 44px;/);
-  assert.match(css, /\.canvas-message>\.canvas-message-close \{ grid-column:3; grid-row:1 \/ span 2; \}/);
+  assert.match(css, /\.canvas-message \{[^}]*grid-template-columns:minmax\(0,1fr\) 44px;/);
+  assert.match(css, /\.canvas-message>\.canvas-message-close \{ grid-column:2; grid-row:1 \/ span 2; \}/);
   assert.match(css, /\.artwork-name b,\.artwork-name small \{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; \}/);
   assert.match(css, /\.teacher-room \.teacher-header \{ display:grid; grid-template-columns:auto minmax\(0,1fr\) auto;/);
   assert.match(css, /\.message-history p,\.family-link-history p \{ display:grid; grid-template-columns:minmax\(0,1fr\) auto;/);

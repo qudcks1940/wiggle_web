@@ -600,6 +600,16 @@
 - 에셋: 시안에서 몽그리와 선만 잘라 `public/entry-green/wait-mongri.png`(476×340, PNG 214KB — 이 맥에 cwebp가 없어 webp로 못 바꿨다. 있으면 webp로 바꿔 무게를 줄인다). 스타일은 `EntryCheck.module.css`의 `.waitShell`/`.waitMongri`. 구 `.entry-loading` 규칙과 `entry-paint-bob` 키프레임은 사용처가 없어져 삭제.
 - 검증: typecheck·lint(경고 14 기존)·`npm test` 309/309·`git diff --check` 통과. `next build && next start -p 3399` 후 CDP로 `/api/student` 요청을 멈춰 대기 화면을 고정해 320×568·390×844·844×390·1440×900·1693×929 실측: 가로·세로 넘침 0, 1693×929에서 몽그리 위치·폭(x609 w474)과 제목 52px·부제 28px이 시안과 일치. browser-check(3399) 통과.
 
+## 2026-09-09 그리기 팔레트 무스크롤 + 무지개 버튼 색 고르기 대화상자 (`claude/remove-speak-20260909`, 로컬 검증)
+
+- 사용자 요청: 색 카드 안의 색이 스크롤 없이 다 보이고, 무지개 버튼을 누르면 색을 상세하게 고르는 화면이 뜬다.
+- 팔레트(넓은 화면 떠 있는 카드, `min-width:900px and min-height:600px`): `max-height:250px; overflow:auto`를 걷어 12색이 두 칸 6줄로 다 보인다. 화면 높이 880px 이하에서는 색 카드를 156px로 넓혀 세 칸 4줄로 바꿔 1024×768·1280×800에서도 카드가 화면 안에 들어간다(종전에는 12색 중 2색이 스크롤 뒤에 있었고 카드 자체가 768·800 화면 아래로 62px 넘쳤다). 900×600(블록 최소 높이)에서는 도구 카드 383px + 색 카드 278px이 본문 534px보다 커서 여전히 넘친다 — 종전에도 같았고 이번 범위 밖.
+- 색 고르기 대화상자 `app/components/ColorPickerDialog.tsx`(+ `lib/color.ts` HSV↔HEX): 밝기·진하기 면(포인터 드래그, 화살표 키), 무지개(색상) 슬라이더, 현재 색 이름, 고운 색 모음(종전 `MORE_PALETTE` 22색이 여기로 이동), 「닫기 / 이 색으로 그리기」. 기존 `useModalDialog`로 초점 가둠·Escape·배경 inert. 팔레트 밖 색을 쓰는 동안 무지개 버튼이 눌린 상태(초록 테두리)가 되고 안쪽 테두리로 그 색을 보여 준다. 종전 「🎨 색 더보기」 펼침(`colorsExpanded`)은 제거.
+- 주의: 색 적용 네 줄(setColor·글씨 색·지우개 복귀)을 헬퍼 함수로 빼면 React Compiler가 `DrawingStudio` 전체를 컴파일 대상으로 삼아 기존 `performance.now()` 호출 3곳을 lint 오류로 잡는다(현재는 컴파일 제외 상태). 그래서 팔레트 원과 대화상자 `onPick`에 같은 네 줄을 인라인으로 두었다. 컴포넌트를 컴파일 대상으로 바꿀 때는 그 3곳부터 고친다.
+- 대화상자 크기: 세로 flex라 화면이 낮으면 색 모음만 안에서 스크롤하고 면·무지개·버튼은 항상 보인다. 가로 낮은 화면(≤520px)은 면 왼쪽 / 나머지 오른쪽 2열, 세로 낮은 화면(≤640px)은 면을 20vh로 줄인다.
+- 검증: typecheck·lint(경고 14 기존)·`npm test` 309/309(`drawing-tools`에 HSV 왕복·CSS 단언, `guide-demonstration` 갱신)·`git diff --check` 통과. `next build && next start -p 3399` 후 CDP 실측(교사 로그인→학급→학생 입장→작품 생성 시드): 팔레트 scrollHeight 초과 0, 12색 44px, 색 카드 아래끝 1024×768=755·1280×800=786·1440×900=886(모두 화면 안); 대화상자 320×568·390×844·844×390·1024×768·1440×900에서 화면 안, 내부 스크롤 0, 44px 미만 목표 0, 배경 inert, 초점 안쪽. browser-check(3399) 통과.
+- 실측 스크립트: 세션 스크래치 `studio-panel.mjs`(포트·뷰포트 env, 세 번째 인자로 열기 동작). 검증용 교사 `studio-measure@local.test`·학급 「팔레트 실측반」이 로컬 `.data`에 남는다.
+
 ## 다음 작업 시작 전 확인
 
 1. 이 문서와 `product-decisions.md`, `pending-decisions.md`를 읽는다.

@@ -126,6 +126,8 @@ test("guide status no longer covers the paper and cat choices change the actual 
   assert.match(studio, /Safari와 일부 태블릿 브라우저는 빠른 획에서 pointermove를 거의 보내지 않는다/);
   assert.match(studio, /snapGuideTrace\(currentGuideTraces, guideLock, releasePoint\)/);
   assert.match(studio, /"회색 고양이": \{ color: "#9AA7B1"[\s\S]*회색 크레용을 골랐어요/);
-  assert.match(studio, /setup\.shade === "light"[\s\S]*setColorsExpanded\(true\)[\s\S]*setColor\(setup\.color\)/);
+  // 2026-09-09: 밝은 색은 팔레트 펼침 대신 무지개 버튼의 안쪽 테두리로 보인다(색 고르기 대화상자 도입).
+  assert.match(studio, /if \(setup\.color\) setColor\(setup\.color\)/);
+  assert.doesNotMatch(studio, /setColorsExpanded/);
   assert.match(studio, /className="choice-feedback"/);
 });

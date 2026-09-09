@@ -231,28 +231,50 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
   }
 
   if (mode === "seat") {
-    return <main className="entry-shell"><div className="entry-top"><Logo /><span>{classroomName}</span></div>
-      <section className="entry-card seat-card">
-        <div className="entry-title-row"><div><p className="eyebrow">{classroomName}</p><h1>내 번호를 눌러요</h1></div><SpeakButton text="선생님이 알려 준 내 번호를 눌러요. 다 눌렀으면 들어가기를 눌러요." /></div>
-        <form onSubmit={(event) => { event.preventDefault(); void checkSeat(); }}>
-          <label className="seat-input-label" htmlFor="seat-number">우리 반에서 내 번호</label>
-          <input
-            id="seat-number"
-            className="seat-input"
-            type="tel"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete="off"
-            maxLength={2}
-            value={seatInput}
-            aria-label="내 번호"
-            onChange={(event) => { setSeatInput(event.target.value.replace(/[^0-9]/g, "").slice(0, 2)); clearEntryError(); }}
-          />
-          {errorNotice()}
-          <button className="button primary full child-primary-action" disabled={busy || !seatInput}><span aria-hidden="true">▶️</span>{busy ? "확인 중…" : "들어가기"}</button>
-        </form>
-        <a className="text-button" href="/">수업 코드 다시 입력하기</a>
-      </section></main>;
+    const pressKey = (digit: string) => { clearEntryError(); setSeatInput((current) => (current + digit).slice(0, 2)); };
+    return <main className={`${check.shell} ${check.seatShell}`}>
+      <div className={check.stage}>
+        <div className={check.head}>
+          <div className={check.logo}><Logo /></div>
+          <div className={check.speak}><SpeakButton text="선생님이 알려 준 내 번호를 눌러요. 다 눌렀으면 들어가기를 눌러요." /></div>
+        </div>
+        <img className={check.duck} src="/landing-gallery/duck-painter-640.webp" alt="" aria-hidden="true" width="640" height="640" />
+        <div className={check.seatTitle}>
+          <h1>내 번호를 눌러요</h1>
+          <p>우리 반에서 내 번호를 골라 주세요.</p>
+        </div>
+        <section className={`seat-card ${check.pad}`} aria-label="내 번호 입력 수첩">
+          <span className={check.padBadge}><i aria-hidden="true">🍃</i>{classroomName}<i aria-hidden="true">🍃</i></span>
+          <form onSubmit={(event) => { event.preventDefault(); void checkSeat(); }}>
+            <label className={check.padLabel} htmlFor="seat-number">내 번호</label>
+            <div className={check.display}>
+              <input
+                id="seat-number"
+                className="seat-input"
+                type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="off"
+                maxLength={2}
+                value={seatInput}
+                aria-label="내 번호"
+                onChange={(event) => { setSeatInput(event.target.value.replace(/[^0-9]/g, "").slice(0, 2)); clearEntryError(); }}
+              />
+              <b aria-hidden="true">번</b>
+            </div>
+            <div className={check.keys} role="group" aria-label="숫자판">
+              {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((digit) => <button type="button" className={check.key} key={digit} onClick={() => pressKey(digit)}>{digit}</button>)}
+              <span className={check.keyBlank} aria-hidden="true" />
+              <button type="button" className={check.key} onClick={() => pressKey("0")}>0</button>
+              <button type="button" className={`${check.key} ${check.keyErase}`} aria-label="한 자리 지우기" onClick={() => { clearEntryError(); setSeatInput((current) => current.slice(0, -1)); }}><span aria-hidden="true">⌫</span>지우기</button>
+            </div>
+            {errorNotice()}
+            <button className={`${check.enter} child-primary-action`} disabled={busy || !seatInput}>{busy ? "확인 중…" : "들어가기"}</button>
+          </form>
+          <a className={check.again} href="/">수업 코드 다시 입력하기</a>
+        </section>
+      </div>
+    </main>;
   }
 
   if (mode === "noRoster") {

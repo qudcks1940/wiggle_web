@@ -33,6 +33,18 @@
 - 새 작업을 시작하기 전에 `git status --short`와 최근 커밋을 확인한다.
 - 로컬·브랜치 커밋은 게이트를 통과했어도 `main` 반영(사용자 push) 전까지 배포 상태로 간주하지 않는다.
 
+## 2026-09-09 번호 입력 화면 — 교실 수첩 시안 적용 (브랜치 claude/entry-seat-keypad-20260909)
+
+- `/join` 번호 입력 화면을 사용자 시안(교실 배경 + 스프링 수첩 키패드)으로 재구성.
+  넓은 화면은 기존 `entry-green` 교실 무대(`classroom-with-mongri.webp`)를 재사용해 왼쪽에
+  「내 번호를 눌러요」 제목, 오른쪽에 수첩 패널(반 이름 나무 간판, 내 번호 표시, 1~9·0·지우기
+  키패드, 노랑 들어가기, 수업 코드 다시 입력하기). 좁은 화면은 크림 배경 문서 흐름 + 작은 오리.
+- 검증 스크립트 계약 유지: `.seat-input`은 실제 입력칸(키보드 입력도 그대로 동작),
+  `.seat-card .child-primary-action`이 들어가기. browser-check 수정 없음.
+- 부수 수정: 넓은 화면 cqw 축소가 44px 터치 목표를 깨던 기존 결함 3곳에 44px 바닥
+  (`password-actions`·`entry-mode-back`·`nickname-row` 버튼) — desktop 뷰포트 검사에서 발견.
+- 게이트: typecheck · lint · 테스트 319/319 · build · browser-check(:3299) 기본/‑‑ipad/‑‑desktop 전부 통과.
+
 ## 2026-09-09 3차 병합 — 명단 입장 모델 합류, 반 번호 기능 은퇴
 
 - main의 PR #8~#10(도화지 풀블리드, 교사 명단 번호+실명, 자기 등록 입장 제거)을 아크

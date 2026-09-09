@@ -594,6 +594,12 @@
 - 검증: typecheck·lint(경고 14는 기존)·`npm test` 309/309·`git diff --check`·`git diff --check main...HEAD` 통과. `next build && next start -p 3399` 후 `browser-check.mjs http://localhost:3399` EXIT 0(알려진 SKIP 1).
 - 남은 위험: 비문해 아이가 안내 문장을 소리로 들을 수단이 없어졌다. 필요해지면 서버 TTS 등 다른 방식으로 다시 논의한다.
 
+## 2026-09-09 수업 확인 대기 화면 시안 반영 (`claude/remove-speak-20260909`, 로컬 검증)
+
+- 사용자 시안(1693×929): 크림 배경(#f8f8f3) 가운데에 초록 선 너머로 고개 내민 몽그리 + `잠깐만 기다려 줘!` + `수업실을 준비하고 있어요`. 로고·버튼 없음. `JoinClient`의 `checking` 모드에서 오류가 없는 대기 상태만 이 화면으로 바꿨고, 수업 코드 오류·연결 오류 상태는 종전 교실 장면 화면(`몽그리랑 다시 찾아보자!`)을 그대로 쓴다.
+- 에셋: 시안에서 몽그리와 선만 잘라 `public/entry-green/wait-mongri.png`(476×340, PNG 214KB — 이 맥에 cwebp가 없어 webp로 못 바꿨다. 있으면 webp로 바꿔 무게를 줄인다). 스타일은 `EntryCheck.module.css`의 `.waitShell`/`.waitMongri`. 구 `.entry-loading` 규칙과 `entry-paint-bob` 키프레임은 사용처가 없어져 삭제.
+- 검증: typecheck·lint(경고 14 기존)·`npm test` 309/309·`git diff --check` 통과. `next build && next start -p 3399` 후 CDP로 `/api/student` 요청을 멈춰 대기 화면을 고정해 320×568·390×844·844×390·1440×900·1693×929 실측: 가로·세로 넘침 0, 1693×929에서 몽그리 위치·폭(x609 w474)과 제목 52px·부제 28px이 시안과 일치. browser-check(3399) 통과.
+
 ## 다음 작업 시작 전 확인
 
 1. 이 문서와 `product-decisions.md`, `pending-decisions.md`를 읽는다.

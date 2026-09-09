@@ -197,7 +197,12 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
   if (mode === "checking") {
     const codeError = errorKind === "code";
     // 문구는 docs/design-assets/entry-green/README-CLAUDE.md의 확정 문구. 선생님 도움 버튼은 실제 메시지를 보내지 않고 손을 드는 안내다.
-    const guidance = error ? (codeError ? "수업 코드가 맞는지 한 번만 더 확인해 줘." : "잠깐 연결이 어려운가 봐. 한 번 더 해 보자.") : "몽그리랑 조금만 기다려 줘.";
+    // 대기 상태는 2026-09-09 사용자 시안: 크림 배경 + 선 너머로 고개 내민 몽그리 + 문구 두 줄만.
+    if (!error) return <main className={`entry-check ${check.waitShell}`}>
+      <img className={check.waitMongri} src="/entry-green/wait-mongri.png" alt="" aria-hidden="true" width="476" height="340" />
+      <div role="status"><h1 id="entry-check-title">잠깐만 기다려 줘!</h1><p>수업실을 준비하고 있어요</p></div>
+    </main>;
+    const guidance = codeError ? "수업 코드가 맞는지 한 번만 더 확인해 줘." : "잠깐 연결이 어려운가 봐. 한 번 더 해 보자.";
     return <main className={`entry-check ${check.shell}`}>
       <div className={check.stage}>
         <div className={check.head}>
@@ -206,12 +211,10 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
         <span className={check.sign} aria-hidden="true">우리 반</span>
         <img className={check.duck} src="/landing-gallery/duck-painter-640.webp" alt="" aria-hidden="true" width="640" height="640" />
         <section className={check.panel} aria-labelledby="entry-check-title">
-          <h1 id="entry-check-title">{error ? "몽그리랑 다시 찾아보자!" : "우리 반으로 가는 중이야!"}</h1>
+          <h1 id="entry-check-title">몽그리랑 다시 찾아보자!</h1>
           <p className={check.lead}>{guidance}</p>
           <div className={check.note}>
-            {error
-              ? <div className="error-box child-error" role="alert"><span className="child-error-icon" aria-hidden="true">⚠️</span><p>{codeError ? "수업을 아직 찾지 못했어요" : error}</p></div>
-              : <div className="entry-loading" role="status"><span aria-hidden="true">🎨</span><b>잠깐만 기다려 주세요</b></div>}
+            <div className="error-box child-error" role="alert"><span className="child-error-icon" aria-hidden="true">⚠️</span><p>{codeError ? "수업을 아직 찾지 못했어요" : error}</p></div>
           </div>
           {error && <div className={check.actions}>
             {codeError

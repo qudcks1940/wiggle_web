@@ -90,8 +90,6 @@
 .note :global(.child-error) { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
 .note :global(.child-error) p { margin: 0; font-size: inherit; color: inherit; }
 .note :global(.child-error-icon) { font-size: 1.2em; }
-.note :global(.entry-loading) { min-height: 0; gap: 6px; color: inherit; }
-.note :global(.entry-loading) span { font-size: 2em; }
 .actions { width: 62%; display: flex; flex-direction: column; align-items: stretch; gap: clamp(8px, 1cqw, 14px); }
 .primary, .help, .retry {
   display: flex;
@@ -303,3 +301,19 @@
   .seatShell .duck { width: clamp(96px, 24vw, 140px); margin: 4px auto 0; }
 }
 .seatShell { min-width: 0; }
+
+/* ── 수업 확인 대기 화면(2026-09-09 사용자 시안, 1693×929): 크림 단색 배경 가운데에
+   선 너머로 고개 내민 몽그리(wait-mongri.png, 원본 27% 폭) + 제목 + 부제. 로고·버튼 없음. */
+.waitShell {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding: 24px max(16px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: #f8f8f3;
+  color: #46583f;
+  text-align: center;
+}
+.waitMongri { width: clamp(220px, 28vw, 476px); max-height: 50vh; height: auto; object-fit: contain; object-position: bottom; }
+.waitShell h1 { margin: clamp(14px, 3vh, 34px) 0 0; font-size: clamp(26px, 3.2vw, 52px); font-weight: 900; letter-spacing: -0.04em; line-height: 1.2; }
+.waitShell p { margin: clamp(8px, 1.4vh, 14px) 0 0; font-size: clamp(16px, 1.7vw, 28px); font-weight: 700; color: #6f8a63; }

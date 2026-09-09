@@ -1421,9 +1421,6 @@ body {
     text-wrap:balance;
   }
 }
-.entry-loading { min-height:190px; display:grid; place-items:center; align-content:center; gap:12px; color:var(--secondary); text-align:center; }
-.entry-loading span { font-size:58px; animation:entry-paint-bob .9s ease-in-out infinite alternate; }
-@keyframes entry-paint-bob { to { transform:translateY(-7px) rotate(3deg); } }
 .entry-choice-card { width:min(900px,100%); margin:28px auto; padding:38px; }
 .entry-choice-card .entry-title-row>div>p:last-child { max-width:620px; margin:8px 0 0; color:var(--secondary); font-weight:750; line-height:1.55; }
 .entry-choice-privacy { margin:24px 0 0!important; color:#557d5d!important; font-size:13px; font-weight:800; text-align:center; }

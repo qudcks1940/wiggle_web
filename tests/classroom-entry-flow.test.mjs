@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { startTestServer } from "./harness/server.mjs";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -15,9 +14,9 @@ test("class code and QR resolve the same private classroom entry status without 
   assert.match(route, /hasProfiles: Boolean\(existing\)/);
   assert.doesNotMatch(route.slice(route.indexOf('action === "entryStatus"'), route.indexOf('action === "join"')), /nickname|studentCount|\.all</);
   assert.match(join, /action: "entryStatus", entry/);
-  assert.match(join, /data\.hasProfiles \? "choice" : "join"/);
-  assert.match(join, />새로 시작하기</);
-  assert.match(join, />내 그림 이어가기</);
+  // 입장은 명단 번호로만 한다. 명단이 없으면 아이가 할 수 있는 일이 없어 안내 화면으로 간다.
+  assert.match(join, /setMode\(data\.hasRoster \? "seat" : "noRoster"\)/);
+  assert.match(join, /내 번호를 눌러요/);
   assert.doesNotMatch(join, /profile-grid|deviceProfiles|activeProfile/);
 });
 
@@ -26,13 +25,14 @@ test("normal re-entry uses classroom-scoped animal, nickname and three pictures 
     read("../app/api/student/route.ts"),
     read("../app/components/JoinClient.tsx"),
   ]);
-  assert.match(join, /\{ action, entry, nickname, animal, picturePassword: pictures \}/);
+  assert.match(join, /\{ action, entry, nickname, animal, picturePassword: pictures, \.\.\.seat \}/);
   assert.match(route, /payload\.entry \?\? payload\.classCode/);
-  assert.match(route, /s\.classroom_id = \? AND \$\{nicknameKeySql\("s\.nickname"\)\} = \? COLLATE NOCASE AND s\.animal = \?/);
-  assert.match(route, /PROFILE_CREDENTIALS_EXIST/);
+  // 재입장 후보는 별명·동물이 아니라 번호 하나로 정해진다.
+  assert.match(route, /WHERE s\.classroom_id = \? AND s\.seat_number = \? AND s\.archived_at IS NULL AND c\.active = 1/);
+  assert.match(route, /code: "SEAT_CLAIMED"/);
   assert.doesNotMatch(join, /개인 QR|새 개인 QR|복구 카드 재발급|다른 기기에서 그렸다면 선생님/);
   const normalSubmit = join.slice(join.indexOf('const payload = action === "join"'), join.indexOf('const response = await fetch', join.indexOf('const payload = action === "join"')));
-  assert.match(normalSubmit, /\{ action, entry, nickname, animal, picturePassword: pictures \}/);
+  assert.match(normalSubmit, /\{ action, entry, nickname, animal, picturePassword: pictures, \.\.\.seat \}/);
 });
 
 test("wide/tablet entry stays one screen and only phones or short viewports use three guided steps", async () => {
@@ -67,45 +67,7 @@ test("teacher cards expose only the approved read-only profile facts", async () 
 // allowDuplicate 중복 생성 분기는 기존 프로필의 그림 비밀번호와 대조한다.
 // 이 분기가 복구(recover)와 같은 대상 버킷을 소비하지 않으면 복구 경로의
 // 8회/15분 상한을 우회해 60회/10분씩 비밀번호 일치 여부(409 오라클)를 캘 수 있다.
-test("duplicate-credential probing shares the per-target recovery budget", async (context) => {
-  const server = await startTestServer();
-  context.after(() => server.dispose());
-
-  // 주소는 x-forwarded-for로 흉내 낸다 — 플랫폼이 덮어쓰는, 앱이 실제로 신뢰하는 헤더다.
-  const post = (body, ip = "203.0.113.77") => server.fetch("/api/student", {
-    method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": ip }, body: JSON.stringify(body),
-  });
-  const schemaReady = await post({ action: "unsupported" });
-  assert.equal(schemaReady.status, 400);
-  const DB = server.DB;
-  await DB.batch([
-    DB.prepare("INSERT INTO teachers(id, email, display_name) VALUES ('teacher_probe', 'probe@example.com', 'Probe')"),
-    DB.prepare("INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token) VALUES ('class_probe', 'teacher_probe', '감사 반', '4998', 'join_probe')"),
-  ]);
-
-  const realPassword = ["⭐", "🌙", "🌸"];
-  const joined = await post({ action: "join", entry: "4998", nickname: "감사토끼", animal: "🐰", picturePassword: realPassword });
-  assert.equal(joined.status, 201, "첫 입장은 대상 버킷을 소비하지 않고 성공해야 한다");
-
-  // 서로 다른 오답 8개: 매 시도가 새 중복 프로필을 만들거나 오라클 응답을 받고, 버킷을 1씩 소비한다.
-  const wrongPasswords = [
-    ["⭐", "⭐", "⭐"], ["🌙", "🌙", "🌙"], ["🌸", "🌸", "🌸"], ["⭐", "🌙", "🌙"],
-    ["⭐", "⭐", "🌙"], ["🌙", "⭐", "🌸"], ["🌸", "🌙", "⭐"], ["🌙", "🌸", "⭐"],
-  ];
-  for (const picturePassword of wrongPasswords) {
-    const probe = await post({ action: "join", entry: "4998", nickname: "감사토끼", animal: "🐰", picturePassword, allowDuplicate: true }, "203.0.113.78");
-    assert.equal(probe.status, 201, "상한 이내의 오답 시도");
-  }
-
-  // 9번째 확인 시도는 IP를 바꿔도 대상 단위로 막혀야 한다.
-  const blockedProbe = await post({ action: "join", entry: "4998", nickname: "감사토끼", animal: "🐰", picturePassword: realPassword, allowDuplicate: true }, "203.0.113.79");
-  assert.equal(blockedProbe.status, 429);
-  assert.deepEqual(await blockedProbe.json(), { error: "여러 번 틀렸어요. 선생님께 도움을 요청해 주세요." });
-
-  // 오라클을 join으로 소진한 뒤 recover로 마무리하는 우회도 같은 버킷이 막는다.
-  const blockedRecover = await post({ action: "recover", entry: "4998", nickname: "감사토끼", animal: "🐰", picturePassword: realPassword }, "203.0.113.80");
-  assert.equal(blockedRecover.status, 429);
-
-  const profiles = await DB.prepare("SELECT COUNT(*) AS count FROM student_profiles").first();
-  assert.equal(profiles.count, 9, "차단 이후에는 프로필이 더 늘지 않는다");
-});
+/* "duplicate-credential probing shares the per-target recovery budget" 테스트는 은퇴했다(2026-09-07).
+ * 그 공격은 별명으로 중복 프로필을 만들어 join을 비밀번호 오라클로 쓰는 것이었는데, 자기 등록 경로가
+ * 사라져 더는 존재하지 않는다. 남은 표면(번호 단위 버킷, IP를 바꿔도 같은 버킷, 이미 찬 번호는
+ * 비밀번호와 무관하게 409)은 tests/nickname-spacing.test.mjs가 실제 서버로 검증한다. */

@@ -1,0 +1,83 @@
+{
+  "created": "2026-09-07",
+  "purpose": "Claude handoff assets only; not integrated",
+  "assets": [
+    {
+      "file": "assets/classroom-with-mongri.png",
+      "width": 1672,
+      "height": 941,
+      "hasAlpha": false,
+      "alphaMin": null,
+      "bytes": 2322564,
+      "sha256": "8ffb649370ea2638561d7bd7a93a85306d3e29a2cde14ca6437c940d542aeea4",
+      "source": "/Users/persimmontree/.codex/generated_images/01a07a79-7597-7d53-add9-5dd05dcaa1bd/exec-b683c3b8-5990-44ae-88dd-5dbed4e07867.png",
+      "usage": "문구 없는 완성 장면. 팔레트를 잡는 손 수정. 넓은 화면 권장."
+    },
+    {
+      "file": "assets/classroom-with-mongri.webp",
+      "width": 1672,
+      "height": 941,
+      "hasAlpha": false,
+      "alphaMin": null,
+      "bytes": 218714,
+      "sha256": "51c0071ba5fe5e24805e436e7bac72449c2a33056278d890c5e16e3806994012",
+      "source": "/Users/persimmontree/.codex/generated_images/01a07a79-7597-7d53-add9-5dd05dcaa1bd/exec-b683c3b8-5990-44ae-88dd-5dbed4e07867.png",
+      "usage": "문구 없는 완성 장면. 팔레트를 잡는 손 수정. 넓은 화면 권장."
+    },
+    {
+      "file": "assets/classroom-empty.png",
+      "width": 1672,
+      "height": 941,
+      "hasAlpha": false,
+      "alphaMin": null,
+      "bytes": 2244124,
+      "sha256": "a40549a9019e3aa55210a51ef52f445e040e0bfa6a9ed9beb616b31d000de662",
+      "source": "/Users/persimmontree/.codex/generated_images/01a07a79-7597-7d53-add9-5dd05dcaa1bd/exec-ff5821a4-d65c-4b91-bb15-2dca888b91f8.png",
+      "usage": "오리와 UI 없는 배경. 독립 캐릭터 배치 시 사용."
+    },
+    {
+      "file": "assets/classroom-empty.webp",
+      "width": 1672,
+      "height": 941,
+      "hasAlpha": false,
+      "alphaMin": null,
+      "bytes": 205052,
+      "sha256": "a68bdbab1b75854f0948d295d090f68f493611b2fb5386a390c3a27f30c8133e",
+      "source": "/Users/persimmontree/.codex/generated_images/01a07a79-7597-7d53-add9-5dd05dcaa1bd/exec-ff5821a4-d65c-4b91-bb15-2dca888b91f8.png",
+      "usage": "오리와 UI 없는 배경. 독립 캐릭터 배치 시 사용."
+    },
+    {
+      "file": "assets/mongri-original-transparent-640.webp",
+      "width": 640,
+      "height": 640,
+      "hasAlpha": true,
+      "alphaMin": 0,
+      "bytes": 78470,
+      "sha256": "d826ad97cb6dbe1f17e1caedf8eaee2e9e493b68d8aed5c7592b0f7a8225206d",
+      "source": "/Users/persimmontree/orca/wiggle_web/public/landing-gallery/duck-painter.png",
+      "usage": "첫 진입 화면 기존 정면 오리. 실제 알파 채널. 수정 시안과 자세가 다름. 모바일 권장."
+    },
+    {
+      "file": "assets/mongri-original-transparent.png",
+      "width": 1200,
+      "height": 1200,
+      "hasAlpha": true,
+      "alphaMin": 0,
+      "bytes": 1998676,
+      "sha256": "06f3c91122e03e21acf8566fa4be2f14c83072f50932292f69cae4b21478199d",
+      "source": "/Users/persimmontree/orca/wiggle_web/public/landing-gallery/duck-painter.png",
+      "usage": "첫 진입 화면 기존 정면 오리. 실제 알파 채널. 수정 시안과 자세가 다름. 모바일 권장."
+    },
+    {
+      "file": "assets/mongri-original-transparent.webp",
+      "width": 1200,
+      "height": 1200,
+      "hasAlpha": true,
+      "alphaMin": 0,
+      "bytes": 253602,
+      "sha256": "241aec309dc94bb7d739f404f753e4c61a59c8a39ed8f0b1d530fce1d8b118be",
+      "source": "/Users/persimmontree/orca/wiggle_web/public/landing-gallery/duck-painter.png",
+      "usage": "첫 진입 화면 기존 정면 오리. 실제 알파 채널. 수정 시안과 자세가 다름. 모바일 권장."
+    }
+  ]
+}

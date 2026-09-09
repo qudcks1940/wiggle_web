@@ -7,28 +7,46 @@
       "source": "wiggle_draw/assets/images/logo.png",
       "sourceRole": "read-only reference",
       "sha256": "5564884B4CDDBE68192923D57282CE8037E883FF21D0231EA6FB1055C0F1E79E",
-      "approvedFor": ["web navigation brand mark"]
+      "approvedFor": [
+        "web navigation brand mark"
+      ]
     },
     {
       "path": "/brand/app_icon.png",
       "source": "wiggle_draw/assets/icon/app_icon.png",
       "sourceRole": "read-only reference",
       "sha256": "9F028F6C5A55786BED046AE5C9F2187F743453E8ECC9D548A7817D7592A084F4",
-      "approvedFor": ["favicon", "installed web shortcut"]
+      "approvedFor": [
+        "favicon",
+        "installed web shortcut"
+      ]
     },
     {
       "path": "/brand/animal-portraits-v1.png",
       "source": "project-generated: AI-generated 1536x1024 RGBA sprite sheet created for the 2026-08-18 student entry redesign (introduced in commit 48ecadb; no wiggle_draw or third-party source material)",
       "sourceRole": "project-generated original",
       "sha256": "4C54C087C5E436C70DC34122E9F9A296F52B5B2C2AB39EA991AE72E06CEAAA33",
-      "approvedFor": ["repack source for /brand/animal-portraits-v2.png via scripts/repack_animal_portraits.py; not referenced by app code"]
+      "approvedFor": [
+        "repack source for /brand/animal-portraits-v2.png via scripts/repack_animal_portraits.py; not referenced by app code"
+      ]
     },
     {
       "path": "/brand/animal-portraits-v2.png",
       "source": "derived from /brand/animal-portraits-v1.png by scripts/repack_animal_portraits.py (5x2 square-cell repack, 2560x1024)",
       "sourceRole": "project-generated derivative",
       "sha256": "FEDC65E53ED7EC05425B38CE3714199BC2CF6D427915D2C97A1ED4C6237ACDBC",
-      "approvedFor": ["student entry animal picker and student ID card portraits (app/globals.css)"]
+      "approvedFor": [
+        "student entry animal picker and student ID card portraits (app/globals.css)"
+      ]
+    },
+    {
+      "path": "/entry-green/classroom-with-mongri.webp",
+      "source": "project-generated: built-in ImageGen (Codex), 2026-09-07; docs/design-assets/entry-green/assets/classroom-with-mongri.png (PROVENANCE.md, manifest.json); webp encoded with sharp",
+      "sourceRole": "project-generated original and reviewed derivatives",
+      "sha256": "51C0071BA5FE5E24805E436E7BAC72449C2A33056278D890C5E16E3806994012",
+      "approvedFor": [
+        "join entry-check screen wide-layout background (green classroom with Mongri holding the palette); text and buttons stay HTML"
+      ]
     }
   ],
   "notApproved": "All other wiggle_draw assets remain outside wiggle_web until provenance and service-use permission are reviewed."

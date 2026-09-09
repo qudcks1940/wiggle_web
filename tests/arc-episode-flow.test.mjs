@@ -25,13 +25,15 @@ async function seedClassroomWithEpisode(DB, { arcId = "bicycle-story", episodeId
   await DB.batch([
     DB.prepare("INSERT INTO teachers(id, email, display_name, credential_hash, credential_salt) VALUES ('teacher_arc', 'arc@test.invalid', '아크 선생님', '', '')"),
     DB.prepare(`INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token, current_arc_id, current_episode_id) VALUES ('class_arc', 'teacher_arc', '아크 반', '4999', 'join_arc', '${arcId}', '${episodeId}')`),
+    // 입장은 명단 번호로만 한다(2026-09-07 확정) — 아크 테스트도 자리 하나를 시드한다.
+    DB.prepare("INSERT INTO student_profiles(id, classroom_id, seat_number, real_name, claimed_at, nickname, animal, last_activity_at) VALUES ('seat_arc_7', 'class_arc', 7, '아크아이', NULL, '7번', '❔', strftime('%Y-%m-%dT%H:%M:%fZ','now'))"),
   ]);
 }
 
 async function joinStudent(server, nickname = "토끼화가") {
   const response = await server.fetch("/api/student", {
     method: "POST", headers: { "content-type": "application/json", "x-vercel-forwarded-for": "203.0.113.61" },
-    body: JSON.stringify({ action: "join", entry: "4999", nickname, animal: "🐰", picturePassword: ["⭐", "⭐", "⭐"] }),
+    body: JSON.stringify({ action: "join", entry: "4999", seatNumber: 7, nickname, animal: "🐰", picturePassword: ["⭐", "⭐", "⭐"] }),
   });
   assert.equal(response.status, 201);
   const payload = await response.json();

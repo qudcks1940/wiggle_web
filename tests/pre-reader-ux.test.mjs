@@ -45,8 +45,8 @@ test("entry can be completed with pictures and a generated nickname instead of r
   assert.match(join, /🎲 다른 별명/);
   assert.match(join, /className="button primary full child-primary-action"/);
   assert.match(join, /<span aria-hidden="true">▶️<\/span>/);
-  assert.match(join, /새로 시작하려면 새로 시작하기를 눌러요/);
-  assert.match(join, /전에 그린 그림이 있다면 내 그림 이어가기를 눌러요/);
+  assert.match(join, /선생님이 알려 준 내 번호를 눌러요/);
+  assert.match(join, /다 눌렀으면 들어가기를 눌러요/);
   assert.match(join, /내 동물을 고르고, 그림 별명을 정한 다음, 그림 비밀번호 세 개를 순서대로 골라요/);
   assert.doesNotMatch(join, /이 기기에 저장된 내 동물 고르기/);
   assert.match(join, /className="animal-choice-portrait" data-animal-index=\{index\}/);
@@ -58,7 +58,7 @@ test("entry can be completed with pictures and a generated nickname instead of r
   assert.match(css, /\.entry-join-shell>\.join-card \.join-preview-slots span \{[\s\S]*?border:0;[\s\S]*?background:transparent;/);
   assert.match(css, /\.entry-join-shell>\.join-card \.join-preview-slots span>i \{[\s\S]*?place-items:center;[\s\S]*?transform:none;/);
   assert.match(css, /\.entry-join-shell \.join-controls \.picture-password-picker \{[\s\S]*?position:static;[\s\S]*?display:grid;/);
-  assert.match(css, /\.entry-join-shell \.join-controls \.join-step-2::before,[\s\S]*?\.join-step-3::before \{[\s\S]*?background:#cbdde7;/);
+  assert.match(css, /\.entry-join-shell \.join-controls \.join-step-2::before,[\s\S]*?\.join-step-3::before \{[\s\S]*?background:#d0e2d3;/);
   assert.match(css, /\.entry-join-shell \.join-controls \.picture-password-picker \.password-actions \{[\s\S]*?position:static;[\s\S]*?grid-column:2;[\s\S]*?grid-row:2;/);
   const portraitSheetWidth = animalPortraits.readUInt32BE(16);
   const portraitSheetHeight = animalPortraits.readUInt32BE(20);

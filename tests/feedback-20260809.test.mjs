@@ -114,7 +114,7 @@ test("teacher artwork history is ownership-scoped, newest-first, and paginated",
   const created = await server.fetch("/api/teacher", {
     method: "POST",
     headers: teacherHeaders("history-owner@example.com"),
-    body: JSON.stringify({ action: "createClassroom", displayName: "작품 기록반" }),
+    body: JSON.stringify({ action: "createClassroom", displayName: "작품 기록반", roster: [{ seatNumber: 1, realName: "김민준" }] }),
   });
   assert.equal(created.status, 201);
   const classroom = (await created.json()).classroom;
@@ -125,6 +125,7 @@ test("teacher artwork history is ownership-scoped, newest-first, and paginated",
     body: JSON.stringify({
       action: "join",
       entry: classroom.classCode,
+      seatNumber: 1,
       nickname: "기록 화가",
       animal: "🐻",
       picturePassword: ["⭐", "⭐", "⭐"],

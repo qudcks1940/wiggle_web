@@ -2,7 +2,7 @@
 
 import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { activeTextObjects, DOCUMENT_SIZE, documentHeight, DrawDocument, DrawOp, drawingTextGraphemes, emptyDocument, estimateDocumentBytes, estimateStrokeBytes, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_OPS, MAX_STROKE_POINTS, MAX_TEXT_GRAPHEMES, MAX_TEXT_OBJECTS, normalizeDrawingText, roundUnit, ShapeKind, STROKE_WIDTHS, StrokeWidth, TextKind, TEXT_SIZES, TextSize, validateDrawDocument } from "@/lib/drawing-model";
+import { activeTextObjects, clampDocumentHeight, DOCUMENT_SIZE, documentHeight, DrawDocument, DrawOp, drawingTextGraphemes, emptyDocument, estimateDocumentBytes, estimateStrokeBytes, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_OPS, MAX_STROKE_POINTS, MAX_TEXT_GRAPHEMES, MAX_TEXT_OBJECTS, normalizeDrawingText, roundUnit, ShapeKind, STROKE_WIDTHS, StrokeWidth, TextKind, TEXT_SIZES, TextSize, validateDrawDocument } from "@/lib/drawing-model";
 import { renderDrawDocument, renderDrawOperation, resetDrawingCanvas } from "@/lib/draw-renderer";
 import { mirrorOp } from "@/lib/symmetry";
 import { clearAllDrawing, redoDrawing, undoDrawing } from "@/lib/drawing-history";
@@ -581,6 +581,7 @@ export function DrawingStudio() {
   const guideTraceLocksRef = useRef(new Map<number, { traceIndex: number; pointIndex: number }>());
   const wrapRef = useRef<HTMLDivElement>(null);
   const toolPanelRef = useRef<HTMLElement>(null);
+  const canvasZoneRef = useRef<HTMLElement>(null);
   const viewRef = useRef<CanvasView>(IDENTITY_VIEW);
   const penModeRef = useRef(true);
   const redoRef = useRef<DrawOp[][]>([]);
@@ -1467,6 +1468,31 @@ export function DrawingStudio() {
       window.removeEventListener("keydown", closeOnEscape);
     };
   }, [widthSliderOpen, toolSheetOpen]);
+
+  /* 시안의 도화지는 화면을 가득 채운다. 아직 아무것도 그리지 않은 새 작품이면 화면 비율에
+   * 맞춰 도화지 세로를 정한다. 한 획이라도 그은 뒤에는 절대 바꾸지 않는다 — 좌표가 0~1로
+   * 정규화돼 있어 비율을 바꾸면 이미 그린 선이 늘어난다. */
+  useEffect(() => {
+    const zone = canvasZoneRef.current;
+    if (!zone) return;
+    function fitPaperToScreen() {
+      const current = documentStateRef.current;
+      if (!current || current.ops.length) return;
+      const style = window.getComputedStyle(zone!);
+      const width = zone!.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
+      const height = zone!.clientHeight - Number.parseFloat(style.paddingTop) - Number.parseFloat(style.paddingBottom);
+      if (!(width >= 1) || !(height >= 1)) return;
+      const next = clampDocumentHeight(DOCUMENT_SIZE * height / width);
+      if (next === documentHeight(current)) return;
+      const fitted = { ...current, height: next };
+      documentStateRef.current = fitted;
+      setDocumentState(fitted);
+    }
+    fitPaperToScreen();
+    const observer = new ResizeObserver(fitPaperToScreen);
+    observer.observe(zone);
+    return () => observer.disconnect();
+  }, [artwork?.id, documentState.ops.length]);
 
   function chooseWidth(value: StrokeWidth) {
     if (studioTool === "eraser") setEraserWidth(value);
@@ -2790,7 +2816,7 @@ export function DrawingStudio() {
             </aside>
           )
         )}
-        <section className={`canvas-zone${canvasGuideStatus ? " has-canvas-status" : ""}`}>
+        <section className={`canvas-zone${canvasGuideStatus ? " has-canvas-status" : ""}`} ref={canvasZoneRef}>
           {canvasGuideStatus && (
             <div className="canvas-status-rail">
               <div className="guide-notice" role="status" aria-live="polite">
@@ -2802,7 +2828,10 @@ export function DrawingStudio() {
             className="canvas-wrap"
             ref={wrapRef}
             /* 도화지 비율은 문서가 정한다. 기존 정사각 작품(height 없음)은 1/1 그대로다. */
-            style={{ "--paper-aspect": `${DOCUMENT_SIZE} / ${documentHeight(documentState)}` } as React.CSSProperties}
+            style={{
+              "--paper-aspect": `${DOCUMENT_SIZE} / ${documentHeight(documentState)}`,
+              "--paper-ratio": `${DOCUMENT_SIZE / documentHeight(documentState)}`,
+            } as React.CSSProperties}
             onContextMenu={(event) => event.preventDefault()}
             onDragStart={(event) => event.preventDefault()}
           >

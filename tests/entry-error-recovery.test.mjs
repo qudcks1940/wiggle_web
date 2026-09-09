@@ -41,8 +41,8 @@ test("one big reset clears every picked picture and highlights after a wrong pas
 });
 
 test("the first correction clears the previous error for nickname, animal and pictures (the classroom code has no visible field to correct — it comes from the landing page or QR)", () => {
-  assert.match(join, /setNickname\(event\.target\.value\); setNicknameAuto\(false\); setDuplicateWarning\(false\); clearEntryError\(\);/);
-  assert.match(join, /setAnimal\(value\); setDuplicateWarning\(false\); clearEntryError\(\);/);
+  assert.match(join, /setNickname\(event\.target\.value\); setNicknameAuto\(false\); clearEntryError\(\);/);
+  assert.match(join, /setAnimal\(value\); clearEntryError\(\);/);
   assert.match(join, /function appendPicture\(value: string\) \{\s*clearEntryError\(\);/);
   assert.match(join, /function removeLastPicture\(\) \{\s*clearEntryError\(\);/);
 });
@@ -61,7 +61,7 @@ test("a wrong class code offers calling the teacher (there is no visible code fi
 
 test("join/recover keeps the code hidden and only the approved phone/short-screen step guide is rendered", () => {
   assert.match(join, /className="mobile-entry-progress"/);
-  assert.match(join, /data-mobile-step=\{mobileStep\}/);
+  assert.match(join, /data-mobile-step=\{seatRecover \? 3 : mobileStep\}/);
   assert.doesNotMatch(join, /1️⃣ 수업 코드/);
   assert.match(join, /<legend>1️⃣ 내 동물<\/legend>/);
   assert.match(join, /<span>2️⃣ 그림 별명<\/span>/);

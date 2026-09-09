@@ -178,7 +178,12 @@ test("wide screens put the frames behind and the duck in front, with the code ca
 test("the gallery landing never scales controls with container units, so touch targets stay 44px", async () => {
   const css = await read("../app/globals.css");
   // 주석에는 은퇴 사유로 cqw가 적혀 있다 — 규칙만 본다.
-  const gallery = css.slice(css.indexOf("/* ── 2026-09-07 오리 전시관 대문")).replace(/\/\*[\s\S]*?\*\//g, "");
+  // 대문 블록만 본다. 파일 끝까지 자르면 뒤에 붙은 그리기 화면 규칙(도화지 크기 계산에
+  // 컨테이너 단위를 쓴다)까지 걸려 이 계약이 잘못 깨진다.
+  const galleryStart = css.indexOf("/* ── 2026-09-07 오리 전시관 대문");
+  const galleryEnd = css.indexOf("/* ── 2026-09-07 그리기 화면 플로팅 도구", galleryStart);
+  assert.ok(galleryStart >= 0 && galleryEnd > galleryStart, "expected the gallery landing block boundaries");
+  const gallery = css.slice(galleryStart, galleryEnd).replace(/\/\*[\s\S]*?\*\//g, "");
   assert.ok(gallery.trim(), "expected the gallery landing block");
   // 은퇴한 1488 무대는 cqw로 입력칸까지 줄여 세로 태블릿에서 44px이 깨졌다. 다시 도입하지 않는다.
   assert.doesNotMatch(gallery, /cqw/);

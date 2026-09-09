@@ -233,7 +233,7 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
   if (mode === "seat") {
     const pressKey = (digit: string) => { clearEntryError(); setSeatInput((current) => (current + digit).slice(0, 2)); };
     return <main className={`${check.shell} ${check.seatShell}`}>
-      <div className={check.stage}>
+      <div className={`${check.stage} ${check.seatStage}`}>
         <div className={check.head}>
           <div className={check.logo}><Logo /></div>
           <div className={check.speak}><SpeakButton text="선생님이 알려 준 내 번호를 눌러요. 다 눌렀으면 들어가기를 눌러요." /></div>
@@ -243,8 +243,8 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
           <h1>내 번호를 눌러요</h1>
           <p>우리 반에서 내 번호를 골라 주세요.</p>
         </div>
+        <span className={check.padBadge}>{classroomName}</span>
         <section className={`seat-card ${check.pad}`} aria-label="내 번호 입력 수첩">
-          <span className={check.padBadge}><i aria-hidden="true">🍃</i>{classroomName}<i aria-hidden="true">🍃</i></span>
           <form onSubmit={(event) => { event.preventDefault(); void checkSeat(); }}>
             <label className={check.padLabel} htmlFor="seat-number">내 번호</label>
             <div className={check.display}>

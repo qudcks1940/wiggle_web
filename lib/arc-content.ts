@@ -55,7 +55,7 @@ export type Arc = {
   episodes: ArcEpisode[];
 };
 
-/* 씨앗 선 좌표 도우미. 기본 도화지는 1024×640(가로 1.6:1)이라 세로 반지름은 1.6배로 잡아야 둥글게 보인다. */
+/* 씨앗 선 좌표 도우미. 기본 도화지는 1024×640(가로 1.6:1)이라 원의 세로 반지름은 1.6배로 잡아야 둥글게 보인다. */
 const ASPECT = 1024 / 640;
 const round = (value: number) => Math.round(value * 1000) / 1000;
 const circle = (cx: number, cy: number, r: number, from = 0, to = Math.PI * 2, segments = 24): SeedLine =>
@@ -63,12 +63,88 @@ const circle = (cx: number, cy: number, r: number, from = 0, to = Math.PI * 2, s
     const angle = from + ((to - from) * index) / segments;
     return [round(cx + Math.cos(angle) * r), round(cy + Math.sin(angle) * r * ASPECT)] as [number, number];
   });
-const spiral = (cx: number, cy: number, r: number, turns: number, segments = 40): SeedLine =>
-  Array.from({ length: segments + 1 }, (_, index) => {
-    const t = index / segments;
-    const angle = t * turns * Math.PI * 2;
-    return [round(cx + Math.cos(angle) * r * t), round(cy + Math.sin(angle) * r * t * ASPECT)] as [number, number];
-  });
+
+
+type SeedStory = {
+  arcId: string;
+  title: string;
+  seed: SeedLine[];
+  /** 1회차: 씨앗을 무언가로 만들기 */
+  first: { title: string; sceneText: string; prompts: string[]; discussion: string[] };
+  /** 2~5회차: 지난 그림을 이어 그리기 — [제목, 장면 문장, 힌트 안내들, 토론 질문들] */
+  story: Array<{ title: string; sceneText: string; prompts: string[]; discussion: string[] }>;
+};
+
+const STORY_IDS = ["seed", "who", "event", "where", "end"] as const;
+
+function seedStoryArcs(): Arc[] {
+  const stories: SeedStory[] = [
+    {
+      arcId: "circle-story", title: "동그라미 이야기",
+      seed: [circle(0.5, 0.5, 0.12)],
+      first: { title: "동그라미가 있어", sceneText: "동그라미가 있어. 뭐가 될까?", prompts: ["먹는 것? 굴러가는 것? 얼굴?", "고른 것을 크게 그려 봐.", "이름을 붙여 줘."], discussion: ["같은 동그라미인데 뭐가 됐어?", "제일 뜻밖인 건 뭐야?", "왜 그렇게 봤는지 물어보자."] },
+      story: [
+        { title: "누가 쓰고 있을까", sceneText: "지난 그림의 그것을 누가 쓰고 있을까?", prompts: ["먹는 사람? 타는 사람? 안고 있는 친구?", "그 사람 얼굴 표정도 그려 봐.", "어디에 있는지도 그려 줘."], discussion: ["누가 나왔어?", "그 사람은 기분이 어때 보여?", "친구 그림에서 다른 사람을 찾아보자."] },
+        { title: "무슨 일이 생겼을까", sceneText: "그 사람에게 무슨 일이 생겼을까?", prompts: ["떨어뜨렸어? 잃어버렸어? 더 생겼어?", "놀란 얼굴? 웃는 얼굴?", "옆에 누가 왔을까?"], discussion: ["무슨 일이 생겼어?", "왜 그런 일이 생겼을까?", "너라면 어떻게 했을 것 같아?"] },
+        { title: "어디로 갔을까", sceneText: "그래서 어디로 갔을까?", prompts: ["집? 학교? 바다? 하늘?", "가는 길에 뭐가 보여?", "누구랑 같이 가?"], discussion: ["어디로 갔어?", "가는 길에 뭘 봤어?", "제일 멀리 간 친구는 누구야?"] },
+        { title: "이야기의 끝", sceneText: "이야기의 끝은 어떻게 될까?", prompts: ["다시 만났어? 새로 생겼어? 잔치를 했어?", "제일 좋아하는 장면으로 그려 봐.", "책 제목을 붙여 줘."], discussion: ["끝은 어떻게 됐어?", "처음 동그라미가 마지막에도 있어?", "다음 이야기가 있다면 뭐가 될까?"] },
+      ],
+    },
+    {
+      arcId: "curve-story", title: "구불구불 이야기",
+      seed: [[[0.3, 0.55], [0.4, 0.42], [0.5, 0.5], [0.6, 0.6], [0.7, 0.48]]],
+      first: { title: "구불구불한 선이야", sceneText: "구불구불한 선이야. 뭐가 될까?", prompts: ["강? 뱀? 국수? 길?", "고른 것을 크게 그려 봐.", "이름을 붙여 줘."], discussion: ["같은 선인데 뭐가 됐어?", "선을 뒤집어 본 친구 있어?", "제일 뜻밖인 건 뭐야?"] },
+      story: [
+        { title: "누가 찾아왔을까", sceneText: "지난 그림의 그것에 누가 찾아왔을까?", prompts: ["동물? 아이? 로봇?", "왜 찾아왔는지 표정으로 보여 줘.", "무엇을 들고 왔을까?"], discussion: ["누가 찾아왔어?", "왜 찾아왔을까?", "친구 그림에는 누가 왔어?"] },
+        { title: "같이 뭘 했을까", sceneText: "둘이 같이 무엇을 했을까?", prompts: ["놀았어? 여행했어? 요리했어?", "둘이 하는 모습을 그려 봐.", "주변에 뭐가 있을까?"], discussion: ["둘이 뭘 했어?", "재미있었을까, 힘들었을까?", "너라면 뭘 하고 싶어?"] },
+        { title: "문제가 생겼어", sceneText: "그런데 문제가 생겼어. 무슨 문제일까?", prompts: ["비가 와? 길을 잃었어? 싸웠어?", "곤란한 얼굴을 그려 봐.", "누가 도와줄까?"], discussion: ["무슨 문제야?", "어떻게 해결할 수 있을까?", "친구 그림의 문제는 뭐야?"] },
+        { title: "이야기의 끝", sceneText: "문제는 어떻게 풀렸을까?", prompts: ["힘을 합쳤어? 새 친구가 왔어? 집에 갔어?", "제일 좋아하는 장면으로 그려 봐.", "책 제목을 붙여 줘."], discussion: ["어떻게 풀렸어?", "처음 선이 마지막에도 있어?", "다음 이야기가 있다면 뭐가 될까?"] },
+      ],
+    },
+    {
+      arcId: "zigzag-story", title: "뾰족뾰족 이야기",
+      seed: [[[0.3, 0.6], [0.42, 0.4], [0.54, 0.6], [0.66, 0.4]]],
+      first: { title: "뾰족뾰족한 선이야", sceneText: "뾰족뾰족한 선이야. 뭐가 될까?", prompts: ["산? 번개? 악어 입? 왕관?", "도화지를 돌려서도 봐.", "이름을 붙여 줘."], discussion: ["같은 선인데 뭐가 됐어?", "도화지를 돌린 친구 있어?", "제일 뜻밖인 건 뭐야?"] },
+      story: [
+        { title: "누가 살고 있을까", sceneText: "지난 그림의 그곳에 누가 살고 있을까?", prompts: ["동물? 괴물? 우리 가족?", "집이나 둥지를 그려 봐.", "무엇을 먹고 살까?"], discussion: ["누가 살고 있어?", "왜 거기 살까?", "친구 그림에는 누가 살아?"] },
+        { title: "손님이 왔어", sceneText: "어느 날 손님이 왔어. 누구일까?", prompts: ["친구? 낯선 사람? 비행기?", "손님이 뭘 가져왔을까?", "만나는 순간을 그려 봐."], discussion: ["누가 왔어?", "반가웠을까, 놀랐을까?", "손님이 가져온 건 뭐야?"] },
+        { title: "모험을 떠나", sceneText: "둘은 모험을 떠났어. 어디로 갈까?", prompts: ["산 너머? 바다? 우주?", "타고 가는 것을 그려 봐.", "길에서 뭘 만났을까?"], discussion: ["어디로 갔어?", "길에서 뭘 만났어?", "제일 신나는 장면은 누구 거야?"] },
+        { title: "이야기의 끝", sceneText: "모험의 끝은 어떻게 될까?", prompts: ["보물을 찾았어? 집으로 돌아왔어?", "제일 좋아하는 장면으로 그려 봐.", "책 제목을 붙여 줘."], discussion: ["끝은 어떻게 됐어?", "처음 선이 마지막에도 있어?", "다음 이야기가 있다면 뭐가 될까?"] },
+      ],
+    },
+    {
+      arcId: "cross-story", title: "만난 선 이야기",
+      seed: [[[0.35, 0.35], [0.65, 0.65]], [[0.65, 0.35], [0.35, 0.65]]],
+      first: { title: "선 두 개가 만났어", sceneText: "선 두 개가 만났어. 뭐가 될까?", prompts: ["풍차? 나비? 가위? 별?", "고른 것을 크게 그려 봐.", "이름을 붙여 줘."], discussion: ["같은 선인데 뭐가 됐어?", "만난 자리를 어디로 봤어?", "제일 뜻밖인 건 뭐야?"] },
+      story: [
+        { title: "누구 것일까", sceneText: "지난 그림의 그것은 누구 것일까?", prompts: ["아이? 할머니? 강아지?", "주인이 쓰는 모습을 그려 봐.", "어디에 두고 쓸까?"], discussion: ["누구 거야?", "어떻게 쓰고 있어?", "친구 그림의 주인은 누구야?"] },
+        { title: "잃어버렸어", sceneText: "그런데 잃어버렸어. 어디에 있을까?", prompts: ["나무 위? 물속? 가방 속?", "찾는 얼굴을 그려 봐.", "누가 같이 찾아 줄까?"], discussion: ["어디서 잃어버렸어?", "어떻게 찾을 수 있을까?", "친구는 어디서 찾았어?"] },
+        { title: "찾았다", sceneText: "드디어 찾았어! 어떤 모습일까?", prompts: ["그대로야? 달라졌어? 커졌어?", "기쁜 얼굴을 그려 봐.", "찾은 곳을 그려 줘."], discussion: ["찾았을 때 어땠어?", "뭐가 달라졌어?", "제일 놀라운 장면은 누구 거야?"] },
+        { title: "이야기의 끝", sceneText: "이야기의 끝은 어떻게 될까?", prompts: ["잔치? 선물? 새 친구?", "제일 좋아하는 장면으로 그려 봐.", "책 제목을 붙여 줘."], discussion: ["끝은 어떻게 됐어?", "처음 선이 마지막에도 있어?", "다음 이야기가 있다면 뭐가 될까?"] },
+      ],
+    },
+  ];
+  return stories.map((story) => ({
+    arcId: story.arcId,
+    version: 1,
+    contentChecksum: SEED_STORY_CHECKSUMS[story.arcId] ?? "",
+    title: story.title,
+    episodes: [
+      { episodeId: `${story.arcId}-${STORY_IDS[0]}`, title: story.first.title, sceneText: story.first.sceneText, sceneImage: null, seed: story.seed, prompts: story.first.prompts, discussion: story.first.discussion },
+      ...story.story.map((episode, index) => ({
+        episodeId: `${story.arcId}-${STORY_IDS[index + 1]}`, title: episode.title, sceneText: episode.sceneText, sceneImage: null, prompts: episode.prompts, discussion: episode.discussion,
+      })),
+    ],
+  }));
+}
+
+/** version 1의 arcChecksum 결과. 문안을 고치면 version과 함께 갱신한다(테스트가 잡는다). */
+const SEED_STORY_CHECKSUMS: Record<string, string> = {
+  "circle-story": "723f853b",
+  "curve-story": "6f34468c",
+  "zigzag-story": "d2342901",
+  "cross-story": "454c95d0",
+};
 
 /** 회차 수는 아크마다 다를 수 있다 — 5로 고정하지 않는다 (FR-1). */
 export const ARCS: Arc[] = [
@@ -92,124 +168,11 @@ export const ARCS: Arc[] = [
       },
     ],
   },
-  {
-    // 씨앗 선 12회 — docs/curriculum-seed-plan.md. 앞 회차(1~4)는 주제를 주고 5회부터 연다.
-    // 축: 1~3 많이 떠올리기, 4~6 다르게 보기, 7~9 남과 다르게, 10~11 더 자세히, 12 반 전시.
-    arcId: "seed-lines",
-    version: 1,
-    contentChecksum: "b037a9d7", // version 1의 arcChecksum 결과
-    title: "이 선으로 뭘 만들까?",
-    episodes: [
-      {
-        episodeId: "seed-line-animal",
-        title: "선 하나, 동물",
-        sceneText: "선이 하나 있어. 어떤 동물이 될까?",
-        sceneImage: null,
-        seed: [[[0.5, 0.25], [0.5, 0.62]]],
-        prompts: ["같은 선이 다른 동물도 될 수 있을까?", "하나 더, 아까와 다른 동물로 만들어 봐.", "내 동물에게 이름과 이야기를 붙여 줘."],
-        discussion: ["같은 선인데 뭐가 됐어?", "제일 뜻밖인 동물은 누구야?", "그 친구는 선을 어디로 봤을까?"],
-      },
-      {
-        episodeId: "seed-curve-food",
-        title: "구불구불 선, 먹는 것",
-        sceneText: "구불구불한 선이야. 무슨 음식이 될까?",
-        sceneImage: null,
-        seed: [[[0.3, 0.55], [0.4, 0.42], [0.5, 0.5], [0.6, 0.6], [0.7, 0.48]]],
-        prompts: ["뒤집어 보면 다른 음식도 보여?", "또 하나, 다른 음식으로 만들어 봐.", "누가 먹는지 그려 줘."],
-        discussion: ["뜻밖인 음식은 뭐야?", "선을 뒤집은 친구 있어?", "왜 그렇게 봤는지 물어보자."],
-      },
-      {
-        episodeId: "seed-circle-home",
-        title: "동그라미, 우리 집 물건",
-        sceneText: "동그라미가 있어. 우리 집 어디에 있을까?",
-        sceneImage: null,
-        seed: [circle(0.5, 0.5, 0.12)],
-        prompts: ["다른 방에도 동그라미가 있을까?", "하나 더, 아주 작은 것으로 만들어 봐.", "그 물건이 있는 방을 그려 줘."],
-        discussion: ["동그라미가 어디에 숨었어?", "같은 물건을 만든 친구가 있어?", "아무도 안 만든 물건은 뭐야?"],
-      },
-      {
-        episodeId: "seed-zigzag-outside",
-        title: "뾰족뾰족 선, 밖에서 본 것",
-        sceneText: "뾰족뾰족한 선이야. 밖에서 본 것 중 뭐가 될까?",
-        sceneImage: null,
-        seed: [[[0.3, 0.6], [0.42, 0.4], [0.54, 0.6], [0.66, 0.4]]],
-        prompts: ["도화지를 돌려서 봐. 다른 게 보여?", "또 돌려서 하나 더.", "그 장소에 나를 그려 줘."],
-        discussion: ["도화지를 돌리면 뭐로 보여?", "위로 본 친구와 옆으로 본 친구가 어떻게 달라?", "셋 다 다른 친구 있어?"],
-      },
-      {
-        episodeId: "seed-half-circle",
-        title: "반원",
-        sceneText: "반원이 있어. 뭐가 될까?",
-        sceneImage: null,
-        seed: [circle(0.5, 0.55, 0.15, Math.PI, Math.PI * 2, 16)],
-        prompts: ["뒤집으면 뭐가 될까?", "반원을 두 개로 나누면?", "내 그림에 날씨를 더해 줘."],
-        discussion: ["뒤집으면 달라지는 게 뭐야?", "반원을 잘라 쓴 친구 있어?", "제일 큰 것과 제일 작은 것을 찾아보자."],
-      },
-      {
-        episodeId: "seed-cross",
-        title: "만난 선 두 개",
-        sceneText: "선 두 개가 만났어. 뭐가 될까?",
-        sceneImage: null,
-        seed: [[[0.35, 0.35], [0.65, 0.65]], [[0.65, 0.35], [0.35, 0.65]]],
-        prompts: ["만난 자리를 가운데가 아니라 끝으로 보면?", "하나 더, 움직이는 것으로.", "어디로 가는지 그려 줘."],
-        discussion: ["친구는 어디를 앞으로 봤어?", "움직이는 것으로 만든 친구는 뭘 만들었어?", "두 선을 따로 쓴 친구 있어?"],
-      },
-      {
-        episodeId: "seed-ears",
-        title: "귀 두 개?",
-        sceneText: "귀처럼 보이지? 귀가 아닌 것으로도 만들어 봐.",
-        sceneImage: null,
-        seed: [[[0.42, 0.42], [0.45, 0.28], [0.5, 0.42]], [[0.5, 0.42], [0.55, 0.28], [0.58, 0.42]]],
-        prompts: ["친구들 그림을 봤지? 아무도 안 만든 것으로.", "하나 더, 사람이 아닌 것으로.", "그것이 사는 곳을 그려 줘."],
-        discussion: ["아무도 안 만든 건 뭐야?", "귀로 본 친구와 아닌 친구가 몇 명이야?", "어떻게 그 생각이 났어?"],
-      },
-      {
-        episodeId: "seed-wheel",
-        title: "바퀴 하나와 선",
-        sceneText: "바퀴 하나와 선이 있어. 뭐가 될까?",
-        sceneImage: null,
-        seed: [circle(0.4, 0.65, 0.08, 0, Math.PI * 2, 20), [[0.48, 0.65], [0.75, 0.65]]],
-        prompts: ["바퀴가 아닌 것으로 보면?", "친구들 그림에 없는 것으로 하나 더.", "누가 타는지 그려 줘."],
-        discussion: ["왜 그렇게 봤는지 물어보자.", "바퀴를 바퀴로 안 쓴 친구 있어?", "제일 빠른 것과 제일 느린 것은?"],
-      },
-      {
-        episodeId: "seed-three",
-        title: "씨앗 세 개",
-        sceneText: "씨앗이 셋이야. 하나씩 무언가로 만들어 봐.",
-        sceneImage: null,
-        seed: [[[0.25, 0.3], [0.25, 0.55]], [[0.45, 0.6], [0.55, 0.5], [0.65, 0.6]], circle(0.75, 0.3, 0.05, 0, Math.PI * 2, 16)],
-        prompts: ["셋을 한 장면으로 이을 수 있을까?", "친구들과 다른 이야기로.", "제목을 붙여 줘."],
-        discussion: ["셋을 하나로 이은 친구 있어?", "따로따로 만든 친구 그림은 뭐가 좋아?", "제목만 듣고 그림을 맞혀 보자."],
-      },
-      {
-        episodeId: "seed-spiral-photo",
-        title: "사진 속 나선",
-        sceneText: "사진을 봐. 이 선이 사진 어디에 있어?",
-        sceneImage: "/lessons/observe/snail-closeup.webp",
-        seed: [spiral(0.5, 0.5, 0.14, 2)],
-        prompts: ["사진에 없는 것을 더해 봐.", "나선을 달팽이가 아닌 것으로 하나 더.", "배경까지 채워 줘."],
-        discussion: ["사진에 없는 걸 뭘 더했어?", "사진과 제일 다른 그림은 누구 거야?", "나선이 달팽이가 아닌 친구 있어?"],
-      },
-      {
-        episodeId: "seed-choose-again",
-        title: "다시 고른 씨앗",
-        sceneText: "지금까지 씨앗 중 하나를 골라. 그때 못 만든 것으로 만들어 봐.",
-        sceneImage: null,
-        // 아이가 고르는 회차라 씨앗을 미리 심지 않는다. 11회 선택 화면은 별도 구현 항목이다(계획서).
-        prompts: ["색을 세 가지 이상 써 봐.", "이야기를 두 줄로 써 줘."],
-        discussion: ["처음과 뭐가 달라졌어?", "왜 그 씨앗을 골랐어?", "색이 이야기와 어울려?"],
-      },
-      {
-        episodeId: "seed-wave-exhibit",
-        title: "우리 반 같은 선",
-        sceneText: "우리 반 모두 같은 선이야. 뭐가 될까?",
-        sceneImage: null,
-        seed: [[[0.2, 0.6], [0.35, 0.45], [0.5, 0.6], [0.65, 0.45], [0.8, 0.6]]],
-        prompts: ["친구와 다르게 만들어 봐.", "완성해 줘. 벽에 붙일 거야.", "제목과 이름표를 써 줘."],
-        discussion: ["우리 반 그림을 한꺼번에 보면 뭐가 보여?", "같은 선이 몇 가지가 됐어?", "다음 씨앗은 뭐로 할까?"],
-      },
-    ],
-  },
+  // 씨앗 이야기 아크 4개 (docs/curriculum-seed-plan.md, 2026-09-09 사용자 결정):
+  // 1회차만 씨앗 선을 주고, 2회차부터는 아이 자신의 지난 그림이 다음 회차의 씨앗이다.
+  // 2회차 이후 안내는 힌트가 있는 문장(1~2학년이 덜 막히도록). 5회차가 모이면 동화책 한 권이 된다.
+  // 회차 수는 5로 두되 교사는 언제든 멈추거나 더 열 수 있다(product-decisions 8-1).
+  ...seedStoryArcs(),
 ];
 
 /**

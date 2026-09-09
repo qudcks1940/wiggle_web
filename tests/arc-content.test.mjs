@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { ARCS, arcChecksum, arcById, episodeById, isValidArcEpisode } from "@/lib/arc-content";
+import { ARCS, arcChecksum, episodeById, isValidArcEpisode } from "@/lib/arc-content";
 import { validateDrawDocument } from "@/lib/drawing-model";
 import { provisionSchema } from "@/db/runtime";
 import { createTestDb } from "./harness/db.mjs";
@@ -68,29 +68,29 @@ test("기존 운영 classrooms 테이블에도 포인터 컬럼이 조건부 ALT
   await handle.dispose();
 });
 
-test("씨앗 선 회차는 지울 수 있는 유효한 획으로 도화지를 열고, 정답 점선이 아니다 (docs/curriculum-seed-plan.md)", async () => {
-  const arc = arcById("seed-lines");
-  assert.ok(arc, "씨앗 선 12회 아크가 있어야 한다");
-  assert.equal(arc.episodes.length, 12);
-  const seeded = arc.episodes.filter((episode) => episode.seed?.length);
-  assert.equal(seeded.length, 11, "11회(다시 고른 씨앗)만 씨앗을 미리 심지 않는다");
-  for (const episode of arc.episodes) {
-    assert.ok(episode.sceneText.length <= 40, `${episode.episodeId}: 안내는 한 문장으로 짧게`);
-    assert.ok((episode.prompts ?? []).every((prompt) => prompt.length <= 40), episode.episodeId);
-    assert.equal((episode.discussion ?? []).length, 3, `${episode.episodeId}: 교실 토론 질문 3개`);
-  }
-  for (const episode of seeded) {
-    assert.ok(episode.seed.every((points) => points.length >= 2), episode.episodeId);
-    // 씨앗이 문서 검증을 통과하지 못하면 그 회차는 작품 생성 자체가 영구 실패한다.
+test("씨앗 이야기 아크는 1회차에만 씨앗을 심고 2회차부터 지난 그림을 힌트로 잇는다 (docs/curriculum-seed-plan.md)", async () => {
+  const seedArcs = ARCS.filter((arc) => arc.episodes[0]?.seed?.length);
+  assert.ok(seedArcs.length >= 3 && seedArcs.length <= 4, "씨앗별 아크 3~4개");
+  for (const arc of seedArcs) {
+    assert.equal(arc.episodes.length, 5, `${arc.arcId}: 기본 5회차`);
+    const [first, ...rest] = arc.episodes;
+    assert.ok(first.seed.every((points) => points.length >= 2), arc.arcId);
+    assert.ok(rest.every((episode) => !episode.seed), `${arc.arcId}: 2회차부터는 씨앗을 심지 않는다 — 지난 그림이 씨앗이다`);
+    for (const episode of arc.episodes) {
+      assert.ok(episode.sceneText.length <= 40, `${episode.episodeId}: 장면 문장은 짧게`);
+      assert.ok((episode.prompts ?? []).length >= 2 && episode.prompts.every((prompt) => prompt.length <= 40), `${episode.episodeId}: 힌트 안내`);
+      assert.equal((episode.discussion ?? []).length, 3, `${episode.episodeId}: 교실 토론 질문 3개`);
+    }
+    // 씨앗이 문서 검증을 통과하지 못하면 그 아크는 1회차 작품 생성 자체가 영구 실패한다.
     const document = validateDrawDocument({
       schemaVersion: 1, rendererVersion: 1, size: 1024, height: 640,
-      ops: episode.seed.map((points, index) => ({
+      ops: first.seed.map((points, index) => ({
         opId: `op_seedcheck${index}`, clientOpId: `client_seedcheck${index}`, type: "stroke", at: "2026-01-01T00:00:00.000Z",
         tool: "pencil", color: "#2B4A33", width: 8, points: points.map(([x, y]) => ({ x, y, pressure: 0.5 })),
       })),
     });
-    assert.ok(document, `${episode.episodeId}: 씨앗 선이 문서 검증을 통과해야 한다`);
-    assert.equal(document.ops.length, episode.seed.length, episode.episodeId);
+    assert.ok(document, `${arc.arcId}: 씨앗 선이 문서 검증을 통과해야 한다`);
+    assert.equal(document.ops.length, first.seed.length, arc.arcId);
   }
   // 씨앗은 지우개로 지울 수 있는 보통의 획이어야 하므로 작품 생성 시점에 문서로 들어간다.
   const route = await read("../app/api/artworks/route.ts");

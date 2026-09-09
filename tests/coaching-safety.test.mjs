@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isChildSafeCoachingText, validateStudentCoaching, validateTeacherDraft } from "../lib/openai-coaching.ts";
+import { isChildSafeCoachingText, validateStoryInterpretation, validateStudentCoaching, validateTeacherDraft } from "../lib/openai-coaching.ts";
 
 const praise = [
   "정말 잘하고 있어!",
@@ -252,4 +252,39 @@ test("tense and politeness variants are judged the same way at both final valida
     assert.ok(validateStudentCoaching(studentPayload({ growth_event: text })), `막히면 502가 난다(학생 코칭): ${text}`);
     assert.ok(validateTeacherDraft({ body: "다음에는 배경을 더 그려볼까?", observation: text, next_action: "선을 하나 더 그려 보게 해 주세요." }), `막히면 502가 난다(교사 초안): ${text}`);
   }
+});
+
+const interpretPayload = (overrides = {}) => ({
+  guess: "내 눈에는 우산처럼 보이는데?",
+  choices: [
+    { emoji: "☂️", label: "우산 맞아", answer: "우산을 그렸어요" },
+    { emoji: "🚲", label: "자전거야", answer: "자전거 바퀴를 그렸어요" },
+  ],
+  ...overrides,
+});
+
+test("틀리는 해석자는 짐작을 물음표로 내놓고 아이가 고칠 답을 준다", () => {
+  const value = validateStoryInterpretation(interpretPayload());
+  assert.equal(value.guess, "내 눈에는 우산처럼 보이는데?");
+  assert.equal(value.choices.length, 2);
+
+  // 단정하면 아이가 고칠 여지가 사라진다. 물음표가 없거나 둘 이상이면 거부한다.
+  assert.equal(validateStoryInterpretation(interpretPayload({ guess: "이건 우산이야." })), null);
+  assert.equal(validateStoryInterpretation(interpretPayload({ guess: "우산이야? 맞지?" })), null);
+
+  // 답 칩 안전 검사는 학생 코칭과 같은 것을 써야 한다.
+  assert.equal(validateStoryInterpretation(interpretPayload({
+    choices: [{ emoji: "☂️", label: "우산", answer: "우산을 그렸어요" }],
+  })), null, "칩이 하나면 고를 수 없다");
+  assert.equal(validateStoryInterpretation(interpretPayload({
+    choices: [{ emoji: "멋", label: "있다", answer: "우산을 그렸어요" }, { emoji: "🚲", label: "자전거", answer: "자전거를 그렸어요" }],
+  })), null, "이모지 자리에 글자를 넣은 우회가 통과하면 안 된다");
+
+  // 판정하는 말은 어느 필드로도 새면 안 된다.
+  for (const text of ["정답은 우산일까?", "네 그림이 참 좋네?"]) {
+    assert.equal(validateStoryInterpretation(interpretPayload({ guess: text })), null, `짐작으로 새면 안 됨: ${text}`);
+  }
+  assert.equal(validateStoryInterpretation(interpretPayload({
+    choices: [{ emoji: "☂️", label: "우산", answer: "잘 그렸어요" }, { emoji: "🚲", label: "자전거", answer: "자전거를 그렸어요" }],
+  })), null, "칩 답으로 칭찬 판정이 새면 안 된다");
 });

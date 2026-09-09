@@ -1,12 +1,13 @@
+import { arcById, episodeById } from "@/lib/arc-content";
 import { bindings } from "@/db/runtime";
 import { findOwnedCoachingEvent, recordCoachingAfter, recordCoachingBefore } from "@/lib/coaching-store";
 import { validateDrawDocument } from "@/lib/drawing-model";
 import { parseImageDataUrl } from "@/lib/image-data";
-import { AIServiceError, DrawingGuide, requestStructuredOpenAI, StudentCoaching } from "@/lib/openai-coaching";
+import { AIServiceError, DrawingGuide, requestStructuredOpenAI, StoryInterpretation, StudentCoaching } from "@/lib/openai-coaching";
 import { cleanText, jsonError, noStoreJson, rateLimit, sameOrigin, sha256, studentFromRequest } from "@/lib/security";
 
 const MAX_BODY_CHARS = 5_200_000;
-type ArtworkRow = { id: string; studentId: string; topic: string; intent: string; currentStep: number; revision: number; status: string };
+type ArtworkRow = { id: string; studentId: string; topic: string; intent: string; currentStep: number; revision: number; status: string; arcId: string | null; episodeId: string | null };
 
 async function limitedPayload(request: Request) {
   const declared = Number(request.headers.get("content-length") ?? 0);
@@ -16,7 +17,7 @@ async function limitedPayload(request: Request) {
 }
 
 async function ownedArtwork(artworkId: string, studentId: string) {
-  return bindings().DB.prepare(`SELECT id, student_id AS studentId, topic, intent, current_step AS currentStep, revision, status FROM artworks WHERE id = ? AND student_id = ?`).bind(artworkId, studentId).first<ArtworkRow>();
+  return bindings().DB.prepare(`SELECT id, student_id AS studentId, topic, intent, current_step AS currentStep, revision, status, arc_id AS arcId, episode_id AS episodeId FROM artworks WHERE id = ? AND student_id = ?`).bind(artworkId, studentId).first<ArtworkRow>();
 }
 
 function stringList(value: unknown, maxItems: number, maxLength: number) {
@@ -38,6 +39,18 @@ async function recentContext(artworkId: string) {
     newElements: parsedStringList(row.newElementsJson),
     growthEvent: cleanText(row.growthEvent, 120),
   }));
+}
+
+/**
+ * 오늘 회차의 이야기 문맥. 몽그리는 아이가 어느 이야기의 몇 회차에 있는지 알아야
+ * 새 주제를 가져오지 않고 아이 이야기를 이어 갈 수 있다 (product-decisions 학습 과정 4항).
+ * 아크가 없는 자유 그림이면 null이고, 그때는 문맥 없이 그림만 보고 답한다.
+ */
+function storyContext(artwork: ArtworkRow) {
+  const arc = arcById(artwork.arcId); const episode = episodeById(artwork.arcId, artwork.episodeId);
+  if (!arc || !episode) return null;
+  const index = arc.episodes.findIndex((entry) => entry.episodeId === episode.episodeId);
+  return { arcTitle: arc.title, episodeTitle: episode.title, sceneText: episode.sceneText, episodeNumber: index + 1, episodeCount: arc.episodes.length };
 }
 
 function aiError(error: unknown) {
@@ -82,6 +95,27 @@ export async function POST(request: Request) {
     return noStoreJson(result);
   }
 
+  // 틀리는 해석자 — 아이가 완성을 누른 순간 몽그리가 짐작 하나를 내놓고 아이가 고친다
+  // (product-decisions 학습 과정 4항). 아이 답은 소감의 storyText로 저장되므로 여기서는
+  // 새 작품 버전을 만들지 않는다. 완성 저장은 이 응답을 기다리지 않는다 — 몽그리가
+  // 쉬고 있어도 아이는 그대로 완성할 수 있어야 한다.
+  if (action === "interpret") {
+    if (!(await rateLimit(`ai-create:${student.id}`, 8, 10 * 60))) return jsonError("몽그리를 많이 불렀어요. 잠깐 뒤에 다시 불러 주세요.", 429);
+    const image = parseImageDataUrl(payload.imageDataUrl);
+    if (!image) return jsonError("현재 그림을 확인하지 못했어요.", 413);
+    const context = { artworkIntent: artwork.intent, artworkTopic: artwork.topic, story: storyContext(artwork) };
+    try {
+      const result = await requestStructuredOpenAI({
+        kind: "story_interpretation",
+        prompt: `현재 작품 맥락(JSON): ${JSON.stringify(context)}\n그림을 보고 네 짐작 하나와 아이가 고를 수 있는 답을 만들어 줘.`,
+        imageDataUrl: String(payload.imageDataUrl), safetyIdentifier: await sha256(`wiggle-ai-safety-v1:${student.id}`),
+      });
+      return noStoreJson({ interpretation: result.value as StoryInterpretation, meta: { model: result.model, schemaValid: result.schemaValid } });
+    } catch (error) {
+      return aiError(error);
+    }
+  }
+
   if (action !== "ask" && action !== "guide") return jsonError("지원하지 않는 몽그리 요청이에요.");
   const requestId = cleanText(payload.requestId, 80);
   if (!/^coaching_[a-zA-Z0-9_-]{12,70}$/.test(requestId)) return jsonError("몽그리 요청 번호를 확인해 주세요.");
@@ -94,10 +128,10 @@ export async function POST(request: Request) {
   if (!document || JSON.stringify(document).length > 1_250_000 || !image) return jsonError("현재 그림을 확인하지 못했어요.", 413);
   const childChoice = cleanText(payload.childChoice, 80); const requestedTopic = cleanText(payload.requestedTopic, 60);
   if (action === "guide" && requestedTopic.length < 2) return jsonError("그리고 싶은 것을 두 글자 이상 말해 주세요.");
-  const context = { artworkIntent: artwork.intent, artworkTopic: artwork.topic, childChoice, currentStep: artwork.currentStep, recentEvents: await recentContext(artworkId) };
+  const context = { artworkIntent: artwork.intent, artworkTopic: artwork.topic, childChoice, currentStep: artwork.currentStep, story: storyContext(artwork), recentEvents: await recentContext(artworkId) };
   const prompt = action === "guide"
     ? `아이의 요청 주제: ${requestedTopic}\n현재 작품 맥락(JSON): ${JSON.stringify(context)}\n단계별 가이드만 만들어 줘.`
-    : `현재 작품 맥락(JSON): ${JSON.stringify(context)}\n그림을 관찰하고 질문 하나와 실제 다음 그리기 행동을 제안해 줘.`;
+    : `현재 작품 맥락(JSON): ${JSON.stringify(context)}\n그림을 관찰하고, 아이가 이미 그린 것을 이어 가는 질문 하나와 실제 다음 그리기 행동을 제안해 줘.`;
   try {
     const result = await requestStructuredOpenAI({
       kind: action === "guide" ? "drawing_guide" : "student_coaching",

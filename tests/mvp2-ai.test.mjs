@@ -152,3 +152,28 @@ test("prompts and routes preserve child agency, teacher approval and structured 
   assert.match(studio, /몽그리 부르기/); assert.match(studio, /그냥 내 마음대로 그릴래/); assert.match(studio, /TimelapsePlayer/); assert.match(teacherUi, /수정한 뒤 승인해서 보내기/);
   assert.match(renderer, /op\.type === "fill"/); assert.match(renderer, /op\.type === "shape"/); assert.match(renderer, /op\.type === "sticker"/); assert.match(timelapse, /setInterval/); assert.match(timelapse, /clearInterval/); assert.doesNotMatch(timelapse, /document\.ops\.slice\(0, frame\)/);
 });
+
+test("몽그리가 오늘 회차 이야기를 알고 답한다 (확장 협업자·틀리는 해석자)", async () => {
+  const [route, prompts, studio] = await Promise.all([
+    read("../app/api/ai/coaching/route.ts"), read("../lib/openai-coaching.ts"), read("../app/components/DrawingStudio.tsx"),
+  ]);
+  // 이야기 문맥이 없으면 두 역할 모두 성립하지 않는다. 작품 행의 아크·회차를
+  // 읽어 실제로 프롬프트 맥락에 실리는지 본다.
+  assert.match(route, /arc_id AS arcId, episode_id AS episodeId/);
+  assert.match(route, /function storyContext/);
+  assert.match(route, /story: storyContext\(artwork\)/);
+  assert.match(route, /episodeById\(artwork\.arcId, artwork\.episodeId\)/);
+
+  // 확장 협업자: 아이가 먼저이고 몽그리가 뒤따른다.
+  assert.match(prompts, /확장 협업자이며 앞서 끌고 가지 않는다/);
+  assert.match(prompts, /새 소재나 새 주제를 네가 가져오지 않는다/);
+
+  // 틀리는 해석자: 완성 순간에만 부르고, 실패해도 완성을 막지 않는다.
+  assert.match(route, /action === "interpret"/);
+  assert.match(prompts, /STORY_INTERPRETATION_INSTRUCTIONS/);
+  assert.match(studio, /askInterpretation/);
+  assert.match(studio, /storyText,/);
+  // AI 문장은 음성으로 내보내지 않는다 (product-decisions 20항) — 짐작에 SpeakButton이 붙으면 안 된다.
+  const guessBlock = studio.slice(studio.indexOf("mongri-guess-text"), studio.indexOf("mongri-guess-own"));
+  assert.doesNotMatch(guessBlock, /SpeakButton/);
+});

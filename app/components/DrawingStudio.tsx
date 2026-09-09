@@ -172,6 +172,8 @@ type StudentCoaching = {
   uncertain: boolean;
   growthEvent: string;
 };
+/** 틀리는 해석자 — 몽그리가 먼저 짐작을 내놓고 아이가 고친다 (product-decisions 학습 과정 4항). */
+type StoryInterpretation = { guess: string; choices: CoachingChoice[] };
 type GuideStep = {
   instruction: string;
   openChoice: boolean;
@@ -547,6 +549,10 @@ export function DrawingStudio() {
   const [completionError, setCompletionError] = useState("");
   const [favoritePart, setFavoritePart] = useState("");
   const [favoriteReason, setFavoriteReason] = useState("");
+  // 틀리는 해석자. 몽그리가 쉬고 있어도 완성은 그대로 되어야 하므로 전부 선택 항목이다.
+  const [interpretation, setInterpretation] = useState<StoryInterpretation | null>(null);
+  const [interpretLoading, setInterpretLoading] = useState(false);
+  const [storyText, setStoryText] = useState("");
   // 선생님 말씀 배너는 고정 오버레이라 닫을 수 없으면 밑의 버튼을 영영 가린다.
   // 닫은 메시지 id를 기억하고, 새 메시지가 오면 다시 보여 준다.
   const [teacherMessages, setTeacherMessages] = useState<StudentTeacherMessage[]>([]);
@@ -1228,8 +1234,14 @@ export function DrawingStudio() {
   const textObjects = useMemo(() => activeTextObjects(documentState.ops), [documentState.ops]);
   const selectedText = useMemo(() => textObjects.find((op) => op.textObjectId === selectedTextObjectId) ?? null, [selectedTextObjectId, textObjects]);
   const reflectionDialogRef = useRef<HTMLDivElement>(null);
+  // 소감을 닫으면 몽그리 짐작도 함께 접는다. 남겨 두면 다시 열었을 때
+  // 지금 그림과 맞지 않는 옛 짐작이 그대로 보인다.
   const closeReflection = useCallback(() => {
+    // 저장 중에는 아무것도 건드리지 않는다. 여기서 초기화하면 저장이 도는 동안
+    // 아이가 쓴 이야기 한 줄이 화면에서 사라진다.
     if (completionState === "saving") return;
+    setInterpretation(null);
+    setStoryText("");
     setReflectionOpen(false);
   }, [completionState]);
   useModalDialog(reflectionDialogRef, closeReflection, reflectionOpen);
@@ -2136,7 +2148,7 @@ export function DrawingStudio() {
           favoritePart,
           favoriteReason,
           spokenDescription: `${favoritePart}을(를) 그렸어요.`,
-          storyText: "",
+          storyText,
         },
       });
       if (ok) {
@@ -2413,11 +2425,34 @@ export function DrawingStudio() {
     setReflectionOpen(true);
   }
 
+  /**
+   * 틀리는 해석자 요청. 완성 흐름을 막지 않는다 — 실패하면 조용히 접고
+   * 소감 화면은 지금까지처럼 동작한다.
+   */
+  async function askInterpretation() {
+    if (!artwork || !canvasRef.current || interpretLoading) return;
+    setInterpretLoading(true);
+    setInterpretation(null);
+    try {
+      const response = await studentFetch("/api/ai/coaching", {
+        method: "POST",
+        body: JSON.stringify({ action: "interpret", artworkId: artwork.id, imageDataUrl: imageData(canvasRef.current, 1024) }),
+      });
+      const data = (await response.json()) as { interpretation?: StoryInterpretation };
+      if (response.ok && data.interpretation) setInterpretation(data.interpretation);
+    } catch {
+      // 몽그리 짐작은 있으면 좋은 것이고 없어도 완성에는 지장이 없다.
+    } finally {
+      setInterpretLoading(false);
+    }
+  }
+
   function requestArtworkCompletion() {
     if (!lesson) {
       setCompletionState("idle");
       setCompletionError("");
       setReflectionOpen(true);
+      void askInterpretation();
       return;
     }
     if (artwork && artwork.currentStep < lesson.steps.length - 1) {
@@ -3288,6 +3323,31 @@ export function DrawingStudio() {
               <SpeakButton text="정답은 없어요. 네가 그림을 보고, 제일 마음에 드는 곳과 그 이유를 직접 골라요." />
             </div>
             <p className="reflection-choice-note">정답이 아니에요. 네가 보고 직접 골라요.</p>
+            {(interpretLoading || interpretation) && (
+              <div className="reflection-question mongri-guess">
+                <p className="mongri-guess-head"><span aria-hidden="true">✨</span> 몽그리 생각</p>
+                {interpretLoading && !interpretation && <p className="mongri-guess-waiting">몽그리가 네 그림을 보고 있어…</p>}
+                {interpretation && (
+                  <>
+                    {/* AI가 만든 문장은 음성으로 내보내지 않는다 (product-decisions 20항).
+                        글을 못 읽는 아이는 답 칩의 이모지로 참여한다. */}
+                    <p className="mongri-guess-text">{interpretation.guess}</p>
+                    <div className="reflection-choice-grid">
+                      {interpretation.choices.map((choice) => (
+                        <button type="button" aria-pressed={storyText === choice.answer} onClick={() => setStoryText(choice.answer)} key={choice.label}>
+                          <span>{choice.emoji}</span>
+                          {choice.label}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="mongri-guess-own" htmlFor="story-text">
+                      내 말로 알려 줄래?
+                      <input id="story-text" maxLength={120} value={storyText} onChange={(event) => setStoryText(event.target.value)} placeholder="예: 아니야, 자전거 바퀴야" />
+                    </label>
+                  </>
+                )}
+              </div>
+            )}
             <div className="reflection-question">
               <p>마음에 드는 곳은?</p>
               <div className="reflection-choice-grid">

@@ -126,12 +126,29 @@ const STUB_COACHING = {
   },
 };
 
+// 틀리는 해석자. 완성을 누른 순간의 짐작 응답이라 코칭과 본문이 다르다.
+const STUB_INTERPRETATION = {
+  interpretation: {
+    guess: "내 눈에는 우산처럼 보이는데?",
+    choices: [
+      { emoji: "☂️", label: "우산 맞아", answer: "우산을 그렸어요" },
+      { emoji: "🚲", label: "자전거야", answer: "자전거 바퀴를 그렸어요" },
+      { emoji: "🍭", label: "사탕이야", answer: "커다란 사탕을 그렸어요" },
+    ],
+  },
+};
+
 async function stubCoaching(cdp, session) {
   cdp.on("Fetch.requestPaused", async (params, eventSession) => {
     const target = eventSession ?? session;
     try {
       if (params.request.url.includes("/api/ai/coaching")) {
-        const body = Buffer.from(JSON.stringify(STUB_COACHING)).toString("base64");
+        // 같은 주소로 두 역할이 온다. 요청 본문의 action으로 갈라야 완성 화면에서
+        // 코칭 응답이 대신 돌아가는 일이 없다.
+        let action = "";
+        try { action = JSON.parse(params.request.postData ?? "{}").action ?? ""; } catch { action = ""; }
+        const payload = action === "interpret" ? STUB_INTERPRETATION : STUB_COACHING;
+        const body = Buffer.from(JSON.stringify(payload)).toString("base64");
         await cdp.send("Fetch.fulfillRequest", { requestId: params.requestId, responseCode: 200, responseHeaders: [{ name: "content-type", value: "application/json" }], body }, target);
         return;
       }
@@ -755,6 +772,39 @@ async function main() {
           opener.focus(); opener.click();
           for (let attempt = 0; attempt < 40 && !document.querySelector('.reflection-modal'); attempt += 1) await wait(100);
           if (!document.querySelector('.reflection-modal')) return { error: 'no-modal' };
+          // 틀리는 해석자는 완성을 누른 뒤 비동기로 온다. 렌더를 기다렸다가 실제로 잰다.
+          for (let attempt = 0; attempt < 40 && !document.querySelector('.mongri-guess-text'); attempt += 1) await wait(100);
+          const guessEl = document.querySelector('.mongri-guess-text');
+          const guessChips = [...document.querySelectorAll('.mongri-guess .reflection-choice-grid button')];
+          const guessInput = document.querySelector('#story-text');
+          let guessChipApplied = null;
+          if (guessChips[1] && guessInput) {
+            guessChips[1].click();
+            await wait(200);
+            guessChipApplied = { pressed: guessChips[1].getAttribute('aria-pressed'), inputValue: guessInput.value };
+          }
+          const guessReachableBeforeScroll = guessEl ? window.__wiggle.reachable(guessEl) : null;
+          const guess = {
+            shown: Boolean(guessEl),
+            reachable: guessReachableBeforeScroll,
+            clipped: guessEl ? guessEl.scrollHeight - guessEl.clientHeight > 1 : null,
+            chipCount: guessChips.length,
+            // 소감 모달은 원래 스크롤되는 화면이다. 아이가 실제로 하듯 칩을 화면에
+            // 들여놓은 뒤 눌리는지 본다 — 한 화면에 다 담기는지를 재면 이 모달의
+            // 기존 기준보다 엄해져서, 통과시키려고 칩을 줄이는 잘못된 수정을 부른다.
+            chipsReachable: await (async () => {
+              const results = [];
+              for (const chip of guessChips) {
+                chip.scrollIntoView({ block: 'center' });
+                await wait(120);
+                results.push({ label: chip.textContent.trim().slice(0, 20), ...window.__wiggle.reachable(chip) });
+              }
+              return results;
+            })(),
+            inputBox: guessInput ? window.__wiggle.box(guessInput) : null,
+            applied: guessChipApplied,
+            speakInside: Boolean(document.querySelector('.mongri-guess .speak-button, .mongri-guess [class*="speak"]')),
+          };
           const focusedInside = document.querySelector('.modal-backdrop')?.contains(document.activeElement) ?? false;
           // 모달은 .studio 안에 그려지므로, 배경은 모달의 형제(헤더·본문)로 확인한다.
           const backgroundInert = ['.studio-header', '.studio-body'].every((selector) => document.querySelector(selector)?.hasAttribute('inert') ?? false);
@@ -766,7 +816,7 @@ async function main() {
           const closed = !document.querySelector('.reflection-modal');
           const focusRestored = document.activeElement === opener;
           const inertCleared = ['.studio-header', '.studio-body'].every((selector) => !(document.querySelector(selector)?.hasAttribute('inert') ?? true));
-          return { focusedInside, backgroundInert, backgroundHidden, overflow, small, closed, focusRestored, inertCleared };
+          return { guess, focusedInside, backgroundInert, backgroundHidden, overflow, small, closed, focusRestored, inertCleared };
         })()`);
         check(!modal.error, `${viewport.name} 소감 모달 재현`, modal.error);
         if (!modal.error) {
@@ -777,6 +827,15 @@ async function main() {
           check(modal.closed, `${viewport.name} Escape로 모달이 닫힘`);
           check(modal.focusRestored, `${viewport.name} 모달을 닫으면 열었던 버튼으로 초점 복귀`);
           check(modal.inertCleared, `${viewport.name} 모달을 닫으면 배경 inert 해제`);
+          // 틀리는 해석자 (product-decisions 학습 과정 4항)
+          check(modal.guess.shown, `${viewport.name} 몽그리 짐작이 소감 화면에 보임`, modal.guess);
+          check(modal.guess.reachable?.hitsSelf, `${viewport.name} 몽그리 짐작이 가려지지 않음`, modal.guess.reachable);
+          check(modal.guess.clipped === false, `${viewport.name} 몽그리 짐작 문장이 잘리지 않음`, modal.guess);
+          check(modal.guess.chipCount >= 2 && modal.guess.chipsReachable.every((chip) => chip?.hitsSelf), `${viewport.name} 고칠 답을 모두 누를 수 있음`, modal.guess);
+          check(modal.guess.applied?.pressed === "true" && Boolean(modal.guess.applied?.inputValue), `${viewport.name} 답을 고르면 내 말 칸에 들어감`, modal.guess.applied);
+          check(Math.min(modal.guess.inputBox?.w ?? 0, modal.guess.inputBox?.h ?? 0) >= 44, `${viewport.name} 내 말 칸이 44px 이상`, modal.guess.inputBox);
+          // AI가 만든 문장은 음성으로 내보내지 않는다 (product-decisions 20항).
+          check(modal.guess.speakInside === false, `${viewport.name} 몽그리 짐작에 음성 버튼이 없음`, modal.guess);
         }
       });
     }

@@ -585,6 +585,15 @@
 - 검증: typecheck, lint(기존 경고만), production build, 전체 테스트 **325/325**, `git diff --check`를 통과했다. `npm run check:browser`의 320×568·390×844·844×390 전 항목도 통과했다(390px 핀치 1건은 하네스 환경 SKIP이며 기존 단위·형제 뷰포트가 검사). 실제 로컬 브라우저에서 세 탭, 학생·회차 작품 필터, 저장 작품 미리보기, 전체 메시지, 큰 QR, 명단 표, 학생 추가 모달의 Escape 닫기와 초점 복귀를 확인했다. 세 시안과 최종 1536×1024 캡처를 비교한 `design-qa.md`는 `Final result: passed`다.
 - 사용자 요청으로 검증 커밋을 로컬 `main`에 fast-forward 병합했다. GitHub `main` push와 Vercel 운영 배포는 저장소 경계에 따라 사용자가 실행한다.
 
+## 2026-09-09 들어 보기(읽어 주기) 기능 전부 제거 (`claude/remove-speak-20260909`, 로컬 검증)
+
+- 사용자 지시("들어보기 기능은 전부 제거")로 브라우저 `speechSynthesis` 기반 읽어 주기 버튼을 코드베이스에서 완전히 뺐다. 삭제: `app/components/SpeakButton.tsx`, `lib/speech.ts`, `tests/speak-button.test.mjs`. 사용처 24곳 정리: `DrawingStudio`(코칭·AI 가이드·레슨 단계·시작 선택·종이 가득·글씨 넣기·소개), `StudentHome`(오늘 회차·자유 그리기 인트로), `StudentMessageCenter`(배너·이력), `JoinClient`(수업 확인 오류·번호 화면·명단 없음·재입장·프로필 화면). 교사 목소리 귓속말(`VoiceWhisper`, 오디오 재생)은 별개 기능이라 그대로 둔다.
+- CSS: `.speak-button*`·`speaker-pulse` 규칙 전부 삭제, 버튼 자리를 비워 두던 열(`spoken-prompt`·`lesson-spoken-prompt`·`text-composer-title-row`·`canvas-message`·`guide-choice-heading`)을 제거해 빈 칸이 남지 않게 했다. `EntryCheck.module.css`의 `.speak` 자리 규칙 삭제.
+- 테스트·스크립트: `pre-reader-ux`(SpeakButton 부재를 단언), `entry-error-recovery`, `mobile-css`(canvas-message 2열), `browser-check.mjs`의 "소리로 들을 수 있음" 2항목 삭제.
+- 문서: `CLAUDE.md` 제품 원칙의 "그림, 음성, 큰 터치 목표"에서 음성을 뺐고, `docs/product-decisions.md` 교사와 메시지 8항에 결정을 적었다.
+- 검증: typecheck·lint(경고 14는 기존)·`npm test` 309/309·`git diff --check`·`git diff --check main...HEAD` 통과. `next build && next start -p 3399` 후 `browser-check.mjs http://localhost:3399` EXIT 0(알려진 SKIP 1).
+- 남은 위험: 비문해 아이가 안내 문장을 소리로 들을 수단이 없어졌다. 필요해지면 서버 TTS 등 다른 방식으로 다시 논의한다.
+
 ## 다음 작업 시작 전 확인
 
 1. 이 문서와 `product-decisions.md`, `pending-decisions.md`를 읽는다.

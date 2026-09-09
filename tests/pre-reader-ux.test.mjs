@@ -3,9 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [speak, speech, join, home, studio, css, messageCenter] = await Promise.all([
-  read("../app/components/SpeakButton.tsx"),
-  read("../lib/speech.ts"),
+const [join, home, studio, css, messageCenter] = await Promise.all([
   read("../app/components/JoinClient.tsx"),
   read("../app/components/StudentHome.tsx"),
   read("../app/components/DrawingStudio.tsx"),
@@ -14,26 +12,15 @@ const [speak, speech, join, home, studio, css, messageCenter] = await Promise.al
 ]);
 const animalPortraits = await readFile(new URL("../public/brand/animal-portraits-v2.png", import.meta.url));
 
-test("important child prompts can be heard on demand without automatic classroom audio", () => {
-  assert.match(speech, /new SpeechSynthesisUtterance/);
-  assert.match(speech, /utterance\.lang = "ko-KR"/);
-  assert.match(speech, /utterance\.rate = 0\.96/);
-  assert.match(speech, /selectKoreanVoice\(window\.speechSynthesis\.getVoices\(\)\)/);
-  assert.match(speak, /onClick=\{handleClick\}/);
-  // 음성 미지원·실패 시에도 버튼을 비활성화하지 않고 접근 가능한 대체 행동을 남긴다.
-  assert.doesNotMatch(speak, /disabled=/);
-  assert.match(speak, /같이 읽기/);
-  assert.match(speak, /선생님과 같이 읽어요/);
-  assert.match(home, /SpeakButton text="오늘은 무엇을 그릴까\? 선생님이 고른 활동부터 시작해 봐요\."/);
-  assert.match(messageCenter, /선생님이 말했어요/);
+test("child prompts stay readable as text — the listen button was removed on 2026-09-09", () => {
+  for (const source of [join, home, studio, messageCenter]) assert.doesNotMatch(source, /SpeakButton/);
+  assert.doesNotMatch(css, /speak-button/);
+  assert.match(home, /<h1>오늘은 무엇을 그릴까\?<\/h1>/);
   // 2026-08-18 사용자 결정: 열기 버튼 아이콘은 💌 — 👩‍🏫 ZWJ 시퀀스는 Windows에서 깨져 보이고
   // "무엇을 여는 버튼인지"가 읽히지 않았다. 배너·이력 안의 👩‍🏫(말하는 주체 표시)는 유지한다.
   assert.match(messageCenter, /className="teacher-message-icon" aria-hidden="true">💌<\/span>/);
   assert.match(messageCenter, /<b>👩‍🏫 선생님<\/b>/);
   assert.doesNotMatch(messageCenter, /📬/);
-  assert.match(studio, /SpeakButton text=\{`\$\{lesson\.steps\[step\]\.instruction\}/);
-  assert.match(studio, /SpeakButton text=\{`\$\{coaching\.question\}/);
-  assert.match(studio, /SpeakButton text=\{coaching\.nextAction\}/);
 });
 
 test("entry can be completed with pictures and a generated nickname instead of reading and typing every field", () => {
@@ -45,9 +32,6 @@ test("entry can be completed with pictures and a generated nickname instead of r
   assert.match(join, /🎲 다른 별명/);
   assert.match(join, /className="button primary full child-primary-action"/);
   assert.match(join, /<span aria-hidden="true">▶️<\/span>/);
-  assert.match(join, /선생님이 알려 준 내 번호를 눌러요/);
-  assert.match(join, /다 눌렀으면 들어가기를 눌러요/);
-  assert.match(join, /내 동물을 고르고, 그림 별명을 정한 다음, 그림 비밀번호 세 개를 순서대로 골라요/);
   assert.doesNotMatch(join, /이 기기에 저장된 내 동물 고르기/);
   assert.match(join, /className="animal-choice-portrait" data-animal-index=\{index\}/);
   assert.match(join, /className="join-preview-animal" data-animal-index=\{ANIMALS\.indexOf\(animal\)\}/);
@@ -88,16 +72,14 @@ test("drawing, navigation and reflection retain familiar visual actions when tex
   assert.match(studio, /"작품 완성"/);
 });
 
-test("speaker, picture slots and choice controls remain large and visible on small screens", () => {
-  assert.match(css, /\.speak-button \{[^}]*min-height:52px/);
-  assert.match(css, /\.speak-button\.compact \{[^}]*min-width:48px; width:48px; min-height:48px/);
+test("picture slots and choice controls remain large and visible on small screens", () => {
   assert.match(css, /\.student-message-button \.teacher-message-icon \{[^}]*font-size:26px/);
   assert.match(css, /\.password-slots span \{[^}]*width:52px; height:52px/);
   assert.match(css, /\.reflection-choice-grid button \{[^}]*min-height:84px/);
   // `.welcome-title-row` 규칙은 어떤 화면도 렌더링하지 않는 죽은 CSS라 함께 제거했다.
-  assert.match(css, /@media \(max-width:460px\) and \(orientation:portrait\)[\s\S]*\.lesson-spoken-prompt \{ grid-column:1; grid-row:1; grid-template-columns:minmax\(0,1fr\) 48px/);
+  assert.match(css, /@media \(max-width:460px\) and \(orientation:portrait\)[\s\S]*\.lesson-spoken-prompt \{ grid-column:1; grid-row:1; grid-template-columns:minmax\(0,1fr\)/);
   assert.match(css, /\.reflection-choice-grid \{ display:grid; grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-  assert.match(home, /className="student-home-intro"[\s\S]*<SpeakButton text="오늘은 무엇을 그릴까\? 선생님이 고른 활동부터 시작해 봐요\."/);
+  assert.match(home, /className="student-home-intro"[\s\S]*<h1>오늘은 무엇을 그릴까\?<\/h1>/);
   // 오늘 회차 카드(FR-4)가 그림책형 레슨 카드를 대체했다 — 삽화 자리 + 제목 + 장면 문장 + 큰 시작 버튼.
   assert.match(home, /className="today-episode-card"[\s\S]*today-episode-scene-text[\s\S]*child-primary-action/);
   assert.match(css, /\.teacher-activity-book \{[^}]*grid-template-columns:minmax\(0,1fr\) 46px minmax\(0,1fr\);/);

@@ -26,7 +26,6 @@
 .logo { position: absolute; left: 2.4%; top: 3.2%; }
 .logo :global(.brand) { min-height: 44px; color: var(--ink); font-size: clamp(20px, 2.2cqw, 34px); }
 .logo :global(.brand-mark) { width: clamp(36px, 3.4cqw, 52px); height: clamp(36px, 3.4cqw, 52px); }
-.speak { position: absolute; right: 2.4%; top: 3.3%; }
 .sign {
   position: absolute;
   left: 21.3%;
@@ -136,7 +135,7 @@
   text-underline-offset: 4px;
 }
 .primary:disabled, .help:disabled, .retry:disabled { opacity: .55; cursor: default; transform: none; }
-.primary:focus-visible, .help:focus-visible, .retry:focus-visible, .speak :global(.speak-button):focus-visible { outline: 4px solid var(--accent); outline-offset: 3px; }
+.primary:focus-visible, .help:focus-visible, .retry:focus-visible { outline: 4px solid var(--accent); outline-offset: 3px; }
 .actions :global(.teacher-call-note) {
   margin: 0;
   padding: 12px 14px;
@@ -155,7 +154,7 @@
     padding: 12px max(16px, env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   }
   .stage { width: auto; aspect-ratio: auto; background: none; overflow: visible; container-type: normal; }
-  .logo, .speak { position: static; }
+  .logo { position: static; }
   .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .logo :global(.brand) { font-size: 22px; gap: 7px; }
   .logo :global(.brand-mark) { width: 36px; height: 36px; }

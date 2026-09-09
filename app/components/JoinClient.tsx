@@ -7,7 +7,6 @@ import { PICTURE_PASSWORD_LENGTH } from "@/lib/picture-password";
 import { classifyEntryError, EntryErrorKind, readStudentEntryResponse, StudentEntryResponseError } from "@/lib/student-entry-client";
 import { Logo } from "./Logo";
 import check from "./EntryCheck.module.css";
-import { SpeakButton } from "./SpeakButton";
 
 const ANIMALS = ["🐰", "🐻", "🦊", "🐯", "🐼", "🐶", "🐱", "🐨", "🦁", "🐸"];
 const ANIMAL_NAMES: Record<string, string> = { "🐰": "토끼", "🐻": "곰", "🦊": "여우", "🐯": "호랑이", "🐼": "판다", "🐶": "강아지", "🐱": "고양이", "🐨": "코알라", "🦁": "사자", "🐸": "개구리" };
@@ -203,7 +202,6 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
       <div className={check.stage}>
         <div className={check.head}>
           <div className={check.logo}><Logo /></div>
-          {error && <div className={check.speak}><SpeakButton text={`${codeError ? "몽그리랑 다시 찾아보자! 수업 코드가 맞는지 한 번만 더 확인해 줘. 수업 코드 다시 입력하기를 눌러요. 도움이 필요하면 손을 들고 선생님을 불러요." : `우리 반을 찾는 중에 연결이 끊겼어요. ${error} 다시 확인하기를 눌러요.`}`} /></div>}
         </div>
         <span className={check.sign} aria-hidden="true">우리 반</span>
         <img className={check.duck} src="/landing-gallery/duck-painter-640.webp" alt="" aria-hidden="true" width="640" height="640" />
@@ -236,7 +234,6 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
       <div className={`${check.stage} ${check.seatStage}`}>
         <div className={check.head}>
           <div className={check.logo}><Logo /></div>
-          <div className={check.speak}><SpeakButton text="선생님이 알려 준 내 번호를 눌러요. 다 눌렀으면 들어가기를 눌러요." /></div>
         </div>
         <img className={check.duck} src="/landing-gallery/duck-painter-640.webp" alt="" aria-hidden="true" width="640" height="640" />
         <div className={check.seatTitle}>
@@ -280,7 +277,7 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
   if (mode === "noRoster") {
     return <main className="entry-shell"><div className="entry-top"><Logo /><span>{classroomName}</span></div>
       <section className="entry-card entry-check-card">
-        <div className="entry-title-row"><div><p className="eyebrow">{classroomName}</p><h1>아직 준비 중이에요</h1></div><SpeakButton text="선생님이 우리 반 명단을 아직 넣지 않았어요. 선생님을 불러 주세요." /></div>
+        <div className="entry-title-row"><div><p className="eyebrow">{classroomName}</p><h1>아직 준비 중이에요</h1></div></div>
         <p className="helper">선생님이 우리 반 명단을 넣으면 내 번호로 들어올 수 있어요.</p>
         <button type="button" className="button primary full child-primary-action" disabled={busy} onClick={() => void checkEntry()}><span aria-hidden="true">🔄</span>{busy ? "확인 중…" : "다시 확인하기"}</button>
         <a className="text-button" href="/">수업 코드 다시 입력하기</a>
@@ -288,21 +285,16 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
   }
 
   if (mode === "legacyRecover") {
-    return <main className="entry-shell"><div className="entry-top"><Logo /></div><section className="entry-card"><div className="entry-title-row"><div><p className="eyebrow">내 그림을 찾아요</p><h1>다시 만나서 반가워!</h1></div><SpeakButton text="화면 아래의 내 그림 찾기 버튼을 눌러요." /></div><p className="helper">안전하게 내 그림을 찾고 있어요.</p>{errorNotice()}<button className="button primary full child-primary-action" disabled={busy} onClick={() => void submit()}><span aria-hidden="true">▶️</span>{busy ? "찾는 중…" : "내 그림 찾기"}</button></section></main>;
+    return <main className="entry-shell"><div className="entry-top"><Logo /></div><section className="entry-card"><div className="entry-title-row"><div><p className="eyebrow">내 그림을 찾아요</p><h1>다시 만나서 반가워!</h1></div></div><p className="helper">안전하게 내 그림을 찾고 있어요.</p>{errorNotice()}<button className="button primary full child-primary-action" disabled={busy} onClick={() => void submit()}><span aria-hidden="true">▶️</span>{busy ? "찾는 중…" : "내 그림 찾기"}</button></section></main>;
   }
 
   const creating = mode === "join";
   /* 번호로 들어온 재입장은 그림 비밀번호만 확인한다. 번호가 이미 한 사람을 가리키므로
    * 동물·별명을 다시 묻지 않는다 — 아이가 별명을 잊어도 자기 그림으로 돌아올 수 있다. */
   const seatRecover = seatNumber !== null && !creating;
-  const pageInstruction = seatRecover
-    ? `${seatNumber}번이 맞으면 그림 비밀번호 세 개를 순서대로 골라요. 모두 고르면 내 그림 이어가기를 눌러요.`
-    : creating
-    ? "내 동물을 고르고, 그림 별명을 정한 다음, 그림 비밀번호 세 개를 순서대로 골라요. 모두 고르면 이 모습으로 수업 들어가기를 눌러요."
-    : "전에 고른 동물과 그림 별명을 선택하고, 그림 비밀번호 세 개를 같은 순서로 골라요. 모두 고르면 내 그림 이어가기를 눌러요.";
 
   return <main className="entry-shell entry-join-shell"><div className="entry-top entry-join-top"><Logo /></div><section className={`entry-card join-card ${creating ? "join-create" : "join-recover"}${seatRecover ? " join-seat-recover" : ""}`} data-mobile-step={seatRecover ? 3 : mobileStep}>
-    <div className="entry-title-row"><div><p className="eyebrow">{seatNumber !== null ? `${seatNumber}번` : creating ? "수업에 들어가요" : "내 그림을 찾아요"}</p><h1>{seatRecover ? "내 그림 비밀번호" : creating ? "나만의 꼬마 화가를 만들어요" : "내 꼬마 화가를 찾아요"}</h1><p className="join-subtitle">{seatRecover ? "그림 세 개를 순서대로 골라요." : creating ? "세 가지만 고르면 바로 그림 수업에 들어갈 수 있어요." : "전에 고른 세 가지를 입력하면 어느 태블릿에서나 이어갈 수 있어요."}</p></div><SpeakButton text={pageInstruction} /></div>
+    <div className="entry-title-row"><div><p className="eyebrow">{seatNumber !== null ? `${seatNumber}번` : creating ? "수업에 들어가요" : "내 그림을 찾아요"}</p><h1>{seatRecover ? "내 그림 비밀번호" : creating ? "나만의 꼬마 화가를 만들어요" : "내 꼬마 화가를 찾아요"}</h1><p className="join-subtitle">{seatRecover ? "그림 세 개를 순서대로 골라요." : creating ? "세 가지만 고르면 바로 그림 수업에 들어갈 수 있어요." : "전에 고른 세 가지를 입력하면 어느 태블릿에서나 이어갈 수 있어요."}</p></div></div>
     <button type="button" className="entry-mode-back" onClick={backToSeat}>← 번호 다시 입력하기</button>
     <div className="mobile-entry-progress" aria-label={`입장 ${mobileStep}단계 / 3단계`}><span className={mobileStep >= 1 ? "active" : ""}>1 동물</span><span className={mobileStep >= 2 ? "active" : ""}>2 별명</span><span className={mobileStep >= 3 ? "active" : ""}>3 비밀번호</span></div>
     <div className="join-card-body">

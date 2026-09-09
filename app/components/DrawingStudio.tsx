@@ -18,7 +18,6 @@ import { activeProfile, clearQueuedArtworkSaves, createSerialTaskQueue, deleteQu
 
 import type { QueuedArtworkDraft } from "@/lib/client-session";
 import { Logo } from "./Logo";
-import { SpeakButton } from "./SpeakButton";
 import { TimelapsePlayer } from "./TimelapsePlayer";
 import { VoiceWhisperStatus } from "./VoiceWhisper";
 import { useModalDialog } from "./useModalDialog";
@@ -2617,7 +2616,6 @@ export function DrawingStudio() {
                 <small>이제 그려 볼 일</small>
                 <div className="spoken-prompt">
                   <b>{coaching.nextAction}</b>
-                  <SpeakButton text={coaching.nextAction} compact />
                 </div>
                 <button className="button primary full child-primary-action" disabled={grimiLoading || answerSaved || !answer} onClick={recordCoachingAnswer}>
                   <span aria-hidden="true">✅</span>
@@ -2640,7 +2638,6 @@ export function DrawingStudio() {
                     <p className="eyebrow">몽그리가 궁금해요</p>
                     <div className="spoken-prompt">
                       <h2>{coaching.question}</h2>
-                      <SpeakButton text={`${coaching.question} 고를 수 있어요. ${coaching.choices.map((choice) => choice.label).join(", ")}`} compact />
                     </div>
                     <div className="grimi-chips">
                       {coaching.choices.map((choice) => (
@@ -2676,7 +2673,6 @@ export function DrawingStudio() {
                         <small>이제 그려 볼 일</small>
                         <div className="spoken-prompt">
                           <b>{coaching.nextAction}</b>
-                          <SpeakButton text={coaching.nextAction} compact />
                         </div>
                         <button className="button primary full child-primary-action" disabled={grimiLoading || answerSaved} onClick={recordCoachingAnswer}>
                           <span aria-hidden="true">✅</span>
@@ -2693,7 +2689,6 @@ export function DrawingStudio() {
                     </p>
                     <div className="spoken-prompt">
                       <h2>{aiGuide.steps[aiGuideStep].instruction}</h2>
-                      <SpeakButton text={`${aiGuide.steps[aiGuideStep].instruction}${aiGuide.steps[aiGuideStep].choices.length ? ` 고를 수 있어요. ${aiGuide.steps[aiGuideStep].choices.join(", ")}` : ""}`} compact />
                     </div>
                     {aiGuide.steps[aiGuideStep].openChoice && (
                       <div className="grimi-chips">
@@ -2761,7 +2756,6 @@ export function DrawingStudio() {
               <p className="eyebrow">지금 할 일</p>
               <div className="spoken-prompt lesson-spoken-prompt">
                 <h2>{lesson.steps[step].instruction}</h2>
-                <SpeakButton text={`${lesson.steps[step].instruction}${lesson.steps[step].choices?.length ? ` 고를 수 있어요. ${lesson.steps[step].choices.join(", ")}` : ""}`} compact />
               </div>
               {lesson.steps[step].choices?.length && (
                 <>
@@ -2789,10 +2783,6 @@ export function DrawingStudio() {
                 <div className="lesson-step-prompt" role="status" aria-live="polite">
                   <div className="spoken-prompt">
                     <b>{lessonStepPrompt === "unfinished-lesson" ? "아직 그릴 순서가 남았어. 다음을 눌러 천천히 이어 가자." : lessonStepPromptText}</b>
-                    <SpeakButton
-                      text={lessonStepPrompt === "unfinished-lesson" ? "아직 그릴 순서가 남았어. 다음을 눌러 천천히 이어 가자." : lessonStepPromptText}
-                      compact
-                    />
                   </div>
                   <div className="lesson-step-prompt-actions">
                     <button type="button" onClick={() => setLessonStepPrompt(null)}>
@@ -2841,7 +2831,6 @@ export function DrawingStudio() {
                   <div className="guide-choice-heading">
                     <span aria-hidden="true">🖍️</span>
                     <div><p className="eyebrow">그리기 시작</p><h2 id="guide-choice-title">어떻게 시작할까?</h2></div>
-                    <SpeakButton text="연필 시범과 점선 도움을 받을지, 내 생각대로 먼저 그릴지 골라요." compact />
                   </div>
                   <div className="guide-choice-buttons">
                     <button type="button" onClick={chooseGuideHelp}><span>✏️</span><b>도움받을래</b><small>연필 시범 뒤 점선을 따라 해요</small></button>
@@ -2868,7 +2857,6 @@ export function DrawingStudio() {
             {canvasFull && (
               <div className="canvas-full-hint" role="alert">
                 <span aria-hidden="true">🌟</span> 종이가 가득 찼어! ‘완성’을 눌러 완성하자.
-                <SpeakButton text="종이가 가득 찼어요. 위에 있는 완성을 눌러 작품을 완성해요." compact />
               </div>
             )}
             <div
@@ -3224,7 +3212,6 @@ export function DrawingStudio() {
             <div className="text-composer-title-row">
               <span aria-hidden="true">🔤</span>
               <div><p className="eyebrow">그림에 글씨 넣기</p><h2 id="text-composer-title">무슨 말을 쓸까?</h2></div>
-              <SpeakButton text="그림에 넣을 짧은 말을 써 봐요. 키보드의 마이크로 말해도 돼요." compact />
             </div>
             <div className="text-kind-grid" role="group" aria-label="글씨 모양">
               {TEXT_KIND_OPTIONS.map((option) => (
@@ -3285,7 +3272,6 @@ export function DrawingStudio() {
             <span className="modal-emoji">🌟</span>
             <div className="reflection-title-row">
               <h2 id="reflection-title">네 그림을 소개해 줘!</h2>
-              <SpeakButton text="정답은 없어요. 네가 그림을 보고, 제일 마음에 드는 곳과 그 이유를 직접 골라요." />
             </div>
             <p className="reflection-choice-note">정답이 아니에요. 네가 보고 직접 골라요.</p>
             <div className="reflection-question">

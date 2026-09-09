@@ -27,11 +27,10 @@ test("a wrong class code is classified for code-field recovery, wrong pictures f
   assert.equal(classifyEntryError({ status: 500, action: "join", hasPersonalQrToken: false }), "general");
 });
 
-test("errors are shown with a warning picture while the page keeps one top voice guide", () => {
+test("errors are shown with a warning picture", () => {
   assert.match(join, /className="error-box child-error" role="alert"/);
   assert.match(join, /child-error-icon" aria-hidden="true">⚠️/);
-  assert.doesNotMatch(join, /<SpeakButton text=\{error\}/);
-  assert.match(join, /<SpeakButton text=\{pageInstruction\} \/>/);
+  assert.doesNotMatch(join, /SpeakButton/);
 });
 
 test("one big reset clears every picked picture and highlights after a wrong password", () => {

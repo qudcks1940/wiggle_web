@@ -9,7 +9,7 @@ import { useModalDialog } from "./useModalDialog";
 
 type ClassroomArc = { arcId: string; title: string; episodeId: string; episodeTitle: string; episodeIndex: number | null; episodeCount: number; discussion?: string[] };
 type ArcOption = { arcId: string; title: string; episodes: Array<{ episodeId: string; title: string }> };
-type Classroom = { id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; currentActivityKey: string; currentActivityLabel: string; arc: ClassroomArc | null; studentCount: number };
+type Classroom = { id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; currentActivityKey: string; currentActivityLabel: string; arc: ClassroomArc | null; studentCount: number; updatedAt: string };
 type Student = { id: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null; claimedAt: string | null; createdAt: string; lastActivityAt: string; artworkId: string | null; completedArtworkId: string | null; artworkTitle: string | null; status: string | null; currentStep: number | null; revision: number | null; thumbnail: string | null; artworkUpdatedAt: string | null; artworkCount: number; drawingArtworkCount: number; completedArtworkCount: number; duplicateNickname: boolean };
 type ArchivedStudent = { id: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null; lastActivityAt: string; archivedAt: string; artworkCount: number };
 function RosterField({ value, onChange, label }: { value: string; onChange: (next: string) => void; label: string }) {
@@ -45,16 +45,40 @@ function StudentProfileFacts({ student }: { student: Student }) {
   </section>;
 }
 
-function ClassroomCard({ item, deleting, onDelete }: { item: Classroom; deleting: boolean; onDelete: (item: Classroom) => void }) {
+function lessonDate(value: string) {
+  // CURRENT_TIMESTAMP('YYYY-MM-DD HH:MM:SS')는 Safari에서 Invalid Date라 ISO로 맞춘다.
+  const date = new Date(value.includes("T") ? value : `${value.replace(" ", "T")}Z`);
+  if (Number.isNaN(date.getTime())) return "";
+  const label = `${date.getMonth() + 1}월 ${date.getDate()}일`;
+  const today = new Date();
+  const days = Math.round((new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime() - new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()) / 86_400_000);
+  return days === 0 ? `오늘 (${label})` : days === 1 ? `어제 (${label})` : label;
+}
+
+function AdmissionBadge({ open }: { open: number }) {
+  return <span className={`admission-badge ${open ? "is-open" : "is-closed"}`}>{open ? "입장 열림" : "입장 닫힘"}</span>;
+}
+
+const UsersIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
+const CalendarIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>;
+
+function ClassroomCard({ item }: { item: Classroom }) {
   return <article className="class-card">
-    <a className="class-card-link" href={`/teacher/class/${item.id}`} aria-label={`${item.displayName} 학급 자세히 보기`}>
-      <div className="class-card-top"><span>{item.admissionOpen ? "입장 열림" : "입장 닫힘"}</span><b>{item.studentCount}명</b></div>
-      <h2>{item.displayName}</h2><p>{item.currentActivity}</p>
-      <div className="class-code"><small>수업 코드</small><strong>{item.classCode}</strong></div>
-      <span className="class-card-detail">학급 자세히 보기 →</span>
-    </a>
-    <div className="class-card-actions"><button type="button" className="class-delete-button" aria-label={`${item.displayName} 학급 삭제`} disabled={deleting} onClick={() => onDelete(item)}>{deleting ? "삭제 처리 중…" : "학급 삭제"}</button></div>
+    <div className="class-card-head"><h3>{item.displayName}</h3><AdmissionBadge open={item.admissionOpen} /></div>
+    <p>{item.currentActivity}</p>
+    <div className="class-card-foot"><span><UsersIcon />{item.studentCount}명</span><span><CalendarIcon />{lessonDate(item.updatedAt)}</span><a className={`class-open-link${item.admissionOpen ? " is-primary" : ""}`} href={`/teacher/class/${item.id}`} aria-label={`${item.displayName} 학급 열기`}>학급 열기</a></div>
   </article>;
+}
+
+function ClassroomRow({ item, deleting, onDelete, onQr }: { item: Classroom; deleting: boolean; onDelete: (item: Classroom) => void; onQr: (item: Classroom, opener: HTMLButtonElement) => void }) {
+  return <tr>
+    <td data-label="학급명"><b>{item.displayName}</b><div className="class-row-meta"><span>수업 코드 {item.classCode}</span><button type="button" onClick={() => navigator.clipboard?.writeText(item.classCode)} aria-label={`${item.displayName} 수업 코드 복사`}>복사</button><button type="button" onClick={(event) => onQr(item, event.currentTarget)} aria-label={`${item.displayName} 입장 QR 보기`}>QR 보기</button></div></td>
+    <td data-label="오늘 활동">{item.currentActivity}</td>
+    <td data-label="등록 학생">{item.studentCount}명</td>
+    <td data-label="입장 상태"><AdmissionBadge open={item.admissionOpen} /></td>
+    <td data-label="최근 수업">{lessonDate(item.updatedAt)}</td>
+    <td className="class-row-actions"><a className={`class-open-link${item.admissionOpen ? " is-primary" : ""}`} href={`/teacher/class/${item.id}`} aria-label={`${item.displayName} 학급 열기`}>학급 열기</a><details className="row-menu"><summary aria-label={`${item.displayName} 더 보기`}>⋯</summary><button type="button" className="class-delete-button" aria-label={`${item.displayName} 학급 삭제`} disabled={deleting} onClick={() => onDelete(item)}>{deleting ? "삭제 처리 중…" : "학급 삭제"}</button></details></td>
+  </tr>;
 }
 
 async function teacherPost<T = Record<string, unknown>>(payload: Record<string, unknown>): Promise<T> { const response = await fetch("/api/teacher", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" }); const data = await response.json() as T & { error?: string }; if (!response.ok) throw new Error(data.error ?? "요청을 처리하지 못했어요."); return data; }
@@ -154,6 +178,7 @@ export function TeacherApp({ classroomId = "" }: { classroomId?: string }) {
   const [studentHistoryHasMore, setStudentHistoryHasMore] = useState(false);
   const [studentHistoryOffset, setStudentHistoryOffset] = useState(0);
   const [deletingClassroom, setDeletingClassroom] = useState("");
+  const [creatingClass, setCreatingClass] = useState(false); const [classSearch, setClassSearch] = useState(""); const [classFilter, setClassFilter] = useState<"all" | "open" | "closed">("all"); const [qrClassroom, setQrClassroom] = useState<Classroom | null>(null);
   const [deletingStudent, setDeletingStudent] = useState("");
   const [draftId, setDraftId] = useState(""); const [draftBody, setDraftBody] = useState(""); const [draftLoading, setDraftLoading] = useState(false); const [draftSent, setDraftSent] = useState(false);
   // 초안이 어느 학생 것인지 함께 들고 다닌다. 늦게 도착한 응답이 다른 학생 화면에 붙어
@@ -358,7 +383,25 @@ export function TeacherApp({ classroomId = "" }: { classroomId?: string }) {
 
   if (authorized === null) return <main className="teacher-shell"><div className="loading-card">수업실을 준비하는 중…</div></main>;
   if (!authorized) return <main className="teacher-login"><section className="login-brand"><Logo /><div><p className="eyebrow">아이의 다음 선을 함께 찾아요</p><h1>교사 수업 진행실</h1><p>순위 없이 학생의 진행과 작품 변화를 한눈에 확인하고, 짧은 도움말을 보낼 수 있어요.</p></div><ul><li>우리 반 명단은 담임만 볼 수 있어요</li><li>낮은 빈도의 안전한 썸네일</li><li>전체 또는 한 학생에게 메시지</li></ul></section>{localDemo ? <form className="login-card" onSubmit={login}><h2>로컬 개발 로그인</h2><p className="helper">localhost에서만 열립니다. 처음 입력한 이메일과 8자 이상 PIN으로 개발 계정을 만들어요.</p><label>이메일<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} /></label><label>접속 PIN<input type="password" minLength={8} autoComplete="current-password" value={pin} onChange={(event) => setPin(event.target.value)} /></label>{error && <p className="error-box">{error}</p>}<button className="button primary full" disabled={!email || pin.length < 8}>로컬 수업실 열기</button><a className="text-button" href="/">학생 화면으로 돌아가기</a></form> : <section className="login-card"><h2>로그인이 필요해요</h2><p>운영 교사 화면은 구글 로그인으로 열립니다.</p><a className="button primary full" href="/api/auth/google/start?return_to=%2Fteacher">구글로 로그인</a></section>}</main>;
-  if (!classroomId) return <main className="teacher-shell"><header className="teacher-header"><Logo /><div><span>교사</span><b>{teacher?.displayName}</b></div><button className="small-button" onClick={async () => { await teacherPost({ action: "logout" }); location.href = "/teacher"; }}>로그아웃</button></header><section className="teacher-welcome"><div><p className="eyebrow">오늘의 수업</p><h1>아이들의 생각이<br />자라는 교실</h1></div><form className="create-class" onSubmit={createClass}><label>새 학급 만들기<input value={newClass} maxLength={30} onChange={(event) => setNewClass(event.target.value)} placeholder="예: 별빛 1반" /></label><RosterField label="우리 반 명단" value={newRoster} onChange={setNewRoster} /><p className="roster-privacy">학생은 자기 <b>번호</b>로 들어옵니다. 이름은 <b>선생님만</b> 봅니다 — 학생 화면·가족 공유·AI에는 보내지 않아요.</p><button className="button primary" disabled={newClass.length < 2 || !parseRosterText(newRoster).entries.length || parseRosterText(newRoster).errors.length > 0}>학급 만들기</button></form></section>{error && <p className="error-box" role="alert">{error}</p>}<section><div className="section-title"><h2>내 학급</h2><span>{classrooms.length}개 학급</span></div><div className="class-grid">{classrooms.map((item) => <ClassroomCard item={item} deleting={deletingClassroom === item.id} onDelete={deleteClassroom} key={item.id} />)}</div></section></main>;
+  if (!classroomId) {
+    const sorted = [...classrooms].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    const query = classSearch.trim().toLowerCase();
+    const listed = sorted.filter((item) => (classFilter === "all" || (classFilter === "open") === Boolean(item.admissionOpen)) && (!query || item.displayName.toLowerCase().includes(query)));
+    const openQr = (item: Classroom, opener: HTMLButtonElement) => { qrOpenButtonRef.current = opener; setQrClassroom(item); setQrExpanded(true); };
+    return <main className="teacher-shell teacher-dashboard">
+      <header className="teacher-header"><Logo /><div><span>교사</span><b>{teacher?.displayName}</b></div><button className="small-button" onClick={async () => { await teacherPost({ action: "logout" }); location.href = "/teacher"; }}>로그아웃</button></header>
+      <section className="dashboard-title"><div><h1>내 학급</h1><p>오늘도, 아이들의 생각이 자라는 수업을 만들어보세요.</p></div><button type="button" className="button primary" aria-expanded={creatingClass} onClick={() => setCreatingClass((value) => !value)}>＋ 새 학급</button></section>
+      {creatingClass && <form className="create-class" onSubmit={createClass}><label>새 학급 이름<input value={newClass} maxLength={30} autoFocus onChange={(event) => setNewClass(event.target.value)} placeholder="예: 별빛 1반" /></label><RosterField label="우리 반 명단" value={newRoster} onChange={setNewRoster} /><p className="roster-privacy">학생은 자기 <b>번호</b>로 들어옵니다. 이름은 <b>선생님만</b> 봅니다 — 학생 화면·가족 공유·AI에는 보내지 않아요.</p><div className="create-class-actions"><button className="button primary" disabled={newClass.length < 2 || !parseRosterText(newRoster).entries.length || parseRosterText(newRoster).errors.length > 0}>학급 만들기</button><button type="button" className="button secondary" onClick={() => { setCreatingClass(false); setNewClass(""); setNewRoster(""); }}>취소</button></div></form>}
+      {error && <p className="error-box" role="alert">{error}</p>}
+      {sorted.length > 0 && <section><div className="section-title"><h2>최근 사용한 학급</h2><span>최근 수업한 순</span></div><div className="class-grid">{sorted.slice(0, 3).map((item) => <ClassroomCard item={item} key={item.id} />)}</div></section>}
+      <section>
+        <div className="section-title"><h2>모든 학급 <small>({classrooms.length}개)</small></h2><label className="class-search"><span className="sr-only">학급 이름 검색</span><input type="search" value={classSearch} onChange={(event) => setClassSearch(event.target.value)} placeholder="학급 이름 검색" /></label></div>
+        <div className="class-filter" role="group" aria-label="입장 상태로 거르기">{([["all", "전체"], ["open", "입장 열림"], ["closed", "입장 닫힘"]] as const).map(([key, label]) => <button type="button" key={key} aria-pressed={classFilter === key} onClick={() => setClassFilter(key)}>{label}</button>)}</div>
+        {listed.length ? <table className="class-table"><thead><tr><th>학급명</th><th>오늘 활동</th><th>등록 학생</th><th>입장 상태</th><th>최근 수업</th><th><span className="sr-only">열기</span></th></tr></thead><tbody>{listed.map((item) => <ClassroomRow item={item} deleting={deletingClassroom === item.id} onDelete={deleteClassroom} onQr={openQr} key={item.id} />)}</tbody></table> : <p className="empty-state">{classrooms.length ? "조건에 맞는 학급이 없어요." : "아직 학급이 없어요. 새 학급을 만들어 보세요."}</p>}
+      </section>
+      {qrExpanded && qrClassroom && <dialog ref={qrDialogRef} className="qr-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="large-qr-title" onCancel={(event) => { event.preventDefault(); setQrExpanded(false); }}><section className="large-qr-dialog"><button className="modal-close" aria-label="입장 QR 닫기" autoFocus onClick={() => setQrExpanded(false)}>×</button><h2 id="large-qr-title">{qrClassroom.displayName} 입장 QR</h2><p>카메라로 QR을 비추거나 아래 수업 코드를 입력해요.</p><QrCode value={`${location.origin}/join/${qrClassroom.classCode}`} label={`${qrClassroom.displayName} 입장 QR`} variant="large" /><div className="large-qr-code"><small>수업 코드</small><strong>{qrClassroom.classCode}</strong></div><button className="button secondary full" onClick={() => navigator.clipboard?.writeText(`${location.origin}/join/${qrClassroom.classCode}`)}>입장 주소 복사</button></section></dialog>}
+    </main>;
+  }
   if (!classroomData) return <main className="teacher-shell"><div className="loading-card">{error || "학급을 불러오는 중…"}</div></main>;
   const room = classroomData.classroom;
   return <main className="teacher-room"><header className="teacher-header"><Logo /><a className="small-button" href="/teacher">← 학급 목록</a><div className="room-heading"><b>{room.displayName}</b><span>{room.currentActivity}</span></div><button className="subscription-pill" disabled title="결제 제공자와 가격이 정해진 뒤 연결됩니다.">구독 연결 전</button><div className={room.admissionOpen ? "live-pill" : "closed-pill"}>{room.admissionOpen ? "● 입장 열림" : "입장 닫힘"}</div></header>

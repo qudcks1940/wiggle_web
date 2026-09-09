@@ -554,6 +554,18 @@
 - 검증: `tests/arc-content.test.mjs`에 씨앗 이야기 불변식(아크 3~4개, 각 5회차, 1회차만 씨앗, 씨앗이 문서 검증 통과, 힌트 2개 이상·토론 3개, 문장 40자 이내) 추가. typecheck·lint(경고는 기존 것)·`git diff --check` 통과, 전체 테스트 결과는 아래 기록. `npm run build && npx next start -p 3299`에 `check:browser` 전 항목 통과(12회 버전에서 실행, 이후 변경은 콘텐츠 상수·테스트·문서뿐). 실제 Chrome(CDP) 실측: 로컬 교사로 학급을 만들고 `circle-story` 1회차를 연 뒤 1번 학생으로 입장해 ① 홈 카드에 제목·장면 문장·힌트 3개 ② `그리기 시작` → 작품 문서에 25점 원 획 1개, 도화지 가운데 둥근 원 ③ 교사 학급 화면에 토론 질문 3개를 확인했고, 2회차(`circle-story-who`)는 씨앗 없이 빈 도화지로 열리는 것을 확인했다.
 - 남은 것: 반 작품 크게 보기 화면(토론용), 장면 삽화(`sceneImage` 전부 null). `claude/seed-line-lesson` 브랜치는 이 구현으로 대체되어 폐기 대상이다.
 
+## 2026-09-09 교사 학급 목록(/teacher) 디자인 개편 (`claude/teacher-dashboard-20260909`, 로컬 검증)
+
+- 사용자가 제시한 시안대로 `/teacher` 대시보드를 재구성했다: 흰 배경 상단바(교사 이름 | 로그아웃), `내 학급` 제목 + `＋ 새 학급` 버튼(누르면 인라인 생성 폼), `최근 사용한 학급` 카드 3개(updatedAt 내림차순), `모든 학급` 표(학급명·수업 코드 복사·QR 보기, 오늘 활동, 등록 학생, 입장 상태, 최근 수업, 학급 열기, `⋯` 메뉴 안 학급 삭제) + 이름 검색 + 전체/입장 열림/입장 닫힘 필터. 초록은 DESIGN.md 공통 팔레트(`--primary`/`--primary-dark`)를 `.teacher-dashboard` 범위 변수로 받아 쓴다. 새 학급 폼은 main의 명단 필수 규칙(`RosterField`)을 그대로 품는다.
+- `학급 열기`는 입장 열림 학급만 초록 채움 버튼, 입장 닫힘 학급은 텍스트 링크다(사용자 결정 2026-09-09: 교사가 지금 열 학급이 먼저 보이게). 카드·표 모두 같은 기준.
+- 시안의 `보관됨` 탭·정렬 드롭다운·페이지네이션은 현재 데이터 모델(보관 개념 없음, 학급 수 적음)에 맞지 않아 넣지 않았다. 필요해지면 `docs/pending-decisions.md`에 올린다.
+- QR 보기는 수업실의 큰 QR 대화상자(`qr-modal-backdrop`)를 재사용한다. 이 대화상자는 Tailwind preflight의 `margin:0` 때문에 왼쪽에 붙어 있었으므로 `margin:auto`를 추가했다(수업실 화면도 함께 중앙 정렬됨).
+- 변경 파일: `app/components/TeacherApp.tsx`(대시보드 분기·`ClassroomCard`·`ClassroomRow`·`lessonDate`), `app/globals.css`(구 `teacher-welcome`/`class-card` 규칙 삭제, 대시보드 블록 추가), `tests/classroom-delete.test.mjs`(행 구조에 맞게 소스 검사 갱신).
+- 처음 `5d7e8b0` 기준으로 만든 뒤 최신 main(명단 입장·초록 팔레트) 위에 다시 적용했다.
+- 검증(최신 main 위 재적용 후): typecheck·lint(경고 13은 main 기존)·`npm test` 320/320·`git diff --check`·`git diff --check main...HEAD` 통과. `next build && next start -p 3399`로 현재 트리를 띄워 `scripts/browser-check.mjs http://localhost:3399` 3뷰포트 통과(FAIL 0, 핀치 SKIP 1은 기존). 별도 CDP 스크립트로 320×568·390×844·844×390·1440×900에서 가로 넘침 0, 44px 미만 터치 목표 0, 텍스트 잘림 0을 실측했고 QR 대화상자 열기·Escape 닫기·초점 복귀, 새 학급 폼(명단 포함) 열림을 확인했다.
+- 사고 기록: 3299 포트에 다른 워크트리(menhaden) 서버가 떠 있는 줄 모르고 한 번 검사해 그 로컬 DB에 검증용 학급이 생겼다(로컬 `.data` 전용, 운영 무관). CLAUDE.md 경고 그대로 — 검사 전 포트 소유 프로세스의 cwd를 확인한다.
+- 주의: 이 저장소의 테스트 하네스는 Node 타입 스트리핑을 쓰므로 Node 22.13에서는 `ERR_UNKNOWN_FILE_EXTENSION`이 난다. Node 22.18+ 또는 23.6+로 실행한다. `next dev`는 `.next/dev` 캐시가 CSS 편집을 놓칠 수 있어 스타일 검증 전 캐시 삭제 후 재시작이 필요할 수 있다.
+
 ## 다음 작업 시작 전 확인
 
 1. 이 문서와 `product-decisions.md`, `pending-decisions.md`를 읽는다.

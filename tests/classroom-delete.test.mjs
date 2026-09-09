@@ -6,19 +6,18 @@ import { resetActiveStudentRecovery, rotateClassroomEntry, setClassroomEpisode, 
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
-test("teacher classroom cards separate navigation from the accessible delete action", async () => {
+test("teacher classroom rows separate navigation from the accessible delete action", async () => {
   const [teacher, css] = await Promise.all([read("../app/components/TeacherApp.tsx"), read("../app/globals.css")]);
-  const start = teacher.indexOf("function ClassroomCard");
-  const end = teacher.indexOf("function ArcCockpit");
-  const card = teacher.slice(start, end);
-  const link = card.match(/<a className="class-card-link"[\s\S]*?<\/a>/)?.[0] ?? "";
+  const start = teacher.indexOf("function ClassroomRow");
+  const end = teacher.indexOf("async function teacherPost");
+  const row = teacher.slice(start, end);
+  const link = row.match(/<a className=\{`class-open-link[\s\S]*?<\/a>/)?.[0] ?? "";
 
   assert.ok(start >= 0 && end > start);
-  assert.match(card, /<article className="class-card">/);
-  assert.match(link, /학급 자세히 보기/);
+  assert.match(link, /학급 열기/);
   assert.doesNotMatch(link, /<button/);
-  assert.match(card, /<button type="button" className="class-delete-button"/);
-  assert.match(card, /aria-label=\{`\$\{item\.displayName\} 학급 삭제`\}/);
+  assert.match(row, /<button type="button" className="class-delete-button"/);
+  assert.match(row, /aria-label=\{`\$\{item\.displayName\} 학급 삭제`\}/);
   assert.match(teacher, /item\.displayName/);
   assert.match(teacher, /학생 \$\{item\.studentCount\}명/);
   // 학급 삭제는 restoreClassroom이 없어 교사 화면에서 되돌릴 수 없다.

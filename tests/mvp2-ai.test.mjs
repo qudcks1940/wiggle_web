@@ -173,7 +173,8 @@ test("몽그리가 오늘 회차 이야기를 알고 답한다 (확장 협업자
   assert.match(prompts, /STORY_INTERPRETATION_INSTRUCTIONS/);
   assert.match(studio, /askInterpretation/);
   assert.match(studio, /storyText,/);
-  // AI 문장은 음성으로 내보내지 않는다 (product-decisions 20항) — 짐작에 SpeakButton이 붙으면 안 된다.
+  // AI 문장은 음성으로 내보내지 않는다 (product-decisions 20항). 학생 화면의 읽어 주기는
+  // 2026-09-09에 통째로 빠졌지만, 되돌아오더라도 몽그리 짐작에는 붙지 않아야 한다.
   const guessBlock = studio.slice(studio.indexOf("mongri-guess-text"), studio.indexOf("mongri-guess-own"));
-  assert.doesNotMatch(guessBlock, /SpeakButton/);
+  assert.doesNotMatch(guessBlock, /Speak|speech|읽어 주기|들어 보기/);
 });

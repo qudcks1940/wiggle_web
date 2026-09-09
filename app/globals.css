@@ -62,7 +62,7 @@ legend small { color:var(--primary-dark); }
 .picture-chip:disabled { opacity:.48; cursor:not-allowed; }
 .password-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
 .password-actions button:disabled { opacity:.45; cursor:not-allowed; }
-.reset-pictures-button { border:1px solid var(--border); background:white; border-radius:12px; padding:9px 13px; font-weight:800; cursor:pointer; }
+.reset-pictures-button { min-height:44px; border:1px solid var(--border); background:white; border-radius:12px; padding:9px 13px; font-weight:800; cursor:pointer; }
 .reset-pictures-button.attention { flex:1; min-height:52px; border:2px solid #d64545; background:#fff1f1; color:#9f2f2f; font-size:16px; font-weight:900; animation:reset-pictures-nudge .6s ease-in-out 2; }
 @keyframes reset-pictures-nudge { 50% { transform:translateY(-3px); box-shadow:0 4px 0 rgba(214,69,69,.25); } }
 .picture-password-help { display:flex; align-items:center; gap:10px; }.picture-password-help .helper { flex:1; margin:0; }.password-slots { display:flex; justify-content:center; gap:8px; margin:12px 0; }.password-slots span { width:52px; height:52px; display:grid; place-items:center; border:2px dashed var(--border); border-radius:15px; background:#f7fcf8; color:#a3b4a5; font-size:24px; font-weight:900; }.password-slots span.filled { border-style:solid; border-color:#e3c74f; background:#fff7c8; color:var(--ink); }
@@ -1702,7 +1702,7 @@ body {
     top:59.85cqw;
     right:11.2cqw;
     left:auto;
-    min-height:2.45cqw;
+    min-height:max(44px,2.45cqw);
     margin:0;
     padding:.25cqw .45cqw;
     border:0;
@@ -1901,8 +1901,8 @@ body {
   }
   .entry-join-shell .join-controls .nickname-row input,
   .entry-join-shell .join-controls .nickname-row button {
-    min-height:0;
-    height:3.45cqw;
+    min-height:44px;
+    height:max(44px,3.45cqw);
     padding:.55cqw .85cqw;
     border-width:.13cqw;
     border-radius:.8cqw;
@@ -1951,8 +1951,8 @@ body {
   }
   .entry-join-shell .join-controls .picture-password-picker .password-actions button {
     min-width:0;
-    min-height:0;
-    height:2.35cqw;
+    min-height:44px;
+    height:max(44px,2.35cqw);
     padding:.25cqw .55cqw;
     border-width:.08cqw;
     border-radius:.65cqw;

@@ -4,7 +4,7 @@
   "status": "prepared assets; landing route not integrated",
   "generation": "built-in ImageGen; exact prompts in docs/design-assets/gallery/prompts.json",
   "reference": "docs/design-assets/gallery/selected-reference.png",
-  "reusedLogo": "/brand/logo.png",
+  "reusedLogo": "/brand/crayon-mark-128.png",
   "assets": [
     {
       "id": "duck-painter",

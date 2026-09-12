@@ -8,7 +8,16 @@
       "sourceRole": "read-only reference",
       "sha256": "5564884B4CDDBE68192923D57282CE8037E883FF21D0231EA6FB1055C0F1E79E",
       "approvedFor": [
-        "web navigation brand mark"
+        "(2026-09-12부터 화면 브랜드 마크는 crayon-mark-128.png를 쓴다. 이 자산은 이력 보존용으로 남긴다)"
+      ]
+    },
+    {
+      "path": "/brand/crayon-mark-128.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 크레용 그림(1254x1254)에서 자른 128px 마크. 자르기·크기 줄이기만 했다.",
+      "sourceRole": "user-provided original",
+      "sha256": "7C499A99C6F730A1F13961E73C92DF3ECB363E287A13E257DA136921AFECB0ED",
+      "approvedFor": [
+        "화면 머리의 브랜드 마크(Logo 컴포넌트)"
       ]
     },
     {

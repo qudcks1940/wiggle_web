@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { detectDelimiter, gridToRosterText, looksLikeHeader, parseDelimited, parseXlsx, readRosterFile } from "../lib/roster-file.ts";
+import { buildRosterTemplate, buildXlsx, crc32, ROSTER_TEMPLATE_ROWS } from "../lib/xlsx-write.ts";
 import { parseRosterText } from "../lib/roster.ts";
 
 /* 명단을 엑셀·CSV 파일로 추가하는 길(2026-09-12 사용자 요청).
@@ -95,4 +96,36 @@ test("교사 화면이 파일을 서버로 보내지 않고 그 자리에서 읽
   // 읽은 결과는 입력칸을 채울 뿐이고, 저장은 교사가 확인한 뒤 기존 addStudents로 간다.
   assert.match(settings, /setRoster\(read\.text\)/);
   assert.match(settings, /onAction\("addStudents", \{ roster: parsed\.entries \}\)/);
+});
+
+test("내려받는 엑셀 양식은 우리가 읽는 규칙과 정확히 맞물린다", async () => {
+  // 양식을 만들고 → 우리 읽기로 되읽어 → 기존 명단 검증까지 통과해야 한다.
+  const bytes = buildRosterTemplate();
+  const read = await readRosterFile(fileOf("위글-명단-양식.xlsx", Buffer.from(bytes)));
+  assert.equal(read.skippedHeader, true, "첫 줄 제목은 건너뛴다");
+  assert.equal(read.numbered, true);
+  assert.equal(read.text, "1 김민준\n2 이서연\n3 박지호");
+  assert.deepEqual(parseRosterText(read.text).errors, []);
+  // 양식 첫 줄은 읽기가 제목으로 알아보는 낱말이어야 한다.
+  assert.equal(looksLikeHeader(ROSTER_TEMPLATE_ROWS[0]), true);
+});
+
+test("만든 xlsx는 zip 규격을 지키고 특수문자도 깨지지 않는다", async () => {
+  const bytes = buildXlsx([["번호", "이름"], ["1", '김 & "민준" <1반>']], "명단");
+  // zip 끝 표지와 항목 다섯 개(콘텐츠 타입·관계·워크북·관계·시트).
+  const tail = Buffer.from(bytes.subarray(bytes.length - 22));
+  assert.equal(tail.readUInt32LE(0), 0x06054b50);
+  assert.equal(tail.readUInt16LE(8), 5);
+  const grid = await parseXlsx(bytes);
+  assert.deepEqual(grid, [["번호", "이름"], ["1", '김 & "민준" <1반>']]);
+  // CRC32는 알려진 값과 맞아야 한다 — 엑셀이 깨진 파일로 보고 거절하지 않게.
+  assert.equal(crc32(new TextEncoder().encode("123456789")), 0xcbf43926);
+});
+
+test("교사 화면에 양식 내려받기가 있고 파일을 그 자리에서 만든다", async () => {
+  const settings = await readFile(new URL("../app/components/TeacherRosterSettings.tsx", import.meta.url), "utf8");
+  assert.match(settings, /엑셀 양식 내려받기/);
+  assert.match(settings, /buildRosterTemplate\(\)/);
+  assert.match(settings, /link\.download = "위글-명단-양식\.xlsx"/);
+  assert.match(settings, /URL\.revokeObjectURL\(url\)/);
 });

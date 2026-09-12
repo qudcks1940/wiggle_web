@@ -1,9 +1,10 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { Copy, MoreHorizontal, Plus, Printer, QrCode, RefreshCw, Search, Upload } from "lucide-react";
+import { Copy, Download, MoreHorizontal, Plus, Printer, QrCode, RefreshCw, Search, Upload } from "lucide-react";
 import { parseRosterText } from "@/lib/roster";
 import { readRosterFile } from "@/lib/roster-file";
+import { buildRosterTemplate } from "@/lib/xlsx-write";
 import { WorkspaceDialog, WorkspaceProps } from "./TeacherWorkspace";
 import { TeacherRosterPrint } from "./TeacherRosterPrint";
 import "./TeacherRosterSettings.css";
@@ -49,6 +50,16 @@ export function TeacherRosterSettings({ data, onAction, onArchive, onRestore, on
         : `${file.name}을(를) 읽지 못했어요. 엑셀(.xlsx)이나 CSV 파일인지 확인해 주세요.`);
     }
   }
+  /* 양식 내려받기: 파일도 브라우저 안에서 만든다. 서버에 정적 파일을 두면 양식과
+   * 읽기 규칙이 따로 놀 수 있어, 읽는 코드와 같은 자리에서 만든다. */
+  function downloadTemplate() {
+    const url = URL.createObjectURL(new Blob([buildRosterTemplate() as unknown as BlobPart], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    const link = document.createElement("a");
+    link.href = url; link.download = "위글-명단-양식.xlsx";
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    setFileNotice("양식을 내려받았어요. 번호와 이름을 채운 뒤 다시 불러오면 돼요.");
+  }
   async function copy(text: string) { try { if (!navigator.clipboard) throw new Error(); await navigator.clipboard.writeText(text); setNotice("복사했어요."); } catch { setNotice("자동 복사가 되지 않아요. 수업 코드를 직접 선택해 복사해 주세요."); } }
   async function action(key: string, rest?: Record<string, unknown>) { if (pending) return; setPending(key); const result = await onAction(key, rest); setPending(""); if (result) setNotice("변경 사항을 저장했어요."); }
   async function save(event: FormEvent) {
@@ -79,6 +90,6 @@ export function TeacherRosterSettings({ data, onAction, onArchive, onRestore, on
       <TeacherRosterPrint classroomName={room.displayName} classCode={room.classCode} joinUrl={joinUrl} students={students} />
     </WorkspaceDialog>}
     {notice && <div className="trs-notice" role="status">{notice}<button aria-label="알림 닫기" onClick={() => setNotice("")}>닫기</button></div>}
-    {dialog && <WorkspaceDialog title={dialog === "add" ? "명단에 학생 추가" : "번호·이름 수정"} onClose={() => { if (!busy) { setDialog(null); setFileNotice(""); } }}><form onSubmit={save}>{dialog === "add" ? <><div className="trs-import"><label className="trs-import-button"><Upload size={18} />엑셀·CSV 파일 불러오기<input type="file" accept=".xlsx,.csv,.tsv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void importFile(file); }} /></label><small>엑셀에서 표를 복사해 아래 칸에 붙여 넣어도 돼요.</small></div>{fileNotice && <p className="trs-import-notice" role="status">{fileNotice}</p>}<label>학생 번호와 이름<textarea rows={6} value={roster} onChange={(event) => { setRoster(event.target.value); setFileNotice(""); }} placeholder={"1 김민준\n2 이서연\n3 박지호"} spellCheck={false} /></label><small>한 줄에 한 명씩 번호와 이름을 적어 주세요. {parsed.entries.length > 0 && `${parsed.entries.length}명 확인`}</small>{parsed.errors.length > 0 && <ul className="tcw-error">{parsed.errors.slice(0, 4).map((item) => <li key={item}>{item}</li>)}</ul>}</> : <><label>번호<input type="number" min={1} max={99} required value={seat} onChange={(event) => setSeat(event.target.value)} /></label><label>이름<input required maxLength={20} value={name} onChange={(event) => setName(event.target.value)} /></label></>}<p className="trs-privacy">이름은 선생님만 볼 수 있어요. 학생 화면, 가족 공유, AI에는 전달되지 않아요.</p>{error && <p className="tcw-error" role="alert">{error}</p>}<div className="trs-form-actions"><button type="button" disabled={busy} onClick={() => setDialog(null)}>취소</button><button className="tcw-primary" disabled={busy || (dialog === "add" && (!parsed.entries.length || parsed.errors.length > 0))}>{busy ? "저장 중…" : "저장"}</button></div></form></WorkspaceDialog>}
+    {dialog && <WorkspaceDialog title={dialog === "add" ? "명단에 학생 추가" : "번호·이름 수정"} onClose={() => { if (!busy) { setDialog(null); setFileNotice(""); } }}><form onSubmit={save}>{dialog === "add" ? <><div className="trs-import"><label className="trs-import-button"><Upload size={18} />엑셀·CSV 파일 불러오기<input type="file" accept=".xlsx,.csv,.tsv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void importFile(file); }} /></label><button type="button" className="trs-import-button" onClick={downloadTemplate}><Download size={18} />엑셀 양식 내려받기</button><small>양식을 채워 다시 불러오거나, 엑셀에서 표를 복사해 아래 칸에 붙여 넣어도 돼요.</small></div>{fileNotice && <p className="trs-import-notice" role="status">{fileNotice}</p>}<label>학생 번호와 이름<textarea rows={6} value={roster} onChange={(event) => { setRoster(event.target.value); setFileNotice(""); }} placeholder={"1 김민준\n2 이서연\n3 박지호"} spellCheck={false} /></label><small>한 줄에 한 명씩 번호와 이름을 적어 주세요. {parsed.entries.length > 0 && `${parsed.entries.length}명 확인`}</small>{parsed.errors.length > 0 && <ul className="tcw-error">{parsed.errors.slice(0, 4).map((item) => <li key={item}>{item}</li>)}</ul>}</> : <><label>번호<input type="number" min={1} max={99} required value={seat} onChange={(event) => setSeat(event.target.value)} /></label><label>이름<input required maxLength={20} value={name} onChange={(event) => setName(event.target.value)} /></label></>}<p className="trs-privacy">이름은 선생님만 볼 수 있어요. 학생 화면, 가족 공유, AI에는 전달되지 않아요.</p>{error && <p className="tcw-error" role="alert">{error}</p>}<div className="trs-form-actions"><button type="button" disabled={busy} onClick={() => setDialog(null)}>취소</button><button className="tcw-primary" disabled={busy || (dialog === "add" && (!parsed.entries.length || parsed.errors.length > 0))}>{busy ? "저장 중…" : "저장"}</button></div></form></WorkspaceDialog>}
   </section>;
 }

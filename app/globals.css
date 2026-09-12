@@ -208,6 +208,15 @@ legend small { color:var(--primary-dark); }
 .grimi-button { color:#563c00; background:var(--yellow); border-color:#e4bc34; box-shadow:0 4px 0 #d2a918; }
 .grimi-panel { background:#fffdf1; border-right:1px solid #eadb9b; padding:16px; overflow:auto; z-index:3; }
 /* 몽그리가 먼저 연 카드임을 알리는 작은 표. 아이가 부른 것과 구별된다(2026-09-12). */
+/* 몽그리 표정. 상태에 따라 얼굴만 바뀌고 자리는 그대로다(2026-09-12).
+   기본 96px, 접힌 안내·짐작 머리에서는 36px — 사용 제안서의 시작값을 따른다. */
+.grimi-face { width:96px; height:96px; flex:0 0 auto; object-fit:contain; }
+.grimi-face-small { width:36px; height:36px; vertical-align:middle; }
+.grimi-peek { position:relative; }
+.grimi-peek .grimi-face-small { position:absolute; right:0; top:0; }
+@media (max-width:720px) { .grimi-face { width:64px; height:64px; } }
+/* 가로 눕힌 폰(844x390)에서는 얼굴이 접힌 패널을 키워 도화지를 먹는다. */
+@media (max-height:480px) { .grimi-face { width:44px; height:44px; } }
 .grimi-auto-tag { margin-left:8px; padding:3px 8px; border-radius:999px; background:#fff1c9; color:#7a5c14; font-size:11px; font-weight:800; white-space:nowrap; }
 .grimi-scroll { display:contents; }
 .grimi-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:15px; }

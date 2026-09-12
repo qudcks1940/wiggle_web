@@ -2504,6 +2504,16 @@ export function DrawingStudio() {
   // 색 적용은 팔레트 원과 색 고르기 대화상자(onPick)에 같은 네 줄이 인라인으로 있다. 헬퍼로 빼면
   // React Compiler가 이 컴포넌트 전체를 컴파일 대상으로 삼아 기존 performance.now() 호출을 오류로 잡는다.
   const customColor = !PALETTE.includes(selectedColor);
+  /* 몽그리 표정(2026-09-12). 어떤 얼굴을 쓸지는 **UI 상태로만** 정한다 —
+   * AI가 쓴 문장에서 감정을 추측해 고르지 않는다(사용 제안서 2026-09-09).
+   * 우선순위: 오류 → 생각 중 → 접힌 제안 → 답을 고른 뒤 → 질문. */
+  const grimiFace = grimiError ? "reassuring"
+    : grimiLoading ? "thinking"
+    : grimiCollapsed && coaching ? "suggesting"
+    : coaching && answer ? "listening"
+    : coaching ? "curious"
+    : "listening";
+
   return (
     <main className="studio">
       <header className="studio-header">
@@ -2554,7 +2564,7 @@ export function DrawingStudio() {
           <aside className={`grimi-panel${grimiCollapsed ? " collapsed" : ""}`} aria-live="polite">
             <div className="grimi-head">
               <div>
-                <span>✨</span>
+                <img className="grimi-face" src={`/brand/mongri/${grimiFace}.png`} alt="" aria-hidden="true" width={224} height={224} />
                 <b>몽그리</b>
                 {/* 아이가 부르지 않았는데 열린 경우, 누가 먼저 말을 걸었는지 알려 준다. */}
                 {autoGrimi && <small className="grimi-auto-tag">내가 먼저 말 걸었어</small>}
@@ -2570,6 +2580,7 @@ export function DrawingStudio() {
             </div>
             {grimiCollapsed && coaching ? (
               <div className="grimi-peek">
+                <img className="grimi-face grimi-face-small" src="/brand/mongri/suggesting.png" alt="" aria-hidden="true" width={224} height={224} />
                 <small>이제 그려 볼 일</small>
                 <div className="spoken-prompt">
                   <b>{coaching.nextAction}</b>
@@ -3194,12 +3205,13 @@ export function DrawingStudio() {
             <p className="reflection-choice-note">정답이 아니에요. 네가 보고 직접 골라요.</p>
             {(interpretLoading || interpretation) && (
               <div className="reflection-question mongri-guess">
-                <p className="mongri-guess-head"><span aria-hidden="true">✨</span> 몽그리 생각</p>
+                {/* 짐작을 기다릴 때는 생각 중, 짐작이 나오면 발견한 표정이다. */}
+                <p className="mongri-guess-head"><img className="grimi-face grimi-face-small" src={`/brand/mongri/${interpretation ? "delighted" : "thinking"}.png`} alt="" aria-hidden="true" width={224} height={224} /> 몽그리 생각</p>
                 {interpretLoading && !interpretation && <p className="mongri-guess-waiting">몽그리가 네 그림을 보고 있어…</p>}
                 {interpretation && (
                   <>
                     {/* AI가 만든 문장은 음성으로 내보내지 않는다 (product-decisions 20항).
-                        글을 못 읽는 아이는 답 칩의 이모지로 참여한다. */}
+                        답 칩의 이모지가 글과 함께 읽기 부담을 덜어 준다. */}
                     <p className="mongri-guess-text">{interpretation.guess}</p>
                     <div className="reflection-choice-grid">
                       {interpretation.choices.map((choice) => (

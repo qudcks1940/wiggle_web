@@ -21,6 +21,60 @@
       ]
     },
     {
+      "path": "/brand/mongri/curious.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 몽그리 표정 여섯 장(1536x1024 시트). 칸마다 잘라 배경을 투명으로 만들고 224px로 줄였다. 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "314593EFC850FF99ACB3E05D51DE743E1A7511D558B3AE2F3CCF019B8C81FD26",
+      "approvedFor": [
+        "질문을 보여 줄 때(궁금해요)"
+      ]
+    },
+    {
+      "path": "/brand/mongri/thinking.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 몽그리 표정 여섯 장(1536x1024 시트). 칸마다 잘라 배경을 투명으로 만들고 224px로 줄였다. 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "30453DA117DDA1138FA997F5BAE6944FD9A7ACFF2FD78D7AADC26C86DD721AEA",
+      "approvedFor": [
+        "답을 기다릴 때(생각 중)"
+      ]
+    },
+    {
+      "path": "/brand/mongri/suggesting.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 몽그리 표정 여섯 장(1536x1024 시트). 칸마다 잘라 배경을 투명으로 만들고 224px로 줄였다. 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "18A51A2002CCC47C14A21776BA6A2109883C62BA01E5546ABEC37032514B4AD6",
+      "approvedFor": [
+        "다음에 그릴 일을 권할 때(이런 건 어때?)"
+      ]
+    },
+    {
+      "path": "/brand/mongri/delighted.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 몽그리 표정 여섯 장(1536x1024 시트). 칸마다 잘라 배경을 투명으로 만들고 224px로 줄였다. 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "8BD74962B4F7B2C867D79B20AEEBE5C621BFF4420FB2F433B65FCEEA4FF5C644",
+      "approvedFor": [
+        "짐작을 내놓을 때(오, 발견했어!)"
+      ]
+    },
+    {
+      "path": "/brand/mongri/listening.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 몽그리 표정 여섯 장(1536x1024 시트). 칸마다 잘라 배경을 투명으로 만들고 224px로 줄였다. 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "7F3FD0B890795905EF840C8B8140312192A20134FED4643AC8A669D960627A20",
+      "approvedFor": [
+        "아이가 답을 고른 뒤(듣고 있어)"
+      ]
+    },
+    {
+      "path": "/brand/mongri/reassuring.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 몽그리 표정 여섯 장(1536x1024 시트). 칸마다 잘라 배경을 투명으로 만들고 224px로 줄였다. 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "1F1DFF82F365F018437002E93B5035541D2210DEF8F37AD84BB0EF920039AB6E",
+      "approvedFor": [
+        "오류를 알릴 때(괜찮아)"
+      ]
+    },
+    {
       "path": "/brand/app_icon.png",
       "source": "wiggle_draw/assets/icon/app_icon.png",
       "sourceRole": "read-only reference",

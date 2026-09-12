@@ -537,6 +537,23 @@
   "담임만 열람 / 학급 삭제 시 함께 삭제 / AI 미전송"을 기본값으로 잡았을 뿐이다.
   명단이 없는 기존 학급은 예전 흐름(동물·별명·그림 비밀번호로 스스로 만들기)을 그대로 쓴다.
 
+## 2026-09-12 몽그리 표정 여섯 가지를 화면 상태에 연결 (`claude/blank-canvas-20260912`)
+
+- 사용자가 준 표정 시트(1536×1024)를 여섯 장으로 잘라 `public/brand/mongri/`에 두었다
+  (`curious` `thinking` `suggesting` `delighted` `listening` `reassuring`, 각 224px 정사각 RGBA).
+  크림색 배경과 몸통 색을 flood fill로 걷어내 투명 배경으로 만들었고, 여섯 장 모두
+  출처·SHA-256·용도와 함께 `public/brand/asset-manifest.json`에 등록했다.
+- **얼굴은 화면 상태로만 고른다**(`DrawingStudio`의 `grimiFace`). AI가 쓴 문장에서 감정을
+  읽어 고르지 않는다 — 그 통로를 열면 모델이 "대단"처럼 금지된 평가어를 쓰도록 유도된다.
+  - 오류 → `reassuring`, 기다리는 중 → `thinking`, 접힌 채 제안이 남음 → `suggesting`,
+    아이가 답을 고른 뒤 → `listening`, 질문이 떠 있음 → `curious`, 그 밖 → `listening`.
+  - 소감 화면의 몽그리 짐작 머리글은 짐작이 나오기 전 `thinking`, 나온 뒤 `delighted`.
+- **실측에서 잡은 회귀**: 96px 얼굴이 접힌 패널을 키워 가로로 눕힌 폰(844×390)에서 그릴 칸이
+  140px 밑으로 떨어졌다(실측 103px). `@media (max-height:480px)`로 44px까지 줄여 되돌렸다.
+  `tests/mongri-face.test.mjs`가 이 규칙을 지킨다.
+- 검증: typecheck · lint(오류 0) · `npm test` 313/313 · `git diff --check` ·
+  브라우저 실측 3종(`localhost:3299`, 기본 · `--desktop` · `--ipad`) 모두 통과.
+
 ## 2026-09-12 몽그리가 먼저 말을 건다 · 프롬프트 정정 · 대상 3~6학년 (`claude/blank-canvas-20260912`)
 
 - **자동 개입**(사용자 결정). 종전 원칙 「아이가 호출했을 때만 개입한다」를 바꿨다. 아이가

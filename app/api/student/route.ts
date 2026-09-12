@@ -143,7 +143,7 @@ async function studentPost(request: Request) {
     if (!classroom.admissionOpen) return jsonError("선생님이 입장을 열 때까지 기다려 주세요.", 403);
 
     // 입장은 선생님 명단의 참여 코드 하나로 한다(2026-09-09 사용자 결정). 번호 + 그림 비밀번호는
-    // 1~2학년이 매번 기억해야 해서 없앴다. 코드는 종이에 적혀 있고, 코드가 곧 그 아이의 자리라
+    // 아이가 매번 기억해야 해서 없앴다. 코드는 종이에 적혀 있고, 코드가 곧 그 아이의 자리라
     // 다음 회차에 같은 코드를 넣으면 같은 학생 ID로 돌아온다. 명단 자체는 절대 돌려주지 않는다.
     const rosterRow = await bindings().DB.prepare(`SELECT 1 FROM student_profiles WHERE classroom_id = ? AND archived_at IS NULL AND seat_number IS NOT NULL LIMIT 1`).bind(classroom.id).first();
     if (!rosterRow) return noStoreJson({ error: "선생님이 아직 우리 반 명단을 넣지 않았어요. 선생님께 말해 주세요.", code: "NO_ROSTER" }, { status: 409 });

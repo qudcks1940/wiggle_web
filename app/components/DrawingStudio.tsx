@@ -696,6 +696,11 @@ export function DrawingStudio() {
       currentStepRef.current = loadedStep;
       documentStateRef.current = loadedDocument;
       setArtwork({ ...data.artwork, currentStep: loadedStep });
+      // 자동 몽그리 시계는 도화지를 열 때 처음부터 센다.
+      openedAtRef.current = Date.now();
+      lastStrokeAtRef.current = Date.now();
+      autoGrimiCountRef.current = 0;
+      lastAutoGrimiAtRef.current = 0;
       setDocumentState(loadedDocument);
       resetDocumentHistory();
       setEditVersion(0);
@@ -736,9 +741,29 @@ export function DrawingStudio() {
   }, [artwork]);
   // 편집 표시는 effect가 아니라 편집이 일어나는 즉시(markEdited) 동기로 올린다.
   // effect는 저장 응답보다 늦게 돌 수 있어 미저장 표시를 놓친다.
+  /* 자동 몽그리(2026-09-12 사용자 결정). 종전 원칙은 "아이가 부를 때만"이었지만,
+   * 아이가 버튼을 먼저 찾는 일이 드물어 기능이 없는 것과 같았다. 그래서 몽그리가 먼저 말을 건다.
+   * 대신 그리는 것을 막지 않는다 — 옆 패널로 열리고, 아이가 다시 그리기 시작하면 스스로 접힌다.
+   * 뜨는 때와 뜨지 않는 때는 AUTO_GRIMI가 정본이다. */
+  const AUTO_GRIMI = {
+    minOps: 8,            // 도화지가 비었으면 확장할 것이 없다 — 무엇을 그릴지는 선생님 몫
+    settleMs: 120_000,    // 자리 잡기 전에 말 걸지 않는다
+    idleMs: 75_000,       // 손이 멈춘 뒤
+    afterManualMs: 30_000,// 직접 부른 직후는 건너뛴다
+    gapMs: 300_000,       // 자동끼리 최소 간격
+    maxPerArtwork: 2,
+    tickMs: 5_000,
+  } as const;
+  const lastStrokeAtRef = useRef(0);
+  const openedAtRef = useRef(0);
+  const lastManualGrimiAtRef = useRef(0);
+  const lastAutoGrimiAtRef = useRef(0);
+  const autoGrimiCountRef = useRef(0);
+  const [autoGrimi, setAutoGrimi] = useState(false);
   const markEdited = useCallback(() => {
     editSeqRef.current += 1;
     unsavedRef.current = true;
+    lastStrokeAtRef.current = Date.now();
   }, []);
   const currentGuideTraces = useMemo(() => guideTraces(lesson, artwork?.currentStep ?? 0, "none", artwork?.guideVariant ?? 0), [artwork?.currentStep, artwork?.guideVariant, lesson]);
   const currentLessonActivity = lesson?.steps[artwork?.currentStep ?? 0]?.activity;
@@ -1724,6 +1749,9 @@ export function DrawingStudio() {
     renderDocument(event.currentTarget, documentStateRef.current);
   }
   function pointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
+    lastStrokeAtRef.current = Date.now();
+    // 몽그리가 먼저 띄운 카드는 아이가 다시 그리기 시작하면 스스로 접힌다 — 그리기를 막지 않는다.
+    if (autoGrimi && grimiOpen && !grimiCollapsed) setGrimiCollapsed(true);
     if (event.pointerType === "pen") enablePenMode();
     // 펜 모드: 손 터치는 절대 편집하지 않는다(손바닥 안전). 한 손가락은 아무 일도 하지 않고,
     // 두 손가락만 확대/축소한다. 한 손가락 두 번 탭은 화면 맞춤으로만 쓴다.
@@ -2211,8 +2239,38 @@ export function DrawingStudio() {
     location.replace(draft.complete ? "/student/archive" : `/student/draw/${createdData.artwork.id}`);
   }
 
-  async function askGrimi() {
+  /* 조건이 맞는 순간에만 몽그리가 먼저 말을 건다. 획을 긋는 도중에는 절대 뜨지 않는다 —
+   * 마지막 획에서 idleMs가 지나야 하고, 완성·소감·저장 충돌·선생님 보기 중에도 뜨지 않는다. */
+  const autoGrimiReady = useCallback(() => {
+    const now = Date.now();
+    if (!artwork || artwork.status === "complete") return false;
+    if (grimiLoading || grimiOpen || reflectionOpen || interpretLoading) return false;
+    if (conflictDraftRef.current || teacherViewing) return false;
+    if (documentStateRef.current.ops.length < AUTO_GRIMI.minOps) return false;
+    if (autoGrimiCountRef.current >= AUTO_GRIMI.maxPerArtwork) return false;
+    if (now - openedAtRef.current < AUTO_GRIMI.settleMs) return false;
+    if (now - lastStrokeAtRef.current < AUTO_GRIMI.idleMs) return false;
+    if (now - lastManualGrimiAtRef.current < AUTO_GRIMI.afterManualMs) return false;
+    if (lastAutoGrimiAtRef.current && now - lastAutoGrimiAtRef.current < AUTO_GRIMI.gapMs) return false;
+    return true;
+  }, [AUTO_GRIMI.afterManualMs, AUTO_GRIMI.gapMs, AUTO_GRIMI.idleMs, AUTO_GRIMI.maxPerArtwork, AUTO_GRIMI.minOps, AUTO_GRIMI.settleMs, artwork, grimiLoading, grimiOpen, interpretLoading, reflectionOpen, teacherViewing]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      if (autoGrimiReady()) void askGrimi({ auto: true });
+    }, AUTO_GRIMI.tickMs);
+    return () => window.clearInterval(timer);
+  // askGrimi는 렌더마다 새로 만들어지지만 조건 판정은 autoGrimiReady가 모두 한다.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoGrimiReady, AUTO_GRIMI.tickMs]);
+
+  async function askGrimi(options: { auto?: boolean } = {}) {
     if (!artwork || !canvasRef.current || grimiLoading) return;
+    const auto = options.auto === true;
+    if (auto) { autoGrimiCountRef.current += 1; lastAutoGrimiAtRef.current = Date.now(); }
+    else lastManualGrimiAtRef.current = Date.now();
+    setAutoGrimi(auto);
     setGrimiOpen(true);
     setGrimiCollapsed(false);
     setGrimiLoading(true);
@@ -2240,6 +2298,7 @@ export function DrawingStudio() {
           document: documentStateRef.current,
           imageDataUrl: imageData(canvasRef.current, 1024),
           childChoice,
+          openedBy: auto ? "mongri" : "child",
         }),
       });
       const data = (await response.json()) as {
@@ -2464,7 +2523,7 @@ export function DrawingStudio() {
         <button className="button ghost compact" onClick={() => setTimelapseOpen(true)}>
           과정 보기
         </button>
-        <button className="button grimi-button compact" disabled={grimiLoading || Boolean(conflictDraft)} onClick={askGrimi}>
+        <button className="button grimi-button compact" disabled={grimiLoading || Boolean(conflictDraft)} onClick={() => void askGrimi()}>
           <SparklesIcon size={18} />
           <span className="grimi-button-label">몽그리 부르기</span>
         </button>
@@ -2497,6 +2556,8 @@ export function DrawingStudio() {
               <div>
                 <span>✨</span>
                 <b>몽그리</b>
+                {/* 아이가 부르지 않았는데 열린 경우, 누가 먼저 말을 걸었는지 알려 준다. */}
+                {autoGrimi && <small className="grimi-auto-tag">내가 먼저 말 걸었어</small>}
               </div>
               {coaching && !grimiLoading && (
                 <button className="grimi-collapse" onClick={() => setGrimiCollapsed((value) => !value)}>

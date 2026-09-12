@@ -34,7 +34,7 @@ test("Responses request keeps image, strict schema, privacy and coaching invaria
   assert.equal(captured.body.text.format.type, "json_schema"); assert.equal(captured.body.text.format.strict, true);
   assert.equal(captured.body.input[0].content[1].type, "input_image"); assert.equal(captured.body.input[0].content[1].detail, "low");
   assert.equal(captured.body.model, "gpt-5.6-sol"); assert.equal(captured.body.reasoning.effort, "low");
-  assert.match(captured.body.instructions, /자동으로 끼어들지 않는다/); assert.match(captured.body.instructions, /질문은 정확히 하나/); assert.match(captured.body.instructions, /점수, 순위.*평가/);
+  assert.match(captured.body.instructions, /아이가 그리는 것을 막지 않는다/); // 2026-09-12: 자동 개입으로 바뀌며 "끼어들지 않는다"가 "막지 않는다"로 바뀌었다 assert.match(captured.body.instructions, /질문은 정확히 하나/); assert.match(captured.body.instructions, /점수, 순위.*평가/);
   assert.doesNotMatch(JSON.stringify(captured.body), /student_x7k29/i);
 });
 
@@ -134,7 +134,7 @@ test("prompts and routes preserve child agency, teacher approval and structured 
   assert.match(renderer, /op\.type === "fill"/); assert.match(renderer, /op\.type === "shape"/); assert.match(renderer, /op\.type === "sticker"/); assert.match(timelapse, /setInterval/); assert.match(timelapse, /clearInterval/); assert.doesNotMatch(timelapse, /document\.ops\.slice\(0, frame\)/);
 });
 
-test("몽그리가 오늘 회차 이야기를 알고 답한다 (확장 협업자·틀리는 해석자)", async () => {
+test("몽그리의 두 역할이 그림과 아이 말에만 기대어 답한다 (확장 협업자·틀리는 해석자)", async () => {
   const [route, prompts, studio] = await Promise.all([
     read("../app/api/ai/coaching/route.ts"), read("../lib/openai-coaching.ts"), read("../app/components/DrawingStudio.tsx"),
   ]);
@@ -144,7 +144,8 @@ test("몽그리가 오늘 회차 이야기를 알고 답한다 (확장 협업자
   assert.doesNotMatch(route, /storyContext|arcById|episodeById|arc_id/);
 
   // 확장 협업자: 아이가 먼저이고 몽그리가 뒤따른다.
-  assert.match(prompts, /확장 협업자이며 앞서 끌고 가지 않는다/);
+  // 스키마가 next_action을 필수로 강제하므로 "앞서 끌고 가지 않는다"로 부정하지 않는다(2026-09-12 정정).
+  assert.match(prompts, /그것을 잇는 확장 협업자다/);
   assert.match(prompts, /새 소재나 새 주제를 네가 가져오지 않는다/);
 
   // 틀리는 해석자: 완성 순간에만 부르고, 실패해도 완성을 막지 않는다.

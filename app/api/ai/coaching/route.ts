@@ -114,7 +114,9 @@ export async function POST(request: Request) {
   if (!Number.isInteger(expectedRevision) || expectedRevision !== artwork.revision) return noStoreJson({ error: "그림을 먼저 저장한 뒤 다시 불러 주세요.", code: "REVISION_CONFLICT", serverRevision: artwork.revision }, { status: 409 });
   if (!document || JSON.stringify(document).length > 1_250_000 || !image) return jsonError("현재 그림을 확인하지 못했어요.", 413);
   const childChoice = cleanText(payload.childChoice, 80);
-  const context = { artworkIntent: artwork.intent, artworkTopic: artwork.topic, childChoice, currentStep: artwork.currentStep, recentEvents: await recentContext(artworkId) };
+  // 아이가 불렀는지 몽그리가 먼저 말을 걸었는지 알려 준다 — 프롬프트가 이 값으로 말투를 고른다.
+  const openedBy = payload.openedBy === "mongri" ? "mongri" : "child";
+  const context = { artworkIntent: artwork.intent, artworkTopic: artwork.topic, childChoice, openedBy, currentStep: artwork.currentStep, recentEvents: await recentContext(artworkId) };
   const prompt = `현재 작품 맥락(JSON): ${JSON.stringify(context)}\n그림을 관찰하고, 아이가 이미 그린 것을 이어 가는 질문 하나와 실제 다음 그리기 행동을 제안해 줘.`;
   try {
     const result = await requestStructuredOpenAI({

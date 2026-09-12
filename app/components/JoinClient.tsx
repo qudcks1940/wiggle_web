@@ -11,7 +11,7 @@ const ANIMAL_NAMES: Record<string, string> = { "🐰": "토끼", "🐻": "곰", 
 export const ENTRY_CODE_LENGTH = 4;
 /* 입장은 두 단계다: 반을 정하고(QR이 기본, 못 쓰면 수업 코드 4자리) 아이 참여 코드 4자리를 누른다.
  * 코드가 곧 그 아이의 자리라, 다음 시간에 같은 코드를 넣으면 같은 아이로 돌아온다.
- * 참여 코드는 2026-09-12에 네 자리로 줄였다 — 여섯 자리는 저학년이 누르기 벅찼다. */
+ * 참여 코드는 2026-09-12에 네 자리로 줄였다 — 여섯 자리는 아이가 누르기 벅찼다. */
 type Mode = "checking" | "code" | "animal" | "noRoster";
 
 export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {

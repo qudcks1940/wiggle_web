@@ -207,6 +207,8 @@ legend small { color:var(--primary-dark); }
 /* MVP 2 coaching */
 .grimi-button { color:#563c00; background:var(--yellow); border-color:#e4bc34; box-shadow:0 4px 0 #d2a918; }
 .grimi-panel { background:#fffdf1; border-right:1px solid #eadb9b; padding:16px; overflow:auto; z-index:3; }
+/* 몽그리가 먼저 연 카드임을 알리는 작은 표. 아이가 부른 것과 구별된다(2026-09-12). */
+.grimi-auto-tag { margin-left:8px; padding:3px 8px; border-radius:999px; background:#fff1c9; color:#7a5c14; font-size:11px; font-weight:800; white-space:nowrap; }
 .grimi-scroll { display:contents; }
 .grimi-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:15px; }
 .grimi-collapse { min-height:44px; margin-left:auto; padding:8px 12px; border:2px solid #e1c14d; border-radius:13px; background:#fff7c8; color:#654d00; font-size:13px; font-weight:900; white-space:nowrap; cursor:pointer; }

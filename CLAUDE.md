@@ -62,7 +62,8 @@ git diff --check main...HEAD
 
 ## 배포 (GitHub → Vercel)
 
-- 운영 주소: `https://wiggleweb.vercel.app` — Vercel 프로젝트 `wiggle-web`이 GitHub `main` push를 자동 빌드·배포한다(서울 리전 icn1). `wiggle-web.vercel.app`은 타인 소유이므로 사용·안내 금지.
+- ⚠️ **2026-09-12 실측: 운영은 지금 이 저장소를 빌드하지 않는다.** Vercel 프로젝트 `wiggle-web`이 옛 저장소 `yonghwan86/wiggle_web`에 연결돼 있어 `wwwiggle/new_wiggle`의 `main` push가 배포되지 않는다. 운영은 2026-08-23 빌드에 멈춰 있다. 연결을 바꾸기 전에는 **`main` push를 "운영 반영"이라고 보고하지 않는다**. 미결정 P-009.
+- 운영 주소: `https://wiggleweb.vercel.app` — Vercel 프로젝트 `wiggle-web`(서울 리전 icn1). `wiggle-web.vercel.app`은 타인 소유이므로 사용·안내 금지.
 - 운영 환경 변수는 Vercel 대시보드에서만 관리한다(9종: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `R2_S3_ENDPOINT`, `R2_S3_BUCKET`, `R2_S3_ACCESS_KEY_ID`, `R2_S3_SECRET_ACCESS_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `OPENAI_API_KEY`). 값에 따옴표를 넣지 않는다.
 - DB(Turso)는 첫 요청의 `ensureSchema()`가 자가 프로비저닝한다. 운영 Turso·R2 데이터를 SQL·S3로 직접 수정·삭제하지 않는다(정리도 사용자 승인 필요).
 - 교사 인증은 구글 OAuth다. 도메인을 추가하면 구글 콘솔의 승인된 리디렉션 URI에 `https://<도메인>/api/auth/google/callback`을 함께 추가해야 그 도메인에서 교사 로그인이 된다.

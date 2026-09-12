@@ -8,10 +8,10 @@ import check from "./EntryCheck.module.css";
 
 const ANIMALS = ["🐰", "🐻", "🦊", "🐯", "🐼", "🐶", "🐱", "🐨", "🦁", "🐸"];
 const ANIMAL_NAMES: Record<string, string> = { "🐰": "토끼", "🐻": "곰", "🦊": "여우", "🐯": "호랑이", "🐼": "판다", "🐶": "강아지", "🐱": "고양이", "🐨": "코알라", "🦁": "사자", "🐸": "개구리" };
-export const ENTRY_CODE_LENGTH = 6;
-/* 입장은 수업 코드 → 아이 참여 코드 6자리, 두 단계다(2026-09-09 사용자 결정). 번호 입력과
- * 그림 비밀번호는 1~2학년이 매번 기억해야 해서 없앴다. 코드는 종이에 적혀 있고 코드가 곧 자리라,
- * 처음 들어올 때 동물 하나만 고르면 그 뒤로는 코드만으로 자기 그림에 돌아온다. */
+export const ENTRY_CODE_LENGTH = 4;
+/* 입장은 두 단계다: 반을 정하고(QR이 기본, 못 쓰면 수업 코드 4자리) 아이 참여 코드 4자리를 누른다.
+ * 코드가 곧 그 아이의 자리라, 다음 시간에 같은 코드를 넣으면 같은 아이로 돌아온다.
+ * 참여 코드는 2026-09-12에 네 자리로 줄였다 — 여섯 자리는 저학년이 누르기 벅찼다. */
 type Mode = "checking" | "code" | "animal" | "noRoster";
 
 export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
@@ -72,7 +72,7 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
   }
 
   async function submit(chosenAnimal = "") {
-    if (codeInput.length !== ENTRY_CODE_LENGTH) { setError("참여 코드 여섯 자리를 눌러 주세요."); setErrorKind("general"); return; }
+    if (codeInput.length !== ENTRY_CODE_LENGTH) { setError("참여 코드 네 자리를 눌러 주세요."); setErrorKind("general"); return; }
     clearEntryError(); setBusy(true);
     let failureKind: EntryErrorKind = "general";
     try {
@@ -147,7 +147,7 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
         <img className={check.duck} src="/landing-gallery/duck-painter-640.webp" alt="" aria-hidden="true" width="640" height="640" />
         <div className={check.seatTitle}>
           <h1>내 참여 코드를 눌러요</h1>
-          <p>선생님이 준 여섯 자리 숫자예요.</p>
+          <p>선생님이 준 네 자리 숫자예요.</p>
         </div>
         <span className={check.padBadge}>{classroomName}</span>
         <section className={`code-card ${check.pad}`} aria-label="참여 코드 입력 수첩">

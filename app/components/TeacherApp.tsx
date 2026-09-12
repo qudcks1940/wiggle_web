@@ -8,9 +8,7 @@ import { TeacherWorkspace, WorkspaceDialog } from "./TeacherWorkspace";
 import "./TeacherWorkspace.css";
 import { useModalDialog } from "./useModalDialog";
 
-type ClassroomArc = { arcId: string; title: string; episodeId: string; episodeTitle: string; episodeIndex: number | null; episodeCount: number; discussion?: string[] };
-type ArcOption = { arcId: string; title: string; episodes: Array<{ episodeId: string; title: string }> };
-type Classroom = { id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; currentActivityKey: string; currentActivityLabel: string; arc: ClassroomArc | null; studentCount: number; updatedAt: string };
+type Classroom = { id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; currentActivityKey: string; currentActivityLabel: string; studentCount: number; updatedAt: string };
 export type WorkspaceArtwork = { id: string; title: string; status: string; thumbnail: string | null; updatedAt: string };
 export type Student = { sessionArtwork: (WorkspaceArtwork & { currentStep: number; revision: number }) | null; id: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null; entryCode: string | null; claimedAt: string | null; createdAt: string; lastActivityAt: string; artworkId: string | null; completedArtworkId: string | null; artworkTitle: string | null; status: string | null; currentStep: number | null; revision: number | null; thumbnail: string | null; artworkUpdatedAt: string | null; artworkCount: number; drawingArtworkCount: number; completedArtworkCount: number; duplicateNickname: boolean };
 export type ArchivedStudent = { id: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null; lastActivityAt: string; archivedAt: string; artworkCount: number };
@@ -25,7 +23,7 @@ function RosterField({ value, onChange, label }: { value: string; onChange: (nex
 
 type FamilyLink = { id: string; studentId: string; scope: "artwork" | "bundle"; expiresAt: string; revokedAt: string | null; createdAt: string; artworkCount: number };
 type TeacherArtworkHistory = { id: string; title: string; topic: string; learningMode: string; lessonSlug: string | null; status: string; currentStep: number; updatedAt: string; completedAt: string | null; thumbnail: string | null };
-export type ClassroomData = { monitorScope: "episode" | "latest"; classroom: Classroom; students: Student[]; archivedStudents: ArchivedStudent[]; messages: Array<{ id: string; studentId: string | null; body: string; createdAt: string; nickname?: string; seenCount?: number }>; familyLinks: FamilyLink[]; teacher: { displayName: string; source?: "siwc" | "local" } };
+export type ClassroomData = { classroom: Classroom; students: Student[]; archivedStudents: ArchivedStudent[]; messages: Array<{ id: string; studentId: string | null; body: string; createdAt: string; nickname?: string; seenCount?: number }>; familyLinks: FamilyLink[]; teacher: { displayName: string; source?: "siwc" | "local" } };
 type TeacherPayload = Partial<ClassroomData> & { error?: string; localDemo?: boolean; teacher?: { displayName: string; source?: "siwc" | "local" }; classrooms?: Classroom[] };
 
 function profileDate(value: string) {
@@ -86,37 +84,6 @@ function ClassroomRow({ item, deleting, onDelete, onQr }: { item: Classroom; del
 async function teacherPost<T = Record<string, unknown>>(payload: Record<string, unknown>): Promise<T> { const response = await fetch("/api/teacher", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" }); const data = await response.json() as T & { error?: string }; if (!response.ok) throw new Error(data.error ?? "요청을 처리하지 못했어요."); return data; }
 async function teacherAiPost<T = Record<string, unknown>>(payload: Record<string, unknown>): Promise<T> { const response = await fetch("/api/ai/teacher-draft", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" }); const data = await response.json() as T & { error?: string }; if (!response.ok) throw new Error(data.error ?? "AI 코칭 초안을 처리하지 못했어요."); return data; }
 
-/**
- * 수업 조종석 (FR-34, EXPERIENCE.md): 학급 화면 맨 위 — 교사의 실제 순서(회차 열기→QR→입장)와
- * 화면 순서를 일치시킨다. 학급 포인터(아크·현재 회차)만 보여준다.
- * 아이별 진행·집계·정렬은 여기에 두지 않는다(AD-15).
- */
-function ArcCockpit({ room, onOpenEpisode }: { room: Classroom; onOpenEpisode: (arcId: string, episodeId: string) => void | Promise<void> }) {
-  const [arcs, setArcs] = useState<ArcOption[]>([]);
-  const [selectedArc, setSelectedArc] = useState(room.arc?.arcId ?? "");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [retry, setRetry] = useState(0);
-  useEffect(() => {
-    let alive = true; setLoading(true); setError("");
-    teacherPost<{ arcs: ArcOption[] }>({ action: "listArcs", classroomId: room.id })
-      .then((data) => { if (alive) setArcs(data.arcs); })
-      .catch(() => { if (alive) setError("이야기 목록을 불러오지 못했어요."); })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
-  }, [room.id, retry]);
-  const arc = arcs.find((entry) => entry.arcId === selectedArc);
-  return <section className="arc-cockpit" aria-label="수업 조종석">
-    <p>{room.arc ? `현재: ${room.arc.title} · ${room.arc.episodeIndex}회차` : "지금은 자유 그리기 중이에요."}</p>
-    {loading && <p role="status">이야기를 불러오는 중…</p>}
-    {error && <p className="tcw-error" role="alert">{error}<button onClick={() => setRetry((value) => value + 1)}>다시 불러오기</button></p>}
-    {!loading && !error && <label>이야기 고르기<select value={selectedArc} onChange={(event) => setSelectedArc(event.target.value)}><option value="" disabled>이야기를 골라 주세요</option>{arcs.map((entry) => <option value={entry.arcId} key={entry.arcId}>{entry.title} ({entry.episodes.length}회차)</option>)}</select></label>}
-    {arc && <div className="arc-cockpit-actions">{arc.episodes.map((episode, index) => <button key={episode.episodeId} className={room.arc?.episodeId === episode.episodeId && room.arc?.arcId === arc.arcId ? "tcw-primary" : ""} disabled={busy} onClick={async () => { setBusy(true); try { await onOpenEpisode(arc.arcId, episode.episodeId); } finally { setBusy(false); } }}>{index + 1}회차 · {episode.title}{room.arc?.episodeId === episode.episodeId && room.arc?.arcId === arc.arcId ? " · 현재" : ""}</button>)}</div>}
-  </section>;
-}
-
-
 function TeacherHistoryDrawer({ student, artworks, loading, error, hasMore, onMore }: { student: Student | null; artworks: TeacherArtworkHistory[]; loading: boolean; error: string; hasMore: boolean; onMore: () => void }) {
   const [selectedArtworkId, setSelectedArtworkId] = useState("");
   useEffect(() => { setSelectedArtworkId(""); }, [student?.id]);
@@ -135,7 +102,7 @@ function TeacherHistoryDrawer({ student, artworks, loading, error, hasMore, onMo
 
 export function TeacherApp({ classroomId = "" }: { classroomId?: string }) {
   const [newRoster, setNewRoster] = useState("");
-  const [workspaceDialog, setWorkspaceDialog] = useState<"episode" | "message" | null>(null);
+  const [workspaceDialog, setWorkspaceDialog] = useState<"message" | null>(null);
   const [selectedArtwork, setSelectedArtwork] = useState<WorkspaceArtwork | null>(null);
   const [messageSending, setMessageSending] = useState(false);
   const [messageNotice, setMessageNotice] = useState("");
@@ -373,7 +340,6 @@ export function TeacherApp({ classroomId = "" }: { classroomId?: string }) {
   return <main className="teacher-workspace">
     <TeacherWorkspace data={classroomData} lastUpdated={lastUpdated} loadError={loadError} onRetry={() => void load()}
       onOpenArtwork={(studentId, artwork) => { const student = classroomData.students.find((item) => item.id === studentId); if (student) { openPreview(student); setSelectedArtwork(artwork ?? null); } }}
-      onEpisode={() => setWorkspaceDialog("episode")}
       onMessage={() => { setTargetStudent(""); setMessageNotice(""); setWorkspaceDialog("message"); }}
       onQr={(opener) => { qrOpenButtonRef.current = opener; setQrExpanded(true); }}
       onAction={classAction} onArchive={(id) => { const student = classroomData.students.find((item) => item.id === id); if (student) void archiveStudent(student); }}
@@ -382,7 +348,6 @@ export function TeacherApp({ classroomId = "" }: { classroomId?: string }) {
     />
     {error && <div className="tcw-error tcw-action-error" role="alert">{error}<button type="button" onClick={() => setError("")}>닫기</button></div>}
     {familyShareUrl && <div className="family-link-ready" role="status"><b>10분 동안 유효한 1회용 가족 입장 링크를 만들었어요.</b><input readOnly value={familyShareUrl} aria-label="새 가족 공유 1회용 입장 링크" /><button onClick={() => navigator.clipboard?.writeText(familyShareUrl).catch(() => setError("주소를 직접 선택해 복사해 주세요."))}>다시 복사</button><button onClick={() => setFamilyShareUrl("")}>닫기</button></div>}
-    {workspaceDialog === "episode" && <WorkspaceDialog title="이야기와 회차 변경" onClose={() => setWorkspaceDialog(null)}><ArcCockpit room={room} onOpenEpisode={async (arcId, episodeId) => { const result = await classAction("setEpisode", { arcId, episodeId }); if (result) setWorkspaceDialog(null); }} />{error && <p className="tcw-error" role="alert">{error}</p>}</WorkspaceDialog>}
     {workspaceDialog === "message" && <WorkspaceDialog title="메시지 보내기" onClose={() => setWorkspaceDialog(null)}>
       <form className="tcw-message" onSubmit={sendMessage}><label>받는 학생<select value={targetStudent} onChange={(event) => setTargetStudent(event.target.value)}><option value="">우리 반 모두</option>{classroomData.students.map((student) => <option value={student.id} key={student.id}>{student.seatNumber} {student.realName ?? student.nickname}</option>)}</select></label><label>메시지<textarea maxLength={180} rows={4} value={messageBody} onChange={(event) => { setMessageBody(event.target.value); setMessageNotice(""); }} placeholder="학생에게 전할 짧은 도움말을 적어 주세요." /></label><div className="tcw-message-footer"><small>{messageBody.length}/180</small><button className="tcw-primary" disabled={messageSending || !messageBody.trim()}>{messageSending ? "보내는 중…" : "보내기"}</button></div>{messageNotice && <p role="status">{messageNotice}</p>}{error && <p className="tcw-error" role="alert">{error}</p>}</form>
       <details className="tcw-message-history"><summary>보낸 메시지 {classroomData.messages.length}개</summary>{classroomData.messages.map((item) => <article key={item.id}><b>{item.studentId ? item.nickname : "우리 반 모두"}</b><p>{item.body}</p><small>{item.seenCount ? `${item.seenCount}명 확인` : "아직 확인 전"}</small></article>)}</details>

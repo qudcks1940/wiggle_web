@@ -1,7 +1,6 @@
 import { bindings } from "@/db/runtime";
-import { DrawOp, emptyDocument } from "@/lib/drawing-model";
+import { emptyDocument } from "@/lib/drawing-model";
 import { lessonBySlug } from "@/lib/lesson-content";
-import { arcById, episodeById } from "@/lib/arc-content";
 import { GUIDED_LESSON_VARIANT_COUNT } from "@/lib/lesson-guide-variants";
 import { cleanText, id, jsonError, noStoreJson, rateLimit, sameOrigin, studentFromRequest } from "@/lib/security";
 
@@ -12,25 +11,6 @@ export async function GET(request: Request) {
   return noStoreJson({ artworks: rows.results });
 }
 
-// 씨앗 선 회차는 빈 도화지가 아니라 미리 그어 둔 선으로 시작한다(docs/curriculum-seed-plan.md).
-// 점선 힌트와 달리 보통의 획이라 아이가 지울 수 있고 저장 이미지에도 그대로 남는다.
-function seededDocument(seed: Array<Array<[number, number]>> | undefined) {
-  const document = emptyDocument();
-  if (!seed?.length) return document;
-  const seededAt = new Date().toISOString();
-  document.ops = seed.map((points): DrawOp => ({
-    opId: id("op"),
-    clientOpId: id("seed"),
-    type: "stroke",
-    at: seededAt,
-    tool: "pencil",
-    color: "#2B4A33",
-    width: 8,
-    points: points.map(([x, y]) => ({ x, y, pressure: 0.5 })),
-  }));
-  return document;
-}
-
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return jsonError("요청 출처를 확인할 수 없어요.", 403);
   const student = await studentFromRequest(request);
@@ -39,30 +19,6 @@ export async function POST(request: Request) {
   const payload = await request.json().catch(() => ({})) as Record<string, unknown>;
   const clientArtworkId = cleanText(payload.clientArtworkId, 80);
   const artworkId = /^artwork_[a-zA-Z0-9_-]{12,64}$/.test(clientArtworkId) ? clientArtworkId : id("artwork");
-  const arcId = cleanText(payload.arcId, 60) || null;
-  const episodeId = cleanText(payload.episodeId, 60) || null;
-  if (arcId || episodeId) {
-    // ── 아크 회차 작품 (Story 2.2) ──
-    // 귀속은 생성 시점에 고정된다(AD-10). learningMode는 free — LESSONS 제거 후에도 유일하게 남는 모드다.
-    const arc = arcById(arcId);
-    const episode = episodeById(arcId, episodeId);
-    if (!arc || !episode) return jsonError("오늘 회차를 다시 확인해 주세요.");
-    // 같은 학생이 같은 회차를 두 번 시작하면(태블릿 재부팅·기기 두 대) 새 행을 만들지 않고
-    // 기존 작품을 이어 쓴다 — clientArtworkId 기반 ON CONFLICT는 기기 간 충돌을 못 잡는다(AD-3).
-    const existing = await bindings().DB.prepare(
-      `SELECT id, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, intent, revision, status FROM artworks WHERE student_id = ? AND arc_id = ? AND episode_id = ? ORDER BY CASE status WHEN 'complete' THEN 0 ELSE 1 END, created_at ASC LIMIT 1`,
-    ).bind(student.id, arcId, episodeId).first();
-    if (existing) return noStoreJson({ artwork: existing, reused: true });
-    await bindings().DB.prepare(
-      `INSERT INTO artworks(id, student_id, classroom_id, title, topic, learning_mode, arc_id, episode_id, arc_version, intent, ops_json) VALUES (?, ?, ?, ?, ?, 'free', ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`,
-    ).bind(artworkId, student.id, student.classroomId, episode.title, arc.title, arcId, episodeId, arc.version, cleanText(payload.intent, 160), JSON.stringify(seededDocument(episode.seed))).run();
-    // INSERT가 경합에서 졌어도(같은 clientArtworkId 재전송) 아래 재조회가 기존 행을 돌려준다 — 유실 없음.
-    const artwork = await bindings().DB.prepare(
-      `SELECT id, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, intent, revision, status FROM artworks WHERE student_id = ? AND arc_id = ? AND episode_id = ? ORDER BY CASE status WHEN 'complete' THEN 0 ELSE 1 END, created_at ASC LIMIT 1`,
-    ).bind(student.id, arcId, episodeId).first();
-    if (!artwork) return jsonError("그림을 만들 수 없어요.", 409);
-    return noStoreJson({ artwork }, { status: 201 });
-  }
   const mode = cleanText(payload.learningMode, 20);
   if (!["practice", "guided", "observe", "free"].includes(mode)) return jsonError("그리기 활동을 다시 골라 주세요.");
   const lessonSlug = cleanText(payload.lessonSlug, 80) || null;

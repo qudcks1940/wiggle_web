@@ -42,8 +42,8 @@ test("a wrong code offers calling the teacher (there is no visible class-code fi
   assert.match(join, /참여 코드를 다시 알려 주실 거예요\./);
 });
 
-test("the code screen submits only six digits and the animal screen only after a pick", () => {
-  assert.match(join, /export const ENTRY_CODE_LENGTH = 6;/);
+test("the code screen submits only four digits and the animal screen only after a pick", () => {
+  assert.match(join, /export const ENTRY_CODE_LENGTH = 4;/);
   assert.match(join, /disabled=\{busy \|\| codeInput\.length !== ENTRY_CODE_LENGTH\}/);
   assert.match(join, /disabled=\{busy \|\| !animal\}/);
   assert.match(join, /autoComplete="one-time-code"/);

@@ -93,6 +93,8 @@ export const artworks = sqliteTable("artworks", {
   learningMode: text("learning_mode", { enum: ["practice", "guided", "observe", "free"] }).notNull(),
   lessonSlug: text("lesson_slug"),
   // 회차 귀속 — 생성 시점에 고정, 어떤 쓰기도 학급 포인터로 재결정하지 않는다 (AD-10)
+  /* 은퇴한 커리큘럼(이야기 아크)의 귀속 컬럼. 2026-09-12부터 새로 쓰지 않지만,
+   * 그때 그린 그림의 기록이라 지우지 않는다. */
   arcId: text("arc_id"),
   episodeId: text("episode_id"),
   arcVersion: integer("arc_version"),

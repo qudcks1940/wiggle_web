@@ -8,23 +8,13 @@ import { prepareTeacherMessageInsert, validateTeacherMessageTarget } from "@/lib
 import { createFamilyShare, revokeFamilyShare } from "@/lib/family-sharing";
 import { activityLabel, DEFAULT_ACTIVITY_KEY, normalizeActivityKey } from "@/lib/lesson-content";
 import { nicknameKeySql } from "@/lib/nickname";
-import { rotateClassroomEntry, setClassroomEpisode, updateClassroomAdmission, upsertTeacherView } from "@/lib/teacher-classroom-mutations";
-import { arcById, ARCS, episodeById, isValidArcEpisode } from "@/lib/arc-content";
+import { rotateClassroomEntry, updateClassroomAdmission, upsertTeacherView } from "@/lib/teacher-classroom-mutations";
 
-type ClassroomRow = { id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; currentArcId: string | null; currentEpisodeId: string | null; studentCount: number; updatedAt: string };
+type ClassroomRow = { id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; studentCount: number; updatedAt: string };
 
-function presentClassroom<T extends { currentActivity: string; currentArcId?: string | null; currentEpisodeId?: string | null }>(classroom: T) {
+function presentClassroom<T extends { currentActivity: string }>(classroom: T) {
   const currentActivityKey = normalizeActivityKey(classroom.currentActivity);
-  // 수업 조종석(FR-34): 학급 포인터가 가리키는 아크·회차의 이름을 함께 내려준다.
-  // 아이별 쪽 목록·집계는 내려주지 않는다 — 응답 형상 금지(AD-15).
-  const arc = arcById(classroom.currentArcId);
-  const episode = episodeById(classroom.currentArcId, classroom.currentEpisodeId);
-  const episodeIndex = arc && episode ? arc.episodes.findIndex((entry) => entry.episodeId === episode.episodeId) + 1 : null;
-  return {
-    ...classroom,
-    currentActivity: activityLabel(currentActivityKey), currentActivityKey, currentActivityLabel: activityLabel(currentActivityKey),
-    arc: arc && episode ? { arcId: arc.arcId, title: arc.title, episodeId: episode.episodeId, episodeTitle: episode.title, episodeIndex, episodeCount: arc.episodes.length, discussion: episode.discussion ?? [] } : null,
-  };
+  return { ...classroom, currentActivity: activityLabel(currentActivityKey), currentActivityKey, currentActivityLabel: activityLabel(currentActivityKey) };
 }
 
 function clientKey(request: Request, scope: string) {
@@ -56,7 +46,7 @@ async function uniqueClassCode() {
 }
 
 async function ownedClassroom(teacherId: string, classroomId: string) {
-  const classroom = await bindings().DB.prepare(`SELECT id, display_name AS displayName, class_code AS classCode, join_token AS joinToken, admission_open AS admissionOpen, current_activity AS currentActivity, current_arc_id AS currentArcId, current_episode_id AS currentEpisodeId FROM classrooms WHERE id = ? AND teacher_id = ? AND active = 1`).bind(classroomId, teacherId).first<{ id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; currentArcId: string | null; currentEpisodeId: string | null }>();
+  const classroom = await bindings().DB.prepare(`SELECT id, display_name AS displayName, class_code AS classCode, join_token AS joinToken, admission_open AS admissionOpen, current_activity AS currentActivity FROM classrooms WHERE id = ? AND teacher_id = ? AND active = 1`).bind(classroomId, teacherId).first<{ id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string }>();
   return classroom ? presentClassroom(classroom) : null;
 }
 
@@ -70,20 +60,9 @@ async function toDataUrl(key: string | null) {
   return bytesToDataUrl(bytes, object.httpMetadata?.contentType === "image/jpeg" ? "image/jpeg" : "image/png");
 }
 
-function presentEpisode(arcId: string | null, episodeId: string | null) {
-  const arc = arcById(arcId);
-  const episode = episodeById(arcId, episodeId);
-  return {
-    arcId, episodeId,
-    arcTitle: arc?.title ?? null,
-    episodeTitle: episode?.title ?? null,
-    episodeIndex: arc && episode ? arc.episodes.findIndex((entry) => entry.episodeId === episodeId) + 1 : null,
-  };
-}
-
 type ArtworkArchiveRow = {
   id: string; studentId: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null;
-  title: string; status: string; updatedAt: string; completedAt: string | null; arcId: string | null; episodeId: string | null; imageKey: string | null;
+  title: string; status: string; updatedAt: string; completedAt: string | null; imageKey: string | null;
 };
 
 // Keyset pagination keeps newly saved pictures at the start without shifting the next page.
@@ -103,8 +82,6 @@ function parseArchiveCursor(value: string | null): { updatedAt: string; id: stri
 async function classroomArtworkArchive(url: URL, teacherId: string, classroomId: string) {
   const db = bindings().DB;
   const studentId = cleanText(url.searchParams.get("studentId"), 40);
-  const arcId = cleanText(url.searchParams.get("arcId"), 60);
-  const episodeId = cleanText(url.searchParams.get("episodeId"), 60);
   const cursor = parseArchiveCursor(url.searchParams.get("cursor"));
   if (cursor === false) return jsonError("작품 목록을 처음부터 다시 열어 주세요.");
   const limit = Math.min(48, Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "24", 10) || 24));
@@ -116,25 +93,20 @@ async function classroomArtworkArchive(url: URL, teacherId: string, classroomId:
   }
   const studentWhere = studentId ? " AND s.id = ?" : "";
   if (studentId) rosterValues.push(studentId);
-  let filteredWhere = rosterWhere + studentWhere;
+  const filteredWhere = rosterWhere + studentWhere;
   const filteredValues = [...rosterValues];
-  if (arcId) { filteredWhere += " AND a.arc_id = ?"; filteredValues.push(arcId); }
-  if (episodeId) { filteredWhere += " AND a.episode_id = ?"; filteredValues.push(episodeId); }
   const cursorWhere = cursor ? " AND (a.updated_at < ? OR (a.updated_at = ? AND a.id < ?))" : "";
   const pageValues = [...filteredValues, ...(cursor ? [cursor.updatedAt, cursor.updatedAt, cursor.id] : []), limit + 1];
   const from = `FROM artworks a JOIN student_profiles s ON s.id = a.student_id JOIN classrooms c ON c.id = a.classroom_id`;
-  const [rows, total, episodeRows] = await Promise.all([
-    db.prepare(`SELECT a.id, a.student_id AS studentId, s.nickname, s.animal, s.seat_number AS seatNumber, s.real_name AS realName, a.title, a.status, a.updated_at AS updatedAt, a.completed_at AS completedAt, a.arc_id AS arcId, a.episode_id AS episodeId, COALESCE(a.thumbnail_key, a.final_image_key) AS imageKey ${from} WHERE ${filteredWhere}${cursorWhere} ORDER BY a.updated_at DESC, a.id DESC LIMIT ?`).bind(...pageValues).all<ArtworkArchiveRow>(),
+  const [rows, total] = await Promise.all([
+    db.prepare(`SELECT a.id, a.student_id AS studentId, s.nickname, s.animal, s.seat_number AS seatNumber, s.real_name AS realName, a.title, a.status, a.updated_at AS updatedAt, a.completed_at AS completedAt, COALESCE(a.thumbnail_key, a.final_image_key) AS imageKey ${from} WHERE ${filteredWhere}${cursorWhere} ORDER BY a.updated_at DESC, a.id DESC LIMIT ?`).bind(...pageValues).all<ArtworkArchiveRow>(),
     db.prepare(`SELECT COUNT(*) AS count ${from} WHERE ${filteredWhere}`).bind(...filteredValues).first<{ count: number }>(),
-    db.prepare(`SELECT DISTINCT a.arc_id AS arcId, a.episode_id AS episodeId ${from} WHERE ${rosterWhere}${studentWhere} AND a.arc_id IS NOT NULL AND a.episode_id IS NOT NULL ORDER BY a.arc_id, a.episode_id`).bind(...rosterValues).all<{ arcId: string; episodeId: string }>(),
   ]);
   const page = rows.results.slice(0, limit);
-  const artworks = await Promise.all(page.map(async ({ imageKey, ...artwork }) => ({ ...artwork, ...presentEpisode(artwork.arcId, artwork.episodeId), thumbnail: await toDataUrl(imageKey) })));
+  const artworks = await Promise.all(page.map(async ({ imageKey, ...artwork }) => ({ ...artwork, thumbnail: await toDataUrl(imageKey) })));
   const hasMore = rows.results.length > limit;
   const last = page.at(-1);
-  const episodes = episodeRows.results.map(({ arcId: savedArcId, episodeId: savedEpisodeId }) => presentEpisode(savedArcId, savedEpisodeId))
-    .sort((a, b) => (a.arcTitle ?? a.arcId ?? "").localeCompare(b.arcTitle ?? b.arcId ?? "", "ko") || (a.episodeIndex ?? 0) - (b.episodeIndex ?? 0));
-  return noStoreJson({ artworks, total: Number(total?.count ?? 0), episodes, hasMore, nextCursor: hasMore && last ? Buffer.from(JSON.stringify([last.updatedAt, last.id])).toString("base64url") : null });
+  return noStoreJson({ artworks, total: Number(total?.count ?? 0), hasMore, nextCursor: hasMore && last ? Buffer.from(JSON.stringify([last.updatedAt, last.id])).toString("base64url") : null });
 }
 
 export async function GET(request: Request) {
@@ -144,7 +116,7 @@ export async function GET(request: Request) {
   const classroomId = cleanText(url.searchParams.get("classroomId"), 40);
   const db = bindings().DB;
   if (!classroomId) {
-    const result = await db.prepare(`SELECT c.id, c.display_name AS displayName, c.class_code AS classCode, c.join_token AS joinToken, c.admission_open AS admissionOpen, c.current_activity AS currentActivity, c.current_arc_id AS currentArcId, c.current_episode_id AS currentEpisodeId, c.updated_at AS updatedAt, COUNT(s.id) AS studentCount FROM classrooms c LEFT JOIN student_profiles s ON s.classroom_id = c.id AND s.archived_at IS NULL WHERE c.teacher_id = ? AND c.active = 1 GROUP BY c.id ORDER BY c.created_at DESC`).bind(teacher.id).all<ClassroomRow>();
+    const result = await db.prepare(`SELECT c.id, c.display_name AS displayName, c.class_code AS classCode, c.join_token AS joinToken, c.admission_open AS admissionOpen, c.current_activity AS currentActivity, c.updated_at AS updatedAt, COUNT(s.id) AS studentCount FROM classrooms c LEFT JOIN student_profiles s ON s.classroom_id = c.id AND s.archived_at IS NULL WHERE c.teacher_id = ? AND c.active = 1 GROUP BY c.id ORDER BY c.created_at DESC`).bind(teacher.id).all<ClassroomRow>();
     return noStoreJson({ teacher, classrooms: result.results.map(presentClassroom) });
   }
 
@@ -164,12 +136,7 @@ export async function GET(request: Request) {
   }
   type StudentRow = { id: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null; entryCode: string | null; claimedAt: string | null; createdAt: string; lastActivityAt: string; artworkId: string | null; artworkTitle: string | null; status: string | null; currentStep: number | null; revision: number | null; thumbnailKey: string | null; artworkUpdatedAt: string | null; completedArtworkId: string | null; artworkCount: number; drawingArtworkCount: number; completedArtworkCount: number; duplicateNicknameCount: number };
   const students = await db.prepare(`SELECT s.id, s.nickname, s.animal, s.seat_number AS seatNumber, s.real_name AS realName, s.entry_code AS entryCode, s.claimed_at AS claimedAt, s.created_at AS createdAt, s.last_activity_at AS lastActivityAt, a.id AS artworkId, a.title AS artworkTitle, a.status, a.current_step AS currentStep, a.revision, a.thumbnail_key AS thumbnailKey, a.updated_at AS artworkUpdatedAt, (SELECT a3.id FROM artworks a3 WHERE a3.student_id = s.id AND a3.classroom_id = s.classroom_id AND a3.status = 'complete' AND a3.final_image_key IS NOT NULL ORDER BY a3.completed_at DESC, a3.id DESC LIMIT 1) AS completedArtworkId, (SELECT COUNT(*) FROM artworks ac WHERE ac.student_id = s.id AND ac.classroom_id = s.classroom_id) AS artworkCount, (SELECT COUNT(*) FROM artworks ad WHERE ad.student_id = s.id AND ad.classroom_id = s.classroom_id AND ad.status = 'drawing') AS drawingArtworkCount, (SELECT COUNT(*) FROM artworks af WHERE af.student_id = s.id AND af.classroom_id = s.classroom_id AND af.status = 'complete') AS completedArtworkCount, (SELECT COUNT(*) FROM student_profiles sd WHERE sd.classroom_id = s.classroom_id AND sd.archived_at IS NULL AND ${nicknameKeySql("sd.nickname")} = ${nicknameKeySql("s.nickname")} COLLATE NOCASE) AS duplicateNicknameCount FROM student_profiles s LEFT JOIN artworks a ON a.id = (SELECT a2.id FROM artworks a2 WHERE a2.student_id = s.id ORDER BY a2.updated_at DESC LIMIT 1) WHERE s.classroom_id = ? AND s.archived_at IS NULL ORDER BY s.seat_number IS NULL, s.seat_number, s.nickname COLLATE NOCASE, s.id`).bind(classroomId).all<StudentRow>();
-  const monitorScope = classroom.arc ? "episode" : "latest";
-  type SessionArtworkRow = { id: string; studentId: string; title: string; status: string; currentStep: number; revision: number; updatedAt: string; imageKey: string | null };
-  const sessionArtworks = classroom.arc ? await db.prepare(`SELECT a.id, a.student_id AS studentId, a.title, a.status, a.current_step AS currentStep, a.revision, a.updated_at AS updatedAt, COALESCE(a.thumbnail_key, a.final_image_key) AS imageKey FROM artworks a JOIN student_profiles s ON s.id = a.student_id AND s.classroom_id = a.classroom_id WHERE a.classroom_id = ? AND s.archived_at IS NULL AND a.arc_id = ? AND a.episode_id = ? AND a.id = (SELECT latest.id FROM artworks latest WHERE latest.student_id = s.id AND latest.classroom_id = s.classroom_id AND latest.arc_id = a.arc_id AND latest.episode_id = a.episode_id ORDER BY latest.updated_at DESC, latest.id DESC LIMIT 1)`).bind(classroomId, classroom.arc.arcId, classroom.arc.episodeId).all<SessionArtworkRow>() : null;
-  const sessionByStudent = new Map(sessionArtworks?.results.map((artwork) => [artwork.studentId, artwork]) ?? []);
-  // The legacy latest-artwork fields remain available for history callers. Today’s monitor
-  // gets a separate record so a later save from a different episode cannot masquerade as today.
+  // 회차 개념이 사라져(2026-09-12) 오늘 수업은 학생별 **최근 그림**을 보여 준다.
   const thumbnailCache = new Map<string, Promise<string | null>>();
   const thumbnailFor = (key: string | null) => {
     if (!key) return Promise.resolve(null);
@@ -178,16 +145,15 @@ export async function GET(request: Request) {
   };
   const hydrated = await Promise.all(students.results.map(async ({ thumbnailKey, duplicateNicknameCount, ...student }: StudentRow) => {
     const thumbnail = await thumbnailFor(thumbnailKey);
-    const current = sessionByStudent.get(student.id);
-    const sessionArtwork = classroom.arc
-      ? current ? { id: current.id, title: current.title, status: current.status, currentStep: current.currentStep, revision: current.revision, updatedAt: current.updatedAt, thumbnail: await thumbnailFor(current.imageKey) } : null
-      : student.artworkId ? { id: student.artworkId, title: student.artworkTitle, status: student.status, currentStep: student.currentStep, revision: student.revision, updatedAt: student.artworkUpdatedAt, thumbnail } : null;
+    const sessionArtwork = student.artworkId
+      ? { id: student.artworkId, title: student.artworkTitle, status: student.status, currentStep: student.currentStep, revision: student.revision, updatedAt: student.artworkUpdatedAt, thumbnail }
+      : null;
     return { ...student, duplicateNickname: duplicateNicknameCount > 1, thumbnail, sessionArtwork };
   }));
   const archivedStudents = await db.prepare(`SELECT s.id, s.nickname, s.animal, s.seat_number AS seatNumber, s.real_name AS realName, s.last_activity_at AS lastActivityAt, s.archived_at AS archivedAt, COUNT(a.id) AS artworkCount FROM student_profiles s LEFT JOIN artworks a ON a.student_id = s.id WHERE s.classroom_id = ? AND s.archived_at IS NOT NULL GROUP BY s.id ORDER BY s.archived_at DESC, s.nickname COLLATE NOCASE`).bind(classroomId).all<{ id: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null; lastActivityAt: string; archivedAt: string; artworkCount: number }>();
   const messages = await db.prepare(`SELECT m.id, m.student_id AS studentId, m.body, m.created_at AS createdAt, s.nickname, COUNT(r.student_id) AS seenCount FROM teacher_messages m LEFT JOIN student_profiles s ON s.id = m.student_id LEFT JOIN message_receipts r ON r.message_id = m.id WHERE m.classroom_id = ? GROUP BY m.id ORDER BY m.created_at DESC, m.id DESC LIMIT 30`).bind(classroomId).all();
   const familyLinks = await db.prepare(`SELECT l.id, l.student_id AS studentId, l.scope, l.expires_at AS expiresAt, l.revoked_at AS revokedAt, l.created_at AS createdAt, COUNT(f.artwork_id) AS artworkCount FROM family_share_links l JOIN student_profiles s ON s.id = l.student_id LEFT JOIN family_share_artworks f ON f.link_id = l.id WHERE l.teacher_id = ? AND s.classroom_id = ? GROUP BY l.id ORDER BY l.created_at DESC LIMIT 50`).bind(teacher.id, classroomId).all();
-  return noStoreJson({ teacher, classroom, monitorScope, students: hydrated, archivedStudents: archivedStudents.results, messages: messages.results, familyLinks: familyLinks.results });
+  return noStoreJson({ teacher, classroom, students: hydrated, archivedStudents: archivedStudents.results, messages: messages.results, familyLinks: familyLinks.results });
 }
 
 /* 교사가 입력하는 학급 명단. 번호는 학급 안에서 고유하고, 실명은 담임에게만 보인다.
@@ -226,9 +192,9 @@ function insertRosterRow(db: ReturnType<typeof bindings>["DB"], classroomId: str
     .bind(id("student"), classroomId, entry.seatNumber, entry.realName, entryCode, `${entry.seatNumber}번`, UNCLAIMED_ANIMAL);
 }
 
-/* 아이별 참여 코드 6자리(2026-09-09). 학급 안에서만 겹치지 않으면 된다 — 아이는 수업 코드를
- * 먼저 넣고 참여 코드를 넣는다. 부분 유니크 인덱스가 뒤를 받치지만, 배치 전체가 실패하지 않게
- * 여기서 먼저 피한다. */
+/* 아이별 참여 코드 네 자리(2026-09-12에 여섯 자리에서 줄임). 반은 QR이나 수업 코드로 먼저
+ * 정해지므로 코드는 학급 안에서만 겹치지 않으면 된다. 부분 유니크 인덱스가 뒤를 받치지만,
+ * 배치 전체가 실패하지 않게 여기서 먼저 피한다. */
 async function freshEntryCodes(db: ReturnType<typeof bindings>["DB"], classroomId: string, count: number) {
   const taken = await db.prepare(`SELECT entry_code AS entryCode FROM student_profiles WHERE classroom_id = ? AND archived_at IS NULL AND entry_code IS NOT NULL`).bind(classroomId).all<{ entryCode: string }>();
   const used = new Set(taken.results.map((row) => row.entryCode));
@@ -374,20 +340,6 @@ export async function POST(request: Request) {
     const updated = await rotateClassroomEntry(db, { teacherId: teacher.id, classroomId, classCode, joinToken });
     if (!updated) return jsonError("활성 학급을 다시 확인해 주세요.", 403);
     return noStoreJson({ classCode, joinToken });
-  }
-  if (action === "setEpisode") {
-    // 오늘 회차 지정 (FR-2·FR-3). 알 수 없는 아크·회차는 400으로 거부하고
-    // 기본값으로 조용히 대체하지 않는다 — normalizeActivityKey의 폴백 사고를 반복하지 않는다.
-    const arcId = cleanText(payload.arcId, 60);
-    const episodeId = cleanText(payload.episodeId, 60);
-    if (!isValidArcEpisode(arcId, episodeId)) return jsonError("목록에 있는 아크와 회차를 골라 주세요.");
-    const updated = await setClassroomEpisode(db, { teacherId: teacher.id, classroomId, arcId, episodeId });
-    if (!updated) return jsonError("활성 학급을 다시 확인해 주세요.", 403);
-    return noStoreJson({ arcId, episodeId });
-  }
-  if (action === "listArcs") {
-    // 조종석의 아크·회차 선택지. 콘텐츠는 코드 상수(AD-8)이므로 그대로 내려준다.
-    return noStoreJson({ arcs: ARCS.map((arc) => ({ arcId: arc.arcId, title: arc.title, episodes: arc.episodes.map(({ episodeId, title }) => ({ episodeId, title })) })) });
   }
   if (action === "viewStudent") {
     const studentId = cleanText(payload.studentId, 40);

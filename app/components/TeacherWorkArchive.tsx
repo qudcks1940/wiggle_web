@@ -5,15 +5,13 @@ import { ArrowRight } from "lucide-react";
 import type { Student, WorkspaceArtwork } from "./TeacherApp";
 import "./TeacherWorkArchive.css";
 
-type Artwork = WorkspaceArtwork & { studentId: string; nickname: string; realName: string | null; seatNumber: number | null; arcId: string | null; episodeId: string | null; episodeIndex: number | null; arcTitle: string | null; episodeTitle: string | null };
-type Episode = { arcId: string; episodeId: string; episodeIndex: number | null; arcTitle: string | null; episodeTitle: string | null };
-type Archive = { artworks: Artwork[]; episodes: Episode[]; total: number; hasMore: boolean; nextCursor: string | null };
+type Artwork = WorkspaceArtwork & { studentId: string; nickname: string; realName: string | null; seatNumber: number | null; completedAt: string | null };
+type Archive = { artworks: Artwork[]; total: number; hasMore: boolean; nextCursor: string | null };
 type Book = { id: string; title: string; studentId: string; nickname: string; completedAt: string; pageCount: number; cover: { background: string; backgroundAssetId: string | null; imageAssetId: string | null; text: string } };
 function dateLabel(value: string) { return new Date(value.includes("T") ? value : `${value.replace(" ", "T")}Z`).toLocaleDateString("ko-KR"); }
 
 export function TeacherWorkArchive({ classroomId, students, onOpenArtwork }: { classroomId: string; students: Student[]; onOpenArtwork: (studentId: string, artwork: WorkspaceArtwork) => void }) {
   const [studentId, setStudentId] = useState("");
-  const [episode, setEpisode] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [archive, setArchive] = useState<Archive | null>(null);
   const [books, setBooks] = useState<Book[]>([]);
@@ -27,7 +25,6 @@ export function TeacherWorkArchive({ classroomId, students, onOpenArtwork }: { c
   function query(cursor?: string) {
     const params = new URLSearchParams({ classroomId, artworks: "1", limit: expanded ? "24" : "4" });
     if (studentId) params.set("studentId", studentId);
-    if (episode) { const [arcId, episodeId] = JSON.parse(episode) as [string, string]; params.set("arcId", arcId); params.set("episodeId", episodeId); }
     if (cursor) params.set("cursor", cursor);
     return `/api/teacher?${params}`;
   }
@@ -53,11 +50,11 @@ export function TeacherWorkArchive({ classroomId, students, onOpenArtwork }: { c
   }
   const filteredBooks = books.filter((book) => !studentId || book.studentId === studentId);
   return <section className="twa" aria-label="작품과 그림책">
-    <header className="twa-heading"><div><h2>작품 · 그림책</h2><p>학생들이 그린 그림과 완성한 책을 모아 봐요.</p></div><label><span className="sr-only">학생으로 작품과 그림책 거르기</span><select value={studentId} onChange={(event) => { setStudentId(event.target.value); setEpisode(""); }}><option value="">모든 학생</option>{students.map((student) => <option key={student.id} value={student.id}>{student.seatNumber} {student.realName ?? student.nickname}</option>)}</select></label></header>
-    <div className="twa-section-heading"><h3>{expanded ? "모든 그림" : "최근 그림"}{archive && <small>{archive.total}개</small>}</h3><div><label><span className="sr-only">회차로 그림 거르기</span><select value={episode} onChange={(event) => setEpisode(event.target.value)}><option value="">모든 회차</option>{(archive?.episodes ?? []).map((item) => <option key={`${item.arcId}/${item.episodeId}`} value={JSON.stringify([item.arcId, item.episodeId])}>{item.arcTitle ?? item.arcId} · {item.episodeIndex ? `${item.episodeIndex}회차 ` : ""}{item.episodeTitle ?? item.episodeId}</option>)}</select></label><button type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? "최근 그림만 보기" : "전체 그림 보기"}<ArrowRight size={16} /></button></div></div>
+    <header className="twa-heading"><div><h2>작품 · 그림책</h2><p>학생들이 그린 그림과 완성한 책을 모아 봐요.</p></div><label><span className="sr-only">학생으로 작품과 그림책 거르기</span><select value={studentId} onChange={(event) => setStudentId(event.target.value)}><option value="">모든 학생</option>{students.map((student) => <option key={student.id} value={student.id}>{student.seatNumber} {student.realName ?? student.nickname}</option>)}</select></label></header>
+    <div className="twa-section-heading"><h3>{expanded ? "모든 그림" : "최근 그림"}{archive && <small>{archive.total}개</small>}</h3><div><button type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? "최근 그림만 보기" : "전체 그림 보기"}<ArrowRight size={16} /></button></div></div>
     {error && <p className="tcw-error" role="alert">{error}<button onClick={() => setRetry((value) => value + 1)}>다시 불러오기</button></p>}
     {loading && !archive && <p className="twa-loading" role="status">그림을 모으는 중…</p>}
-    {archive?.artworks.length ? <div className="twa-grid">{archive.artworks.map((artwork) => <article key={artwork.id}><button className="tcw-artwork" onClick={() => onOpenArtwork(artwork.studentId, artwork)} aria-label={`${artwork.realName ?? artwork.nickname}의 ${artwork.title} 크게 보기`}>{artwork.thumbnail ? <img src={artwork.thumbnail} alt={artwork.title} /> : <span>저장된 미리보기가 없어요</span>}</button><div className="twa-artwork-title"><h4>{artwork.title}</h4><span className={`tcw-status ${artwork.status === "complete" ? "is-complete" : ""}`}>{artwork.status === "complete" ? "완성" : "그리는 중"}</span></div><p>{artwork.seatNumber} {artwork.realName ?? artwork.nickname}{artwork.episodeIndex ? ` · ${artwork.episodeIndex}회차` : ""}</p><small>{dateLabel(artwork.updatedAt)}</small></article>)}</div> : !loading && !error && <div className="tcw-empty"><h3>아직 저장된 그림이 없어요</h3><p>학생이 그림을 저장하면 여기에 모여요.</p></div>}
+    {archive?.artworks.length ? <div className="twa-grid">{archive.artworks.map((artwork) => <article key={artwork.id}><button className="tcw-artwork" onClick={() => onOpenArtwork(artwork.studentId, artwork)} aria-label={`${artwork.realName ?? artwork.nickname}의 ${artwork.title} 크게 보기`}>{artwork.thumbnail ? <img src={artwork.thumbnail} alt={artwork.title} /> : <span>저장된 미리보기가 없어요</span>}</button><div className="twa-artwork-title"><h4>{artwork.title}</h4><span className={`tcw-status ${artwork.status === "complete" ? "is-complete" : ""}`}>{artwork.status === "complete" ? "완성" : "그리는 중"}</span></div><p>{artwork.seatNumber} {artwork.realName ?? artwork.nickname}</p><small>{dateLabel(artwork.updatedAt)}</small></article>)}</div> : !loading && !error && <div className="tcw-empty"><h3>아직 저장된 그림이 없어요</h3><p>학생이 그림을 저장하면 여기에 모여요.</p></div>}
     {expanded && archive?.hasMore && <div className="twa-more"><button disabled={loading} onClick={() => void more()}>{loading ? "불러오는 중…" : "이전 그림 더 보기"}</button></div>}
     <section className="twa-books"><div className="twa-section-heading"><h3>완성 그림책 <small>{filteredBooks.length}권</small></h3><a href={`/teacher/class/${classroomId}/books`} className="twa-text-link">전체 그림책 보기<ArrowRight size={16} /></a></div>
       {booksError && <p className="tcw-error" role="alert">{booksError}<button onClick={() => setRetry((value) => value + 1)}>다시 불러오기</button></p>}

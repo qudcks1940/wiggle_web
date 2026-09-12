@@ -60,7 +60,7 @@ try {
     detail = await readJson(await fetch(`${BASE}/api/teacher?classroomId=${room.id}`, { headers: { cookie } }));
   }
   const entryCode = detail.students[0].entryCode;
-  assert.match(String(entryCode), /^\d{6}$/, "참여 코드");
+  assert.match(String(entryCode), /^\d{4}$/, "참여 코드");
   log(`${step} (코드 ${classCode}, 참여 코드 ${entryCode})`);
 
   step = "학생 입장";

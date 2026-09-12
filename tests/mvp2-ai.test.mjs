@@ -138,12 +138,10 @@ test("몽그리가 오늘 회차 이야기를 알고 답한다 (확장 협업자
   const [route, prompts, studio] = await Promise.all([
     read("../app/api/ai/coaching/route.ts"), read("../lib/openai-coaching.ts"), read("../app/components/DrawingStudio.tsx"),
   ]);
-  // 이야기 문맥이 없으면 두 역할 모두 성립하지 않는다. 작품 행의 아크·회차를
-  // 읽어 실제로 프롬프트 맥락에 실리는지 본다.
-  assert.match(route, /arc_id AS arcId, episode_id AS episodeId/);
-  assert.match(route, /function storyContext/);
-  assert.match(route, /story: storyContext\(artwork\)/);
-  assert.match(route, /episodeById\(artwork\.arcId, artwork\.episodeId\)/);
+  // 커리큘럼 은퇴(2026-09-12)로 회차 문맥은 사라졌다. 몽그리는 그림과 아이가 적은
+  // 의도만 보고 답하므로, 맥락에 실리는 것은 그 둘뿐이어야 한다.
+  assert.match(route, /artworkIntent: artwork\.intent, artworkTopic: artwork\.topic/);
+  assert.doesNotMatch(route, /storyContext|arcById|episodeById|arc_id/);
 
   // 확장 협업자: 아이가 먼저이고 몽그리가 뒤따른다.
   assert.match(prompts, /확장 협업자이며 앞서 끌고 가지 않는다/);

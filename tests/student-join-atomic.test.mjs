@@ -42,13 +42,13 @@ function joinRequest(ip = "203.0.113.40") {
   return {
     method: "POST",
     headers: { "content-type": "application/json", "x-forwarded-for": ip },
-    body: JSON.stringify({ action: "join", entry: "4999", entryCode: "123456", animal: "🐰" }),
+    body: JSON.stringify({ action: "join", entry: "4999", entryCode: "1234", animal: "🐰" }),
   };
 }
 
 /* 선생님이 미리 만들어 둔 빈 자리. 아이는 이 자리를 차지할 뿐 프로필을 새로 만들지 않는다. */
 function seatRow(DB, classroomId, id = "student_seat1") {
-  return DB.prepare(`INSERT INTO student_profiles(id, classroom_id, seat_number, real_name, entry_code, claimed_at, nickname, animal, last_activity_at) VALUES (?, ?, 1, '김민준', '123456', NULL, '1번', '❔', strftime('%Y-%m-%dT%H:%M:%fZ','now'))`).bind(id, classroomId);
+  return DB.prepare(`INSERT INTO student_profiles(id, classroom_id, seat_number, real_name, entry_code, claimed_at, nickname, animal, last_activity_at) VALUES (?, ?, 1, '김민준', '1234', NULL, '1번', '❔', strftime('%Y-%m-%dT%H:%M:%fZ','now'))`).bind(id, classroomId);
 }
 
 async function count(DB, table) {

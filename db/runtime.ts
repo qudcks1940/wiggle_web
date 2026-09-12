@@ -195,22 +195,26 @@ export async function provisionSchema(DB: D1Database) {
   await ensureArtworkMutationPrimaryKey(DB);
 }
 
+/* 아이별 참여 코드 네 자리(2026-09-12 사용자 결정, 종전 여섯 자리에서 줄임).
+ * 여섯 자리는 저학년이 누르기 벅찼다. 반이 QR로 먼저 정해지므로 코드는 학급 안에서만
+ * 고유하면 되고, 만 개 중 한 반은 수십 개다 — 찍어 맞추기는 학급+IP 한도(60회/10분)가 막는다. */
 export function randomEntryCode() {
-  return String(100000 + Math.floor(Math.random() * 900000));
+  return String(1000 + Math.floor(Math.random() * 9000));
 }
 
-// 코드가 없는 활성 학생(코드 도입 전 명단, 예전 자기 등록 프로필)에 코드를 채운다.
-// 학급 안에서만 겹치지 않으면 된다 — 아이는 수업 코드를 먼저 넣고 참여 코드를 넣는다.
+// 코드가 없거나 형식이 옛것인 활성 학생의 코드를 채운다.
+// 학급 안에서만 겹치지 않으면 된다 — 반은 QR이나 수업 코드로 먼저 정해진다.
 async function backfillEntryCodes(DB: D1Database) {
-  const missing = await DB.prepare(`SELECT id, classroom_id AS classroomId FROM student_profiles WHERE entry_code IS NULL AND archived_at IS NULL`).all<{ id: string; classroomId: string }>();
+  // 코드가 없는 행과, 네 자리가 아닌 옛 여섯 자리 코드를 함께 다시 발급한다.
+  const missing = await DB.prepare(`SELECT id, classroom_id AS classroomId FROM student_profiles WHERE archived_at IS NULL AND (entry_code IS NULL OR length(entry_code) <> 4)`).all<{ id: string; classroomId: string }>();
   if (!missing.results.length) return;
-  const taken = await DB.prepare(`SELECT classroom_id AS classroomId, entry_code AS entryCode FROM student_profiles WHERE entry_code IS NOT NULL AND archived_at IS NULL`).all<{ classroomId: string; entryCode: string }>();
+  const taken = await DB.prepare(`SELECT classroom_id AS classroomId, entry_code AS entryCode FROM student_profiles WHERE entry_code IS NOT NULL AND length(entry_code) = 4 AND archived_at IS NULL`).all<{ classroomId: string; entryCode: string }>();
   const used = new Set(taken.results.map((row) => `${row.classroomId}:${row.entryCode}`));
   const statements = missing.results.map((row) => {
     let code = randomEntryCode();
     while (used.has(`${row.classroomId}:${code}`)) code = randomEntryCode();
     used.add(`${row.classroomId}:${code}`);
-    return DB.prepare(`UPDATE student_profiles SET entry_code = ? WHERE id = ? AND entry_code IS NULL`).bind(code, row.id);
+    return DB.prepare(`UPDATE student_profiles SET entry_code = ? WHERE id = ?`).bind(code, row.id);
   });
   for (let offset = 0; offset < statements.length; offset += 50) await DB.batch(statements.slice(offset, offset + 50));
 }

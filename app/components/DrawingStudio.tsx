@@ -477,9 +477,6 @@ export function DrawingStudio() {
   const requestedLesson = useMemo(() => lessonBySlug(search.get("lesson") ?? ""), [search]);
   const [artwork, setArtwork] = useState<ArtworkPayload | null>(null);
   // 지난 회차 서랍(Story 3.1) — 같은 아크의 다른 회차 그림. 보기 전용이며 도화지를 딤 처리하지 않는다.
-  type PreviousEpisode = { id: string; episodeId: string; episodeTitle: string; hasImage: boolean };
-  const [previousEpisodes, setPreviousEpisodes] = useState<PreviousEpisode[]>([]);
-  const [episodeDrawerOpen, setEpisodeDrawerOpen] = useState(false);
   const [documentState, setDocumentState] = useState<DrawDocument>(emptyDocument());
   const lesson = useMemo(() => (params.id === "new" ? requestedLesson : lessonBySlug(artwork?.lessonSlug)), [artwork?.lessonSlug, params.id, requestedLesson]);
   const reflectionPartChoices = useMemo(() => favoritePartChoices(lesson), [lesson]);
@@ -676,7 +673,6 @@ export function DrawingStudio() {
       const data = (await response.json()) as {
         error?: string;
         artwork: ArtworkPayload;
-        previousEpisodes?: Array<{ id: string; episodeId: string; episodeTitle: string; hasImage: boolean }>;
       };
       if (!response.ok) throw new Error(data.error);
       const loadDisposition = artworkUrl ? resolveArtworkDraftDisposition(localSaves, artworkUrl, data.artwork.status === "complete") : { action: "load" as const };
@@ -700,7 +696,6 @@ export function DrawingStudio() {
       currentStepRef.current = loadedStep;
       documentStateRef.current = loadedDocument;
       setArtwork({ ...data.artwork, currentStep: loadedStep });
-      setPreviousEpisodes(Array.isArray(data.previousEpisodes) ? data.previousEpisodes : []);
       setDocumentState(loadedDocument);
       resetDocumentHistory();
       setEditVersion(0);
@@ -2453,7 +2448,7 @@ export function DrawingStudio() {
   return (
     <main className="studio">
       <header className="studio-header">
-        <a className="icon-button studio-back" href="/student" aria-label="그림 나가기">
+        <a className="icon-button studio-back" href="/student/archive" aria-label="내 그림으로 나가기">
           <ArrowLeftIcon />
         </a>
         <Logo compact />
@@ -2465,11 +2460,6 @@ export function DrawingStudio() {
           <span className="step-count">
             {step + 1}/{lesson.steps.length}
           </span>
-        )}
-        {previousEpisodes.length > 0 && (
-          <button className="button ghost compact" aria-expanded={episodeDrawerOpen} onClick={() => setEpisodeDrawerOpen((open) => !open)}>
-            📖 지난 이야기
-          </button>
         )}
         <button className="button ghost compact" onClick={() => setTimelapseOpen(true)}>
           과정 보기
@@ -2483,23 +2473,6 @@ export function DrawingStudio() {
           완성
         </button>
       </header>
-      {episodeDrawerOpen && previousEpisodes.length > 0 && (
-        <aside className="episode-drawer" aria-label="지난 이야기 그림">
-          <div className="episode-drawer-head">
-            <b>지난 이야기</b>
-            <button className="icon-button" aria-label="지난 이야기 닫기" onClick={() => setEpisodeDrawerOpen(false)}>×</button>
-          </div>
-          {/* 보기 전용: 어떤 조작 어포던스도 두지 않는다 — 크레용 아이콘·편집 힌트 금지 (DESIGN.md past-drawing-drawer) */}
-          {previousEpisodes.map((episode) => (
-            <figure className="episode-drawer-item" key={episode.id}>
-              {episode.hasImage
-                ? <img src={`/api/artworks/${encodeURIComponent(episode.id)}/image`} alt={`${episode.episodeTitle} 그림`} loading="lazy" />
-                : <span className="episode-drawer-empty" aria-hidden="true">✏️</span>}
-              <figcaption>{episode.episodeTitle}</figcaption>
-            </figure>
-          ))}
-        </aside>
-      )}
       {conflictDraft && (
         <div className="save-conflict" role="alert">
           <b>{conflictDraft.save.conflict ? "다른 기기 저장과 겹쳤어요." : "아직 서버에 보내지 못한 그림이 있어요."}</b>

@@ -2,8 +2,8 @@
 // 학생 입장 → 작품 생성 → 3.4MB 완성 PNG 바이너리 업로드(Vercel 4.5MB 한도 실증) →
 // 완성 저장(키 참조) → 완성본 회수(바이트 전수 일치) → 경계(남의 키·유령 키 413).
 //
-// 사용법: npm run check:deployed -- https://wiggleweb.vercel.app 1234 483921
-//   - 두 번째 인자는 입장이 열린 실제 학급의 4자리 수업 코드, 세 번째는 그 반 명단의 6자리 참여 코드다
+// 사용법: npm run check:deployed -- https://wiggleweb.vercel.app 1234 4839
+//   - 두 번째 인자는 입장이 열린 실제 학급의 4자리 수업 코드, 세 번째는 그 반 명단의 4자리 참여 코드다
 //     (교사 화면 명단·설정에서 본다). 검증용으로 명단에 자리를 하나 더 만들어 그 코드를 쓰는 것을 권한다.
 //   - 실행하면 그 자리의 학생에게 검증용 작품이 생긴다.
 //     끝나면 교사 화면에서 지우거나, 남겨서 시연용으로 써도 된다.
@@ -14,9 +14,9 @@ import { emptyDocument } from "../lib/drawing-model.ts";
 const rawBase = process.argv[2] ?? "";
 const CLASS_CODE = process.argv[3] ?? "";
 const ENTRY_CODE = process.argv[4] ?? "";
-if (!/^https?:\/\//.test(rawBase) || !/^\d{4}$/.test(CLASS_CODE) || !/^\d{6}$/.test(ENTRY_CODE)) {
-  console.error("사용법: npm run check:deployed -- <운영주소> <4자리 수업코드> <6자리 참여코드>");
-  console.error("예:     npm run check:deployed -- https://wiggleweb.vercel.app 1234 483921");
+if (!/^https?:\/\//.test(rawBase) || !/^\d{4}$/.test(CLASS_CODE) || !/^\d{4}$/.test(ENTRY_CODE)) {
+  console.error("사용법: npm run check:deployed -- <운영주소> <4자리 수업코드> <4자리 참여코드>");
+  console.error("예:     npm run check:deployed -- https://wiggleweb.vercel.app 1234 4839");
   process.exit(1);
 }
 const BASE = new URL(rawBase).origin;

@@ -39,15 +39,15 @@ async function seed() {
   await db.batch([
     db.prepare("INSERT INTO teachers(id, email, display_name, credential_hash, credential_salt) VALUES ('teacher_owner', 'owner@workspace.invalid', '담임', '', ''), ('teacher_other', 'other@workspace.invalid', '다른 교사', '', '')"),
     db.prepare("INSERT INTO teacher_sessions(token_hash, teacher_id, expires_at, last_used_at) VALUES (?, 'teacher_owner', '2099-01-01T00:00:00.000Z', CURRENT_TIMESTAMP), (?, 'teacher_other', '2099-01-01T00:00:00.000Z', CURRENT_TIMESTAMP)").bind(await sha256("workspace_owner_session"), await sha256("workspace_other_session")),
-    db.prepare("INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token, active, current_arc_id, current_episode_id) VALUES ('class_workspace', 'teacher_owner', '우리 반', '5101', 'join_workspace', 1, 'bicycle-story', 'bicycle-begin'), ('class_other', 'teacher_other', '다른 반', '5102', 'join_other', 1, NULL, NULL), ('class_inactive', 'teacher_owner', '삭제한 반', '5103', 'join_inactive', 0, NULL, NULL)"),
+    db.prepare("INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token, active) VALUES ('class_workspace', 'teacher_owner', '우리 반', '5101', 'join_workspace', 1), ('class_other', 'teacher_other', '다른 반', '5102', 'join_other', 1), ('class_inactive', 'teacher_owner', '삭제한 반', '5103', 'join_inactive', 0)"),
     db.prepare("INSERT INTO student_profiles(id, classroom_id, seat_number, real_name, nickname, animal, last_activity_at, archived_at) VALUES ('student_one', 'class_workspace', 1, '김하나', '토끼화가', '🐰', '2026-09-09T01:00:00.000Z', NULL), ('student_two', 'class_workspace', 2, '이두리', '곰화가', '🐻', '2026-09-09T01:00:00.000Z', NULL), ('student_archived', 'class_workspace', 3, '보관학생', '보관별명', '🐸', '2026-09-09T01:00:00.000Z', '2026-09-09T01:00:00.000Z'), ('student_other', 'class_other', 1, '다른학생', '다른별명', '🦊', '2026-09-09T01:00:00.000Z', NULL), ('student_inactive', 'class_inactive', 1, '삭제학급학생', '삭제학급별명', '🐱', '2026-09-09T01:00:00.000Z', NULL)"),
   ]);
   return server;
 }
 
-async function artwork(server, { id, studentId = "student_one", classroomId = "class_workspace", arcId = "bicycle-story", episodeId = "bicycle-begin", updatedAt = "2026-09-09T02:00:00.000Z", status = "drawing", finalImage = false, withThumbnail = false }) {
-  await server.DB.prepare("INSERT INTO artworks(id, student_id, classroom_id, title, topic, learning_mode, status, arc_id, episode_id, updated_at, completed_at, thumbnail_key, final_image_key) VALUES (?, ?, ?, ?, '이야기', 'free', ?, ?, ?, ?, ?, ?, ?)")
-    .bind(id, studentId, classroomId, `그림 ${id}`, status, arcId, episodeId, updatedAt, status === "complete" ? updatedAt : null, withThumbnail ? "workspace/real-thumbnail.png" : null, finalImage ? "workspace/real-thumbnail.png" : null).run();
+async function artwork(server, { id, studentId = "student_one", classroomId = "class_workspace", updatedAt = "2026-09-09T02:00:00.000Z", status = "drawing", finalImage = false, withThumbnail = false }) {
+  await server.DB.prepare("INSERT INTO artworks(id, student_id, classroom_id, title, topic, learning_mode, status, updated_at, completed_at, thumbnail_key, final_image_key) VALUES (?, ?, ?, ?, '이야기', 'free', ?, ?, ?, ?, ?)")
+    .bind(id, studentId, classroomId, `그림 ${id}`, status, updatedAt, status === "complete" ? updatedAt : null, withThumbnail ? "workspace/real-thumbnail.png" : null, finalImage ? "workspace/real-thumbnail.png" : null).run();
 }
 
 async function archive(server, query = "") {
@@ -57,63 +57,43 @@ async function archive(server, query = "") {
   return response.json();
 }
 
-test("오늘 수업은 다른 회차의 최신 저장과 구별하고, 해당 회차 작품이 없으면 비워 둔다", async () => {
+test("오늘 수업은 학생별 최근 그림을 보여 주고, 삭제 명단은 섞지 않는다", async () => {
+  // 커리큘럼 은퇴(2026-09-12): 회차 범위가 사라져 오늘 수업은 언제나 학생별 최근 그림이다.
   const server = await seed();
-  await artwork(server, { id: "artwork_current", status: "complete", finalImage: true });
-  await artwork(server, { id: "artwork_later_save", episodeId: "bicycle-ride", updatedAt: "2026-09-09T03:00:00.000Z" });
-  await artwork(server, { id: "artwork_only_previous", studentId: "student_two", episodeId: "bicycle-ride" });
+  await artwork(server, { id: "artwork_old", withThumbnail: true });
+  await artwork(server, { id: "artwork_latest", updatedAt: "2026-09-09T03:00:00.000Z", withThumbnail: true });
   await artwork(server, { id: "artwork_hidden", studentId: "student_archived" });
   const response = await server.fetch("/api/teacher?classroomId=class_workspace", { headers: ownerHeaders });
   assert.equal(response.status, 200);
   const data = await response.json();
-  assert.equal(data.monitorScope, "episode");
+  assert.equal(data.monitorScope, undefined, "회차 범위 표시는 사라졌다");
   assert.deepEqual(data.students.map((student) => student.id), ["student_one", "student_two"]);
   const [first, second] = data.students;
-  assert.equal(first.artworkId, "artwork_later_save", "기존 최신 작품 필드는 이력을 위해 그대로 둔다");
-  assert.equal(first.sessionArtwork.id, "artwork_current");
-  assert.equal(first.sessionArtwork.status, "complete");
-  assert.equal(first.sessionArtwork.thumbnail, thumbnail, "별도 썸네일 없는 완성작은 실제 완성 이미지로 미리 본다");
-  assert.equal(second.sessionArtwork, null, "다른 회차 그림을 오늘 그림으로 꾸며 표시하면 안 된다");
+  assert.equal(first.sessionArtwork.id, "artwork_latest");
+  assert.equal(first.sessionArtwork.thumbnail, thumbnail);
+  assert.equal(second.sessionArtwork, null, "아직 그리지 않은 아이는 비워 둔다");
   assert.equal(data.archivedStudents[0].id, "student_archived", "삭제 명단은 별도 복원 목록에서만 제공한다");
 });
 
-test("회차를 정하지 않은 학급의 최신 작품 표시는 latest 범위를 명시한다", async () => {
-  const server = await seed();
-  await server.DB.prepare("UPDATE classrooms SET current_arc_id = NULL, current_episode_id = NULL WHERE id = 'class_workspace'").run();
-  await artwork(server, { id: "artwork_latest", withThumbnail: true });
-  const data = await (await server.fetch("/api/teacher?classroomId=class_workspace", { headers: ownerHeaders })).json();
-  assert.equal(data.monitorScope, "latest");
-  assert.equal(data.students[0].sessionArtwork.id, "artwork_latest");
-  assert.equal(data.students[0].sessionArtwork.thumbnail, thumbnail);
-  assert.equal(data.students[1].sessionArtwork, null);
-});
-
-test("작품 보관함은 소유 학급의 활성 명단만 조회하고 학생·아크·회차 필터와 실제 썸네일을 제공한다", async () => {
+test("작품 보관함은 소유 학급의 활성 명단만 조회하고 학생 필터와 실제 썸네일을 제공한다", async () => {
   const server = await seed();
   await artwork(server, { id: "artwork_begin", withThumbnail: true });
-  await artwork(server, { id: "artwork_ride", episodeId: "bicycle-ride" });
+  await artwork(server, { id: "artwork_ride" });
   await artwork(server, { id: "artwork_second", studentId: "student_two" });
-  await artwork(server, { id: "artwork_archived", studentId: "student_archived", arcId: "archived-secret", episodeId: "secret-episode" });
+  await artwork(server, { id: "artwork_archived", studentId: "student_archived" });
   await artwork(server, { id: "artwork_foreign", studentId: "student_other", classroomId: "class_other" });
   // Even a malformed historical record with a student from another room must not enter this room's archive.
   await artwork(server, { id: "artwork_mismatched", studentId: "student_other" });
   const all = await archive(server);
   assert.equal(all.total, 3);
   assert.deepEqual(all.artworks.map((entry) => entry.id).sort(), ["artwork_begin", "artwork_ride", "artwork_second"]);
-  assert.deepEqual(all.episodes.map((episode) => episode.episodeId), ["bicycle-begin", "bicycle-ride"]);
-  assert.ok(all.episodes.every((episode) => episode.arcTitle === "자전거 이야기"));
-  assert.deepEqual(all.episodes.map((episode) => episode.episodeIndex), [1, 2]);
-  const filtered = await archive(server, "&studentId=student_one&arcId=bicycle-story&episodeId=bicycle-begin");
+  assert.equal(all.episodes, undefined, "회차 목록은 사라졌다");
+  const filtered = await archive(server, "&studentId=student_two");
   assert.equal(filtered.total, 1);
-  assert.equal(filtered.artworks[0].id, "artwork_begin");
-  assert.equal(filtered.artworks[0].studentId, "student_one");
-  assert.equal(filtered.artworks[0].seatNumber, 1);
-  assert.equal(filtered.artworks[0].realName, "김하나");
-  assert.equal(filtered.artworks[0].thumbnail, thumbnail);
+  assert.equal(filtered.artworks[0].id, "artwork_second");
+  assert.equal(filtered.artworks[0].studentId, "student_two");
   assert.equal(filtered.artworks[0].imageKey, undefined);
-  assert.equal(filtered.artworks[0].arcTitle, "자전거 이야기");
-  assert.equal(filtered.artworks[0].episodeIndex, 1);
-  assert.equal((await archive(server, "&arcId=unrelated-arc")).total, 0);
+  assert.equal(filtered.artworks[0].arcTitle, undefined, "회차 이름표는 사라졌다");
 });
 
 test("작품 페이지는 동시간 저장도 안정적으로 이어지고 새 작품이 생겨도 이미 본 그림을 반복하지 않는다", async () => {
@@ -133,7 +113,7 @@ test("작품 페이지는 동시간 저장도 안정적으로 이어지고 새 �
   assert.equal(invalid.status, 400);
 });
 
-test("작품·회차 목록은 다른 교사, 삭제한 학급, 삭제 학생 및 다른 반 학생의 접근을 거절한다", async () => {
+test("작품 목록은 다른 교사, 삭제한 학급, 삭제 학생 및 다른 반 학생의 접근을 거절한다", async () => {
   const server = await seed();
   await artwork(server, { id: "artwork_private", withThumbnail: true });
   for (const [url, headers, status] of [

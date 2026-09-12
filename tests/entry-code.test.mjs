@@ -7,7 +7,7 @@ import { startTestServer } from "./harness/server.mjs";
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
 /* 아이별 참여 코드 입장(2026-09-09 사용자 결정).
- * 수업 코드로 반을 확인한 뒤 명단의 참여 코드 6자리 하나로 자기 도화지에 들어온다.
+ * 수업 코드로 반을 확인한 뒤 명단의 참여 코드 네 자리 하나로 자기 도화지에 들어온다.
  * 번호 입력·그림 비밀번호는 1~2학년이 매번 기억해야 해서 없앴다. 코드가 곧 자리라
  * 다음 회차에 같은 코드를 넣으면 같은 학생 ID로 돌아온다(지난 그림을 찾을 필요가 없다).
  * 코드는 교사 화면(명단·코드표)에만 보이고 학생 응답에는 절대 실리지 않는다. */
@@ -31,7 +31,7 @@ function studentRequest(body, ip = "203.0.113.160") {
   return { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": ip }, body: JSON.stringify(body) };
 }
 
-async function seedClassroom(DB, suffix, codes = ["111111"]) {
+async function seedClassroom(DB, suffix, codes = ["1111"]) {
   await DB.batch([
     DB.prepare(`INSERT INTO teachers(id, email, display_name) VALUES ('teacher_${suffix}', '${suffix}@example.com', 'Codes')`),
     DB.prepare(`INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token) VALUES ('class_${suffix}', 'teacher_${suffix}', '코드 학급', '4321', 'join_${suffix}')`),
@@ -43,23 +43,23 @@ async function seedClassroom(DB, suffix, codes = ["111111"]) {
 test("참여 코드 하나로 들어오고, 같은 코드는 다음에도 같은 학생이다", async (context) => {
   const server = await sharedServer();
   context.after(() => resetRows(server.DB));
-  await seedClassroom(server.DB, "code1", ["111111", "222222"]);
+  await seedClassroom(server.DB, "code1", ["1111", "2222"]);
 
   // 코드가 맞지만 처음이면 세션 없이 firstTime만 돌려준다 — 아이는 동물 하나만 고른다.
-  const first = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "111111" }, "203.0.113.161"));
+  const first = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "1111" }, "203.0.113.161"));
   assert.equal(first.status, 200);
   assert.deepEqual(await first.json(), { classroomName: "코드 학급", firstTime: true });
 
-  const claimed = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "111111", animal: "🐻" }, "203.0.113.162"));
+  const claimed = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "1111", animal: "🐻" }, "203.0.113.162"));
   assert.equal(claimed.status, 201);
   const claimedPayload = await claimed.json();
   assert.ok(claimedPayload.deviceToken);
   // 별명은 동물의 기본 별명이다. 실명·번호·코드는 학생 응답에 없다.
   assert.deepEqual(claimedPayload.student, { id: "student_code1_1", nickname: "곰돌 화가", animal: "🐻", classroomName: "코드 학급" });
-  assert.doesNotMatch(JSON.stringify(claimedPayload), /학생1|entryCode|111111|seatNumber/);
+  assert.doesNotMatch(JSON.stringify(claimedPayload), /학생1|entryCode|1111|seatNumber/);
 
   // 재입장: 다른 기기에서 같은 코드를 넣으면 같은 학생 ID, 동물을 다시 묻지 않는다.
-  const again = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "111111" }, "203.0.113.163"));
+  const again = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "1111" }, "203.0.113.163"));
   assert.equal(again.status, 200);
   const againPayload = await again.json();
   assert.equal(againPayload.student.id, "student_code1_1");
@@ -67,7 +67,7 @@ test("참여 코드 하나로 들어오고, 같은 코드는 다음에도 같은
   assert.ok(againPayload.deviceToken && againPayload.deviceToken !== claimedPayload.deviceToken);
 
   // 다른 코드는 다른 학생이다. 학급 QR 토큰으로 들어와도 같다.
-  const other = await server.fetch("/api/student", studentRequest({ action: "join", entry: "join_code1", entryCode: "222222", animal: "🐰" }, "203.0.113.164"));
+  const other = await server.fetch("/api/student", studentRequest({ action: "join", entry: "join_code1", entryCode: "2222", animal: "🐰" }, "203.0.113.164"));
   assert.equal(other.status, 201);
   assert.equal((await other.json()).student.id, "student_code1_2");
   assert.equal((await server.DB.prepare("SELECT COUNT(*) AS count FROM student_profiles").first()).count, 2);
@@ -76,9 +76,9 @@ test("참여 코드 하나로 들어오고, 같은 코드는 다음에도 같은
 test("틀린 코드는 404로만 답하고 명단을 알려 주지 않으며, 지운 학생의 코드는 죽는다", async (context) => {
   const server = await sharedServer();
   context.after(() => resetRows(server.DB));
-  await seedClassroom(server.DB, "code2", ["333333", "444444"]);
+  await seedClassroom(server.DB, "code2", ["3333", "4444"]);
 
-  const wrong = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "999999", animal: "🐰" }, "203.0.113.170"));
+  const wrong = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "9999", animal: "🐰" }, "203.0.113.170"));
   assert.equal(wrong.status, 404);
   assert.deepEqual(await wrong.json(), { error: "참여 코드를 다시 확인해 주세요.", code: "ENTRY_CODE" });
 
@@ -86,11 +86,11 @@ test("틀린 코드는 404로만 답하고 명단을 알려 주지 않으며, �
   assert.equal(short.status, 400);
 
   await server.DB.prepare("UPDATE student_profiles SET archived_at = '2026-09-09T01:00:00.000Z' WHERE id = 'student_code2_1'").run();
-  const archived = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "333333", animal: "🐰" }, "203.0.113.172"));
+  const archived = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "3333", animal: "🐰" }, "203.0.113.172"));
   assert.equal(archived.status, 404);
   // 명단이 통째로 비면(모두 삭제) 코드가 맞아도 준비 중 화면으로 보낸다.
   await server.DB.prepare("UPDATE student_profiles SET archived_at = '2026-09-09T01:00:00.000Z' WHERE id = 'student_code2_2'").run();
-  const noRoster = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "444444", animal: "🐰" }, "203.0.113.173"));
+  const noRoster = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "4444", animal: "🐰" }, "203.0.113.173"));
   assert.equal(noRoster.status, 409);
   assert.equal((await noRoster.json()).code, "NO_ROSTER");
 });
@@ -108,12 +108,12 @@ test("교사는 명단에서 코드를 보고 새로 뽑을 수 있고, 옛 코�
   ]);
   const teacherHeaders = { "content-type": "application/json", cookie: `wiggle_teacher=${token}` };
 
-  // 학급을 만들면 자리마다 여섯 자리 코드가 붙고, 같은 반 안에서 겹치지 않는다.
+  // 학급을 만들면 자리마다 네 자리 코드가 붙고, 같은 반 안에서 겹치지 않는다.
   const created = await server.fetch("/api/teacher", { method: "POST", headers: teacherHeaders, body: JSON.stringify({ action: "createClassroom", displayName: "코드 발급반", roster: [{ seatNumber: 1, realName: "김민준" }, { seatNumber: 2, realName: "이서연" }] }) });
   assert.equal(created.status, 201);
   const createdPayload = await created.json();
   assert.equal(createdPayload.entryCodes.length, 2);
-  for (const row of createdPayload.entryCodes) assert.match(row.entryCode, /^\d{6}$/);
+  for (const row of createdPayload.entryCodes) assert.match(row.entryCode, /^\d{4}$/);
   assert.notEqual(createdPayload.entryCodes[0].entryCode, createdPayload.entryCodes[1].entryCode);
   const classroom = createdPayload.classroom;
 
@@ -134,7 +134,7 @@ test("교사는 명단에서 코드를 보고 새로 뽑을 수 있고, 옛 코�
   const rotated = await server.fetch("/api/teacher", { method: "POST", headers: teacherHeaders, body: JSON.stringify({ action: "rotateEntryCode", classroomId: classroom.id, studentId }) });
   assert.equal(rotated.status, 200);
   const { entryCode: newCode } = await rotated.json();
-  assert.match(newCode, /^\d{6}$/);
+  assert.match(newCode, /^\d{4}$/);
   assert.notEqual(newCode, seat1.entryCode);
   const oldCode = await server.fetch("/api/student", studentRequest({ action: "join", entry: classroom.classCode, entryCode: seat1.entryCode }, "203.0.113.181"));
   assert.equal(oldCode.status, 404);
@@ -147,21 +147,21 @@ test("교사는 명단에서 코드를 보고 새로 뽑을 수 있고, 옛 코�
   assert.equal(stranger.status, 403);
 });
 
-test("코드 없는 예전 학생 행은 스키마가 코드를 채워 준다", async () => {
+test("코드가 없거나 옛 여섯 자리인 학생 행은 스키마가 네 자리로 채워 준다", async () => {
   const { createSchemaDb } = await import("./harness/db.mjs");
   const db = await createSchemaDb();
   try {
     await db.DB.batch([
       db.DB.prepare(`INSERT INTO teachers(id, email, display_name) VALUES ('t_legacy', 'legacy@example.com', 'Legacy')`),
       db.DB.prepare(`INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token) VALUES ('c_legacy', 't_legacy', '옛 반', '4321', 'join_legacy')`),
-      db.DB.prepare(`INSERT INTO student_profiles(id, classroom_id, seat_number, real_name, claimed_at, nickname, animal, last_activity_at) VALUES ('s_legacy_1', 'c_legacy', 1, '옛 학생', '2026-09-01T00:00:00.000Z', '토끼 화가', '🐰', '2026-09-01T00:00:00.000Z')`),
+      db.DB.prepare(`INSERT INTO student_profiles(id, classroom_id, seat_number, real_name, entry_code, claimed_at, nickname, animal, last_activity_at) VALUES ('s_legacy_1', 'c_legacy', 1, '옛 학생', '654321', '2026-09-01T00:00:00.000Z', '토끼 화가', '🐰', '2026-09-01T00:00:00.000Z')`),
       db.DB.prepare(`INSERT INTO student_profiles(id, classroom_id, claimed_at, nickname, animal, last_activity_at) VALUES ('s_legacy_2', 'c_legacy', '2026-08-01T00:00:00.000Z', '곰돌 화가', '🐻', '2026-08-01T00:00:00.000Z')`),
     ]);
     const { provisionSchema } = await import("../db/runtime.ts");
     await provisionSchema(db.DB);
     const rows = await db.DB.prepare(`SELECT id, entry_code AS entryCode FROM student_profiles ORDER BY id`).all();
     assert.equal(rows.results.length, 2);
-    for (const row of rows.results) assert.match(row.entryCode ?? "", /^\d{6}$/, row.id);
+    for (const row of rows.results) assert.match(row.entryCode ?? "", /^\d{4}$/, row.id);
     assert.notEqual(rows.results[0].entryCode, rows.results[1].entryCode);
   } finally { await db.dispose(); }
 });
@@ -183,7 +183,7 @@ test("학생 화면은 코드 수첩 하나와 동물 고르기만 그리고, �
   assert.doesNotMatch(join, /seatStatus|picturePassword|switchProfile|recover|nickname-row|realName|deviceProfiles/);
   assert.doesNotMatch(student, /real_name|picturePassword|verifySecret|seatStatus|switchProfile/);
   // 코드는 정규식과 길이를 서버가 검사하고, 학급 + 코드로만 찾는다.
-  assert.match(student, /if \(!\/\^\\d\{6\}\$\/\.test\(entryCode\)\)/);
+  assert.match(student, /if \(!\/\^\\d\{4\}\$\/\.test\(entryCode\)\)/);
   assert.match(student, /WHERE classroom_id = \? AND entry_code = \? AND archived_at IS NULL/);
   // 자리 차지와 세션은 한 배치다.
   assert.match(student, /const seatResults = await bindings\(\)\.DB\.batch\(\[[\s\S]*student_profiles[\s\S]*device_sessions[\s\S]*\]\)/);

@@ -2,7 +2,6 @@ import { bindings, ensureSchema } from "@/db/runtime";
 import { cleanText, clientIp, isLocalDemoRequest, jsonError, noStoreJson, randomToken, rateLimit, sameOrigin, sha256, studentFromRequest } from "@/lib/security";
 import { FALLBACK_NICKNAME, NICKNAME_IDEAS } from "@/lib/nickname-ideas";
 import { activityLabel, normalizeActivityKey } from "@/lib/lesson-content";
-import { resolveTodayEpisode } from "@/lib/arc-session";
 import { ensureLocalStorybookStudent } from "@/lib/dev-only/demo-seed";
 
 async function prepareDeviceSession() {
@@ -48,7 +47,7 @@ export async function GET(request: Request) {
   const now = new Date().toISOString();
   const [artworkRows, classroom, latestUnfinishedArtwork, artworkTotalRow, messages, teacherView] = await Promise.all([
     db.prepare(`SELECT id, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, revision, CASE WHEN thumbnail_key IS NOT NULL OR final_image_key IS NOT NULL THEN 1 ELSE 0 END AS hasImage, updated_at AS updatedAt, completed_at AS completedAt FROM artworks WHERE student_id = ? ORDER BY updated_at DESC, id DESC LIMIT ? OFFSET ?`).bind(student.id, artworkPageSize + 1, artworkOffset).all(),
-    db.prepare(`SELECT current_activity AS currentActivity, current_arc_id AS currentArcId, current_episode_id AS currentEpisodeId FROM classrooms WHERE id = ?`).bind(student.classroomId).first<{ currentActivity: string; currentArcId: string | null; currentEpisodeId: string | null }>(),
+    db.prepare(`SELECT current_activity AS currentActivity FROM classrooms WHERE id = ?`).bind(student.classroomId).first<{ currentActivity: string }>(),
     db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND status <> 'complete' ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id).first(),
     db.prepare(`SELECT COUNT(*) AS count FROM artworks WHERE student_id = ?`).bind(student.id).first<{ count: number }>(),
     db.prepare(`SELECT id, body, createdAt, audience, seenAt FROM (SELECT m.id, m.body, m.created_at AS createdAt, CASE WHEN m.student_id IS NULL THEN 'all' ELSE 'student' END AS audience, r.seen_at AS seenAt FROM teacher_messages m LEFT JOIN message_receipts r ON r.message_id = m.id AND r.student_id = ? WHERE m.classroom_id = ? AND (m.student_id IS NULL OR m.student_id = ?) ORDER BY m.created_at DESC, m.id DESC LIMIT 50) recent ORDER BY createdAt ASC, id ASC`).bind(student.id, student.classroomId, student.id).all<{ id: string; body: string; createdAt: string; audience: string; seenAt: string | null }>(),
@@ -56,19 +55,11 @@ export async function GET(request: Request) {
   ]);
   const artworks = artworkRows.results.slice(0, artworkPageSize);
   const currentActivityKey = normalizeActivityKey(classroom?.currentActivity);
-  // 레슨 카탈로그 은퇴(Story 2.3) — 활동은 free 하나이므로 최근 자유 그림만 조회한다.
-  // 아크 회차 작품은 todayEpisodeArtwork가 따로 나른다(회차 귀속 조회, AD-10).
-  const currentActivityArtwork = await db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND learning_mode = 'free' AND arc_id IS NULL ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id).first();
+  // 레슨 카탈로그·커리큘럼 은퇴 — 활동은 free 하나뿐이라 최근 그림만 조회한다.
+  const currentActivityArtwork = await db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND learning_mode = 'free' ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id).first();
   const artworkTotal = Number(artworkTotalRow?.count ?? 0);
   const teacherViewing = Boolean(teacherView);
-  // 접속 맥락 판별(AD-14): current_episode_id 유효성 하나만 보고, 요청당 한 번 계산해 응답에 싣는다.
-  // 포인터가 없으면 todayEpisode는 null — 화면은 자유 그리기로 흐른다(기본값은 교실, 대기 화면 금지).
-  const todayEpisode = resolveTodayEpisode(classroom?.currentArcId, classroom?.currentEpisodeId);
-  // 재입장 대응(Story 2.2): 이미 이 회차를 그렸다면 그 작품을 함께 내려 이어 열게 한다.
-  const todayEpisodeArtwork = todayEpisode
-    ? await db.prepare(`SELECT id, title, status, revision, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND arc_id = ? AND episode_id = ? ORDER BY CASE status WHEN 'complete' THEN 0 ELSE 1 END, created_at ASC LIMIT 1`).bind(student.id, todayEpisode.arcId, todayEpisode.episodeId).first()
-    : null;
-  return noStoreJson({ student, artworks, artworkTotal, todayEpisode, todayEpisodeArtwork, currentActivityArtwork, latestUnfinishedArtwork, artworkHasMore: artworkRows.results.length > artworkPageSize, artworkNextOffset: artworkOffset + artworks.length, messages: messages.results, teacherViewing, currentActivityKey, currentActivityLabel: activityLabel(currentActivityKey) });
+  return noStoreJson({ student, artworks, artworkTotal, currentActivityArtwork, latestUnfinishedArtwork, artworkHasMore: artworkRows.results.length > artworkPageSize, artworkNextOffset: artworkOffset + artworks.length, messages: messages.results, teacherViewing, currentActivityKey, currentActivityLabel: activityLabel(currentActivityKey) });
 }
 
 async function studentPost(request: Request) {
@@ -156,10 +147,10 @@ async function studentPost(request: Request) {
     // 다음 회차에 같은 코드를 넣으면 같은 학생 ID로 돌아온다. 명단 자체는 절대 돌려주지 않는다.
     const rosterRow = await bindings().DB.prepare(`SELECT 1 FROM student_profiles WHERE classroom_id = ? AND archived_at IS NULL AND seat_number IS NOT NULL LIMIT 1`).bind(classroom.id).first();
     if (!rosterRow) return noStoreJson({ error: "선생님이 아직 우리 반 명단을 넣지 않았어요. 선생님께 말해 주세요.", code: "NO_ROSTER" }, { status: 409 });
-    const entryCode = cleanText(payload.entryCode, 6);
-    if (!/^\d{6}$/.test(entryCode)) return jsonError("참여 코드 여섯 자리를 눌러 주세요.");
+    const entryCode = cleanText(payload.entryCode, 4);
+    if (!/^\d{4}$/.test(entryCode)) return jsonError("참여 코드 네 자리를 눌러 주세요.");
     // 학급 상한은 IP와 함께 묶는다. 학급 단독 버킷은 한 클라이언트가 학급 전체를 잠그는 통로가 된다.
-    // 여섯 자리 백만 개 중 한 반 코드는 수십 개라, 이 상한 안에서 찍어 맞출 수 없다.
+    // 네 자리 만 개 중 한 반 코드는 수십 개다. 학급+IP 버킷(60회/10분)이 찍어 맞추기를 막는다.
     if (!(await rateLimit(`student-join-class:${classroom.id}:${requestIp(request)}`, CLASSROOM_JOIN_LIMIT, IP_ENTRY_WINDOW_SECONDS))) return jsonError("이 수업의 입장 시도가 많아요. 선생님께 알려 주세요.", 429);
     const seat = await bindings().DB.prepare(`SELECT id, nickname, animal, claimed_at AS claimedAt FROM student_profiles WHERE classroom_id = ? AND entry_code = ? AND archived_at IS NULL`).bind(classroom.id, entryCode).first<{ id: string; nickname: string; animal: string; claimedAt: string | null }>();
     if (!seat) return noStoreJson({ error: "참여 코드를 다시 확인해 주세요.", code: "ENTRY_CODE" }, { status: 404 });

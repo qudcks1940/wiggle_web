@@ -361,9 +361,9 @@ async function main() {
             // 내 홈으로 넘어가는 순간 보낸 evaluate는 응답 없이 사라질 수 있어 시간 제한을 둔다.
             const settle = (expression) => Promise.race([evaluate(cdp, session, expression), new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 1500))]);
             try { reentryUrl = await settle("location.href"); askedAnimal = await settle("Boolean(document.querySelector('.animal-card'))"); } catch { continue; }
-            if (reentryUrl.includes("/student") || askedAnimal) break;
+            if (reentryUrl.includes("/student/draw") || askedAnimal) break;
           }
-          check(reentryUrl.includes("/student") && !askedAnimal, `${viewport.name} 쓰던 코드는 동물을 다시 묻지 않고 내 홈으로 감`, { reentryUrl, askedAnimal });
+          check(reentryUrl.includes("/student/draw") && !askedAnimal, `${viewport.name} 쓰던 코드는 동물을 다시 묻지 않고 바로 도화지로 감`, { reentryUrl, askedAnimal });
         }
 
         // 4) 잘못된 수업 코드: 글자 없이도 복구 행동이 보인다

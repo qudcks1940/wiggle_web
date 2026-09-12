@@ -179,7 +179,7 @@ test("teacher artwork history is ownership-scoped, newest-first, and paginated",
 });
 
 test("the UI source keeps completion, archive, palette, help-choice and touch protections visible", async () => {
-  const [studio, archive, detail, globalCss, tracker, artworkRoute, artworkImageRoute, teacher, teacherRoute, studentRoute, studentHome, uploads] = await Promise.all([
+  const [studio, archive, detail, globalCss, tracker, artworkRoute, artworkImageRoute, teacher, teacherRoute, studentRoute, studentEntry, uploads] = await Promise.all([
     readFile(new URL("../app/components/DrawingStudio.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/components/Archive.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/components/ArtworkDetail.tsx", import.meta.url), "utf8"),
@@ -190,7 +190,7 @@ test("the UI source keeps completion, archive, palette, help-choice and touch pr
     readFile(new URL("../app/components/TeacherApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/teacher/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/student/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/components/StudentHome.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/StudentEntry.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/settled-uploads.ts", import.meta.url), "utf8"),
   ]);
   assert.match(studio, /도움받을래/);
@@ -224,8 +224,10 @@ test("the UI source keeps completion, archive, palette, help-choice and touch pr
   assert.match(studentRoute, /artworkTotal/);
   assert.match(studentRoute, /currentActivityArtwork/);
   assert.match(studentRoute, /latestUnfinishedArtwork/);
-  assert.match(studentHome, /const unfinished = data\?\.latestUnfinishedArtwork/);
-  assert.match(studentHome, /data\.artworkTotal/);
+  // 홈이 사라져(2026-09-12) 들어온 아이는 그리다 만 그림이 있으면 그것을, 없으면 새 도화지를 연다.
+  assert.match(studentEntry, /const unfinished = data\.latestUnfinishedArtwork;/);
+  assert.match(studentEntry, /location\.replace\(unfinished \? `\/student\/draw\/\$\{unfinished\.id\}` : "\/student\/draw\/new\?mode=free"\)/);
+  assert.match(archive, /setHasMore\(Boolean\(value\.artworkHasMore\)\)/);
   assert.doesNotMatch(studio, /lastTwoFingerTapRef|두 손가락 짧은 탭 두 번/);
   assert.match(studio, /lastSingleFingerTapRef[\s\S]*resetViewToFit/);
   assert.match(globalCss, /max-height:480px[\s\S]*orientation:landscape[\s\S]*guide-choice-card/);

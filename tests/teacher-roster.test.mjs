@@ -70,7 +70,7 @@ test("자리 차지와 세션은 한 배치이고, 같은 코드는 두 번 차�
 
 test("코드 재입장은 학급 + 코드로만 찾고, 무차별 대입은 학급·IP 버킷이 막는다", async () => {
   const student = await read("../app/api/student/route.ts");
-  assert.match(student, /if \(!\/\^\\d\{6\}\$\/\.test\(entryCode\)\)/);
+  assert.match(student, /if \(!\/\^\\d\{4\}\$\/\.test\(entryCode\)\)/);
   assert.match(student, /student-join-class:\$\{classroom\.id\}:\$\{requestIp\(request\)\}/);
   assert.match(student, /WHERE classroom_id = \? AND entry_code = \? AND archived_at IS NULL/);
   assert.doesNotMatch(student, /picture_hash|verifySecret|deriveSecret/);

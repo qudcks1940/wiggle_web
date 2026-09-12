@@ -17,8 +17,35 @@
       "sourceRole": "read-only reference",
       "sha256": "9F028F6C5A55786BED046AE5C9F2187F743453E8ECC9D548A7817D7592A084F4",
       "approvedFor": [
-        "favicon",
-        "installed web shortcut"
+        "installed web shortcut",
+        "(2026-09-12부터 파비콘은 crayon-icon-*을 쓴다)"
+      ]
+    },
+    {
+      "path": "/brand/crayon-icon-512.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 크레용 그림(1254x1254). 배경 초록 위 노랑 크레용과 흰 낙서 한 줄. 자르기·크기 줄이기만 했고 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "CC75935109E6140D3132153FC79C8F6AD5389FCE16398E7C3FAD790A851ECF1C",
+      "approvedFor": [
+        "설치 아이콘·큰 화면용 512px"
+      ]
+    },
+    {
+      "path": "/brand/crayon-icon-180.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 크레용 그림(1254x1254). 배경 초록 위 노랑 크레용과 흰 낙서 한 줄. 자르기·크기 줄이기만 했고 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "7BF9E67D92F2BEE0FA7CB2D4CDEA41BB0140F619EE73FD69F67685045D7FD384",
+      "approvedFor": [
+        "iOS 홈 화면 아이콘 180px"
+      ]
+    },
+    {
+      "path": "/brand/crayon-icon-32.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 크레용 그림(1254x1254). 배경 초록 위 노랑 크레용과 흰 낙서 한 줄. 자르기·크기 줄이기만 했고 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "5D2E4AE631BAB8D2A50A4C50CF65F37717F86FD68D50449F59C92349A477A37A",
+      "approvedFor": [
+        "브라우저 탭 파비콘 32px (작은 크기라 크레용을 더 크게 잘라 씀)"
       ]
     },
     {

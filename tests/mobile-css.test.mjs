@@ -9,8 +9,7 @@ const compactSource = (text) => text.replace(/\s+/g, " ");
 test("Korean text wraps by word while code, passwords, emoji and canvas surfaces stay intact", async () => {
   const css = await read("../app/globals.css");
   assert.match(css, /body \{ word-break:keep-all; overflow-wrap:break-word; word-wrap:break-word; \}/);
-  // 학생 홈 은퇴(2026-09-12)로 선반·회차 카드 선택자가 빠지고 대문 문구만 남았다.
-  assert.match(css, /\.landing-headline,\.landing-subtitle \{[\s\S]*?word-break:keep-all;[\s\S]*?overflow-wrap:break-word;[\s\S]*?word-wrap:break-word;[\s\S]*?text-wrap:balance;/);
+  assert.match(css, /\.landing-headline,\.landing-subtitle,[\s\S]*?\.student-tool-shelf \.student-menu-card h2 \{[\s\S]*?word-break:keep-all;[\s\S]*?overflow-wrap:break-word;[\s\S]*?word-wrap:break-word;[\s\S]*?text-wrap:balance;/);
   // `.personal-card`, `.password-preview`는 옛 입장 흐름과 함께 제거된 죽은 클래스라 단언에서 뺐다.
   assert.match(css, /code,pre \{[^}]*white-space:nowrap;[^}]*word-break:normal;[^}]*overflow-wrap:normal;[^}]*word-wrap:normal;/);
   assert.match(css, /\.emoji-chip,\.class-code strong,\.qr-panel strong,\.large-qr-code strong,\.draw-canvas,\.guide-canvas \{ word-break:normal; overflow-wrap:normal; word-wrap:normal; \}/);
@@ -47,8 +46,11 @@ test("mobile lesson cards keep the picture, copy and start action readable", asy
   assert.match(mobile, /\.lesson-card>b \{ grid-column:2; grid-row:2;/);
 });
 
-/* 「활동 그림책」 카드는 학생 홈과 함께 은퇴했다(2026-09-12). 세로 태블릿 가로 넘침을
-   막던 이 계약은 지킬 대상이 사라져 삭제한다. */
+test("portrait tablets size the PNG activity book from available width instead of forcing horizontal overflow", async () => {
+  const css = await read("../app/globals.css");
+  assert.match(css, /\.teacher-activity-book \{\n    width:100%;\n    min-height:0;\n    aspect-ratio:1560\/690;/);
+});
+
 
 test("mobile studio and teacher layouts finish in two rows without horizontal text overflow", async () => {
   const [css, studioRaw, teacher] = await Promise.all([read("../app/globals.css"), read("../app/components/DrawingStudio.tsx"), read("../app/components/TeacherApp.tsx")]);

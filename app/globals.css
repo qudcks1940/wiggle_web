@@ -85,7 +85,7 @@ legend small { color:var(--primary-dark); }
 
 /* Student */
 .app-shell { width:min(1180px,calc(100% - 36px)); margin:auto; min-height:100vh; padding-bottom:95px; }
-.app-header { justify-content:space-between; }
+.app-header { justify-content:space-between; }.student-identity { display:flex; align-items:center; gap:9px; margin-left:auto; }.student-identity>span { font-size:30px; }.student-identity div { display:grid; }.student-identity small { color:var(--secondary); font-size:11px; }
 .small-button,.icon-button { border:1px solid var(--border); background:white; border-radius:12px; padding:9px 13px; font-weight:800; cursor:pointer; }
 .teacher-message { max-width:900px; margin:12px auto; background:#fff9d8; border:1px solid #eed46d; border-radius:17px; padding:12px 18px; display:flex; gap:12px; align-items:center; }.teacher-message>span { color:#7e6512; font-weight:900; }.teacher-message p { margin:0; flex:1; font-weight:800; }.teacher-message small { color:#8f7c3a; }
 .section-title { display:flex; justify-content:space-between; align-items:end; gap:20px; margin:25px 0 15px; }.section-title h1,.section-title h2 { margin:0; }.section-title a,.section-title span,.section-title p { color:var(--secondary); font-size:13px; font-weight:700; }
@@ -239,7 +239,7 @@ html,body { width:100%; max-width:100%; overflow-x:hidden; }
 body { word-break:keep-all; overflow-wrap:break-word; word-wrap:break-word; }
 
 /* Korean display copy wraps by words and balances short child-facing lines. */
-.landing-headline,.landing-subtitle {
+.landing-headline,.landing-subtitle,.student-home-intro h1,.student-home-intro p,.teacher-activity-copy h2,.teacher-activity-copy>p,.student-tool-shelf .student-menu-card h2 {
   word-break:keep-all;
   overflow-wrap:break-word;
   word-wrap:break-word;
@@ -260,7 +260,7 @@ button { min-height:44px; touch-action:manipulation; }
 .palette button { min-width:44px; min-height:44px; }
 .grimi-head>button { width:44px; height:44px; }
 .family-consent-panel label:first-of-type { min-height:44px; }
-.entry-top,.app-header,.teacher-header,.teacher-header>div,.room-heading,.student-info,.student-info>div,.teacher-message p,.message-history span,.family-link-history span,.family-link-ready b,.family-link-ready span,.lesson-card>div { min-width:0; }
+.entry-top,.app-header,.teacher-header,.teacher-header>div,.room-heading,.student-identity,.student-identity div,.student-info,.student-info>div,.teacher-message p,.message-history span,.family-link-history span,.family-link-ready b,.family-link-ready span,.lesson-card>div { min-width:0; }
 .student-info b,.student-info small,.room-heading b,.room-heading span,.teacher-header b,.teacher-message p,.message-history b,.message-history span,.family-link-history b,.family-link-history span,.teacher-preview h2 { max-width:100%; }
 code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:normal; overflow-wrap:normal; word-wrap:normal; }
 .emoji-chip,.class-code strong,.qr-panel strong,.large-qr-code strong,.draw-canvas,.guide-canvas { word-break:normal; overflow-wrap:normal; word-wrap:normal; }
@@ -295,7 +295,7 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   .control-stack,.message-compose { grid-column:2; align-self:start; }
 }
 @media (max-width:1000px) { .archive-grid { grid-template-columns:repeat(2,1fr); }.studio-body { grid-template-columns:210px 1fr 130px; }.studio-body.without-step-panel { grid-template-columns:minmax(0,1fr) 130px; }.tool-panel { padding:10px; }.palette { grid-template-columns:repeat(2,1fr); }.room-controls { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }.qr-code-teacher { width:clamp(160px,18vw,190px); min-width:160px; }.message-compose { grid-column:1/-1; }.student-grid { grid-template-columns:repeat(3,1fr); }.teacher-login { grid-template-columns:1fr; }.login-brand { padding:45px; min-height:360px; }.login-card { padding:35px 0; } }
-@media (max-width:720px) { .lesson-list,.archive-grid { grid-template-columns:1fr; }.entry-card { padding:25px; }.studio { grid-template-rows:60px minmax(0,1fr); overflow:hidden; }.studio-header .brand { display:none; }.studio-header { gap:6px; padding:6px 8px; }.studio-header .button.compact { padding:6px 8px; font-size:11px; }.studio-body { display:flex; flex-direction:column; min-height:0; }.step-panel { order:1; padding:10px 14px; border:0; display:grid; grid-template-columns:80px 1fr auto; gap:10px; align-items:center; }.step-panel:has(.observation-reference) { grid-template-columns:120px minmax(0,1fr) auto; }.grimi-panel { order:1; max-height:320px; border-right:0; border-bottom:1px solid #eadb9b; }.reference-tile { min-height:70px; margin:0; }.reference-tile span { font-size:35px; }.step-panel:has(.observation-reference) .reference-tile { width:120px; padding:4px; }.step-panel:has(.observation-reference) .observation-reference-preview img { height:88px; }.step-panel:has(.observation-reference) .observation-reference-preview>span { font-size:9px; }.step-panel:has(.observation-reference) .observation-word-list { display:none; }.reference-tile small,.step-panel>.eyebrow,.step-panel .choice-chips,.step-panel .step-actions,.step-panel>.text-button { display:none; }.step-panel h2 { margin:0; font-size:15px; }.guide-actions { grid-column:1/-1; grid-template-columns:1fr 1fr; gap:8px; }.guide-actions button { width:100%; min-height:44px; }.canvas-zone { order:2; padding:8px; flex:1; }.guide-notice,.canvas-start-hint { max-width:calc(100% - 16px); padding:8px 11px; border-radius:15px; font-size:12px; }.guide-notice { top:8px; }.canvas-start-hint { bottom:8px; }.tool-panel { order:3; border:0; padding:7px; display:flex; gap:7px; align-items:center; overflow:auto; }.tool-group { display:flex; }.tool-group button { min-width:48px; font-size:0; justify-content:center; }.tool-group span { font-size:20px; }.width-row { margin:0; display:flex; }.width-row button { width:36px; height:36px; }.palette { display:flex; }.palette button { min-width:31px; width:31px; height:31px; }.history-row { display:flex; margin:0; }.history-row button { min-width:55px; font-size:0; }.history-row button:first-child:after { content:"↶"; font-size:20px; }.history-row button:last-child:after { content:"↷"; font-size:20px; }.room-controls { grid-template-columns:1fr; padding:14px; }.message-compose { grid-column:auto; grid-template-columns:1fr; }.student-grid { grid-template-columns:repeat(2,1fr); }.student-monitor { padding:16px 14px; }.teacher-header { padding:0 12px; }.room-heading span { display:none; }.family-shell { width:min(100% - 22px,1120px); }.family-hero { padding:28px; min-height:250px; }.family-hero h1 { font-size:39px; }.family-expiry { display:none; }.family-observations,.family-artwork,.family-share-tools { grid-template-columns:1fr; }.family-report,.family-artwork,.family-share-tools { padding:20px; }.family-share-actions { grid-template-columns:1fr; }.family-link-ready { margin:12px; display:grid; }.family-link-history { margin:12px; }.subscription-pill { display:none; } }
+@media (max-width:720px) { .lesson-list,.archive-grid { grid-template-columns:1fr; }.entry-card { padding:25px; }.student-identity { display:none; }.studio { grid-template-rows:60px minmax(0,1fr); overflow:hidden; }.studio-header .brand { display:none; }.studio-header { gap:6px; padding:6px 8px; }.studio-header .button.compact { padding:6px 8px; font-size:11px; }.studio-body { display:flex; flex-direction:column; min-height:0; }.step-panel { order:1; padding:10px 14px; border:0; display:grid; grid-template-columns:80px 1fr auto; gap:10px; align-items:center; }.step-panel:has(.observation-reference) { grid-template-columns:120px minmax(0,1fr) auto; }.grimi-panel { order:1; max-height:320px; border-right:0; border-bottom:1px solid #eadb9b; }.reference-tile { min-height:70px; margin:0; }.reference-tile span { font-size:35px; }.step-panel:has(.observation-reference) .reference-tile { width:120px; padding:4px; }.step-panel:has(.observation-reference) .observation-reference-preview img { height:88px; }.step-panel:has(.observation-reference) .observation-reference-preview>span { font-size:9px; }.step-panel:has(.observation-reference) .observation-word-list { display:none; }.reference-tile small,.step-panel>.eyebrow,.step-panel .choice-chips,.step-panel .step-actions,.step-panel>.text-button { display:none; }.step-panel h2 { margin:0; font-size:15px; }.guide-actions { grid-column:1/-1; grid-template-columns:1fr 1fr; gap:8px; }.guide-actions button { width:100%; min-height:44px; }.canvas-zone { order:2; padding:8px; flex:1; }.guide-notice,.canvas-start-hint { max-width:calc(100% - 16px); padding:8px 11px; border-radius:15px; font-size:12px; }.guide-notice { top:8px; }.canvas-start-hint { bottom:8px; }.tool-panel { order:3; border:0; padding:7px; display:flex; gap:7px; align-items:center; overflow:auto; }.tool-group { display:flex; }.tool-group button { min-width:48px; font-size:0; justify-content:center; }.tool-group span { font-size:20px; }.width-row { margin:0; display:flex; }.width-row button { width:36px; height:36px; }.palette { display:flex; }.palette button { min-width:31px; width:31px; height:31px; }.history-row { display:flex; margin:0; }.history-row button { min-width:55px; font-size:0; }.history-row button:first-child:after { content:"↶"; font-size:20px; }.history-row button:last-child:after { content:"↷"; font-size:20px; }.room-controls { grid-template-columns:1fr; padding:14px; }.message-compose { grid-column:auto; grid-template-columns:1fr; }.student-grid { grid-template-columns:repeat(2,1fr); }.student-monitor { padding:16px 14px; }.teacher-header { padding:0 12px; }.room-heading span { display:none; }.family-shell { width:min(100% - 22px,1120px); }.family-hero { padding:28px; min-height:250px; }.family-hero h1 { font-size:39px; }.family-expiry { display:none; }.family-observations,.family-artwork,.family-share-tools { grid-template-columns:1fr; }.family-report,.family-artwork,.family-share-tools { padding:20px; }.family-share-actions { grid-template-columns:1fr; }.family-link-ready { margin:12px; display:grid; }.family-link-history { margin:12px; }.subscription-pill { display:none; } }
 @media (max-width:720px) { .teacher-preview-guide { padding:14px; }.teacher-preview-guide form { grid-template-columns:1fr; }.teacher-preview-guide form>.button { width:100%; min-width:0; min-height:48px; }.teacher-preview-guide textarea { min-height:96px; } }
 @media (max-width:460px) { .entry-shell { padding:14px; }.student-grid { grid-template-columns:1fr; }.archive-hero { padding:25px; }.archive-hero h1 { font-size:38px; }.growth-flower { font-size:60px; }.modal-actions { display:grid; }.login-brand { padding:30px 24px; }.login-brand h1 { font-size:44px; }.qr-panel { flex-direction:column; align-items:flex-start; } }
 @media (max-width:720px) {
@@ -357,6 +357,21 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   .save-conflict { top:auto; bottom:calc(72px + env(safe-area-inset-bottom)); }
 }
 
+.student-home-redesign {
+  width:min(1500px,100%);
+  background:#fff;
+}
+.teacher-activity-book {
+  min-height:0;
+  aspect-ratio:1560/690;
+  padding:5.5% 7% 6.5%;
+  grid-template-columns:minmax(0,1fr) 5.5% minmax(0,1fr);
+  border:0;
+  border-radius:0;
+  background:transparent url('/brand/student-home-book-v2.png') center/100% 100% no-repeat;
+  box-shadow:none;
+}
+.teacher-activity-book::before,.teacher-activity-book::after { display:none; }
 .book-page {
   padding:6% 8%;
   background:transparent;
@@ -364,11 +379,40 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
 }
 .book-tape { display:none; }
 .book-binding { opacity:0; }
-
+.teacher-activity-pill { margin-bottom:18px!important; }
+.teacher-activity-copy h2 { font-size:clamp(34px,4.5vw,64px); }
+.teacher-activity-copy>p:not(.teacher-activity-pill) { margin:24px 0 20px; }
 .teacher-activity-visual { width:min(330px,83%); }
+.student-tool-shelf {
+  aspect-ratio:1560/170;
+  margin-top:8px;
+  padding:13px 72px;
+  border:0;
+  border-radius:0;
+  background:transparent url('/brand/student-home-shelf-v2.png') center/100% 100% no-repeat;
+  box-shadow:none;
+}
+.student-tool-shelf::before,.student-tool-shelf::after { display:none; }
+.student-menu-card {
+  min-height:0;
+  padding:10px 14px;
+  border:0;
+  background:transparent!important;
+  box-shadow:none;
+}
+.student-menu-card:hover { box-shadow:none; }
+.student-menu-card>span { font-size:40px; }
+.student-menu-card h2 { font-size:clamp(17px,2vw,28px); }
 
 @media (max-width:720px) {
-
+  .teacher-activity-book {
+    aspect-ratio:auto;
+    padding:0;
+    display:grid;
+    grid-template-columns:1fr;
+    gap:8px;
+    background:none;
+  }
   .book-copy-page,.book-visual-page {
     min-height:clamp(330px,88vw,470px);
     padding:15% 10% 12%;
@@ -380,11 +424,23 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   }
   .book-copy-page { background-image:url('/brand/student-home-book-left-v2.png'); }
   .book-visual-page { background-image:url('/brand/student-home-book-right-v2.png'); }
-
+  .teacher-activity-copy h2 { font-size:30px; }
+  .teacher-activity-copy>p:not(.teacher-activity-pill) { margin:18px 0 14px; }
   .teacher-activity-visual { width:min(230px,72%); }
-
+  .student-tool-shelf {
+    aspect-ratio:auto;
+    min-height:142px;
+    padding:12px 30px;
+    background-size:100% 100%;
+  }
+  .student-menu-card { min-height:112px; }
+  .student-menu-card>span { font-size:30px; }
 }
 
+@media (max-width:480px) {
+  .student-tool-shelf { padding:10px 22px; gap:5px; }
+  .student-menu-card { padding:8px 2px; }
+}
 @media (max-width:460px) and (orientation:portrait) {
   /* 스크롤 컨테이너 안에서 아래로 끌 때 브라우저 새로고침이 그림 도중에 걸리지 않게 막는다. */
   .studio-body { overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; }
@@ -570,23 +626,41 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
 /* 2026-08 iPad-first student flow */
 .animal-choice-grid { display:grid; grid-template-columns:repeat(5,minmax(48px,1fr)); gap:8px; }
 .animal-choice-grid .emoji-chip { width:100%; min-width:48px; min-height:52px; }
-
+.student-home-redesign { width:min(1480px,100%); padding:0 28px 30px; background:linear-gradient(180deg,#fbfefb 0,#f1fcf3 100%); }
+.student-home-header { gap:12px; border-bottom:1px solid var(--border); }
+.student-home-header .student-identity { margin-left:0; margin-right:auto; }
+.student-header-actions { display:flex; gap:10px; }
+.student-header-actions .student-message-button { margin:0; min-height:44px; padding:7px 12px; }
 /* 폰 폭에서는 라벨을 붙이면 옆의 학생 바꾸기·수업 마치기가 짓눌린다 — 아이콘 44px 정사각으로 접고
    안 읽음 배지는 컴팩트 버튼과 같은 모서리 배지로 옮긴다. */
 @media (max-width:720px) {
   /* :not(.compact)은 의미가 아니라 특이도용 — 뒤쪽의 회귀 보호 규칙
-     `.student-message-button:not(.compact) { width:100%; }
-
+     `.student-message-button:not(.compact) { width:100%; }`(그리기 화면 하단 배너용)보다 이겨야 한다. */
+  .student-header-actions .student-message-button:not(.compact) { position:relative; width:44px; min-width:44px; padding:0; justify-content:center; }
+  .student-header-actions .student-message-button .student-message-label { display:none; }
+  .student-header-actions .student-message-button b { position:absolute; top:-6px; right:-6px; min-width:20px; width:20px; height:20px; font-size:10px; box-shadow:0 2px 5px rgba(39,79,47,.2); }
 }
 .finish-class-button { border-color:#e9cf77; background:#fff9dc; }
-
+.student-home-intro { margin:22px 22px 14px; display:flex; align-items:center; gap:24px; }
+.student-home-intro>div { min-width:0; }
+.student-home-intro h1 { position:relative; margin:0; font-size:clamp(34px,4.2vw,58px); line-height:1.08; letter-spacing:-.055em; }
+.student-home-intro h1:after { content:""; position:absolute; right:0; bottom:-8px; left:0; height:7px; border-radius:50%; background:#4bb65d; clip-path:polygon(0 20%,18% 35%,35% 14%,52% 48%,70% 18%,84% 44%,100% 10%,100% 62%,83% 83%,65% 55%,49% 90%,30% 58%,13% 75%,0 54%); opacity:.9; }
+.student-home-intro p { margin:18px 0 0; color:var(--secondary); font-size:18px; font-weight:800; }
+.teacher-activity-book { position:relative; min-height:455px; padding:24px 34px 30px; display:grid; grid-template-columns:minmax(0,1fr) 46px minmax(0,1fr); align-items:stretch; border:10px solid #389a49; border-radius:30px 30px 22px 22px; background:#288338; box-shadow:0 15px 0 #1f6f2d,0 24px 34px rgba(39,79,47,.18); }
+.teacher-activity-book:before,.teacher-activity-book:after { content:""; position:absolute; z-index:0; top:16px; bottom:18px; width:34px; border-radius:16px; background:#ffd85a; }
+.teacher-activity-book:before { left:12px; }.teacher-activity-book:after { right:12px; }
 .book-page { position:relative; z-index:1; min-width:0; padding:58px clamp(28px,4vw,66px) 38px; display:grid; align-items:center; background:#fffdf7; box-shadow:inset 0 0 0 2px #ece7da,inset 0 -12px 18px rgba(143,116,62,.07); }
 .book-copy-page { border-radius:18px 5px 5px 18px; }
 .book-visual-page { border-radius:5px 18px 18px 5px; grid-template-rows:minmax(0,1fr) auto; justify-items:center; }
 .book-tape { position:absolute; top:-5px; left:50%; width:138px; height:38px; transform:translateX(-50%) rotate(-1deg); background:var(--yellow); clip-path:polygon(2% 12%,96% 0,100% 82%,3% 100%,0 42%); opacity:.9; }
 .book-binding { position:relative; z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:space-around; padding:22px 0; background:linear-gradient(90deg,#e9e3d6,#fffaf0 48%,#ddd6c8); box-shadow:inset 8px 0 10px rgba(66,55,40,.08),inset -8px 0 10px rgba(66,55,40,.08); }
 .book-binding i { width:68px; height:18px; border:4px solid #4d463b; border-right-color:#8c8375; border-left-color:#8c8375; border-radius:999px; background:linear-gradient(#fff,#c9c4ba); box-shadow:0 3px 3px rgba(0,0,0,.18); }
-
+.teacher-activity-copy { min-width:0; display:grid; justify-items:center; align-content:center; text-align:center; }
+.teacher-activity-pill { margin:0 0 24px!important; padding:10px 20px; border-radius:8px; background:#ffe284; color:#725c00!important; font-size:16px; font-weight:1000; transform:rotate(-1deg); }
+.teacher-activity-copy h2 { position:relative; margin:0; font-size:clamp(38px,5vw,66px); letter-spacing:-.055em; line-height:1.08; }
+.teacher-activity-copy h2:after { content:""; position:absolute; right:4%; bottom:-10px; left:4%; height:6px; border-radius:50%; background:#47b259; transform:rotate(-1deg); }
+.teacher-activity-copy>p:not(.teacher-activity-pill) { max-width:470px; margin:30px 0 24px; color:var(--ink); font-size:18px; font-weight:800; line-height:1.65; }
+.teacher-activity-copy .button { min-width:250px; min-height:64px; font-size:22px; }
 .teacher-activity-visual { position:relative; width:min(350px,100%); justify-self:center; }
 .teacher-activity-visual>:is(.lesson-illustration,.lesson-finished-illustration),.teacher-activity-visual>img { width:100%; aspect-ratio:1; display:block; object-fit:contain; border-radius:26px; }
 .teacher-activity-visual>.transparent-cutout { border-radius:0; }
@@ -598,7 +672,16 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
 .teacher-pencil-progress span { display:inline-grid; place-items:center; width:34px; height:34px; filter:grayscale(1); opacity:.25; transform:rotate(-18deg); }
 .teacher-pencil-progress span.done { filter:none; opacity:1; }
 .teacher-pencil-progress b { min-width:52px; font-size:20px; }
-
+.student-primary-menu { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.student-tool-shelf { position:relative; margin-top:28px; padding:14px 56px; border:4px solid #d4a25d; border-radius:18px; background:linear-gradient(#f7d49a,#e9b967); box-shadow:0 7px 0 #b98545; }
+.student-tool-shelf:before,.student-tool-shelf:after { content:""; position:absolute; top:7px; bottom:7px; width:16px; border-radius:6px; background:#8c5e2d; box-shadow:inset 0 0 0 4px #f4d087; }
+.student-tool-shelf:before { left:13px; }.student-tool-shelf:after { right:13px; }
+.student-menu-card { position:relative; min-width:0; min-height:106px; padding:16px 20px; display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:12px 16px; align-items:center; border:2px solid #e1d7c7; border-radius:10px; background:#fffefb!important; box-shadow:0 5px 0 rgba(120,84,39,.24); transition:.16s transform,.16s box-shadow; }
+.student-menu-card:hover { transform:translateY(-3px); box-shadow:0 8px 0 rgba(120,84,39,.2); }
+.student-menu-card>span { font-size:46px; }
+.student-menu-card h2 { margin:0 0 5px; font-size:24px; }
+.student-menu-card p { margin:0; color:var(--secondary); font-size:13px; font-weight:700; line-height:1.4; }
+.student-menu-card>b { min-width:58px; padding:9px 8px; border:2px dashed var(--border); border-radius:10px; color:var(--primary-dark); text-align:center; }
 .activity-chooser-page { padding-bottom:50px; }
 .activity-chooser-hero { margin:28px 0; padding:36px; border-radius:28px; background:linear-gradient(120deg,#fff,#eafaeb); }
 .activity-chooser-hero h1 { margin:0; font-size:clamp(36px,5vw,56px); letter-spacing:-.055em; }
@@ -631,9 +714,24 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   .animal-choice-grid { gap:8px; }
   .animal-choice-grid .emoji-chip { min-height:58px; font-size:30px; }
 
+  .student-home-redesign { padding:0 18px 30px; }
+  .student-home-header { margin:0 -18px; padding-right:18px; padding-left:18px; }
+  .student-home-intro { margin:16px 12px 12px; }
+  .student-home-intro h1 { font-size:42px; }
+  .student-primary-menu { gap:10px; }
+  .student-menu-card { min-height:96px; padding:13px 11px; gap:5px 8px; grid-template-columns:42px minmax(0,1fr); }
+  .student-menu-card>span { font-size:38px; }
+  .student-menu-card h2 { font-size:19px; }
+  .student-menu-card p { display:none; }
+  .student-menu-card>b { grid-column:2; justify-self:start; min-width:48px; padding:6px 8px; font-size:12px; }
+  .student-tool-shelf { margin-top:22px; padding:12px 42px; }
+  .teacher-activity-book { min-height:405px; padding:18px 24px 24px; grid-template-columns:minmax(0,1fr) 38px minmax(0,1fr); border-width:8px; }
   .book-page { padding:50px 24px 28px; }
   .book-binding i { width:56px; }
-
+  .teacher-activity-pill { margin-bottom:18px!important; padding:8px 13px; font-size:13px; }
+  .teacher-activity-copy h2 { font-size:38px; }
+  .teacher-activity-copy>p:not(.teacher-activity-pill) { margin:25px 0 18px; font-size:15px; }
+  .teacher-activity-copy .button { min-width:190px; min-height:56px; font-size:18px; }
   .teacher-activity-visual { width:min(265px,100%); }
   .lesson-list { grid-template-columns:1fr; }
   .lesson-card { min-height:164px; padding:16px 20px; }
@@ -754,20 +852,42 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   .lesson-card>b { grid-column:2; grid-row:2; align-self:start; justify-self:start; }
   .lesson-card h2 { font-size:21px; }
   .lesson-card p { margin-bottom:7px; font-size:14px; line-height:1.55; }
-
+  .student-home-redesign .student-identity { display:flex; }
+  .student-home-header { flex-wrap:wrap; padding:8px 0; }
+  .student-home-header .brand { flex:1; }
+  .student-home-header .student-identity { order:3; flex:1 1 100%; }
+  .student-header-actions { margin-left:auto; }
+  .student-header-actions .small-button { min-height:44px; padding:7px 9px; font-size:12px; }
+  .student-home-redesign { padding:0 8px 24px; }
+  .student-home-intro { margin:14px 8px 12px; align-items:flex-start; gap:10px; }
+  .student-home-intro h1 { font-size:30px; }
+  .student-home-intro p { margin-top:14px; font-size:14px; }
+  .teacher-activity-book { min-height:0; padding:13px; display:grid; grid-template-columns:1fr; border-width:7px; border-radius:22px; box-shadow:0 8px 0 #1f6f2d,0 15px 24px rgba(39,79,47,.14); }
+  .teacher-activity-book:before,.teacher-activity-book:after { width:20px; }
   .book-binding { display:none; }
   .book-page { padding:42px 16px 22px; }
   .book-copy-page { border-radius:14px 14px 4px 4px; }
   .book-visual-page { border-radius:4px 4px 14px 14px; border-top:2px dashed #d9d1c2; }
   .book-tape { width:100px; height:28px; }
-
+  .teacher-activity-pill { margin-bottom:14px!important; padding:7px 10px; font-size:12px; }
+  .teacher-activity-copy h2 { font-size:32px; }
+  .teacher-activity-copy>p:not(.teacher-activity-pill) { margin:22px 0 14px; font-size:14px; line-height:1.5; }
+  .teacher-activity-copy .button { width:100%; min-width:0; min-height:50px; }
   .teacher-activity-visual { width:min(230px,78vw); }
   .teacher-activity-visual>.observation-reference .observation-reference-preview img { height:210px; }
   .teacher-pencil-progress { margin-top:6px; gap:7px; }
   .teacher-pencil-progress>div { gap:2px; }
   .teacher-pencil-progress span { width:28px; height:28px; font-size:16px; }
   .teacher-pencil-progress b { min-width:44px; font-size:16px; }
-
+  .student-primary-menu { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .student-tool-shelf { margin-top:18px; padding:9px 23px; gap:6px; border-width:3px; }
+  .student-tool-shelf:before,.student-tool-shelf:after { width:9px; }
+  .student-tool-shelf:before { left:7px; }.student-tool-shelf:after { right:7px; }
+  .student-menu-card { min-height:116px; padding:10px 4px; display:grid; grid-template-columns:1fr; grid-template-rows:auto auto auto; justify-items:center; gap:4px; text-align:center; }
+  .student-menu-card>span { font-size:32px; }
+  .student-menu-card h2 { margin:0; font-size:15px; }
+  .student-menu-card p { display:none; }
+  .student-menu-card>b { min-width:48px; padding:4px 5px; font-size:11px; }
   /* :not(.compact)로 막는다 — 헤더 안의 컴팩트 선생님 말씀 버튼도 .floating 클래스를
      같이 갖고 있어서, 이 규칙을 그냥 두면 하단 고정 위치 오프셋(bottom/right/width:auto)이
      헤더 버튼에도 새어 들어가 옆 컨트롤들과 세로로 어긋난다. */
@@ -790,7 +910,8 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   .entry-card { padding-right:14px; padding-left:14px; }
   .animal-choice-grid { grid-template-columns:repeat(5,minmax(48px,1fr)); gap:4px; }
   .animal-choice-grid .emoji-chip { min-width:48px; min-height:48px; padding:0; font-size:25px; }
-
+  .student-home-header .brand { font-size:20px; }
+  .student-home-header .brand-mark { width:36px; height:36px; }
   .finish-class-button { font-size:0!important; }
   .finish-class-button:before { content:"🚪"; font-size:18px; }
 }
@@ -884,22 +1005,153 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
 @media (max-width:600px) { .teacher-history-preview { grid-template-columns:1fr; }.teacher-history-preview figcaption { grid-template-columns:minmax(0,1fr) auto; align-items:center; } }
 
 /* Keep the PNG book and shelf as the final visual layer after legacy responsive rules. */
+.student-home-redesign { width:min(1500px,100%); background:#fff; }
+.teacher-activity-book {
+  min-height:0;
+  aspect-ratio:1560/690;
+  padding:5.5% 7% 6.5%;
+  grid-template-columns:minmax(0,1fr) 5.5% minmax(0,1fr);
+  border:0;
+  border-radius:0;
+  background:transparent url('/brand/student-home-book-v2.png') center/100% 100% no-repeat;
+  box-shadow:none;
+}
+.teacher-activity-book::before,.teacher-activity-book::after { display:none; }
+.teacher-activity-book .book-page { padding:6% 8%; background:transparent; box-shadow:none; }
+.teacher-activity-book .book-tape { display:none; }
+.teacher-activity-book .book-binding { opacity:0; }
+.teacher-activity-book .teacher-activity-pill { margin-bottom:18px!important; }
+.teacher-activity-book .teacher-activity-copy h2 { font-size:clamp(34px,4.5vw,64px); }
+.teacher-activity-book .teacher-activity-copy>p:not(.teacher-activity-pill) { margin:24px 0 20px; }
+.teacher-activity-book .teacher-activity-visual { width:min(330px,83%); }
+.student-tool-shelf {
+  aspect-ratio:1560/170;
+  margin-top:8px;
+  /* 좌우 패딩은 배경 선반 PNG의 색연필 장식 폭(약 4.8%)을 따라간다 — 고정 72px이면
+     좁은 화면에서 장식은 줄어드는데 카드 폭만 깎여 내용이 카드 밖으로 넘친다. */
+  padding:13px clamp(30px,4.8vw,72px);
+  border:0;
+  border-radius:0;
+  background:transparent url('/brand/student-home-shelf-v2.png') center/100% 100% no-repeat;
+  box-shadow:none;
+}
+.student-tool-shelf::before,.student-tool-shelf::after { display:none; }
+.student-tool-shelf .student-menu-card {
+  min-height:0;
+  padding:10px 14px;
+  border:0;
+  background:transparent!important;
+  box-shadow:none;
+}
+.student-tool-shelf .student-menu-card:hover { box-shadow:none; }
+.student-tool-shelf .student-menu-card>span { font-size:40px; }
+.student-tool-shelf .student-menu-card h2 { font-size:clamp(17px,2vw,28px); }
+.student-tool-shelf .student-menu-card p { display:none; }
+.student-tool-shelf .student-menu-card h2 { white-space:nowrap; }
 
 /* 확정 시안처럼 아이콘·제목·칩을 한 덩어리로 칸 중앙에 모은다.
    ≤720px 휴대전화 레이아웃(2열·세로 스택)은 기존 규칙을 그대로 쓴다. */
+@media (min-width:1101px) {
+  .student-tool-shelf .student-menu-card { display:flex; align-items:center; justify-content:center; gap:14px; }
+  .student-tool-shelf .student-menu-card>span { font-size:52px; }
+  .student-tool-shelf .student-menu-card h2 { margin:0; }
+}
+
+@media (min-width:721px) and (max-width:1100px) {
+  .student-tool-shelf .student-menu-card { display:flex; align-items:center; justify-content:center; gap:clamp(6px,1vw,10px); padding:5px 4px; }
+  .student-tool-shelf .student-menu-card>span { font-size:clamp(28px,3.8vw,34px); }
+  .student-tool-shelf .student-menu-card h2 { margin:0; font-size:clamp(16px,2.2vw,20px); }
+  .student-tool-shelf .student-menu-card>b { min-width:42px; padding:5px 6px; font-size:12px; }
+}
+
+@media (min-width:721px) and (max-width:1024px) and (orientation:portrait) {
+  .teacher-activity-book {
+    width:100%;
+    min-height:0;
+    aspect-ratio:1560/690;
+    padding:5.5% 7% 6.5%;
+    grid-template-columns:minmax(0,1fr) 5.5% minmax(0,1fr);
+    border:0;
+    background:transparent url('/brand/student-home-book-v2.png') center/100% 100% no-repeat;
+    box-shadow:none;
+  }
+  .teacher-activity-book .book-page { padding:5% 7%; background:transparent; }
+  .student-tool-shelf { margin-top:8px; padding:12px 50px; border:0; }
+}
+
+@media (max-width:720px) {
+  .teacher-activity-book {
+    aspect-ratio:auto;
+    min-height:0;
+    padding:0;
+    display:grid;
+    grid-template-columns:1fr;
+    gap:8px;
+    border:0;
+    background:none;
+    box-shadow:none;
+  }
+  .teacher-activity-book .book-copy-page,.teacher-activity-book .book-visual-page {
+    min-height:clamp(330px,88vw,470px);
+    padding:15% 10% 12%;
+    border:0;
+    border-radius:20px;
+    background-position:center;
+    background-size:100% 100%;
+    background-repeat:no-repeat;
+  }
+  .teacher-activity-book .book-copy-page { background-image:url('/brand/student-home-book-left-v2.png'); }
+  .teacher-activity-book .book-visual-page { background-image:url('/brand/student-home-book-right-v2.png'); }
+  .teacher-activity-book .teacher-activity-copy h2 { font-size:30px; }
+  .teacher-activity-book .teacher-activity-copy>p:not(.teacher-activity-pill) { margin:18px 0 14px; }
+  .teacher-activity-book .teacher-activity-visual { width:min(230px,72%); }
+  .student-tool-shelf {
+    aspect-ratio:auto;
+    min-height:142px;
+    margin-top:12px;
+    padding:12px 30px;
+    border:0;
+    background:transparent url('/brand/student-home-shelf-v2.png') center/100% 100% no-repeat;
+    box-shadow:none;
+  }
+  .student-tool-shelf .student-menu-card { min-height:112px; padding:8px 3px; }
+  .student-tool-shelf .student-menu-card>span { font-size:30px; }
+}
+
+@media (max-width:480px) {
+  .student-tool-shelf { padding:10px 22px; gap:5px; }
+}
 
 /* Reference-image typography and paper controls for the three student entry surfaces. */
 body {
   font-family:"Pretendard Variable","Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
 }
-.landing {
+.landing,.student-home-redesign {
   --picture-ink:#16220F;
   --picture-blue:#2E5F23;
   --picture-muted:#5A6B52;
   --picture-line:#B6C2AC;
 }
-.landing .topbar,.entry-top { color:var(--picture-ink,#184523); }
-.landing .teacher-link { letter-spacing:-.025em; }
+.landing .topbar,.entry-top,.student-home-header { color:var(--picture-ink,#184523); }
+.landing .teacher-link,.student-home-redesign :is(.small-button,.button) { letter-spacing:-.025em; }
+
+.student-home-intro h1,.teacher-activity-copy h2,.student-tool-shelf .student-menu-card h2 {
+  color:var(--picture-ink);
+  font-weight:950;
+  letter-spacing:-.055em;
+}
+.student-home-intro p { color:var(--picture-muted); font-weight:800; line-height:1.45; }
+.teacher-activity-pill {
+  color:#5d4700;
+  background:#ffe899;
+  border-color:#f1c95d;
+  box-shadow:0 3px 0 rgba(188,139,25,.18);
+  font-weight:900;
+}
+.teacher-activity-copy>p:not(.teacher-activity-pill) { color:#305137; font-weight:750; }
+.teacher-activity-copy .button.primary { background:#2c9e40; box-shadow:0 7px 0 #227831; }
+.student-tool-shelf .student-menu-card { color:var(--picture-ink); }
+.student-tool-shelf .student-menu-card>b { color:var(--primary-dark); border-color:var(--border); background:rgba(255,255,255,.74); }
 
 @media (min-width:901px) {
   .landing-headline,.landing-subtitle {
@@ -908,7 +1160,7 @@ body {
     white-space:nowrap;
     text-wrap:nowrap;
   }
-
+  .student-home-intro h1,.student-home-intro p { white-space:nowrap; text-wrap:nowrap; }
 }
 
 @media (max-width:900px) {
@@ -984,6 +1236,7 @@ body {
 .storybook-preview .small-button { color:#2b4331; }
 @keyframes storybook-page-open { from { opacity:.35; transform:perspective(900px) rotateY(-5deg) translateX(10px); } to { opacity:1; transform:none; } }
 
+@media (min-width:901px) { .student-primary-menu { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 @media (max-width:900px) {
   .storybook-book-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .storybook-editor-header { height:auto; min-height:68px; flex-wrap:wrap; }.storybook-editor-header>input { order:4; flex:1 1 100%; max-width:none; }.storybook-save-state { margin-left:auto; }.storybook-editor-body { height:calc(100dvh - 120px); grid-template-columns:90px minmax(0,1fr) 220px; }.storybook-page-rail>button>span { width:64px; }
@@ -1003,7 +1256,13 @@ body {
 .storybook-stage .moveable-rotation-line { height:58px!important; }
 
 /* 최신 그림책형 Wiggle 화면과 같은 종이·나무·하늘색 계열을 이어 쓴다. */
-
+.storybook-home-entry { position:relative; margin:26px 0 8px; padding:22px 24px; display:grid; grid-template-columns:126px minmax(0,1fr) auto; align-items:center; gap:20px; overflow:hidden; border:3px solid #d4a25d; border-radius:20px; background:linear-gradient(108deg,#fffdf5 0 64%,#e9f7eb 64%); box-shadow:0 7px 0 #b98545; color:var(--picture-ink,#2c3d2e); }
+.storybook-home-entry::after { content:""; position:absolute; inset:8px; pointer-events:none; border:2px dashed rgba(212,162,93,.4); border-radius:13px; }
+.storybook-home-entry>div,.storybook-home-entry>a { position:relative; z-index:1; }
+.storybook-home-entry h2 { margin:2px 0 7px; font-size:clamp(22px,2.6vw,32px); }
+.storybook-home-entry p { margin:0; color:var(--secondary); font-weight:700; line-height:1.5; }
+.storybook-home-entry .eyebrow { color:#299439; }
+.storybook-home-entry .button { min-height:52px; white-space:nowrap; }
 .storybook-home-books { min-height:90px; display:grid; place-items:center; position:relative; }
 .storybook-home-books span { position:absolute; font-size:54px; filter:drop-shadow(0 4px 0 rgba(90,61,30,.15)); }
 .storybook-home-books span:nth-child(1) { transform:translate(-25px,14px) rotate(-10deg); }
@@ -1052,16 +1311,18 @@ body {
 .storybook-format-dialog p { margin:0; color:var(--secondary); font-weight:700; }
 
 @media (max-width:720px) {
-
+  .storybook-home-entry { padding:18px; grid-template-columns:82px minmax(0,1fr); gap:12px; }
+  .storybook-home-entry .button { grid-column:1/-1; width:100%; }
   .storybook-home-books span { font-size:43px; }
   .storybook-home-books span:nth-child(3) { font-size:28px; }
 }
 
 @media (max-height:520px) and (orientation:landscape) {
-
+  .storybook-home-entry { grid-template-columns:74px minmax(0,1fr) auto; padding:13px 18px; }
   .storybook-home-books { min-height:64px; }
   .storybook-home-books span { font-size:38px; }
-
+  .storybook-home-entry h2 { font-size:20px; }
+  .storybook-home-entry p:not(.eyebrow) { display:none; }
 }
 
 /* ── 정책 페이지 (개인정보처리방침 · 서비스 약관) ─────────────────────
@@ -1080,10 +1341,44 @@ body {
 @media (max-width:480px) { .policy-body { padding:20px 16px 26px; } .policy-body>h1 { font-size:22px; } }
 
 /* ── 수업 조종석 (FR-34) — 학급 화면 맨 위. 회차 열기→QR→입장 순서와 화면 순서 일치 ── */
+.arc-cockpit { max-width:1080px; margin:0 auto 14px; background:var(--paper); border:1px solid var(--border); border-radius:14px; padding:14px 16px; display:flex; flex-wrap:wrap; gap:12px 18px; align-items:center; justify-content:space-between; }
+.arc-cockpit-now { display:flex; flex-direction:column; gap:2px; min-width:220px; }
+.arc-cockpit-now>small { color:var(--secondary); font-weight:700; }
+.arc-cockpit-now>b { font-size:17px; color:var(--ink); }
+.arc-cockpit-actions { display:flex; flex-wrap:wrap; gap:10px; align-items:end; }
+.arc-cockpit-actions>label { display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--secondary); font-weight:700; }
+.arc-cockpit-actions select { min-height:44px; border:1px solid var(--border); border-radius:10px; padding:0 10px; font-size:15px; background:var(--paper); color:var(--ink); }
+.arc-cockpit-actions>.button { min-height:44px; }
+.arc-cockpit-done { color:var(--secondary); font-weight:700; align-self:center; }
+.arc-cockpit-jump>summary { cursor:pointer; min-height:44px; display:flex; align-items:center; color:var(--secondary); font-weight:700; }
+.arc-cockpit-jump>button { display:block; margin:6px 0; min-height:44px; }
+@media (max-width:640px) { .arc-cockpit { flex-direction:column; align-items:stretch; } .arc-cockpit-actions { align-items:stretch; flex-direction:column; } }
 
 /* ── 오늘 회차 카드 (FR-4, A안) — 수업이 열려 있으면 학생 홈을 차지한다 ── */
+.today-episode-card { max-width:720px; margin:0 auto 18px; background:var(--paper); border:2px solid var(--border); border-radius:20px; padding:24px 22px; display:flex; flex-direction:column; gap:10px; align-items:center; text-align:center; }
+.today-episode-card>.teacher-activity-pill { margin:0; }
+.today-episode-card>h2 { margin:0; font-size:26px; color:var(--ink); }
+.today-episode-scene { max-width:280px; border-radius:14px; }
+.today-episode-scene-text { margin:0; font-size:17px; color:var(--secondary); font-weight:700; line-height:1.6; }
+.today-episode-prompts { margin:0; padding-left:22px; font-size:16px; font-weight:700; line-height:1.7; color:var(--secondary); text-align:left; }
+.today-episode-prompts li::marker { color:var(--primary-dark); }
+.arc-cockpit-discussion { margin-top:6px; font-size:14px; }
+.arc-cockpit-discussion>summary { cursor:pointer; font-weight:800; color:var(--primary-dark); }
+.arc-cockpit-discussion ol { margin:6px 0 0; padding-left:20px; line-height:1.6; }
+.arc-cockpit-discussion p { margin:6px 0 0; color:var(--secondary); }
+.today-episode-card>.child-primary-action { min-height:56px; min-width:220px; font-size:19px; }
+@media (max-width:480px) { .today-episode-card>h2 { font-size:22px; } .today-episode-card>.child-primary-action { width:100%; } }
 
 /* ── 지난 이야기 서랍 (Story 3.1) — 보기 전용, 도화지를 가리지 않는 옆 패널 ── */
+.episode-drawer { position:fixed; top:64px; left:0; bottom:0; width:min(40vw,340px); background:var(--bg); border-right:2px solid var(--border); padding:14px; overflow-y:auto; z-index:40; display:flex; flex-direction:column; gap:12px; }
+.episode-drawer-head { display:flex; justify-content:space-between; align-items:center; }
+.episode-drawer-head>b { font-size:16px; color:var(--ink); }
+.episode-drawer-head>.icon-button { min-width:44px; min-height:44px; font-size:20px; }
+.episode-drawer-item { margin:0; background:var(--paper); border:1px solid var(--soft-border); border-radius:12px; padding:8px; box-shadow:3px 3px 0 var(--border); }
+.episode-drawer-item>img { width:100%; border-radius:8px; display:block; background:#fff; }
+.episode-drawer-empty { display:flex; align-items:center; justify-content:center; height:120px; font-size:34px; }
+.episode-drawer-item>figcaption { margin-top:6px; font-size:13px; font-weight:700; color:var(--secondary); text-align:center; }
+@media (max-width:640px) { .episode-drawer { top:auto; height:45vh; width:100%; border-right:0; border-top:2px solid var(--border); } }
 
 /* ── 교사 구글 로그인 실패 안내 (Story 1.3) — Workspace 차단은 게시와 무관, 학교 관리자만 해결 ── */
 .teacher-auth-notice { max-width:560px; margin:14px auto 0; background:var(--paper); border:2px solid var(--yellow); border-radius:14px; padding:14px 16px; display:flex; flex-direction:column; gap:8px; text-align:left; }
@@ -1821,4 +2116,51 @@ body {
   .archive-page>.app-header { flex-wrap:wrap; gap:10px; }
   .archive-actions { width:100%; }
   .archive-actions .button.primary { flex:1; }
+}
+
+/* ── 참여 코드표 인쇄 (2026-09-12) ────────────────────────────────────────
+   화면에서는 대화상자 안 미리보기이고, 인쇄하면 이 시트만 남는다.
+   첫 장은 선생님 보관용 명단, 둘째 장은 잘라 나눠 줄 쪽지다. */
+.roster-print-actions { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:14px; }
+.roster-print-actions p { margin:0; color:var(--tw-muted,#5f7d64); font-size:14px; line-height:1.6; }
+.roster-print { color:#14231a; }
+.roster-print-sheet { border:1px solid #d8e0d6; border-radius:10px; padding:18px; background:#fff; }
+.roster-print-sheet + .roster-print-sheet { margin-top:18px; }
+.roster-print-sheet>header h3 { margin:0 0 4px; font-size:18px; font-weight:800; }
+.roster-print-sheet>header p { margin:0; color:#5f7d64; font-size:13px; }
+.roster-print-note { margin:12px 0; padding:8px 10px; border-radius:8px; background:#f4f7f2; color:#41603f; font-size:13px; }
+.roster-print table { border-collapse:collapse; width:100%; margin-top:8px; }
+.roster-print th,.roster-print td { border:1px solid #cfdcc6; padding:7px 10px; text-align:left; font-size:14px; }
+.roster-print th { background:#f4f7f2; font-weight:700; }
+.roster-print-code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:18px; font-weight:800; letter-spacing:.16em; }
+.roster-print-code-big { font-size:30px; }
+.roster-print-slip-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0; margin-top:12px; }
+.roster-print-slip { border:1px dashed #7f9a80; padding:12px 14px; display:grid; gap:8px; break-inside:avoid; }
+.roster-print-slip-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.roster-print-slip-head b { font-size:14px; }
+.roster-print-slip-head span { color:#41603f; font-size:13px; font-weight:700; }
+.roster-print-slip-body { display:flex; align-items:center; gap:12px; }
+.roster-print-slip-qr { display:grid; justify-items:center; gap:3px; }
+.roster-print-slip-qr small { color:#5f7d64; font-size:10px; }
+.roster-print-slip-qr .qr-code-frame { padding:0; border:0; background:none; }
+.roster-print-slip-qr canvas { width:74px!important; height:74px!important; }
+.roster-print-slip dl { margin:0; display:grid; gap:6px; flex:1; min-width:0; }
+.roster-print-slip dl>div { display:grid; gap:1px; }
+.roster-print-slip dt { color:#5f7d64; font-size:11px; font-weight:700; }
+.roster-print-slip dd { margin:0; }
+.roster-print-slip-foot { margin:0; color:#41603f; font-size:11px; line-height:1.45; }
+
+@media print {
+  /* 인쇄에는 코드표만 남긴다. 대화상자가 화면 깊숙이(main>section>backdrop>dialog) 있어서
+     body의 직계 자식만 숨기는 방식으로는 페이지 전체가 같이 인쇄됐다(2026-09-12 실측).
+     그래서 "시트의 조상도 아니고 시트 자신도 아니고 시트 안도 아닌 것"을 모두 숨긴다. */
+  body:has(.roster-print) *:not(:has(.roster-print)):not(.roster-print):not(.roster-print *) { display:none!important; }
+  /* 대화상자가 잡아 둔 스크롤·높이 제한을 풀어야 둘째 장이 잘리지 않는다. */
+  body:has(.roster-print) { overflow:visible!important; }
+  .tcw-dialog-backdrop:has(.roster-print) { position:static!important; display:block!important; inset:auto!important; padding:0!important; background:none!important; }
+  .tcw-dialog:has(.roster-print) { max-width:none!important; max-height:none!important; width:auto!important; margin:0!important; padding:0!important; border:0!important; border-radius:0!important; box-shadow:none!important; overflow:visible!important; }
+  .roster-print-sheet { border:0; border-radius:0; padding:0; }
+  .roster-print-sheet + .roster-print-sheet { margin-top:0; break-before:page; }
+  .roster-print-slip { border-color:#666; }
+  .roster-print th,.roster-print td { border-color:#666; }
 }

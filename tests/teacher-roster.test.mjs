@@ -111,3 +111,29 @@ test("가족 공유와 AI 요청에는 실명이 실리지 않는다", async () 
     assert.doesNotMatch(source, /real_name|realName/, `${name}에 실명이 새면 안 된다`);
   }
 });
+
+test("참여 코드표는 팝업 없이 브라우저 인쇄로 나가고, 선생님 명단과 나눠 줄 쪽지 두 장이다", async () => {
+  const [settings, sheet, css] = await Promise.all([
+    read("../app/components/TeacherRosterSettings.tsx"),
+    read("../app/components/TeacherRosterPrint.tsx"),
+    read("../app/globals.css"),
+  ]);
+  // 종전 방식(window.open에 noopener)은 규격상 null이 돌아와 늘 실패했다. 팝업을 다시 쓰면 안 된다.
+  assert.doesNotMatch(settings, /window\.open\(/);
+  assert.match(settings, /onClick=\{\(\) => setPrintOpen\(true\)\}/);
+  assert.match(settings, /onClick=\{\(\) => window\.print\(\)\}/);
+  assert.match(settings, /<TeacherRosterPrint classroomName=/);
+  // 첫 장은 실명이 있는 보관용, 둘째 장은 잘라 주는 쪽지.
+  assert.match(sheet, /roster-print-list/);
+  assert.match(sheet, /roster-print-slips/);
+  assert.match(sheet, /선생님 보관용/);
+  // 쪽지 한 장이면 입장이 끝나야 한다 — 반 QR + 수업 코드 + 내 참여 코드가 모두 있다.
+  assert.match(sheet, /<QrCode value=\{joinUrl\}/);
+  assert.match(sheet, /<dt>수업 코드<\/dt>/);
+  assert.match(sheet, /<dt>내 참여 코드<\/dt>/);
+  // 인쇄하면 시트만 남는다: 시트의 조상·시트·시트 안을 뺀 나머지를 숨긴다.
+  assert.match(css, /body:has\(\.roster-print\) \*:not\(:has\(\.roster-print\)\):not\(\.roster-print\):not\(\.roster-print \*\) \{ display:none!important; \}/);
+  // 대화상자가 잡아 둔 스크롤·높이 제한을 풀지 않으면 둘째 장이 잘린다.
+  assert.match(css, /body:has\(\.roster-print\) \{ overflow:visible!important; \}/);
+  assert.match(css, /\.roster-print-sheet \+ \.roster-print-sheet \{ margin-top:0; break-before:page; \}/);
+});

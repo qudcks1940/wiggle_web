@@ -85,7 +85,7 @@ test("학생 화면은 명단을 그리지 않고 자기 참여 코드만 입력
   // 서버가 명단을 주지 않으므로 화면에도 목록을 그릴 방법이 없다.
   assert.doesNotMatch(join, /realName|seatNumber|entryCodes/);
   // 재입장은 동물·별명을 다시 묻지 않는다 — 처음일 때만 동물 화면으로 간다.
-  assert.match(join, /if \(data\.firstTime\) \{ setMode\("animal"\)/);
+  assert.match(join, /if \(data\.firstTime\) \{ claimCode\.current = code; setMode\("animal"\)/);
 });
 
 test("실명은 담임 교사 화면에만 나타난다", async () => {

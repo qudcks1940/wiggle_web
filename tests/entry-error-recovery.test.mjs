@@ -32,7 +32,7 @@ test("errors are shown with a warning picture", () => {
 test("the first correction clears the previous error — every key press, erase and animal pick", () => {
   assert.match(join, /const pressKey = \(digit: string\) => \{ clearEntryError\(\);/);
   assert.match(join, /onClick=\{\(\) => \{ clearEntryError\(\); setCodeInput\(\(current\) => current\.slice\(0, -1\)\); \}\}/);
-  assert.match(join, /setAnimal\(value\); clearEntryError\(\);/);
+  assert.match(join, /setAnimal\(character\.emoji\); clearEntryError\(\);/);
 });
 
 test("a wrong code offers calling the teacher (there is no visible class-code field — it comes from the landing page or QR)", () => {
@@ -45,11 +45,12 @@ test("a wrong code offers calling the teacher (there is no visible class-code fi
 test("the code screen submits only four digits and the animal screen only after a pick", () => {
   assert.match(join, /export const ENTRY_CODE_LENGTH = 4;/);
   assert.match(join, /disabled=\{busy \|\| codeInput\.length !== ENTRY_CODE_LENGTH\}/);
-  assert.match(join, /disabled=\{busy \|\| !animal\}/);
+  assert.match(join, /disabled=\{busy \|\| !chosen\}/);
   assert.match(join, /autoComplete="one-time-code"/);
 });
 
 test("animal buttons carry Korean names for assistive tech", () => {
-  assert.match(join, /const ANIMAL_NAMES: Record<string, string> = \{ "🐰": "토끼"/);
-  assert.match(join, /aria-label=\{`\$\{ANIMAL_NAMES\[value\]\} 고르기`\}/);
+  // 친구 이름과 동물 이름을 함께 읽어 준다("솔이, 토끼"). 이름 목록은 lib/animal-characters.ts 한곳이다.
+  assert.match(join, /aria-label=\{`\$\{character\.name\}, \$\{character\.species\}`\}/);
+  assert.match(join, /import \{ ANIMAL_CHARACTERS, withGwaWa \} from "@\/lib\/animal-characters";/);
 });

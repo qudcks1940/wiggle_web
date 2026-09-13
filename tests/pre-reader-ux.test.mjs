@@ -12,7 +12,6 @@ const [join, entry, archive, studio, css, messageCenter, entryCss] = await Promi
   read("../app/components/StudentMessageCenter.tsx"),
   read("../app/components/EntryCheck.module.css"),
 ]);
-const animalPortraits = await readFile(new URL("../public/brand/animal-portraits-v2.png", import.meta.url));
 
 test("child prompts stay readable as text — the listen button was removed on 2026-09-09", () => {
   for (const source of [join, entry, archive, studio, messageCenter]) assert.doesNotMatch(source, /SpeakButton/);
@@ -27,17 +26,14 @@ test("child prompts stay readable as text — the listen button was removed on 2
 test("entry can be completed with a number pad and one animal picture instead of reading and typing every field", () => {
   assert.match(join, /<h1>내 참여 코드를 눌러요<\/h1>/);
   assert.match(join, /<p>선생님이 준 네 자리 숫자예요\.<\/p>/);
-  assert.match(join, /<h1>내 동물을 골라요<\/h1>/);
-  assert.match(join, /<p>처음 왔구나! 하나만 고르면 돼요\.<\/p>/);
+  assert.match(join, /나랑 닮은 친구를 골라요<\/h1>/);
+  assert.match(join, /마음에 드는 친구 하나를 골라 줘\.<\/p>/);
   assert.match(join, /className=\{`\$\{check\.enter\} child-primary-action`\}/);
-  assert.match(join, /className="animal-choice-portrait" data-animal-index=\{index\}/);
+  // 글을 못 읽어도 동물 그림 한 장으로 고른다 — 동물마다 따로 된 그림 파일(고해상도 그림이 오면 덮어씀).
+  assert.match(join, /<img className=\{check\.pickImage\} src=\{character\.image\}/);
   assert.doesNotMatch(join, /이 기기에 저장된 내 동물 고르기|picturePassword|nickname-row/);
-  assert.match(css, /background-image:url\('\/brand\/animal-portraits-v2\.png'\)/);
-  const portraitSheetWidth = animalPortraits.readUInt32BE(16);
-  const portraitSheetHeight = animalPortraits.readUInt32BE(20);
-  assert.equal(portraitSheetWidth, 2560);
-  assert.equal(portraitSheetHeight, 1024);
-  assert.equal(portraitSheetWidth / 5, portraitSheetHeight / 2, "each animal sprite cell must stay square");
+  // 동물 그림은 정사각형 투명 PNG를 webp로 바꾼 파일이다. 옛 스프라이트 한 장은 더 이상 화면에서 쓰지 않는다.
+  assert.doesNotMatch(css, /animal-portraits-v2/);
 });
 
 test("drawing, navigation and reflection retain familiar visual actions when text is not understood", () => {

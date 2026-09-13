@@ -65,23 +65,6 @@ legend small { color:var(--primary-dark); }
 .teacher-call-note { display:flex; align-items:center; gap:12px; padding:14px; border:2px solid #e1c14d; border-radius:16px; background:#fffbe6; }
 .teacher-call-emoji { font-size:36px; line-height:1; }
 .teacher-call-note p { margin:0; flex:1; font-weight:800; line-height:1.5; color:#654d00; }
-.animal-choice-portrait {
-  display:block;
-  background-image:url('/brand/animal-portraits-v2.png');
-  background-repeat:no-repeat;
-  background-size:500% 200%;
-}
-.animal-choice-portrait { width:38px; height:34px; }
-[data-animal-index="0"] { background-position:0 0; }
-[data-animal-index="1"] { background-position:25% 0; }
-[data-animal-index="2"] { background-position:50% 0; }
-[data-animal-index="3"] { background-position:75% 0; }
-[data-animal-index="4"] { background-position:100% 0; }
-[data-animal-index="5"] { background-position:0 100%; }
-[data-animal-index="6"] { background-position:25% 100%; }
-[data-animal-index="7"] { background-position:50% 100%; }
-[data-animal-index="8"] { background-position:75% 100%; }
-[data-animal-index="9"] { background-position:100% 100%; }
 
 /* Student */
 .app-shell { width:min(1180px,calc(100% - 36px)); margin:auto; min-height:100vh; padding-bottom:95px; }
@@ -635,8 +618,6 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
 }
 
 /* 2026-08 iPad-first student flow */
-.animal-choice-grid { display:grid; grid-template-columns:repeat(5,minmax(48px,1fr)); gap:8px; }
-.animal-choice-grid .emoji-chip { width:100%; min-width:48px; min-height:52px; }
 .student-home-redesign { width:min(1480px,100%); padding:0 28px 30px; background:linear-gradient(180deg,#fbfefb 0,#f1fcf3 100%); }
 .student-home-header { gap:12px; border-bottom:1px solid var(--border); }
 .student-home-header .student-identity { margin-left:0; margin-right:auto; }
@@ -722,8 +703,6 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
   .entry-card { width:min(720px,100%); margin:14px auto; padding:22px 30px; }
   .entry-card h1 { font-size:30px; }
   .entry-card label,.entry-card fieldset { margin:12px 0; }
-  .animal-choice-grid { gap:8px; }
-  .animal-choice-grid .emoji-chip { min-height:58px; font-size:30px; }
 
   .student-home-redesign { padding:0 18px 30px; }
   .student-home-header { margin:0 -18px; padding-right:18px; padding-left:18px; }
@@ -919,8 +898,6 @@ code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:norma
 
 @media (max-width:460px) {
   .entry-card { padding-right:14px; padding-left:14px; }
-  .animal-choice-grid { grid-template-columns:repeat(5,minmax(48px,1fr)); gap:4px; }
-  .animal-choice-grid .emoji-chip { min-width:48px; min-height:48px; padding:0; font-size:25px; }
   .student-home-header .brand { font-size:20px; }
   .student-home-header .brand-mark { width:36px; height:36px; }
   .finish-class-button { font-size:0!important; }

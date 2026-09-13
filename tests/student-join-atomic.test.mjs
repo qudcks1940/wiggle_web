@@ -81,7 +81,7 @@ test("a failed device-session insert rolls back the entire join and a retry crea
   const retried = await server.fetch("/api/student", joinRequest());
   assert.equal(retried.status, 201);
   const payload = await retried.json();
-  assert.equal(payload.student.nickname, "토끼 화가");
+  assert.equal(payload.student.nickname, "솔이");
   assert.ok(payload.deviceToken);
   for (const table of ["student_profiles", "device_sessions"]) assert.equal(await count(DB, table), 1, table);
 });

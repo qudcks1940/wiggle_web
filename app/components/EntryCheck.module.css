@@ -313,14 +313,6 @@
 .scan { composes: help; width: 100%; min-height: 56px; margin-top: 10px; font-size: 18px; flex: none; }
 .again { align-self: center; min-height: 44px; display: inline-flex; align-items: center; padding: 4px 10px; color: var(--accent); font-size: clamp(14px, 1.4cqw, 20px); font-weight: 800; text-decoration: underline; text-underline-offset: 4px; }
 .again:focus-visible { outline: 4px solid var(--accent); outline-offset: 3px; }
-/* 첫 입장의 동물 고르기: 같은 수첩 안에 5×2 격자. 칩은 그림 위·이름 아래. */
-.pad :global(.animal-choice-fieldset) { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: clamp(5px, 0.8cqw, 11px); }
-/* 넓으면 5열, 좁은 수첩(200px 남짓)에서는 4열로 접혀 칩이 44px 아래로 내려가지 않는다. */
-.pad :global(.animal-choice-grid) { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(44px, 18%), 1fr)); gap: clamp(5px, 0.7cqw, 10px); }
-.pad :global(.emoji-chip) { min-width: 0; min-height: clamp(48px, 5.4cqw, 80px); display: grid; grid-template-rows: auto auto; place-items: center; gap: 2px; padding: 4px 2px; border: 1px solid #ddd5b4; border-radius: clamp(10px, 1.3cqw, 18px); background: #fffdf4; box-shadow: 0 4px 0 #e2d8b4; }
-.pad :global(.emoji-chip.selected) { background: #e5f9e7; border-color: var(--primary); box-shadow: 0 4px 0 var(--border); transform: none; }
-.pad :global(.emoji-chip small) { font-size: clamp(10px, 1.05cqw, 15px); font-weight: 850; color: var(--ink); line-height: 1; }
-.pad :global(.animal-choice-portrait) { width: clamp(30px, 3.2cqw, 48px); height: clamp(27px, 2.9cqw, 44px); }
 .pad button:global(.again) { border: 0; background: transparent; font: inherit; cursor: pointer; }
 .pad :global(.entry-error-block) { margin: 0; }
 .pad :global(.child-error) { margin: 0; padding: 8px 10px; font-size: clamp(13px, 1.4cqw, 18px); }
@@ -473,3 +465,114 @@
 }
 .readyAgain:hover { text-decoration: underline; text-underline-offset: 4px; }
 .readyAgain:focus-visible { outline: 4px solid #426d34; outline-offset: 3px; border-radius: 8px; }
+
+/* ── 첫 입장 친구 고르기 — 2026-09-13 사용자 시안(1689×931, docs/design-assets/animal-picker/).
+   시안 실측: 배경 #fdf8e6, 카드 면 #fefdf5·약 228×270·간격 19px, 선택 카드 면 #f4f8e7에 초록 테두리,
+   이름 띠 #dbf1ba, 버튼 면 #fedb62·턱 #d6ad51·약 473×70. 격자 폭 약 1218px(5열).
+   동물 그림은 /entry-green/animals/<slug>.webp — 고해상도 그림이 오면 파일만 덮어쓴다. */
+.pickShell {
+  --pick-ink: #184028;
+  --pick-green: #3f7b4a;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 max(12px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: #fdf8e6;
+  color: var(--pick-ink);
+  position: relative;
+}
+/* 시안처럼 로고·반 이름 줄에 제목이 겹쳐 올라간다. 아래로 쌓으면 약 70px 길어져 태블릿에서 스크롤이 생겼다. */
+.pickTop { position: absolute; inset: 0 0 auto 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: clamp(12px, 1.8vw, 28px) max(12px, clamp(12px, 2.2vw, 40px)) 0; pointer-events: none; }
+.pickTop > * { pointer-events: auto; }
+.pickLogo :global(.brand) { min-height: 44px; color: var(--pick-ink); font-size: clamp(22px, 2vw, 34px); }
+.pickLogo :global(.brand-mark) { width: clamp(40px, 3.8vw, 62px); height: clamp(40px, 3.8vw, 62px); }
+/* 반 이름: 시안의 나무 간판. 그림 대신 나무색 칩으로 둔다(간판 그림이 오면 배경만 바꾼다). */
+.pickClass {
+  min-width: 0;
+  max-width: 45vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: clamp(6px, 0.7vw, 12px) clamp(14px, 1.6vw, 28px);
+  border: 2px solid #d8bd8a;
+  border-radius: 12px;
+  background: linear-gradient(#f6e6c6, #ecd6ab);
+  box-shadow: 0 3px 0 #cfb07a;
+  color: #4c3315;
+  font-size: clamp(16px, 1.6vw, 28px);
+  font-weight: 900;
+}
+.pickBody { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(10px, 1.2vw, 20px); padding: clamp(6px, 1vh, 16px) 0; }
+.pickHead { text-align: center; }
+.pickTitle { margin: 0; font-size: clamp(28px, 3.3vw, 56px); font-weight: 900; letter-spacing: -0.02em; line-height: 1.2; color: var(--pick-ink); }
+/* 시안의 제목 양옆 노란 반짝 표시 */
+.pickTitle::before, .pickTitle::after { content: ""; display: inline-block; width: 0.5em; height: 0.5em; margin: 0 0.35em; vertical-align: 0.35em; background: radial-gradient(closest-side, #f5c936 58%, transparent 60%) 0 0 / 40% 40% no-repeat, radial-gradient(closest-side, #f5c936 58%, transparent 60%) 100% 60% / 30% 30% no-repeat; }
+.pickLead { margin: clamp(4px, 0.5vw, 8px) 0 0; font-size: clamp(16px, 1.4vw, 24px); font-weight: 800; color: #307040; }
+.pickFieldset { margin: 0; padding: 0; border: 0; min-width: 0; width: min(100%, 1220px); }
+.pickHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.pickGrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(8px, 1.15vw, 19px); }
+.pickCard {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(8px, 0.8vw, 14px) 6px clamp(8px, 0.9vw, 14px);
+  border: 2px solid #efe8d2;
+  border-radius: clamp(14px, 1.3vw, 22px);
+  background: #fefdf5;
+  box-shadow: 0 4px 14px rgba(120, 96, 40, .08);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.pickCard[aria-pressed="true"] { border: 3px solid var(--pick-green); background: #f4f8e7; }
+.pickCard:focus-visible { outline: 4px solid var(--pick-green); outline-offset: 3px; }
+.pickCheck { position: absolute; top: clamp(6px, 0.7vw, 12px); right: clamp(6px, 0.7vw, 12px); display: grid; place-items: center; width: clamp(26px, 2.6vw, 44px); height: clamp(26px, 2.6vw, 44px); border-radius: 50%; background: var(--pick-green); color: #fff; font-size: clamp(15px, 1.5vw, 26px); font-weight: 900; line-height: 1; }
+/* 짧은 태블릿에서도 두 줄이 한 화면에 들어오도록 그림 크기를 화면 높이로도 막는다. */
+.pickImage { display: block; width: min(88%, 21vh); aspect-ratio: 1; height: auto; object-fit: contain; }
+/* 이름: 시안의 초록 붓 띠 위 굵은 글자 */
+.pickName { margin-top: clamp(-18px, -1vw, -6px); padding: 2px clamp(10px, 1.2vw, 20px); border-radius: 999px 999px 999px 999px / 60% 70% 60% 70%; background: #dbf1ba; font-size: clamp(16px, 1.75vw, 30px); font-weight: 900; line-height: 1.3; color: #184830; }
+.pickSpecies { margin-top: clamp(2px, 0.4vw, 6px); font-size: clamp(12px, 1.15vw, 19px); font-weight: 700; color: #586060; }
+.pickStart {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: min(100%, clamp(280px, 28vw, 476px));
+  min-height: clamp(56px, 4.3vw, 72px);
+  margin-top: clamp(4px, 0.6vw, 10px);
+  padding: 8px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: #fedb62;
+  box-shadow: 0 clamp(4px, 0.4vw, 6px) 0 #d6ad51;
+  color: #104028;
+  font: inherit;
+  font-size: clamp(19px, 1.75vw, 30px);
+  font-weight: 900;
+  cursor: pointer;
+}
+.pickStart span { font-size: 1.2em; line-height: 1; }
+.pickStart:active { transform: translateY(3px); box-shadow: 0 2px 0 #d6ad51; }
+.pickStart:disabled { opacity: .55; cursor: default; transform: none; }
+.pickStart:focus-visible { outline: 4px solid var(--pick-green); outline-offset: 4px; }
+.pickAgain { min-height: 44px; padding: 4px 12px; border: 0; background: none; color: #388048; font: inherit; font-size: clamp(15px, 1.35vw, 23px); font-weight: 900; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.pickAgain:focus-visible { outline: 4px solid var(--pick-green); outline-offset: 3px; border-radius: 8px; }
+/* 세로 화면·휴대폰: 5열이면 카드가 너무 작다. 태블릿 세로는 5열을 두 줄로, 휴대폰은 2열. */
+@media (max-width: 700px) {
+  /* 휴대폰은 제목이 로고와 겹치므로 머리 줄을 다시 흐름에 넣고, 스크롤해도 시작 버튼이 늘 보이게 붙인다. */
+  .pickTop { position: static; padding-left: 0; padding-right: 0; }
+  .pickStart { position: sticky; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 2; }
+  .pickImage { width: 80%; }
+  .pickGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pickName { font-size: 20px; }
+  .pickSpecies { font-size: 14px; }
+}
+/* 가로로 눕힌 휴대폰(844×390)은 폭이 넓어 위 규칙에 안 걸리지만 높이가 낮아 시작 버튼이 화면 밖으로 밀렸다
+   (2026-09-13 browser-check 실측). 낮은 화면에서도 시작 버튼을 아래에 붙인다. */
+@media (max-height: 560px) {
+  .pickStart { position: sticky; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 2; }
+  .pickTitle { font-size: 24px; }
+  .pickLead { font-size: 14px; }
+}

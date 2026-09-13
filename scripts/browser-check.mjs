@@ -315,25 +315,32 @@ async function main() {
           setValue(document.querySelector('.entry-code-input'), ${JSON.stringify(seeded.entryCodes[2])}); await wait(120);
           enter = document.querySelector('.code-card .child-primary-action');
           enter.click();
-          for (let attempt = 0; attempt < 60 && !document.querySelector('.animal-card'); attempt += 1) await wait(120);
-          const card = document.querySelector('.animal-card');
-          if (!card) return { error: 'no-animal-card', text: document.body.innerText.slice(0, 160) };
-          const animals = document.querySelectorAll('.animal-choice-grid .emoji-chip').length;
-          const rabbit = [...document.querySelectorAll('.animal-choice-grid .emoji-chip')].find((button) => button.getAttribute('aria-label') === '토끼 고르기');
-          if (!rabbit) return { error: 'no-rabbit' };
-          const submit = document.querySelector('.animal-card .child-primary-action');
+          // 친구 고르기(2026-09-13 시안): 제목 #pick-title 아래 카드 격자. 카드는 aria-pressed 버튼이다.
+          for (let attempt = 0; attempt < 60 && !document.querySelector('#pick-title'); attempt += 1) await wait(120);
+          const title = document.querySelector('#pick-title');
+          if (!title) return { error: 'no-picker', text: document.body.innerText.slice(0, 160) };
+          const form = title.closest('form');
+          const cards = [...form.querySelectorAll('button[aria-pressed]')];
+          const rabbit = cards.find((button) => button.getAttribute('aria-label') === '솔이, 토끼');
+          if (!rabbit) return { error: 'no-rabbit', labels: cards.map((c) => c.getAttribute('aria-label')) };
+          const submit = form.querySelector('.child-primary-action');
           const disabledBefore = submit ? submit.disabled : null;
           rabbit.click(); await wait(150);
           const disabledAfter = submit ? submit.disabled : null;
-          const cardBottom = Math.round(card.getBoundingClientRect().bottom);
-          return { wrongCode, wrongSmall, animals, disabledBefore, disabledAfter, overflow: window.__wiggle.horizontalOverflow().overflow, small: window.__wiggle.smallTargets(44), cardBottom, viewportHeight: innerHeight, pageHeight: document.documentElement.scrollHeight };
+          const startLabel = submit ? submit.textContent.trim() : '';
+          // 휴대폰은 카드가 길어 스크롤하므로, 시작 버튼이 화면 안에 붙어 있는지 본다.
+          const startBox = submit ? submit.getBoundingClientRect() : null;
+          const startVisible = Boolean(startBox && startBox.top >= 0 && startBox.bottom <= innerHeight + 1);
+          return { wrongCode, wrongSmall, animals: cards.length, disabledBefore, disabledAfter, startLabel, startVisible, overflow: window.__wiggle.horizontalOverflow().overflow, small: window.__wiggle.smallTargets(44), viewportHeight: innerHeight, pageHeight: document.documentElement.scrollHeight };
         })()`);
         check(!createFlow.error, `${viewport.name} 첫 입장 흐름 재현`, createFlow.error);
         if (!createFlow.error) {
           check(createFlow.wrongCode, `${viewport.name} 틀린 참여 코드가 선생님 불러요로 이어짐`);
           check(createFlow.wrongSmall.length === 0, `${viewport.name} 오류 화면 터치 목표 44px 이상`, createFlow.wrongSmall);
           check(createFlow.animals === 10, `${viewport.name} 동물 선택이 10개`, createFlow.animals);
-          check(createFlow.disabledBefore === true && createFlow.disabledAfter === false, `${viewport.name} 동물을 고르면 들어가기가 열림`, { before: createFlow.disabledBefore, after: createFlow.disabledAfter });
+          check(createFlow.disabledBefore === true && createFlow.disabledAfter === false, `${viewport.name} 친구를 고르면 시작하기가 열림`, { before: createFlow.disabledBefore, after: createFlow.disabledAfter });
+          check(createFlow.startLabel.startsWith('솔이와 시작하기'), `${viewport.name} 시작 버튼이 고른 친구 이름을 부름`, createFlow.startLabel);
+          check(createFlow.startVisible, `${viewport.name} 친구를 고른 뒤 시작 버튼이 화면 안에 보임`, createFlow);
           check(createFlow.small.length === 0, `${viewport.name} 동물 화면 터치 목표 44px 이상`, createFlow.small);
           check(createFlow.overflow <= 0, `${viewport.name} 동물 화면 가로 스크롤 없음`, createFlow.overflow);
         }

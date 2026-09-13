@@ -56,7 +56,7 @@ test("class status, seat re-entry, archive and restore stay safe", async (contex
   assert.equal(joined.status, 201);
   const joinedProfile = await joined.json();
   assert.equal(joinedProfile.personalQrToken, undefined);
-  assert.equal(joinedProfile.student.nickname, "토끼 화가");
+  assert.equal(joinedProfile.student.nickname, "솔이");
 
   // 같은 코드로 다시 오면 같은 학생이다. 자리는 한 아이의 것이고 두 번 차지되지 않는다.
   const duplicate = await server.fetch("/api/student", {

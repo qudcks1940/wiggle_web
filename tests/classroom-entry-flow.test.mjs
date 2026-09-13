@@ -41,10 +41,12 @@ test("the code and animal screens reuse the keypad notebook and never scroll sid
   ]);
   assert.match(join, /type Mode = "checking" \| "code" \| "animal" \| "noRoster"/);
   assert.match(join, /className=\{`code-card \$\{check\.pad\}`\}/);
-  assert.match(join, /className=\{`animal-card \$\{check\.pad\}`\}/);
+  // 친구 고르기는 2026-09-13 시안대로 수첩이 아니라 카드 격자다(넓으면 5열, 휴대폰 2열).
+  assert.match(join, /<div className=\{check\.pickGrid\}>/);
+  assert.match(css, /\.pickGrid \{ display: grid; grid-template-columns: repeat\(5, minmax\(0, 1fr\)\);/);
+  assert.match(css, /@media \(max-width: 700px\) \{[^}]*\.pickTop \{ position: static;[\s\S]*?\.pickGrid \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}/);
   assert.match(css, /\.pad \.display :global\(\.entry-code-input\)/);
-  // 넓으면 5열, 좁은 수첩에서는 4열로 접혀 칩이 44px 아래로 내려가지 않는다.
-  assert.match(css, /\.pad :global\(\.animal-choice-grid\) \{ display: grid; grid-template-columns: repeat\(auto-fit, minmax\(max\(44px, 18%\), 1fr\)\)/);
+  assert.doesNotMatch(css, /animal-choice-grid|emoji-chip/);
   // 2026-09-13: 고정 비율 무대를 버리고 배경을 화면에 꽉 채웠다. 무대가 내용 폭으로
   // 줄어 가운데 뭉치던 문제(2026-09-09)는 무대를 가운데 세로 흐름으로 못 박아 막는다.
   assert.match(css, /\.stage \{[^}]*display: flex;[^}]*flex-direction: column;[^}]*align-items: center;/s);

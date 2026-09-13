@@ -6,8 +6,7 @@ import { classifyEntryError, EntryErrorKind, readStudentEntryResponse, StudentEn
 import { Logo } from "./Logo";
 import check from "./EntryCheck.module.css";
 
-const ANIMALS = ["🐰", "🐻", "🦊", "🐯", "🐼", "🐶", "🐱", "🐨", "🦁", "🐸"];
-const ANIMAL_NAMES: Record<string, string> = { "🐰": "토끼", "🐻": "곰", "🦊": "여우", "🐯": "호랑이", "🐼": "판다", "🐶": "강아지", "🐱": "고양이", "🐨": "코알라", "🦁": "사자", "🐸": "개구리" };
+import { ANIMAL_CHARACTERS, withGwaWa } from "@/lib/animal-characters";
 import { entryPathFor, parseEntryQr, readEntryHash } from "@/lib/qr-entry";
 import { QrScanner } from "./QrScanner";
 
@@ -29,6 +28,9 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
   const [scanning, setScanning] = useState(false);
   // 아이별 쪽지 QR(`#entry=1234`)로 들어오면 반 확인이 끝난 뒤 이 코드로 곧바로 입장한다.
   const pendingEntryCode = useRef<string | null>(null);
+  // 첫 입장이 확인된 참여 코드. 친구 고르기 뒤 다시 제출할 때 이 코드를 쓴다 — 그 사이 반 확인이
+  // 다시 돌면 codeInput이 비워져 "참여 코드 네 자리를 눌러 주세요"로 막혔다(2026-09-13 실측).
+  const claimCode = useRef("");
   const entry = initialEntry;
 
   useEffect(() => {
@@ -37,7 +39,9 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
     // 어떤 네트워크 호출보다 먼저 지운다. replaceState라 뒤로 가기 기록에도 남지 않는다.
     const fromHash = readEntryHash(location.hash);
     if (location.hash) history.replaceState(history.state, "", location.pathname + location.search);
-    pendingEntryCode.current = fromHash;
+    // 개발 모드(StrictMode)는 이 효과를 두 번 돌린다. 두 번째에는 조각이 이미 지워져 null이므로
+    // 덮어쓰면 받아 둔 코드가 사라진다(2026-09-13 실측). 코드가 있을 때만 저장한다.
+    if (fromHash) pendingEntryCode.current = fromHash;
     if (!initialEntry) { location.replace("/"); return; }
     void checkEntry();
   // checkEntry only reads the stable entry prop. Keeping it outside this dependency list
@@ -99,7 +103,7 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
   }
 
   function backToCode() {
-    clearEntryError(); setAnimal(""); setCodeInput(""); setMode("code");
+    clearEntryError(); setAnimal(""); setCodeInput(""); claimCode.current = ""; setMode("code");
     requestAnimationFrame(() => window.scrollTo(0, 0));
   }
 
@@ -114,7 +118,7 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
       const data = await readStudentEntryResponse(response);
       if (!response.ok) throw new StudentEntryResponseError(data.error ?? "입장할 수 없어요.");
       // 코드는 맞는데 처음이면 동물 하나만 고른다. 별명은 서버가 동물에 맞춰 붙인다.
-      if (data.firstTime) { setMode("animal"); requestAnimationFrame(() => window.scrollTo(0, 0)); return; }
+      if (data.firstTime) { claimCode.current = code; setMode("animal"); requestAnimationFrame(() => window.scrollTo(0, 0)); return; }
       if (!data.student || !data.deviceToken || !data.expiresAt) throw new StudentEntryResponseError(data.error ?? "입장할 수 없어요.");
       storeProfile({ studentId: data.student.id, nickname: data.student.nickname, animal: data.student.animal, classroomName: data.student.classroomName, deviceToken: data.deviceToken, expiresAt: data.expiresAt });
       location.replace("/student");
@@ -242,29 +246,39 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
   }
 
   if (mode === "animal") {
-    return <main className={`${check.shell} ${check.seatShell}`}>
-      {scenery}
-      <div className={`${check.stage} ${check.seatStage}`}>
-        <div className={check.head}>
-          <div className={check.logo}><Logo /></div>
+    // 첫 입장 친구 고르기(2026-09-13 사용자 시안, docs/design-assets/animal-picker/mockup-2026-09-13.png).
+    // 고른 친구의 이름이 곧 별명이 된다 — 이름은 서버 기본 별명을 읽으므로 둘이 어긋나지 않는다.
+    const chosen = ANIMAL_CHARACTERS.find((character) => character.emoji === animal);
+    return <main className={check.pickShell}>
+      <header className={check.pickTop}>
+        <div className={check.pickLogo}><Logo /></div>
+        <span className={check.pickClass}>{classroomName}</span>
+      </header>
+      <form className={check.pickBody} onSubmit={(event) => { event.preventDefault(); void submit(animal, claimCode.current || codeInput); }}>
+        <div className={check.pickHead}>
+          <h1 id="pick-title" className={check.pickTitle}>나랑 닮은 친구를 골라요</h1>
+          <p className={check.pickLead}>마음에 드는 친구 하나를 골라 줘.</p>
         </div>
-        <img className={check.duck} src="/landing-gallery/duck-painter-640.webp" alt="" aria-hidden="true" width="640" height="640" />
-        <div className={check.seatTitle}>
-          <h1>내 동물을 골라요</h1>
-          <p>처음 왔구나! 하나만 고르면 돼요.</p>
-        </div>
-        <span className={check.padBadge}>{classroomName}</span>
-        <section className={`animal-card ${check.pad}`} aria-label="내 동물 고르기 수첩">
-          <form onSubmit={(event) => { event.preventDefault(); void submit(animal); }}>
-            <fieldset className="animal-choice-fieldset"><legend className={check.padLabel}>내 동물</legend>
-              <div className="animal-choice-grid">{ANIMALS.map((value, index) => <button type="button" aria-pressed={animal === value} aria-label={`${ANIMAL_NAMES[value]} 고르기`} className={animal === value ? "emoji-chip selected" : "emoji-chip"} key={value} onClick={() => { setAnimal(value); clearEntryError(); }}><span className="animal-choice-portrait" data-animal-index={index} aria-hidden="true" /><small>{ANIMAL_NAMES[value]}</small></button>)}</div>
-            </fieldset>
-            {errorNotice()}
-            <button className={`${check.enter} child-primary-action`} disabled={busy || !animal}>{busy ? "들어가는 중…" : "이 동물로 들어가기"}</button>
-          </form>
-          <button type="button" className={check.again} onClick={backToCode}>참여 코드 다시 누르기</button>
-        </section>
-      </div>
+        <fieldset className={check.pickFieldset} aria-labelledby="pick-title">
+          <legend className={check.pickHidden}>친구 고르기</legend>
+          <div className={check.pickGrid}>
+            {ANIMAL_CHARACTERS.map((character) => {
+              const selected = animal === character.emoji;
+              return <button type="button" key={character.emoji} className={check.pickCard} aria-pressed={selected} aria-label={`${character.name}, ${character.species}`} onClick={() => { setAnimal(character.emoji); clearEntryError(); }}>
+                {selected && <span className={check.pickCheck} aria-hidden="true">✓</span>}
+                <img className={check.pickImage} src={character.image} alt="" aria-hidden="true" width="512" height="512" loading="eager" />
+                <b className={check.pickName}>{character.name}</b>
+                <small className={check.pickSpecies}>{character.species}</small>
+              </button>;
+            })}
+          </div>
+        </fieldset>
+        {errorNotice()}
+        <button className={`${check.pickStart} child-primary-action`} disabled={busy || !chosen}>
+          {busy ? "들어가는 중…" : chosen ? <>{withGwaWa(chosen.name)} 시작하기 <span aria-hidden="true">›</span></> : "친구를 골라 줘"}
+        </button>
+        <button type="button" className={check.pickAgain} onClick={backToCode}>참여 코드 다시 누르기</button>
+      </form>
     </main>;
   }
 

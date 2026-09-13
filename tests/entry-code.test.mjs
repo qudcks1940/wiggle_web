@@ -55,7 +55,7 @@ test("참여 코드 하나로 들어오고, 같은 코드는 다음에도 같은
   const claimedPayload = await claimed.json();
   assert.ok(claimedPayload.deviceToken);
   // 별명은 동물의 기본 별명이다. 실명·번호·코드는 학생 응답에 없다.
-  assert.deepEqual(claimedPayload.student, { id: "student_code1_1", nickname: "곰돌 화가", animal: "🐻", classroomName: "코드 학급" });
+  assert.deepEqual(claimedPayload.student, { id: "student_code1_1", nickname: "보리", animal: "🐻", classroomName: "코드 학급" });
   assert.doesNotMatch(JSON.stringify(claimedPayload), /학생1|entryCode|1111|seatNumber/);
 
   // 재입장: 다른 기기에서 같은 코드를 넣으면 같은 학생 ID, 동물을 다시 묻지 않는다.
@@ -178,9 +178,9 @@ test("학생 화면은 코드 수첩 하나와 동물 고르기만 그리고, �
   // QR로 채운 코드는 상태 반영 전에 제출되므로 코드를 인자로 받는다. 기본값은 여전히 키패드 입력이다.
   assert.match(join, /action: "join", entry, entryCode: code,/);
   assert.match(join, /async function submit\(chosenAnimal = "", code = codeInput\)/);
-  assert.match(join, /if \(data\.firstTime\) \{ setMode\("animal"\)/);
+  assert.match(join, /if \(data\.firstTime\) \{ claimCode\.current = code; setMode\("animal"\)/);
   assert.match(join, /내 참여 코드를 눌러요/);
-  assert.match(join, /이 동물로 들어가기/);
+  assert.match(join, /withGwaWa\(chosen\.name\)\} 시작하기/);
   // 없앤 것들: 번호 입력, 그림 비밀번호, 별명 타이핑, 프로필 목록.
   assert.doesNotMatch(join, /seatStatus|picturePassword|switchProfile|recover|nickname-row|realName|deviceProfiles/);
   assert.doesNotMatch(student, /real_name|picturePassword|verifySecret|seatStatus|switchProfile/);

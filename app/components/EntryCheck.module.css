@@ -351,27 +351,15 @@
   position: static;
   width: min(100%, 430px);
   margin: 0;
-  padding: 26px 16px 14px;
+  /* 2026-09-13: 수첩 스프링 고리(CSS 동그라미 줄)를 걷어냈다 — 넓은 화면에서 어색하다는 사용자 지적.
+     고리 자리로 비워 둔 위쪽 여백도 다른 면과 맞춘다. */
+  padding: 18px 16px 14px;
   background: var(--note);
   border: 1px solid #e3d9b6;
   border-radius: 18px;
   box-shadow: 0 8px 0 #e5d9b3, 0 16px 26px rgba(74, 58, 20, .16);
 }
-.pad::before {
-  /* 좁은 화면 카드에만 CSS 스프링 고리 */
-  content: "";
-  position: absolute;
-  top: -12px;
-  left: 5%;
-  right: 5%;
-  height: 24px;
-  background-image: radial-gradient(closest-side at 50% 50%, transparent 34%, #4a7a3a 40%, #2c4f26 58%, transparent 66%);
-  background-size: 30px 100%;
-  background-repeat: repeat-x;
-  background-position: center;
-  pointer-events: none;
-}
-/* ::before 스프링 고리 때문에 relative가 필요한데, 넓은 화면의 left/top/bottom이 상대 오프셋으로 살아남아 카드가 오른쪽으로 밀렸다. */
+/* 옛 넓은 화면 무대의 left/top/bottom 오프셋이 살아남아 카드를 밀지 않도록 inset을 되돌린다. */
 .pad { position: relative; inset: auto; }
 .pad form,.keys { flex: none; }
 .pad .display :global(.entry-code-input) { min-height: 68px; font-size: 40px; }

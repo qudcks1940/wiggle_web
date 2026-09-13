@@ -364,7 +364,11 @@
 .pad form,.keys { flex: none; }
 .pad .display :global(.entry-code-input) { min-height: 68px; font-size: 40px; }
 .key { min-height: 56px; font-size: 24px; }
-.keyErase { font-size: 14px; }
+/* 지우기 키: 아이콘(⌫)과 글자 묶음이 56px 키를 거의 다 채워 아이콘이 위 테두리에 붙어 보였다
+   (1440×900에서 위 여백 3px, 2026-09-13 사용자 지적). 아이콘을 숫자보다 작게, 줄 간격을 좁혀
+   묶음을 키 가운데에 여유 있게 둔다. */
+.keyErase { font-size: 14px; gap: 2px; line-height: 1.15; }
+.keyErase span { font-size: 20px; line-height: 1; }
 /* 키패드 화면에서는 오리를 줄여 키가 화면 안에 남게 한다 */
 /* 키패드 화면의 작은 몽그리는 좁은 화면 전용이다. 넓은 화면에서는 위의 장면 배치가
    쓰여야 하므로 조건 없이 두면 선택자 우선순위로 그 배치를 덮어쓴다. */

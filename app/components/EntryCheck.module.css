@@ -1,6 +1,7 @@
-/* 수업 확인(대기·실패) 화면 — docs/design-assets/entry-green/README-CLAUDE.md, reference/approved-green-palette-fixed.png (1672×941) 기준.
-   넓은 화면: 교실 장면(classroom-with-mongri.webp)을 비율 그대로 한 무대로 두고 문구·버튼은 HTML로 올린다.
-   좁은 화면·낮은 화면: 크림 단색 배경 + 독립 오리 + 일반 문서 흐름. */
+/* 수업 확인(대기·실패)·참여 코드 입력 화면 — docs/design-assets/entry-green/README-CLAUDE.md 기준.
+   교실 장면을 화면 전체에 꽉 채우고(cover), 문구·버튼은 그 위의 반응형 카드로 올린다.
+   2026-09-13까지는 그림을 16:9 고정 무대로 깔고 글까지 퍼센트 좌표로 붙였는데, 화면 비율이
+   그림과 다르면 크림색 빈 띠가 남고 글이 그림과 함께 확대·축소돼 반응형이 아니었다. */
 .shell {
   --ink: #123f23;
   --accent: #426d34;
@@ -10,19 +11,28 @@
   --action: #ffcf37;
   --action-border: #c48d12;
   min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  background: var(--paper);
+  /* 2026-09-13 사용자 결정: 고정 16:9 무대를 버리고 교실 그림을 화면에 꽉 채운다.
+     예전에는 그림과 글이 한 덩어리로 확대·축소돼 화면 비율이 안 맞으면 크림색 빈 띠가
+     남았다(2560×1080에서 좌우 641px, 1440×900에서 아래 90px 실측). 이제 배경만 화면을
+     덮고 글·버튼은 그 위의 일반 반응형 카드로 흐른다. */
+  display: block;
+  padding: 12px max(16px, env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: var(--paper) url("/entry-green/classroom-with-mongri.webp") center bottom / cover no-repeat;
   color: var(--ink);
 }
 .stage {
+  /* 무대 좌표 배치를 걷어낸 뒤의 실제 레이아웃. 내용은 화면 가운데 세로로 쌓는다.
+     그림에 그려진 문·나무 간판에 글자를 맞추던 절대 좌표는 배경이 잘리는 순간
+     어긋나므로 쓰지 않는다(2026-09-13). */
   position: relative;
-  width: min(100vw, calc(100dvh * 1672 / 941));
-  aspect-ratio: 1672 / 941;
-  container-type: inline-size;
-  background: url("/entry-green/classroom-with-mongri.webp") center / 100% 100% no-repeat;
-  overflow: hidden;
+  min-height: calc(100dvh - 40px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
+.head { position: absolute; top: 0; left: 0; right: 0; }
 .logo { position: absolute; left: 2.4%; top: 3.2%; }
 .logo :global(.brand) { min-height: 44px; color: var(--ink); font-size: clamp(20px, 2.2cqw, 34px); }
 .logo :global(.brand-mark) { width: clamp(36px, 3.4cqw, 52px); height: clamp(36px, 3.4cqw, 52px); }
@@ -146,26 +156,20 @@
 .duck { display: none; }
 
 /* 좁은 화면(휴대전화)·낮은 가로 화면: 교실 장면을 잘라 쓰지 않고 문서 흐름으로 */
-@media (max-width: 760px), (max-height: 520px), (max-aspect-ratio: 5/4) {
-  .shell {
-    display: block;
-    padding: 12px max(16px, env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  }
-  .stage { width: auto; aspect-ratio: auto; background: none; overflow: visible; container-type: normal; }
-  .logo { position: static; }
-  .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .logo :global(.brand) { font-size: 22px; gap: 7px; }
-  .logo :global(.brand-mark) { width: 36px; height: 36px; }
-  .sign { display: none; }
-  .duck { display: block; width: clamp(140px, 42vw, 220px); height: auto; margin: 8px auto 0; }
-  .panel { position: static; width: min(100%, 460px); margin: 6px auto 0; padding: 20px 18px 22px; border-radius: 22px; background: #fffdf4; border: 1px solid #e5dcbf; box-shadow: 0 8px 0 #eee4c8; gap: 12px; }
-  .panel h1 { font-size: 28px; }
-  .lead { font-size: 16px; }
-  .note { width: 100%; font-size: 16px; }
-  .actions { width: 100%; }
-  .primary { font-size: 18px; min-height: 56px; }
-  .help { font-size: 16px; }
-}
+/* 무대 좌표 배치를 걷어낸 실제 레이아웃. 모든 화면 크기에 적용한다 (2026-09-13). */
+.logo { position: static; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.logo :global(.brand) { font-size: 22px; gap: 7px; }
+.logo :global(.brand-mark) { width: 36px; height: 36px; }
+.sign { display: none; }
+.panel { position: static; width: min(100%, 460px); margin: 0; padding: 20px 18px 22px; border-radius: 22px; background: #fffdf4; border: 1px solid #e5dcbf; box-shadow: 0 8px 0 #eee4c8; gap: 12px; }
+.panel h1 { font-size: 28px; }
+.lead { font-size: 16px; }
+.note { width: 100%; font-size: 16px; }
+.actions { width: 100%; }
+.primary { font-size: 18px; min-height: 56px; }
+.help { font-size: 16px; }
+
 @media (max-height: 520px) and (min-width: 761px) {
   .stage { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 20px; align-items: center; }
   .head { grid-column: 1 / -1; }
@@ -176,7 +180,6 @@
 /* ── 번호 입력(키패드) 화면 — 수첩이 그려진 교실 배경(classroom-notepad.webp, 1690×931) 위에
    글자·키패드만 HTML로 올린다 (2026-09-09 사용자 시안). 종이 영역 실측: x 45.4~84%, y 8.7~93.4%,
    나무 간판 x 61.5~69.6% · y 16.2~22%. 좁은 화면은 크림 배경 + CSS 수첩 카드로 전환. */
-.seatStage { background-image: url("/entry-green/classroom-notepad.webp"); aspect-ratio: 1690 / 931; width: min(100vw, calc(100dvh * 1690 / 931)); }
 .seatTitle { position: absolute; left: 4.5%; top: 13%; width: 38%; text-align: left; color: var(--ink); }
 .seatTitle h1 { margin: 0; font-size: clamp(26px, 4.6cqw, 64px); font-weight: 900; letter-spacing: -0.05em; line-height: 1.15; text-shadow: 0 2px 0 #fff8; }
 .seatTitle p { margin: clamp(6px, 1cqw, 14px) 0 0; font-size: clamp(15px, 1.6cqw, 25px); font-weight: 800; color: var(--accent); }
@@ -260,63 +263,70 @@
 .pad :global(.entry-error-block) { margin: 0; }
 .pad :global(.child-error) { margin: 0; padding: 8px 10px; font-size: clamp(13px, 1.4cqw, 18px); }
 
-@media (max-width: 760px), (max-height: 520px), (max-aspect-ratio: 5/4) {
-  /* width:auto면 동물 고르기 화면에서 무대가 내용 폭(221px)으로 줄어 가운데 뭉쳤다(2026-09-09 실측). 100%로 못 박는다. */
-  .seatStage { width: 100%; aspect-ratio: auto; background: none; }
-  .seatTitle { position: static; width: auto; margin: 8px auto 0; text-align: center; }
-  .seatTitle h1 { font-size: 28px; }
-  .seatTitle p { font-size: 16px; }
-  .padBadge {
-    /* 좁은 화면: 그려진 간판이 없으므로 나무 칩으로 */
-    position: static;
-    width: auto;
-    height: auto;
-    justify-self: center;
-    margin: 14px auto 0;
-    padding: 6px 18px;
-    border-radius: 10px;
-    background: linear-gradient(#e6c493, #d3ac74);
-    border: 2px solid #b28a55;
-    box-shadow: 0 3px 0 #a37c48;
-    font-size: 16px;
-    pointer-events: auto;
-    overflow: visible;
-    display: inline-grid;
-  }
-  .pad {
-    position: static;
-    width: min(100%, 430px);
-    margin: 12px auto 0;
-    padding: 26px 16px 14px;
-    background: var(--note);
-    border: 1px solid #e3d9b6;
-    border-radius: 18px;
-    box-shadow: 0 8px 0 #e5d9b3, 0 16px 26px rgba(74, 58, 20, .16);
-  }
-  .pad::before {
-    /* 좁은 화면 카드에만 CSS 스프링 고리 */
-    content: "";
-    position: absolute;
-    top: -12px;
-    left: 5%;
-    right: 5%;
-    height: 24px;
-    background-image: radial-gradient(closest-side at 50% 50%, transparent 34%, #4a7a3a 40%, #2c4f26 58%, transparent 66%);
-    background-size: 30px 100%;
-    background-repeat: repeat-x;
-    background-position: center;
-    pointer-events: none;
-  }
-  /* ::before 스프링 고리 때문에 relative가 필요한데, 넓은 화면의 left/top/bottom이 상대 오프셋으로 살아남아 카드가 오른쪽으로 밀렸다. */
-  .pad { position: relative; inset: auto; }
-  .pad form,.keys { flex: none; }
-  .pad .display :global(.entry-code-input) { min-height: 68px; font-size: 40px; }
-  .key { min-height: 56px; font-size: 24px; }
-  .keyErase { font-size: 14px; }
-  /* 키패드 화면에서는 오리를 줄여 키가 화면 안에 남게 한다 */
-  .seatShell .duck { width: clamp(96px, 24vw, 140px); margin: 4px auto 0; }
+/* 키패드 화면도 같은 이유로 무대 배치를 걷어낸다 (2026-09-13). */
+/* width:auto면 동물 고르기 화면에서 무대가 내용 폭(221px)으로 줄어 가운데 뭉쳤다(2026-09-09 실측). 100%로 못 박는다. */
+.seatTitle { position: static; width: min(100%, 460px); margin: 0; text-align: center; }
+.seatTitle h1 { font-size: 28px; }
+.seatTitle p { font-size: 16px; }
+.padBadge {
+  /* 좁은 화면: 그려진 간판이 없으므로 나무 칩으로 */
+  position: static;
+  width: auto;
+  height: auto;
+  justify-self: center;
+  margin: 0;
+  padding: 6px 18px;
+  border-radius: 10px;
+  background: linear-gradient(#e6c493, #d3ac74);
+  border: 2px solid #b28a55;
+  box-shadow: 0 3px 0 #a37c48;
+  font-size: 16px;
+  pointer-events: auto;
+  overflow: visible;
+  display: inline-grid;
 }
-.seatShell { min-width: 0; }
+.pad {
+  position: static;
+  width: min(100%, 430px);
+  margin: 0;
+  padding: 26px 16px 14px;
+  background: var(--note);
+  border: 1px solid #e3d9b6;
+  border-radius: 18px;
+  box-shadow: 0 8px 0 #e5d9b3, 0 16px 26px rgba(74, 58, 20, .16);
+}
+.pad::before {
+  /* 좁은 화면 카드에만 CSS 스프링 고리 */
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 5%;
+  right: 5%;
+  height: 24px;
+  background-image: radial-gradient(closest-side at 50% 50%, transparent 34%, #4a7a3a 40%, #2c4f26 58%, transparent 66%);
+  background-size: 30px 100%;
+  background-repeat: repeat-x;
+  background-position: center;
+  pointer-events: none;
+}
+/* ::before 스프링 고리 때문에 relative가 필요한데, 넓은 화면의 left/top/bottom이 상대 오프셋으로 살아남아 카드가 오른쪽으로 밀렸다. */
+.pad { position: relative; inset: auto; }
+.pad form,.keys { flex: none; }
+.pad .display :global(.entry-code-input) { min-height: 68px; font-size: 40px; }
+.key { min-height: 56px; font-size: 24px; }
+.keyErase { font-size: 14px; }
+/* 키패드 화면에서는 오리를 줄여 키가 화면 안에 남게 한다 */
+.seatShell .duck { width: clamp(96px, 24vw, 140px); margin: 4px auto 0; }
+
+.seatShell { min-width: 0; background-image: url("/entry-green/classroom-notepad.webp"); }
+
+/* 세로로 긴 화면에서는 교실 그림을 cover로 깔면 오리가 크게 잘린다
+   (390×844에서 몸통만, 820×1180에서 머리가 화면 밖 — 2026-09-13 실측).
+   그런 비율에서는 크림 배경 + 독립 오리 그림으로 돌아간다. */
+@media (max-aspect-ratio: 5/4) {
+  .shell, .seatShell { background-image: none; }
+  .duck { display: block; width: clamp(140px, 42vw, 220px); height: auto; margin: 0; }
+}
 
 /* ── 수업 확인 대기 화면(2026-09-09 사용자 시안, 1693×929): 크림 단색 배경 가운데에
    선 너머로 고개 내민 몽그리(wait-mongri.png, 원본 27% 폭) + 제목 + 부제. 로고·버튼 없음. */

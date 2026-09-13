@@ -43,8 +43,13 @@ test("the code and animal screens reuse the keypad notebook and never scroll sid
   assert.match(css, /\.pad \.display :global\(\.entry-code-input\)/);
   // 넓으면 5열, 좁은 수첩에서는 4열로 접혀 칩이 44px 아래로 내려가지 않는다.
   assert.match(css, /\.pad :global\(\.animal-choice-grid\) \{ display: grid; grid-template-columns: repeat\(auto-fit, minmax\(max\(44px, 18%\), 1fr\)\)/);
-  // 좁은 화면 무대는 width:auto면 내용 폭으로 줄어든다 — 100%로 못 박는다.
-  assert.match(css, /\.seatStage \{ width: 100%; aspect-ratio: auto; background: none; \}/);
+  // 2026-09-13: 고정 비율 무대를 버리고 배경을 화면에 꽉 채웠다. 무대가 내용 폭으로
+  // 줄어 가운데 뭉치던 문제(2026-09-09)는 무대를 가운데 세로 흐름으로 못 박아 막는다.
+  assert.match(css, /\.stage \{[^}]*display: flex;[^}]*flex-direction: column;[^}]*align-items: center;/s);
+  assert.doesNotMatch(css, /aspect-ratio: 1672 \/ 941|aspect-ratio: 1690 \/ 931/);
+  assert.match(css, /background: var\(--paper\) url\("\/entry-green\/classroom-with-mongri\.webp"\) center bottom \/ cover no-repeat;/);
+  // 세로로 긴 화면은 cover가 오리를 자르므로 크림 배경 + 독립 오리로 돌아간다.
+  assert.match(css, /@media \(max-aspect-ratio: 5\/4\) \{\s*\.shell, \.seatShell \{ background-image: none; \}/);
   assert.match(css, /\.pad \{ position: relative; inset: auto; \}/);
 });
 

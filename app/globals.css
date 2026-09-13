@@ -275,7 +275,7 @@ button { min-height:44px; touch-action:manipulation; }
 .student-info b,.student-info small,.room-heading b,.room-heading span,.teacher-header b,.teacher-message p,.message-history b,.message-history span,.family-link-history b,.family-link-history span,.teacher-preview h2 { max-width:100%; }
 code,pre { max-width:100%; overflow-x:auto; white-space:nowrap; word-break:normal; overflow-wrap:normal; word-wrap:normal; }
 .emoji-chip,.class-code strong,.qr-panel strong,.large-qr-code strong,.draw-canvas,.guide-canvas { word-break:normal; overflow-wrap:normal; word-wrap:normal; }
-.direct-answer input { font-size:16px; }
+.copy-notice { display:flex; align-items:center; gap:10px; margin:10px 0; padding:10px 13px; border-radius:13px; background:#e9f7ec; color:#245c2e; font-weight:900; }.copy-notice button { min-height:44px; padding:0 10px; border:none; background:none; color:#245c2e; font-weight:900; text-decoration:underline; }.direct-answer input { font-size:16px; }
 .canvas-message,.save-conflict,.teacher-viewing,.voice-speaking { width:max-content; max-width:calc(100vw - max(12px,env(safe-area-inset-left)) - max(12px,env(safe-area-inset-right))); line-height:1.45; white-space:normal; overflow-wrap:break-word; }
 /* 알림 알약은 안내만 하므로 아래 버튼·캔버스의 탭을 가로채면 안 된다. */
 .teacher-viewing,.voice-speaking { pointer-events:none; }

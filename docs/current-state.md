@@ -846,3 +846,24 @@ typecheck·lint(오류 0) 통과, `npm test` 324/325(실패 1은 Node 22.13에 `
 **옛 기록 안전장치.** `recordCoachingAfter`의 종류가 `question_answer` 하나로 줄었지만 `response_kind`·`status` 조건은 그대로 좁혀서 건다. 남아 있는 `guide` 행을 질문-답 경로가 집어 상태를 바꾸지 않는다는 것을 `tests/mvp2-storage.test.mjs`가 실제 DB로 검증한다. 옛 guide 이벤트를 닫으려던 `GUIDE_AFTER_REQUIRED` 분기는 제거했다 — 이제 만들 수 없는 상태를 요구하는 안내였고, 삭제 UPDATE는 원래부터 `question`으로 좁혀져 있다.
 
 **검증.** typecheck·lint(오류 0), `npm test` 308/309(실패 1은 Node 22.13 `registerHooks` 환경 문제로 무관), `browser-check` 세 뷰포트 전부 통과. 검증 서버는 빈 포트를 찾아 띄우고 LISTEN 프로세스의 cwd가 이 워크트리인지 확인한 뒤 돌렸다.
+
+## 2026-09-13 복사 버튼이 조용히 실패하던 문제 수정 (`claude/copy-text-20260913`)
+
+사용자 신고: 수업 코드 복사를 눌러도 반응이 없다.
+
+**원인.** `app/components/TeacherApp.tsx`의 복사 버튼들이 `navigator.clipboard?.writeText(...)` 한 줄이었다. 세 가지가 겹쳤다.
+- 성공해도 아무 표시가 없어 눌리지 않은 것으로 보였다.
+- 옵셔널 체이닝이 `navigator.clipboard` 부재를 삼켜 조용히 끝났다. 이 API는 보안 맥락(HTTPS·localhost)에서만 존재하므로, 교실 태블릿에서 내부 주소(`http://10.0.0.5:3000`)로 열면 아예 없다.
+- 반환된 Promise를 받지 않아 거부돼도 화면에 아무것도 안 떴다.
+
+**수정.** `lib/copy-text.ts`에 `copyText()`·`copyNoticeText()`를 두고 모든 복사를 여기로 모았다. 클립보드가 없거나 거부하면 `execCommand("copy")` 폴백을 한 번 더 시도해 비보안 맥락에서도 실제로 복사된다. 결과를 boolean으로 돌려 부르는 쪽이 반드시 알리게 했다.
+
+바꾼 곳: 학급 목록의 수업 코드 복사, 입장 주소 복사 두 곳(학급 목록 QR 대화상자·수업실 QR 대화상자), 가족 링크 복사 두 곳, 명단 설정의 수업 코드·참여 코드·입장 주소 복사, `FamilyView`의 1회용 링크 복사. `TeacherApp`에 `copyNotice` 상태와 `.copy-notice` 배너를 두 화면에 추가했다. `FamilyView`는 링크 발급 실패와 복사 실패를 한 catch로 묶어 비보안 맥락의 복사 실패를 "링크를 만들지 못했다"로 잘못 알리던 것도 함께 갈랐다.
+
+**회귀 테스트가 잘못된 형태를 고정하고 있었다.** `tests/qr-entry.test.mjs`가 `navigator\.clipboard\?\.writeText\(joinUrl\)`를 단언하고 있어 이 결함이 테스트로 보호되던 상태였다. 한 경로 호출을 단언하고 `navigator.clipboard` 직접 사용이 없는지 함께 본다.
+
+**검증.** `tests/copy-text.test.mjs`가 navigator·document를 갈아 끼워 네 갈래(보안 맥락 성공, 클립보드 없음+폴백 성공, 클립보드 거부+폴백 성공, 둘 다 실패)와 빈 문자열, 문구 생성을 실제로 태운다. typecheck·lint(오류 0), `npm test` 316/317(실패 1은 Node 22.13 `registerHooks` 환경 문제로 무관), `browser-check` 세 뷰포트 통과.
+
+실제 브라우저로 교사 화면을 열어 끝까지 확인했다 — 진짜 클릭으로 `수업 코드를 복사했어요.` 배너가 뜨고, 검색 칸에 붙여넣으니 그 학급의 수업 코드 `6541`이 그대로 들어왔다. 사용자 제스처 없이 JS로 `click()`만 부른 경우에는 브라우저가 클립보드를 거부하는데, 이때 새 코드가 조용히 끝나지 않고 `자동 복사가 되지 않아요…` 안내를 띄우는 것도 같은 화면에서 확인했다. 실패 쪽 분기까지 실제로 본 셈이다.
+
+**남은 것.** 로컬 개발 DB에 점검용 학급 `복사 점검반`(교사 `copycheck@local.test`)이 남아 있다. 로컬 파일 DB라 운영과 무관하며 필요 없으면 지우면 된다.

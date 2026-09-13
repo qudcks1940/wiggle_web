@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { copyText } from "@/lib/copy-text";
 import type { DrawDocument, DrawOp } from "@/lib/drawing-model";
 import { Logo } from "./Logo";
 import { TimelapsePlayer } from "./TimelapsePlayer";
@@ -106,8 +107,14 @@ export function FamilyView() {
   }
 
   async function copyLink() {
-    try { const handoffUrl = await issueHandoff(); await navigator.clipboard.writeText(handoffUrl); setCopyState("10분 안에 한 번 열 수 있는 새 링크를 복사했어요."); }
-    catch { setCopyState("새 링크를 만들거나 복사하지 못했어요. 잠시 뒤 다시 시도해 주세요."); }
+    // 링크 발급 실패와 복사 실패는 원인이 달라 문구를 나눈다. 예전에는 둘을 한 catch로
+    // 묶어 비보안 맥락의 복사 실패까지 "링크를 만들지 못했다"로 잘못 알렸다.
+    let handoffUrl: string;
+    try { handoffUrl = await issueHandoff(); }
+    catch { setCopyState("새 링크를 만들지 못했어요. 잠시 뒤 다시 시도해 주세요."); return; }
+    setCopyState(await copyText(handoffUrl)
+      ? "10분 안에 한 번 열 수 있는 새 링크를 복사했어요."
+      : "링크는 만들었지만 자동 복사가 되지 않아요. 주소를 직접 선택해 복사해 주세요.");
   }
 
   if (error && !data) return <main className="family-shell"><section className="family-unavailable"><Logo /><h1>공유 기록을 열 수 없어요</h1><p>{error}</p><small>보호자나 교사에게 새 링크를 요청해 주세요.</small></section></main>;

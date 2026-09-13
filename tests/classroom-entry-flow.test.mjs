@@ -85,3 +85,21 @@ test("teacher cards expose only the approved read-only profile facts", async () 
  * 그 공격은 별명으로 중복 프로필을 만들어 join을 비밀번호 오라클로 쓰는 것이었는데, 자기 등록 경로가
  * 사라져 더는 존재하지 않는다. 남은 표면(번호 단위 버킷, IP를 바꿔도 같은 버킷, 이미 찬 번호는
  * 비밀번호와 무관하게 409)은 tests/nickname-spacing.test.mjs가 실제 서버로 검증한다. */
+
+test("아직 준비 중 화면은 사용자 시안대로 카드 없이 몽그리·문구·버튼만 둔다", async () => {
+  const [join, css] = await Promise.all([
+    read("../app/components/JoinClient.tsx"),
+    read("../app/components/EntryCheck.module.css"),
+  ]);
+  const ready = join.slice(join.indexOf("// 명단이 아직 없는 반"), join.lastIndexOf("</main>;"));
+  assert.match(ready, /<h1 id="ready-title" className=\{check\.readyTitle\}>아직 준비 중이에요<\/h1>/);
+  assert.match(ready, /선생님이 우리 반 명단을 넣으면<br \/>내 참여 코드로 들어올 수 있어요\./);
+  assert.match(ready, /다시 확인하기/);
+  assert.match(ready, /href="\/">수업 코드 다시 입력하기/);
+  // 종전 카드형(entry-card)은 쓰지 않는다.
+  assert.doesNotMatch(ready, /entry-card|entry-check-card/);
+  // 몽그리 그림은 불투명이라 배경색이 그림과 같아야 경계가 보이지 않는다.
+  assert.match(ready, /src="\/entry-green\/peek-mongri\.webp"/);
+  assert.match(css, /\.readyShell \{[^}]*background: #fefaea;/);
+  assert.match(css, /\.readyRetry \{[^}]*background: #fbce4d;[^}]*box-shadow: 0 clamp\(4px, 0\.4vw, 7px\) 0 #dcab33;/);
+});

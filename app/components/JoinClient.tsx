@@ -268,11 +268,21 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
     </main>;
   }
 
-  return <main className="entry-shell"><div className="entry-top"><Logo /><span>{classroomName}</span></div>
-    <section className="entry-card entry-check-card">
-      <div className="entry-title-row"><div><p className="eyebrow">{classroomName}</p><h1>아직 준비 중이에요</h1></div></div>
-      <p className="helper">선생님이 우리 반 명단을 넣으면 내 참여 코드로 들어올 수 있어요.</p>
-      <button type="button" className="button primary full child-primary-action" disabled={busy} onClick={() => void checkEntry()}><span aria-hidden="true">🔄</span>{busy ? "확인 중…" : "다시 확인하기"}</button>
-      <a className="text-button" href="/">수업 코드 다시 입력하기</a>
-    </section></main>;
+  // 명단이 아직 없는 반(2026-09-13 사용자 시안): 카드 없이 크림 바탕 + 고개 내민 몽그리 + 문구 + 버튼.
+  // 몽그리 그림(peek-mongri)은 사용자 시안에서 잘라 왔다. 불투명 그림이라 배경이 시안과 같은 #fefaea여야
+  // 경계가 보이지 않는다(원본: docs/design-assets/not-ready/mockup-2026-09-13.png).
+  return <main className={check.readyShell}>
+    <header className={check.readyTop}>
+      <div className={check.readyLogo}><Logo /></div>
+      <span className={check.readyClass}>{classroomName}</span>
+    </header>
+    <section className={check.readyBody} aria-labelledby="ready-title">
+      <img className={check.readyMongri} src="/entry-green/peek-mongri.webp" alt="" aria-hidden="true" width="384" height="368" />
+      <h1 id="ready-title" className={check.readyTitle}>아직 준비 중이에요</h1>
+      <p className={check.readyLead}>선생님이 우리 반 명단을 넣으면<br />내 참여 코드로 들어올 수 있어요.</p>
+      {error && <p className={check.readyError} role="alert">{error}</p>}
+      <button type="button" className={`${check.readyRetry} child-primary-action`} disabled={busy} onClick={() => void checkEntry()}><span aria-hidden="true">🔄</span>{busy ? "확인 중…" : "다시 확인하기"}</button>
+      <a className={check.readyAgain} href="/">수업 코드 다시 입력하기</a>
+    </section>
+  </main>;
 }

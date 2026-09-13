@@ -394,3 +394,82 @@
 .waitMongri { width: clamp(220px, 28vw, 476px); max-height: 50vh; height: auto; object-fit: contain; object-position: bottom; }
 .waitShell h1 { margin: clamp(14px, 3vh, 34px) 0 0; font-size: clamp(26px, 3.2vw, 52px); font-weight: 900; letter-spacing: -0.04em; line-height: 1.2; }
 .waitShell p { margin: clamp(8px, 1.4vh, 14px) 0 0; font-size: clamp(16px, 1.7vw, 28px); font-weight: 700; color: #6f8a63; }
+
+/* ── 아직 준비 중(명단 없는 반) — 2026-09-13 사용자 시안(1689×931) 기준.
+   시안 실측: 배경 #fefaea, 제목 잉크 높이 52px, 부제 23px·두 줄, 버튼 면 571×84(#fbce4d)에 턱(#dcab33),
+   몽그리 약 330px. 태블릿 기준으로 비례해 줄이고 휴대폰에서는 최소값을 둔다. */
+.readyShell {
+  --ready-ink: #23452a;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 max(16px, env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: #fefaea;
+  color: var(--ready-ink);
+}
+.readyTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: clamp(14px, 2.2vw, 36px) clamp(0px, 3.2vw, 56px) 0;
+}
+.readyLogo :global(.brand) { min-height: 44px; color: var(--ready-ink); font-size: clamp(22px, 2vw, 34px); }
+.readyLogo :global(.brand-mark) { width: clamp(40px, 3.8vw, 64px); height: clamp(40px, 3.8vw, 64px); }
+.readyClass { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(16px, 1.6vw, 28px); font-weight: 900; letter-spacing: -0.03em; color: var(--ready-ink); }
+.readyBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  /* 세로 가운데 정렬이 시안보다 약 7px 아래로 앉아, 아래 여백을 더 줘 한 덩어리로 올린다. */
+  padding: clamp(12px, 2vh, 24px) 0 clamp(20px, 3.5vh, 38px);
+}
+/* 몽그리는 시안에서 잘라 온 불투명 그림(384×368, 발밑 그림자 포함)이다. 그림 배경이 페이지 배경
+   #fefaea와 같아 경계가 보이지 않는다 — .readyShell 배경을 바꾸면 이 그림도 다시 잘라야 한다.
+   시안에서 몽그리 자체는 약 330px이고 잘라낸 상자는 여백 포함 384px이다. */
+.readyMongri { display: block; width: clamp(220px, 22.7vw, 384px); height: auto; }
+.readyTitle { margin: 0; font-size: clamp(30px, 3.4vw, 58px); font-weight: 900; letter-spacing: -0.015em; line-height: 1.2; color: var(--ready-ink); }
+.readyLead { margin: clamp(2px, 0.36vw, 6px) 0 0; font-size: clamp(17px, 1.5vw, 25px); font-weight: 500; line-height: 1.55; color: #485040; }
+.readyError { margin: 14px 0 0; padding: 10px 14px; border-radius: 12px; background: #fdecea; color: #8a2c1f; font-size: 15px; font-weight: 800; }
+.readyRetry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 1.2vw, 20px);
+  width: min(100%, clamp(290px, 34vw, 580px));
+  min-height: clamp(60px, 5vw, 86px);
+  margin-top: clamp(16px, 1.9vw, 30px);
+  padding: 10px 20px;
+  border: 0;
+  border-radius: clamp(18px, 1.8vw, 30px);
+  background: #fbce4d;
+  box-shadow: 0 clamp(4px, 0.4vw, 7px) 0 #dcab33;
+  color: #204020;
+  font: inherit;
+  font-size: clamp(20px, 1.8vw, 30px);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+.readyRetry span { font-size: 1.15em; line-height: 1; }
+.readyRetry:hover { background: #fcd562; }
+.readyRetry:active { transform: translateY(3px); box-shadow: 0 2px 0 #dcab33; }
+.readyRetry:disabled { opacity: .6; cursor: default; transform: none; }
+.readyRetry:focus-visible { outline: 4px solid #426d34; outline-offset: 4px; }
+.readyAgain {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: clamp(14px, 1.6vw, 26px);
+  padding: 4px 12px;
+  color: #306830;
+  font-size: clamp(16px, 1.45vw, 24px);
+  font-weight: 900;
+  letter-spacing: 0;
+  text-decoration: none;
+}
+.readyAgain:hover { text-decoration: underline; text-underline-offset: 4px; }
+.readyAgain:focus-visible { outline: 4px solid #426d34; outline-offset: 3px; border-radius: 8px; }

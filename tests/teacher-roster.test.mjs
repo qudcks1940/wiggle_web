@@ -134,6 +134,8 @@ test("참여 코드표는 팝업 없이 브라우저 인쇄로 나가고, 선생
   assert.match(sheet, /<QrCode value=\{entryQrUrl\(new URL\(joinUrl\)\.origin, classCode, student\.entryCode\)\}/);
   assert.match(sheet, /<dt>수업 코드<\/dt>/);
   assert.match(sheet, /<dt>내 참여 코드<\/dt>/);
+  // 아이별 QR은 찍기만 하면 들어가므로, 안내가 "코드를 누르라"고 하면 QR 아래 문구와 서로 다른 말을 한다.
+  assert.match(sheet, /student\.entryCode \? "QR을 찍으면 바로 도화지가 열려요\. 찍기 어려우면 참여 코드 네 자리를 눌러요\."/);
   // 인쇄하면 시트만 남는다: 시트의 조상·시트·시트 안을 뺀 나머지를 숨긴다.
   assert.match(css, /body:has\(\.roster-print\) \*:not\(:has\(\.roster-print\)\):not\(\.roster-print\):not\(\.roster-print \*\) \{ display:none!important; \}/);
   // 대화상자가 잡아 둔 스크롤·높이 제한을 풀지 않으면 둘째 장이 잘린다.

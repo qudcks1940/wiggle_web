@@ -63,7 +63,9 @@ export function TeacherRosterPrint({ classroomName, classCode, joinUrl, students
               <div><dt>내 참여 코드</dt><dd className="roster-print-code roster-print-code-big">{student.entryCode ?? "—"}</dd></div>
             </dl>
           </div>
-          <p className="roster-print-slip-foot">QR을 찍고 내 참여 코드 네 자리를 누르면 도화지가 열려요.</p>
+          {/* 참여 코드가 있는 쪽지는 아이별 QR이라 찍기만 하면 들어간다. 코드가 아직 없는 자리는
+              반 QR이므로 종전 안내를 그대로 둔다. */}
+          <p className="roster-print-slip-foot">{student.entryCode ? "QR을 찍으면 바로 도화지가 열려요. 찍기 어려우면 참여 코드 네 자리를 눌러요." : "QR을 찍고 내 참여 코드 네 자리를 누르면 도화지가 열려요."}</p>
         </article>)}
       </div>
     </section>

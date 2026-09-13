@@ -51,12 +51,14 @@ test("the code and animal screens reuse the keypad notebook and never scroll sid
   assert.match(css, /background: var\(--wall\);/);
   assert.doesNotMatch(css, /classroom-with-mongri\.webp|classroom-notepad\.webp/);
   // 문·화분·이젤은 독립 장식이고, 바닥 띠와 같은 배율(--sceneH)을 써야 걸레받이가 어긋나지 않는다.
-  assert.match(css, /--sceneH: min\(72vh, 700px\);/);
+  // 문구 카드는 항상 가운데다. 장면은 카드 옆 남는 폭에 몽그리가 들어가도록 줄어든다(태블릿 기준).
+  assert.match(css, /--sceneH: min\(72vh, 700px, calc\(\(50vw - 230px - 28px\) \* 881 \/ 754\)\);/);
+  assert.doesNotMatch(css, /padding-left: calc\(var\(--sceneH\)/);
   assert.match(css, /height: calc\(var\(--sceneH\) \* 179 \/ 881\);/);
   assert.match(css, /\.sceneryLeft \{ left: 0; height: var\(--sceneH\); \}/);
   assert.match(css, /\.sceneryRight \{ right: 0; height: calc\(var\(--sceneH\) \* 571 \/ 881\); \}/);
   // 좁은 화면에서는 장식을 내려놓는다(대문의 .gallery-leaves와 같은 규칙).
-  assert.match(css, /@media \(max-width: 1100px\), \(max-height: 560px\) \{\s*\.scenery \{ display: none; \}/);
+  assert.match(css, /@media \(max-width: 999px\), \(max-height: 599px\) \{\s*\.scenery \{ display: none; \}/);
   assert.match(css, /\.pad \{ position: relative; inset: auto; \}/);
 });
 

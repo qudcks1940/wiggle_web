@@ -22,7 +22,10 @@
   background: var(--wall);
   /* 장식과 바닥 띠는 원본 장면(941px)의 비율을 그대로 쓴다. 한 변수로 같이 커지고
      같이 작아져야 걸레받이 선이 좌우에서 어긋나지 않는다. */
-  --sceneH: min(72vh, 700px);
+  /* 문구 카드는 항상 화면 가운데다(2026-09-13 사용자 결정 — 태블릿 기준). 그래서 장면을
+     카드 옆 남는 폭에 맞춰 줄인다. 몽그리 오른쪽 끝(원본 x=754)이 가운데 카드(460px)의
+     왼쪽 끝보다 28px 앞에 오도록 한 세 번째 항이 태블릿에서 배율을 정한다. */
+  --sceneH: min(72vh, 700px, calc((50vw - 230px - 28px) * 881 / 754));
   color: var(--ink);
   position: relative;
   overflow: hidden;
@@ -50,7 +53,7 @@
 }
 .sceneryLeft { left: 0; height: var(--sceneH); }
 .sceneryRight { right: 0; height: calc(var(--sceneH) * 571 / 881); }
-@media (max-width: 1100px), (max-height: 560px) {
+@media (max-width: 999px), (max-height: 599px) {
   .scenery { display: none; }
 }
 
@@ -201,7 +204,7 @@
    원본 1672×941에서 실측한 몽그리 상자는 x 258~754, y 369~887이고,
    자산은 640×640 캔버스에 불투명 영역이 x 48~603, y 8~622이다.
    투명 여백을 걷어낸 값으로 --sceneH 배율에 맞춰 환산했다. */
-@media (min-width: 1101px) and (min-height: 561px) {
+@media (min-width: 1000px) and (min-height: 600px) {
   .duck, .seatShell .duck {
     position: absolute;
     left: calc(var(--sceneH) * 231 / 881);
@@ -375,7 +378,7 @@
 /* 키패드 화면에서는 오리를 줄여 키가 화면 안에 남게 한다 */
 /* 키패드 화면의 작은 몽그리는 좁은 화면 전용이다. 넓은 화면에서는 위의 장면 배치가
    쓰여야 하므로 조건 없이 두면 선택자 우선순위로 그 배치를 덮어쓴다. */
-@media (max-width: 1100px), (max-height: 560px) {
+@media (max-width: 999px), (max-height: 599px) {
   .seatShell .duck { width: clamp(96px, 24vw, 140px); margin: 4px auto 0; }
 }
 

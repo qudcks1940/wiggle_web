@@ -1,12 +1,13 @@
-/* 수업 확인(대기·실패)·참여 코드 입력 화면 — docs/design-assets/entry-green/README-CLAUDE.md 기준.
-   교실 장면을 화면 전체에 꽉 채우고(cover), 문구·버튼은 그 위의 반응형 카드로 올린다.
-   2026-09-13까지는 그림을 16:9 고정 무대로 깔고 글까지 퍼센트 좌표로 붙였는데, 화면 비율이
-   그림과 다르면 크림색 빈 띠가 남고 글이 그림과 함께 확대·축소돼 반응형이 아니었다. */
+/* 수업 확인(대기·실패)·참여 코드 입력 화면.
+   대문(.gallery-landing)과 같은 방식이다 — 종이 질감 배경 + 독립 오리 그림 + 일반 반응형 흐름.
+   2026-09-13 사용자 결정: 교실 장면을 배경 그림으로 깔지 않는다. 장면을 깔면 화면 비율에 따라
+   빈 띠가 남거나(고정 비율) 오리가 잘려(cover), 어느 쪽도 대문처럼 자연스럽게 늘어나지 않는다. */
 .shell {
   --ink: #123f23;
   --accent: #426d34;
   --outline: #245834;
   --paper: #fff5d9;
+  --wall: #fceece;
   --note: #fff9e9;
   --action: #ffcf37;
   --action-border: #c48d12;
@@ -17,10 +18,47 @@
      덮고 글·버튼은 그 위의 일반 반응형 카드로 흐른다. */
   display: block;
   padding: 12px max(16px, env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  background: var(--paper) url("/entry-green/classroom-with-mongri.webp") center bottom / cover no-repeat;
+  /* 대문(.gallery-landing)과 같은 원리 — 배경은 '늘어나도 되는 것'만 담는다.
+     벽 질감은 타일로 반복하고, 바닥은 가로로만 늘어나는 띠다. 문·화분·이젤처럼
+     모양이 있는 것은 배경이 아니라 아래의 독립 장식 요소로 놓는다. */
+  /* 벽은 평평한 크림색 하나. 타일로 반복하면 이음매가 보인다. */
+  background: var(--wall);
+  /* 장식과 바닥 띠는 원본 장면(941px)의 비율을 그대로 쓴다. 한 변수로 같이 커지고
+     같이 작아져야 걸레받이 선이 좌우에서 어긋나지 않는다. */
+  --sceneH: min(72vh, 700px);
   color: var(--ink);
+  position: relative;
+  overflow: hidden;
 }
+/* 바닥 띠 — 가로로만 늘어난다. 타일 무늬라 늘어나도 어색하지 않다. */
+.shell::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--sceneH) * 179 / 881);
+  background: url("/entry-green/scene/floor.webp") center bottom / 100% 100% no-repeat;
+  pointer-events: none;
+}
+
+/* 문·화분·이젤 장식. 내용 뒤에 깔리고, 좁은 화면에서는 아예 내려놓는다
+   (대문의 .gallery-leaves와 같은 규칙). */
+.scenery {
+  position: absolute;
+  bottom: 0;
+  width: auto;
+  pointer-events: none;
+  user-select: none;
+}
+.sceneryLeft { left: 0; height: var(--sceneH); }
+.sceneryRight { right: 0; height: calc(var(--sceneH) * 571 / 881); }
+@media (max-width: 1100px), (max-height: 560px) {
+  .scenery { display: none; }
+}
+
 .stage {
+  z-index: 1;
   /* 무대 좌표 배치를 걷어낸 뒤의 실제 레이아웃. 내용은 화면 가운데 세로로 쌓는다.
      그림에 그려진 문·나무 간판에 글자를 맞추던 절대 좌표는 배경이 잘리는 순간
      어긋나므로 쓰지 않는다(2026-09-13). */
@@ -153,7 +191,8 @@
   font-size: clamp(15px, 1.4cqw, 20px);
   text-align: left;
 }
-.duck { display: none; }
+/* 대문의 .gallery-duck과 같은 규칙 — 배경이 아니라 레이아웃 안의 그림이다. */
+.duck { display: block; width: min(62vw, 260px); height: auto; object-fit: contain; margin: 0; }
 
 /* 좁은 화면(휴대전화)·낮은 가로 화면: 교실 장면을 잘라 쓰지 않고 문서 흐름으로 */
 /* 무대 좌표 배치를 걷어낸 실제 레이아웃. 모든 화면 크기에 적용한다 (2026-09-13). */
@@ -177,9 +216,8 @@
   .panel { margin: 0; }
 }
 
-/* ── 번호 입력(키패드) 화면 — 수첩이 그려진 교실 배경(classroom-notepad.webp, 1690×931) 위에
-   글자·키패드만 HTML로 올린다 (2026-09-09 사용자 시안). 종이 영역 실측: x 45.4~84%, y 8.7~93.4%,
-   나무 간판 x 61.5~69.6% · y 16.2~22%. 좁은 화면은 크림 배경 + CSS 수첩 카드로 전환. */
+/* ── 참여 코드 입력(키패드) 화면. 수업 확인 화면과 같은 종이 바탕을 쓰고,
+   수첩은 배경 그림이 아니라 CSS 카드(.pad)로 그린다 (2026-09-13). */
 .seatTitle { position: absolute; left: 4.5%; top: 13%; width: 38%; text-align: left; color: var(--ink); }
 .seatTitle h1 { margin: 0; font-size: clamp(26px, 4.6cqw, 64px); font-weight: 900; letter-spacing: -0.05em; line-height: 1.15; text-shadow: 0 2px 0 #fff8; }
 .seatTitle p { margin: clamp(6px, 1cqw, 14px) 0 0; font-size: clamp(15px, 1.6cqw, 25px); font-weight: 800; color: var(--accent); }
@@ -318,15 +356,8 @@
 /* 키패드 화면에서는 오리를 줄여 키가 화면 안에 남게 한다 */
 .seatShell .duck { width: clamp(96px, 24vw, 140px); margin: 4px auto 0; }
 
-.seatShell { min-width: 0; background-image: url("/entry-green/classroom-notepad.webp"); }
+.seatShell { min-width: 0; }
 
-/* 세로로 긴 화면에서는 교실 그림을 cover로 깔면 오리가 크게 잘린다
-   (390×844에서 몸통만, 820×1180에서 머리가 화면 밖 — 2026-09-13 실측).
-   그런 비율에서는 크림 배경 + 독립 오리 그림으로 돌아간다. */
-@media (max-aspect-ratio: 5/4) {
-  .shell, .seatShell { background-image: none; }
-  .duck { display: block; width: clamp(140px, 42vw, 220px); height: auto; margin: 0; }
-}
 
 /* ── 수업 확인 대기 화면(2026-09-09 사용자 시안, 1693×929): 크림 단색 배경 가운데에
    선 너머로 고개 내민 몽그리(wait-mongri.png, 원본 27% 폭) + 제목 + 부제. 로고·버튼 없음. */

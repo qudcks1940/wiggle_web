@@ -47,9 +47,16 @@ test("the code and animal screens reuse the keypad notebook and never scroll sid
   // 줄어 가운데 뭉치던 문제(2026-09-09)는 무대를 가운데 세로 흐름으로 못 박아 막는다.
   assert.match(css, /\.stage \{[^}]*display: flex;[^}]*flex-direction: column;[^}]*align-items: center;/s);
   assert.doesNotMatch(css, /aspect-ratio: 1672 \/ 941|aspect-ratio: 1690 \/ 931/);
-  assert.match(css, /background: var\(--paper\) url\("\/entry-green\/classroom-with-mongri\.webp"\) center bottom \/ cover no-repeat;/);
-  // 세로로 긴 화면은 cover가 오리를 자르므로 크림 배경 + 독립 오리로 돌아간다.
-  assert.match(css, /@media \(max-aspect-ratio: 5\/4\) \{\s*\.shell, \.seatShell \{ background-image: none; \}/);
+  // 배경에는 '늘어나도 되는 것'만 둔다 — 평평한 벽과 가로로만 늘어나는 바닥 띠.
+  assert.match(css, /background: var\(--wall\);/);
+  assert.doesNotMatch(css, /classroom-with-mongri\.webp|classroom-notepad\.webp/);
+  // 문·화분·이젤은 독립 장식이고, 바닥 띠와 같은 배율(--sceneH)을 써야 걸레받이가 어긋나지 않는다.
+  assert.match(css, /--sceneH: min\(72vh, 700px\);/);
+  assert.match(css, /height: calc\(var\(--sceneH\) \* 179 \/ 881\);/);
+  assert.match(css, /\.sceneryLeft \{ left: 0; height: var\(--sceneH\); \}/);
+  assert.match(css, /\.sceneryRight \{ right: 0; height: calc\(var\(--sceneH\) \* 571 \/ 881\); \}/);
+  // 좁은 화면에서는 장식을 내려놓는다(대문의 .gallery-leaves와 같은 규칙).
+  assert.match(css, /@media \(max-width: 1100px\), \(max-height: 560px\) \{\s*\.scenery \{ display: none; \}/);
   assert.match(css, /\.pad \{ position: relative; inset: auto; \}/);
 });
 

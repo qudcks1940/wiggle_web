@@ -100,6 +100,14 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
     </div>;
   }
 
+  // 교실 장식. 배경이 아니라 독립 요소라 화면이 늘어나도 늘어나지 않고, 좁으면 CSS가 내려놓는다.
+  const scenery = (
+    <>
+      <img className={`${check.scenery} ${check.sceneryLeft}`} src="/entry-green/scene/left-group.webp" alt="" aria-hidden="true" width="700" height="881" />
+      <img className={`${check.scenery} ${check.sceneryRight}`} src="/entry-green/scene/right-group.webp" alt="" aria-hidden="true" width="392" height="571" />
+    </>
+  );
+
   if (mode === "checking") {
     const codeError = errorKind === "code";
     // 문구는 docs/design-assets/entry-green/README-CLAUDE.md의 확정 문구. 선생님 도움 버튼은 실제 메시지를 보내지 않고 손을 드는 안내다.
@@ -110,6 +118,7 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
     </main>;
     const guidance = codeError ? "수업 코드가 맞는지 한 번만 더 확인해 줘." : "잠깐 연결이 어려운가 봐. 한 번 더 해 보자.";
     return <main className={`entry-check ${check.shell}`}>
+      {scenery}
       <div className={check.stage}>
         <div className={check.head}>
           <div className={check.logo}><Logo /></div>
@@ -140,6 +149,7 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
   if (mode === "code") {
     const pressKey = (digit: string) => { clearEntryError(); setCodeInput((current) => (current + digit).slice(0, ENTRY_CODE_LENGTH)); };
     return <main className={`${check.shell} ${check.seatShell}`}>
+      {scenery}
       <div className={`${check.stage} ${check.seatStage}`}>
         <div className={check.head}>
           <div className={check.logo}><Logo /></div>
@@ -184,6 +194,7 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
 
   if (mode === "animal") {
     return <main className={`${check.shell} ${check.seatShell}`}>
+      {scenery}
       <div className={`${check.stage} ${check.seatStage}`}>
         <div className={check.head}>
           <div className={check.logo}><Logo /></div>

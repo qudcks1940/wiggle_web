@@ -67,7 +67,11 @@ test("hosted teachers use verified Google OAuth and fixed demo credentials are a
 test("shared tablet profiles never reactivate a stored raw token", async () => {
   const [session, join, studentApi] = await Promise.all([read("../lib/client-session.ts"), read("../app/components/JoinClient.tsx"), read("../app/api/student/route.ts")]);
   assert.match(session, /sessionStorage\.setItem\(ACTIVE_SESSION_KEY/); assert.match(session, /LEGACY_PROFILES_KEY/); assert.doesNotMatch(session, /function activateProfile/);
-  assert.match(join, /entryCode: codeInput/); assert.doesNotMatch(join, /switchProfile|deviceProfiles|activeProfile|activateProfile|picturePassword/);
+  // 서버로 가는 것은 참여 코드뿐이다 — 키패드로 누른 것이든 쪽지 QR로 찍은 것이든. 찍은 코드는
+  // 주소 조각(readEntryHash)이나 스캔 결과(parseEntryQr)에서만 오고, 기기에 저장된 값에서는 오지 않는다.
+  assert.match(join, /entryCode: code,/); assert.match(join, /code = codeInput\)/);
+  assert.doesNotMatch(join, /switchProfile|deviceProfiles|activeProfile|activateProfile|picturePassword/);
+  assert.doesNotMatch(join, /(localStorage|sessionStorage)\.getItem\([^)]*\)[^;]*entry/i);
   // 재입장도 서버가 참여 코드를 다시 확인하고 새 세션을 발급한다 — 저장된 토큰을 되살리는 길은 없다.
   assert.match(studentApi, /const device = await issueDeviceSession\(seat\.id\)/); assert.doesNotMatch(studentApi, /action === "switchProfile"/); assert.match(studentApi, /2 \* 60 \* 60 \* 1000/);
 });

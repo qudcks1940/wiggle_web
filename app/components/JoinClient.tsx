@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { storeProfile } from "@/lib/client-session";
 import { classifyEntryError, EntryErrorKind, readStudentEntryResponse, StudentEntryResponseError } from "@/lib/student-entry-client";
 import { Logo } from "./Logo";
@@ -8,6 +8,9 @@ import check from "./EntryCheck.module.css";
 
 const ANIMALS = ["🐰", "🐻", "🦊", "🐯", "🐼", "🐶", "🐱", "🐨", "🦁", "🐸"];
 const ANIMAL_NAMES: Record<string, string> = { "🐰": "토끼", "🐻": "곰", "🦊": "여우", "🐯": "호랑이", "🐼": "판다", "🐶": "강아지", "🐱": "고양이", "🐨": "코알라", "🦁": "사자", "🐸": "개구리" };
+import { entryPathFor, parseEntryQr, readEntryHash } from "@/lib/qr-entry";
+import { QrScanner } from "./QrScanner";
+
 export const ENTRY_CODE_LENGTH = 4;
 /* 입장은 두 단계다: 반을 정하고(QR이 기본, 못 쓰면 수업 코드 4자리) 아이 참여 코드 4자리를 누른다.
  * 코드가 곧 그 아이의 자리라, 다음 시간에 같은 코드를 넣으면 같은 아이로 돌아온다.
@@ -23,10 +26,18 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
   const [errorKind, setErrorKind] = useState<EntryErrorKind | "">("");
   const [teacherCallOpen, setTeacherCallOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  // 아이별 쪽지 QR(`#entry=1234`)로 들어오면 반 확인이 끝난 뒤 이 코드로 곧바로 입장한다.
+  const pendingEntryCode = useRef<string | null>(null);
   const entry = initialEntry;
 
   useEffect(() => {
     setCodeInput(""); setAnimal(""); setError(""); setErrorKind(""); setTeacherCallOpen(false);
+    // 참여 코드는 주소 조각에만 온다. 서버로는 원래 안 가지만, 주소창과 방문 기록에 남지 않도록
+    // 어떤 네트워크 호출보다 먼저 지운다. replaceState라 뒤로 가기 기록에도 남지 않는다.
+    const fromHash = readEntryHash(location.hash);
+    if (location.hash) history.replaceState(history.state, "", location.pathname + location.search);
+    pendingEntryCode.current = fromHash;
     if (!initialEntry) { location.replace("/"); return; }
     void checkEntry();
   // checkEntry only reads the stable entry prop. Keeping it outside this dependency list
@@ -44,6 +55,24 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialEntry]);
 
+  // 이미 이 반 화면에 있는데 태블릿 카메라로 쪽지 QR을 찍으면, 경로는 같고 조각만 바뀌어
+  // 페이지가 다시 읽히지 않는다(같은 문서 이동). 그러면 위의 마운트 처리가 돌지 않으므로
+  // 조각 변화를 따로 받는다. 읽자마자 지우는 규칙은 같다.
+  useEffect(() => {
+    const onHashChange = () => {
+      if (!location.hash) return;
+      const code = readEntryHash(location.hash);
+      history.replaceState(history.state, "", location.pathname + location.search);
+      if (!code) return;
+      if (mode === "code") { setCodeInput(code); void submit("", code); }
+      else pendingEntryCode.current = code;
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  // submit은 코드를 인자로 받으므로 옛 codeInput을 붙잡지 않는다. 화면 단계만 따라가면 된다.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
+
   async function checkEntry() {
     setBusy(true); setError(""); setErrorKind(""); setTeacherCallOpen(false);
     try {
@@ -57,6 +86,9 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
       setCodeInput("");
       // 명단이 없으면 아이가 할 수 있는 일이 없다. 선생님을 부르도록 안내한다.
       setMode(data.hasRoster ? "code" : "noRoster");
+      const scanned = pendingEntryCode.current;
+      pendingEntryCode.current = null;
+      if (data.hasRoster && scanned) { setCodeInput(scanned); void submit("", scanned); }
     } catch (cause) {
       setError(cause instanceof StudentEntryResponseError ? cause.message : "수업을 확인하는 중 연결이 끊겼어요. 다시 시도해 주세요.");
     } finally { setBusy(false); }
@@ -71,12 +103,13 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
     requestAnimationFrame(() => window.scrollTo(0, 0));
   }
 
-  async function submit(chosenAnimal = "") {
-    if (codeInput.length !== ENTRY_CODE_LENGTH) { setError("참여 코드 네 자리를 눌러 주세요."); setErrorKind("general"); return; }
+  // code를 따로 받는 이유: QR로 채운 직후에는 setCodeInput이 아직 반영되지 않았다.
+  async function submit(chosenAnimal = "", code = codeInput) {
+    if (code.length !== ENTRY_CODE_LENGTH) { setError("참여 코드 네 자리를 눌러 주세요."); setErrorKind("general"); return; }
     clearEntryError(); setBusy(true);
     let failureKind: EntryErrorKind = "general";
     try {
-      const response = await fetch("/api/student", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "join", entry, entryCode: codeInput, ...(chosenAnimal ? { animal: chosenAnimal } : {}) }), cache: "no-store" });
+      const response = await fetch("/api/student", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "join", entry, entryCode: code, ...(chosenAnimal ? { animal: chosenAnimal } : {}) }), cache: "no-store" });
       failureKind = classifyEntryError(response.status);
       const data = await readStudentEntryResponse(response);
       if (!response.ok) throw new StudentEntryResponseError(data.error ?? "입장할 수 없어요.");
@@ -89,6 +122,19 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
       setError(cause instanceof StudentEntryResponseError ? cause.message : "입장 중 연결을 확인하지 못했어요. 잠시 뒤 다시 해 주세요.");
       setErrorKind(failureKind);
     } finally { setBusy(false); }
+  }
+
+  // 참여 코드 화면에서 찍은 QR. 아이별 쪽지 QR만 쓸모가 있다 — 반 QR에는 참여 코드가 없다.
+  function handleScan(text: string) {
+    setScanning(false);
+    const qr = parseEntryQr(text);
+    if (!qr) { setError("Wiggle 수업 QR이 아니에요. 내 쪽지의 QR을 찍어 주세요."); setErrorKind("general"); return; }
+    if (!qr.entryCode) { setError("이 QR에는 내 참여 코드가 없어요. 내 쪽지의 QR을 찍어 주세요."); setErrorKind("general"); return; }
+    // 지금 들어온 반의 쪽지면 바로 입장한다. 주소 조각만 바뀌는 이동은 페이지를 다시 읽지 않아
+    // 조각 처리가 돌지 않으므로, 같은 반은 여기서 직접 제출한다.
+    if (qr.classCode === entry) { setCodeInput(qr.entryCode); void submit("", qr.entryCode); return; }
+    // 다른 반 쪽지면 그 반부터 다시 확인한다(경로가 달라 실제로 다시 읽힌다).
+    location.replace(entryPathFor(qr));
   }
 
   function errorNotice() {
@@ -186,9 +232,12 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
             {errorNotice()}
             <button className={`${check.enter} child-primary-action`} disabled={busy || codeInput.length !== ENTRY_CODE_LENGTH}>{busy ? "확인 중…" : "들어가기"}</button>
           </form>
+          {/* 누르기 어려운 아이는 쪽지의 QR을 찍어 바로 들어간다. */}
+          <button type="button" className={`${check.scan} child-primary-action`} disabled={busy} onClick={() => { clearEntryError(); setScanning(true); }}><span aria-hidden="true">📷</span>내 쪽지 QR로 찍기</button>
           <a className={check.again} href="/">수업 코드 다시 입력하기</a>
         </section>
       </div>
+      {scanning && <QrScanner onResult={handleScan} onClose={() => setScanning(false)} hint="내 쪽지의 QR을 네모 안에 보여 줘" />}
     </main>;
   }
 

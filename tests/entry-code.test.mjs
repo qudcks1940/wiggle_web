@@ -175,7 +175,9 @@ test("학생 화면은 코드 수첩 하나와 동물 고르기만 그리고, �
   ]);
   assert.match(join, /className="entry-code-input"/);
   assert.match(join, /maxLength=\{ENTRY_CODE_LENGTH\}/);
-  assert.match(join, /action: "join", entry, entryCode: codeInput/);
+  // QR로 채운 코드는 상태 반영 전에 제출되므로 코드를 인자로 받는다. 기본값은 여전히 키패드 입력이다.
+  assert.match(join, /action: "join", entry, entryCode: code,/);
+  assert.match(join, /async function submit\(chosenAnimal = "", code = codeInput\)/);
   assert.match(join, /if \(data\.firstTime\) \{ setMode\("animal"\)/);
   assert.match(join, /내 참여 코드를 눌러요/);
   assert.match(join, /이 동물로 들어가기/);

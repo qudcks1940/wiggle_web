@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { entryPathFor, parseEntryQr } from "@/lib/qr-entry";
+import { QrScanner } from "./QrScanner";
 
 const CODE_LENGTH = 4;
 
 export function LandingCodeForm() {
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(""));
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState("");
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
@@ -75,7 +79,17 @@ export function LandingCodeForm() {
     window.location.href = `/join?code=${submittedDigits.join("")}`;
   }
 
+  // 반 QR이면 그 반 참여 코드 화면으로, 아이별 쪽지 QR이면 키패드 없이 바로 들어간다.
+  function handleScan(text: string) {
+    setScanning(false);
+    const qr = parseEntryQr(text);
+    if (!qr) { setScanError("Wiggle 수업 QR이 아니에요. 쪽지나 선생님 화면의 QR을 찍어 주세요."); return; }
+    setScanError("");
+    window.location.href = entryPathFor(qr);
+  }
+
   return (
+    <>
     <form className="landing-code-form" onSubmit={handleSubmit} aria-label="수업 코드로 입장">
       <div className="landing-code-boxes" role="group" aria-label="4자리 수업 코드">
         {digits.map((digit, index) => (
@@ -100,6 +114,12 @@ export function LandingCodeForm() {
       <button type="submit" className="button primary large full landing-code-submit">
         그리러 가기
       </button>
+      <button type="button" className="button secondary full landing-qr-button" onClick={() => { setScanError(""); setScanning(true); }}>
+        <span aria-hidden="true">📷</span>QR로 찍기
+      </button>
+      {scanError && <p className="landing-qr-error" role="alert">{scanError}</p>}
     </form>
+    {scanning && <QrScanner onResult={handleScan} onClose={() => setScanning(false)} hint="쪽지나 선생님 화면의 QR을 네모 안에 보여 줘" />}
+    </>
   );
 }

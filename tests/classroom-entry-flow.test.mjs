@@ -25,7 +25,9 @@ test("re-entry on every device uses the same participation code — no pictures,
     read("../app/api/student/route.ts"),
     read("../app/components/JoinClient.tsx"),
   ]);
-  assert.match(join, /action: "join", entry, entryCode: codeInput/);
+  // QR로 채운 코드는 상태 반영 전에 제출되므로 코드를 인자로 받는다. 기본값은 여전히 키패드 입력이다.
+  assert.match(join, /action: "join", entry, entryCode: code,/);
+  assert.match(join, /async function submit\(chosenAnimal = "", code = codeInput\)/);
   // 재입장 후보는 별명·동물이 아니라 학급 + 참여 코드로 정해진다.
   assert.match(route, /WHERE classroom_id = \? AND entry_code = \? AND archived_at IS NULL/);
   assert.match(route, /code: "ENTRY_CODE"/);

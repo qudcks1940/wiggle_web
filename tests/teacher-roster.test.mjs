@@ -79,7 +79,9 @@ test("코드 재입장은 학급 + 코드로만 찾고, 무차별 대입은 학�
 test("학생 화면은 명단을 그리지 않고 자기 참여 코드만 입력한다", async () => {
   const join = await read("../app/components/JoinClient.tsx");
   assert.match(join, /className="entry-code-input"/);
-  assert.match(join, /action: "join", entry, entryCode: codeInput/);
+  // QR로 채운 코드는 상태 반영 전에 제출되므로 코드를 인자로 받는다. 기본값은 여전히 키패드 입력이다.
+  assert.match(join, /action: "join", entry, entryCode: code,/);
+  assert.match(join, /async function submit\(chosenAnimal = "", code = codeInput\)/);
   // 서버가 명단을 주지 않으므로 화면에도 목록을 그릴 방법이 없다.
   assert.doesNotMatch(join, /realName|seatNumber|entryCodes/);
   // 재입장은 동물·별명을 다시 묻지 않는다 — 처음일 때만 동물 화면으로 간다.
@@ -127,8 +129,9 @@ test("참여 코드표는 팝업 없이 브라우저 인쇄로 나가고, 선생
   assert.match(sheet, /roster-print-list/);
   assert.match(sheet, /roster-print-slips/);
   assert.match(sheet, /선생님 보관용/);
-  // 쪽지 한 장이면 입장이 끝나야 한다 — 반 QR + 수업 코드 + 내 참여 코드가 모두 있다.
-  assert.match(sheet, /<QrCode value=\{joinUrl\}/);
+  // 쪽지 한 장이면 입장이 끝나야 한다 — 아이별 QR + 수업 코드 + 내 참여 코드가 모두 있다.
+  // QR은 2026-09-13부터 그 아이 참여 코드를 주소 조각에 담아, 찍으면 키패드 없이 들어간다.
+  assert.match(sheet, /<QrCode value=\{entryQrUrl\(new URL\(joinUrl\)\.origin, classCode, student\.entryCode\)\}/);
   assert.match(sheet, /<dt>수업 코드<\/dt>/);
   assert.match(sheet, /<dt>내 참여 코드<\/dt>/);
   // 인쇄하면 시트만 남는다: 시트의 조상·시트·시트 안을 뺀 나머지를 숨긴다.

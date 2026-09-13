@@ -1,5 +1,6 @@
 "use client";
 
+import { entryQrUrl } from "@/lib/qr-entry";
 import { QrCode } from "./QrCode";
 
 export type PrintStudent = { id: string; seatNumber: number | null; realName: string | null; nickname: string; entryCode: string | null };
@@ -10,7 +11,9 @@ export type PrintStudent = { id: string; seatNumber: number | null; realName: st
  *
  * 두 장으로 나눈다.
  *  1) 선생님 보관용 명단: 번호·이름·참여 코드 한 표.
- *  2) 아이에게 나눠 줄 쪽지: 잘라서 주면 그 종이 하나로 입장이 끝난다(반 QR + 수업 코드 + 내 코드).
+ *  2) 아이에게 나눠 줄 쪽지: 잘라서 주면 그 종이 하나로 입장이 끝난다(아이별 QR + 수업 코드 + 내 코드).
+ *     QR은 2026-09-13부터 아이마다 다르다 — 반 주소 뒤 조각(`#entry=`)에 그 아이 참여 코드를 담아
+ *     찍으면 키패드 없이 바로 들어간다. 코드를 새로 뽑으면 옛 QR도 함께 죽는다(같은 코드를 담으므로).
  * 실명이 있으므로 교사 화면에서만 열리고, 나눠 주기 전에 자르라는 안내를 표에 함께 인쇄한다. */
 export function TeacherRosterPrint({ classroomName, classCode, joinUrl, students }: {
   classroomName: string;
@@ -50,8 +53,10 @@ export function TeacherRosterPrint({ classroomName, classCode, joinUrl, students
           </div>
           <div className="roster-print-slip-body">
             <div className="roster-print-slip-qr">
-              <QrCode value={joinUrl} label={`${classroomName} 입장 QR`} variant="personal" />
-              <small>QR을 찍어요</small>
+              {/* 쪽지 QR은 그 아이 참여 코드를 담는다. 옆에 같은 코드가 글자로 이미 적혀 있어
+                  종이 한 장이 입장 수단이라는 점은 종전과 같다(학생 입장 5항). */}
+              <QrCode value={entryQrUrl(new URL(joinUrl).origin, classCode, student.entryCode)} label={`${nameOf(student)} 입장 QR`} variant="personal" />
+              <small>{student.entryCode ? "찍으면 바로 들어가요" : "QR을 찍어요"}</small>
             </div>
             <dl>
               <div><dt>수업 코드</dt><dd className="roster-print-code">{classCode}</dd></div>

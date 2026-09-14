@@ -5,7 +5,7 @@
 // 털 가장자리처럼 섞인 픽셀은 m에 비례해 투명하게 하고, 남은 자홍 기운(스필)을 G 쪽으로 걷어낸다.
 import sharp from "sharp";
 const [input, output, sizeArg] = process.argv.slice(2);
-const SIZE = Number(sizeArg || 1024);
+const SIZE = Number(sizeArg || 0); // 0이면 원래 크기 그대로(장식처럼 정사각형이 아닌 그림)
 const { data, info } = await sharp(input).removeAlpha().raw().toBuffer({ resolveWithObject: true });
 const W = info.width, H = info.height;
 const out = Buffer.alloc(W * H * 4);
@@ -31,5 +31,5 @@ for (let i = 0, o = 0; i < W * H; i++, o += 4) {
   out[o + 3] = Math.round(a * a * 255); // 반투명 가장자리를 조금 더 걷어 크림 카드 위 어두운 테를 줄인다
 }
 // 코덱스가 잡은 구도(여백·눈높이)를 그대로 둔다 — 잘라 다시 맞추면 귀 긴 토끼만 머리가 작아진다.
-await sharp(out, { raw: { width: W, height: H, channels: 4 } }).resize(SIZE, SIZE).png().toFile(output);
+await sharp(out, { raw: { width: W, height: H, channels: 4 } }).resize(SIZE ? { width: SIZE, height: SIZE } : undefined).png().toFile(output);
 console.log(JSON.stringify({ input: input.split("/").pop(), source: `${W}x${H}`, clearedPct: +(cleared / (W * H) * 100).toFixed(1) }));

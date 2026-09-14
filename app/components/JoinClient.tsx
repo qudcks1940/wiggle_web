@@ -250,6 +250,14 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
     // 고른 친구의 이름이 곧 별명이 된다 — 이름은 서버 기본 별명을 읽으므로 둘이 어긋나지 않는다.
     const chosen = ANIMAL_CHARACTERS.find((character) => character.emoji === animal);
     return <main className={check.pickShell}>
+      {/* 장식(코덱스 그림 2026-09-14). 카드 격자 옆 여백이 있는 큰 화면에서만 보인다. */}
+      <div className={check.pickDeco} aria-hidden="true">
+        <img className={check.decoWriting} src="/entry-green/picker/handwriting.webp" alt="" />
+        <img className={check.decoMongri} src="/landing-gallery/duck-painter-640.webp" alt="" />
+        <img className={check.decoSun} src="/entry-green/picker/crayon-sun.webp" alt="" />
+        <img className={check.decoRainbow} src="/entry-green/picker/crayon-rainbow.webp" alt="" />
+        <img className={check.decoFlowers} src="/entry-green/picker/crayon-flowers.webp" alt="" />
+      </div>
       <header className={check.pickTop}>
         <div className={check.pickLogo}><Logo /></div>
         <span className={check.pickClass}>{classroomName}</span>

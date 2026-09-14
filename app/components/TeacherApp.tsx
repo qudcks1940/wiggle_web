@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { copyNoticeText, copyText } from "@/lib/copy-text";
 import { parseRosterText } from "@/lib/roster";
 import { Logo } from "./Logo";
@@ -81,6 +82,21 @@ function ClassroomRow({ item, deleting, onDelete, onQr, onCopy }: { item: Classr
     <td data-label="최근 수업">{lessonDate(item.updatedAt)}</td>
     <td className="class-row-actions"><a className={`class-open-link${item.admissionOpen ? " is-primary" : ""}`} href={`/teacher/class/${item.id}`} aria-label={`${item.displayName} 학급 열기`}>학급 열기</a><details className="row-menu"><summary aria-label={`${item.displayName} 더 보기`}>⋯</summary><button type="button" className="class-delete-button" aria-label={`${item.displayName} 학급 삭제`} disabled={deleting} onClick={() => onDelete(item)}>{deleting ? "삭제 처리 중…" : "학급 삭제"}</button></details></td>
   </tr>;
+}
+
+/* 선생님 화면 첫 불러오기(2026-09-14 사용자 결정 — 코덱스 시안 docs/design-assets/teacher-loading/loading.png).
+ * 빈 페이지의 점선 상자 대신 실제 머리 줄 + 회색 뼈대를 보여 준다. 첫 응답이 권한 오류(403) 같은 실패면
+ * 예전에는 상자가 안내 없이 끝나지 않았다(2026-09-14 로컬 실측). 같은 안내 줄을 오류 문구와 행동 버튼으로 바꾼다. */
+function TeacherLoading({ classPage, error, onRetry }: { classPage: boolean; error: string; onRetry: () => void }) {
+  return <main className={`teacher-workspace tcw-loading${error ? " is-failed" : ""}`} aria-busy={!error}>
+    <header className="tcw-header"><Logo />{classPage && <><a className="tcw-back" href="/teacher"><ArrowLeft size={20} /><span>학급 목록</span></a><span className="tcw-skel tcw-skel-title" aria-hidden="true" /></>}<div className="tcw-header-actions" aria-hidden="true"><span className="tcw-skel tcw-skel-button" /><span className="tcw-skel tcw-skel-button" /></div></header>
+    <div className="tcw-loading-tabs" aria-hidden="true"><span className="tcw-skel" /><span className="tcw-skel" /><span className="tcw-skel" /></div>
+    {error
+      ? <div className="tcw-loading-status is-error" role="alert"><span>{error}</span><span className="tcw-loading-actions">{classPage && <a className="tcw-link-button tcw-primary" href="/teacher">학급 목록으로</a>}<button type="button" onClick={onRetry}>다시 시도</button></span></div>
+      : <p className="tcw-loading-status" role="status"><span className="tcw-spinner" aria-hidden="true" />{classPage ? "학급을 불러오고 있어요" : "학급 목록을 불러오고 있어요"}</p>}
+    <h2 className="tcw-loading-heading" aria-hidden="true">{classPage ? "학생 그림" : "내 학급"}</h2>
+    <div className="tcw-student-grid" aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <div key={index}><span className="tcw-skel tcw-skel-card" /><div className="tcw-skel-caption"><span className="tcw-skel" /><span className="tcw-skel tcw-skel-pill" /></div></div>)}</div>
+  </main>;
 }
 
 async function teacherPost<T = Record<string, unknown>>(payload: Record<string, unknown>): Promise<T> { const response = await fetch("/api/teacher", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" }); const data = await response.json() as T & { error?: string }; if (!response.ok) throw new Error(data.error ?? "요청을 처리하지 못했어요."); return data; }
@@ -317,7 +333,7 @@ export function TeacherApp({ classroomId = "" }: { classroomId?: string }) {
     if (!(await copyText(url))) setError("가족 링크를 만들었어요. 주소를 직접 선택해 복사해 주세요.");
   }
 
-  if (authorized === null) return <main className="teacher-shell"><div className="loading-card">수업실을 준비하는 중…</div></main>;
+  if (authorized === null) return <TeacherLoading classPage={Boolean(classroomId)} error={loadError} onRetry={() => void load()} />;
   async function copyAndNotify(text: string, label: string) {
     setCopyNotice(copyNoticeText(await copyText(text), label));
   }
@@ -343,7 +359,7 @@ export function TeacherApp({ classroomId = "" }: { classroomId?: string }) {
       {qrExpanded && qrClassroom && <dialog ref={qrDialogRef} className="qr-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="large-qr-title" onCancel={(event) => { event.preventDefault(); setQrExpanded(false); }}><section className="large-qr-dialog"><button className="modal-close" aria-label="입장 QR 닫기" autoFocus onClick={() => setQrExpanded(false)}>×</button><h2 id="large-qr-title">{qrClassroom.displayName} 입장 QR</h2><p>카메라로 QR을 비추거나 아래 수업 코드를 입력해요.</p><QrCode value={`${location.origin}/join/${qrClassroom.classCode}`} label={`${qrClassroom.displayName} 입장 QR`} variant="large" /><div className="large-qr-code"><small>수업 코드</small><strong>{qrClassroom.classCode}</strong></div><button className="button secondary full" onClick={() => copyAndNotify(`${location.origin}/join/${qrClassroom.classCode}`, "입장 주소")}>입장 주소 복사</button></section></dialog>}
     </main>;
   }
-  if (!classroomData) return <main className="teacher-shell"><div className="loading-card">{loadError || error || "학급을 불러오는 중…"}</div></main>;
+  if (!classroomData) return <TeacherLoading classPage error={loadError || error} onRetry={() => void load()} />;
   const room = classroomData.classroom;
   const previewArtwork = selectedArtwork ?? viewingStudent?.sessionArtwork ?? null;
   return <main className="teacher-workspace">

@@ -134,3 +134,21 @@ test("작품 목록은 다른 교사, 삭제한 학급, 삭제 학생 및 다른
     assert.doesNotMatch(JSON.stringify(body), /김하나|workspace\/real-thumbnail/);
   }
 });
+
+
+test("선생님 화면 첫 불러오기는 뼈대 화면이고, 첫 응답이 실패하면 끝없는 로딩 대신 안내와 행동 버튼을 보인다", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const [app, css] = await Promise.all([
+    readFile(new URL("../app/components/TeacherApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/TeacherWorkspace.css", import.meta.url), "utf8"),
+  ]);
+  // 2026-09-14: 첫 응답이 403이면 authorized가 null로 남아 "수업실을 준비하는 중…" 상자가 안내 없이 끝나지 않았다.
+  assert.doesNotMatch(app, /수업실을 준비하는 중/);
+  assert.match(app, /if \(authorized === null\) return <TeacherLoading classPage=\{Boolean\(classroomId\)\} error=\{loadError\} onRetry=\{\(\) => void load\(\)\} \/>;/);
+  assert.match(app, /if \(!classroomData\) return <TeacherLoading classPage error=\{loadError \|\| error\} onRetry=\{\(\) => void load\(\)\} \/>;/);
+  assert.match(app, /학급을 불러오고 있어요/);
+  assert.match(app, /학급 목록으로/);
+  assert.match(app, /다시 시도/);
+  assert.match(css, /@media \(prefers-reduced-motion:reduce\)\{\.tcw-skel,\.tcw-spinner\{animation:none\}\}/);
+  assert.match(css, /\.tcw-loading\.is-failed \.tcw-skel\{animation:none;/);
+});

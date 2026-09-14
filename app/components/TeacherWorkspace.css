@@ -55,3 +55,25 @@ body:has(.teacher-workspace){background:#fff}
 .tcw-hand{margin-left:6px;font-size:18px;line-height:1}
 .tcw-hand-count{margin-left:10px;color:#8a5a00;font-weight:900}
 .teacher-hand-raised .text-button,.teacher-live-answer .text-button{display:inline-flex;align-items:center;width:auto;min-height:44px;padding:0 8px;text-decoration:underline}
+/* 첫 불러오기 뼈대(2026-09-14, 시안 docs/design-assets/teacher-loading/loading.png) */
+.tcw-skel{display:block;border-radius:6px;background:linear-gradient(100deg,#eceeed 30%,#f6f7f6 50%,#eceeed 70%) 0 0/300% 100%;animation:tcw-shimmer 1.4s ease-in-out infinite}
+@keyframes tcw-shimmer{from{background-position:100% 0}to{background-position:0 0}}
+@media (prefers-reduced-motion:reduce){.tcw-skel,.tcw-spinner{animation:none}}
+/* 불러오기에 실패하면 뼈대는 멈추고 흐리게 둔다 — 계속 반짝이면 아직 불러오는 중으로 읽힌다. */
+.tcw-loading.is-failed .tcw-skel{animation:none;opacity:.55}
+.tcw-skel-title{width:190px;height:32px}
+.tcw-loading .tcw-back{padding-right:25px;border-right:1px solid #bcc5bf}
+.tcw-skel-button{width:122px;height:44px}
+.tcw-loading-tabs{display:flex;gap:18px;align-items:center;height:64px;border-bottom:1px solid var(--tw-line)}
+.tcw-loading-tabs .tcw-skel{width:142px;height:30px}
+.teacher-workspace .tcw-loading-status{display:flex;align-items:center;gap:14px;margin:0;padding:26px 0;border-bottom:1px solid var(--tw-line);color:var(--tw-ink);font-size:17px;font-weight:500}
+.tcw-spinner{width:26px;height:26px;border:3px solid #d7e3dc;border-top-color:var(--tw-green);border-radius:50%;animation:tcw-spin .9s linear infinite;flex-shrink:0}
+@keyframes tcw-spin{to{transform:rotate(360deg)}}
+.teacher-workspace .tcw-loading-status.is-error{justify-content:space-between;flex-wrap:wrap;color:#8a2f22;font-weight:700}
+.tcw-loading-actions{display:flex;gap:10px;flex-wrap:wrap}
+.teacher-workspace .tcw-loading-actions .tcw-link-button{text-decoration:none}
+.teacher-workspace .tcw-loading-heading{font-size:25px;font-weight:650;padding:22px 0 18px;color:var(--tw-ink)}
+.tcw-skel-card{aspect-ratio:1.44;width:100%;border-radius:8px}
+.tcw-skel-caption{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+.tcw-skel-caption .tcw-skel{width:52%;height:22px}
+.tcw-skel-caption .tcw-skel-pill{width:20%;height:24px;border-radius:999px}

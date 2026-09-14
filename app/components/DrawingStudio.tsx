@@ -449,6 +449,10 @@ const OPS_WARN_THRESHOLD = MAX_DOCUMENT_OPS - 200;
 const DOCUMENT_BYTES_WARN = MAX_DOCUMENT_BYTES - 100_000;
 const AUTOSAVE_DEBOUNCE_MS = 1500;
 const AUTOSAVE_MAX_WAIT_MS = 6000;
+// 선생님이 보고 있는 동안(2026-09-14 사용자 결정): 선생님 실시간 보기가 덜 늦도록 짧게 저장한다.
+// 보지 않을 때는 위 값 그대로라 평소 저장 요청은 늘지 않는다.
+const WATCHED_AUTOSAVE_DEBOUNCE_MS = 500;
+const WATCHED_AUTOSAVE_MAX_WAIT_MS = 2000;
 
 function documentTooLarge(document: DrawDocument) {
   // 한 획도 더 담을 수 없으면 이미 가득 찬 것이다. 여유를 남기지 않으면 pointerDown이
@@ -544,6 +548,8 @@ export function DrawingStudio() {
   const markRef = useRef<HTMLCanvasElement>(null);
   const answeredMarkIds = useRef(new Set<string>());
   const pollFastRef = useRef(false);
+  // 자동 저장 간격만 바꾸면 되므로 ref로 읽는다. 저장 효과의 의존성에 넣으면 보기 시작·끝마다 바뀐 것 없는 저장이 한 번 더 나간다.
+  const teacherViewingRef = useRef(false);
   const [conflictRevision, setConflictRevision] = useState<number | null>(null);
   const [conflictDraft, setConflictDraft] = useState<QueuedArtworkDraft | null>(null);
   const [grimiOpen, setGrimiOpen] = useState(false);
@@ -985,6 +991,7 @@ export function DrawingStudio() {
         };
         setTeacherMessages(data.messages ?? []);
         setTeacherViewing(Boolean(data.teacherViewing));
+        teacherViewingRef.current = Boolean(data.teacherViewing);
         // 방금 답한 표시가 늦게 온 응답으로 다시 뜨지 않게 거른다.
         const mark = data.teacherMark && !answeredMarkIds.current.has(data.teacherMark.id) ? data.teacherMark : null;
         setTeacherMark(mark);
@@ -1232,7 +1239,10 @@ export function DrawingStudio() {
     // 최초 미저장 편집 시각부터 최대 대기 시간을 두어 상한을 강제한다.
     if (!pendingSinceRef.current) pendingSinceRef.current = Date.now();
     const waited = Date.now() - pendingSinceRef.current;
-    const delay = Math.max(0, Math.min(AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_MAX_WAIT_MS - waited));
+    const watched = teacherViewingRef.current;
+    const debounce = watched ? WATCHED_AUTOSAVE_DEBOUNCE_MS : AUTOSAVE_DEBOUNCE_MS;
+    const maxWait = watched ? WATCHED_AUTOSAVE_MAX_WAIT_MS : AUTOSAVE_MAX_WAIT_MS;
+    const delay = Math.max(0, Math.min(debounce, maxWait - waited));
     saveTimer.current = window.setTimeout(() => {
       pendingSinceRef.current = 0;
       void save(documentState, { currentStep: artwork.currentStep });

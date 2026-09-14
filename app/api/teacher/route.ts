@@ -113,17 +113,21 @@ async function classroomArtworkArchive(url: URL, teacherId: string, classroomId:
 /* 선생님 미리보기의 거의 실시간 보기(2026-09-14). 썸네일(256px)이 아니라 그림 문서 자체를 내려
  * 선생님 화면이 같은 렌더러로 원본 크기로 다시 그린다. 미리보기가 열린 동안에만 3초마다 부른다.
  * 가장 최근 작품과, 그 작품에 보낸 가장 최근 표시(답 포함)를 함께 준다. */
-async function liveStudentView(teacherId: string, classroomId: string, studentId: string) {
+async function liveStudentView(teacherId: string, classroomId: string, studentId: string, known: { artworkId: string; revision: number | null }) {
   const db = bindings().DB;
-  const artwork = await db.prepare(`SELECT a.id, a.title, a.status, a.revision, a.updated_at AS updatedAt, a.ops_json AS opsJson FROM artworks a JOIN student_profiles s ON s.id = a.student_id JOIN classrooms c ON c.id = s.classroom_id WHERE s.id = ? AND s.classroom_id = ? AND s.archived_at IS NULL AND a.classroom_id = s.classroom_id AND c.teacher_id = ? AND c.active = 1 ORDER BY a.updated_at DESC, a.id DESC LIMIT 1`).bind(studentId, classroomId, teacherId).first<{ id: string; title: string; status: string; revision: number; updatedAt: string; opsJson: string }>();
+  const artwork = await db.prepare(`SELECT a.id, a.title, a.status, a.revision, a.updated_at AS updatedAt FROM artworks a JOIN student_profiles s ON s.id = a.student_id JOIN classrooms c ON c.id = s.classroom_id WHERE s.id = ? AND s.classroom_id = ? AND s.archived_at IS NULL AND a.classroom_id = s.classroom_id AND c.teacher_id = ? AND c.active = 1 ORDER BY a.updated_at DESC, a.id DESC LIMIT 1`).bind(studentId, classroomId, teacherId).first<{ id: string; title: string; status: string; revision: number; updatedAt: string }>();
   if (!artwork) {
     const student = await db.prepare(`SELECT 1 FROM student_profiles s JOIN classrooms c ON c.id = s.classroom_id WHERE s.id = ? AND s.classroom_id = ? AND s.archived_at IS NULL AND c.teacher_id = ? AND c.active = 1`).bind(studentId, classroomId, teacherId).first();
     return student ? noStoreJson({ artwork: null, mark: null }) : jsonError("이 학급의 학생 기록을 찾을 수 없어요.", 404);
   }
-  const mark = await db.prepare(`SELECT id, strokes_json AS strokesJson, note, answer, answered_at AS answeredAt, created_at AS createdAt FROM teacher_marks WHERE student_id = ? AND artwork_id = ? ORDER BY created_at DESC, id DESC LIMIT 1`).bind(studentId, artwork.id).first<{ id: string; strokesJson: string; note: string; answer: string | null; answeredAt: string | null; createdAt: string }>();
-  const { opsJson, ...rest } = artwork;
+  // 선생님 화면은 1초마다 부른다. 이미 가진 저장 번호와 같으면 그림 문서(최대 1.25MB)를 다시 읽거나 보내지 않는다.
+  const unchanged = known.artworkId === artwork.id && known.revision === artwork.revision;
+  const [opsRow, mark] = await Promise.all([
+    unchanged ? Promise.resolve(null) : db.prepare(`SELECT ops_json AS opsJson FROM artworks WHERE id = ?`).bind(artwork.id).first<{ opsJson: string }>(),
+    db.prepare(`SELECT id, strokes_json AS strokesJson, note, answer, answered_at AS answeredAt, created_at AS createdAt FROM teacher_marks WHERE student_id = ? AND artwork_id = ? ORDER BY created_at DESC, id DESC LIMIT 1`).bind(studentId, artwork.id).first<{ id: string; strokesJson: string; note: string; answer: string | null; answeredAt: string | null; createdAt: string }>(),
+  ]);
   return noStoreJson({
-    artwork: { ...rest, document: JSON.parse(opsJson) },
+    artwork: { ...artwork, document: opsRow ? JSON.parse(opsRow.opsJson) : null, unchanged },
     mark: mark ? { id: mark.id, strokes: JSON.parse(mark.strokesJson), note: mark.note, answer: mark.answer, answeredAt: mark.answeredAt, createdAt: mark.createdAt } : null,
   });
 }
@@ -143,7 +147,10 @@ export async function GET(request: Request) {
   if (!classroom) return jsonError("이 학급을 볼 권한이 없어요.", 403);
   if (url.searchParams.get("artworks") === "1") return classroomArtworkArchive(url, teacher.id, classroomId);
   const liveStudentId = cleanText(url.searchParams.get("liveStudentId"), 40);
-  if (liveStudentId) return liveStudentView(teacher.id, classroomId, liveStudentId);
+  if (liveStudentId) {
+    const knownRevision = Number.parseInt(url.searchParams.get("knownRevision") ?? "", 10);
+    return liveStudentView(teacher.id, classroomId, liveStudentId, { artworkId: cleanText(url.searchParams.get("knownArtworkId"), 80), revision: Number.isInteger(knownRevision) ? knownRevision : null });
+  }
   const historyStudentId = cleanText(url.searchParams.get("studentId"), 40);
   if (historyStudentId) {
     const ownedStudent = await db.prepare(`SELECT s.id, s.nickname, s.animal FROM student_profiles s JOIN classrooms c ON c.id = s.classroom_id WHERE s.id = ? AND s.classroom_id = ? AND s.archived_at IS NULL AND c.teacher_id = ? AND c.active = 1`).bind(historyStudentId, classroomId, teacher.id).first<{ id: string; nickname: string; animal: string }>();

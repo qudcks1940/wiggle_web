@@ -93,6 +93,18 @@ test("담임만 그리는 중인 그림에 표시를 보내고, 아이 화면에
   assert.equal(livePayload.mark.id, second.markId);
   assert.equal(livePayload.mark.answer, null);
   assert.equal((await live(server, other)).status, 403, "다른 교사는 볼 수 없음");
+  // 1초마다 부르므로, 이미 가진 저장 번호와 같으면 그림 문서를 빼고 보낸다(2026-09-14).
+  const knownRevision = livePayload.artwork.revision;
+  const same = await (await server.fetch(`/api/teacher?classroomId=c_marks&liveStudentId=s_one&knownArtworkId=a_now&knownRevision=${knownRevision}`, { headers: owner })).json();
+  assert.equal(same.artwork.unchanged, true);
+  assert.equal(same.artwork.document, null);
+  assert.equal(same.mark.id, second.markId, "문서를 빼도 표시 상태는 늘 보낸다");
+  await server.DB.prepare("UPDATE artworks SET revision = revision + 1 WHERE id = 'a_now'").run();
+  const changed = await (await server.fetch(`/api/teacher?classroomId=c_marks&liveStudentId=s_one&knownArtworkId=a_now&knownRevision=${knownRevision}`, { headers: owner })).json();
+  assert.equal(changed.artwork.unchanged, false);
+  assert.equal(changed.artwork.document.ops.length, 1);
+  const otherArtwork = await (await server.fetch(`/api/teacher?classroomId=c_marks&liveStudentId=s_one&knownArtworkId=a_done&knownRevision=${changed.artwork.revision}`, { headers: owner })).json();
+  assert.ok(otherArtwork.artwork.document, "다른 작품 번호를 들고 오면 문서를 보낸다");
 
   // 답: 형식이 틀리면 거절, 다른 아이는 남의 표시에 답하지 못함, 본인은 한 번만 답함
   assert.equal((await studentPost(server, "marks_student_one", { action: "answerMark", markId: second.markId, answer: "maybe" })).status, 400);
@@ -161,4 +173,11 @@ test("화면 연결: 표시는 아이 원본과 따로 된 캔버스이고 저�
   // 표시 그리기는 표시 캔버스에서만 한다. 작품 ops·저장 경로(documentStateRef)에 표시 획을 넣지 않는다.
   assert.doesNotMatch(studio, /documentStateRef\.current[^\n]*teacherMark|teacherMark[^\n]*documentStateRef/);
   assert.match(liveView, /renderDrawDocument\(context, artwork\.document\.ops/);
+  // 선생님이 보는 동안만 자동 저장을 짧게 한다. 보기 여부는 ref로 읽어 보기 시작·끝에 빈 저장이 나가지 않게 한다.
+  assert.match(studio, /const WATCHED_AUTOSAVE_DEBOUNCE_MS = 500;/);
+  assert.match(studio, /const WATCHED_AUTOSAVE_MAX_WAIT_MS = 2000;/);
+  assert.match(studio, /const AUTOSAVE_DEBOUNCE_MS = 1500;\nconst AUTOSAVE_MAX_WAIT_MS = 6000;/);
+  assert.match(studio, /const watched = teacherViewingRef\.current;/);
+  assert.doesNotMatch(studio, /\}, \[artwork, conflictDraft, documentState, editVersion, save, teacherViewing\]\);/);
+  assert.match(liveView, /\}, 1000\);/);
 });

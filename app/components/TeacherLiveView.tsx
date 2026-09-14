@@ -13,7 +13,8 @@ type LiveMark = { id: string; strokes: MarkStroke[]; note: string; answer: MarkA
  *
  * 아이 그림은 문서(ops)를 받아 아이 도화지와 같은 렌더러로 원본 크기로 다시 그린다 — 256px 썸네일보다 선명하다.
  * 표시는 그 위 따로 된 캔버스에 그린다. 보내면 아이 도화지의 따로 된 층에 뜨고, 아이 그림에는 섞이지 않는다.
- * 미리보기가 열린 동안에만 3초마다 부른다. 아이 쪽 자동 저장(멈춘 뒤 1.5초, 길어도 6초)만큼 늦을 수 있다.
+ * 미리보기가 열린 동안에만 1초마다 부른다. 선생님이 보는 동안 아이 쪽은 멈춘 뒤 0.5초, 길어도 2초마다 저장한다
+ * (2026-09-14 사용자 결정). 이미 가진 저장 번호를 함께 보내 그림이 그대로면 문서를 다시 받지 않는다.
  */
 export function TeacherLiveView({ classroomId, studentId, nickname, onPost }: {
   classroomId: string;
@@ -33,19 +34,32 @@ export function TeacherLiveView({ classroomId, studentId, nickname, onPost }: {
   const markRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef<MarkStroke | null>(null);
   const renderedKey = useRef("");
+  const knownRef = useRef<LiveArtwork | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch(`/api/teacher?classroomId=${encodeURIComponent(classroomId)}&liveStudentId=${encodeURIComponent(studentId)}`, { cache: "no-store" });
-      const data = await response.json() as { artwork: LiveArtwork | null; mark: LiveMark | null; error?: string };
+      const known = knownRef.current;
+      const knownQuery = known ? `&knownArtworkId=${encodeURIComponent(known.id)}&knownRevision=${known.revision}` : "";
+      const response = await fetch(`/api/teacher?classroomId=${encodeURIComponent(classroomId)}&liveStudentId=${encodeURIComponent(studentId)}${knownQuery}`, { cache: "no-store" });
+      const data = await response.json() as { artwork: (Omit<LiveArtwork, "document"> & { document: DrawDocument | null; unchanged?: boolean }) | null; mark: LiveMark | null; error?: string };
       if (!response.ok) throw new Error(data.error ?? "그림을 불러오지 못했어요.");
-      setArtwork(data.artwork); setMark(data.mark); setLoaded(true);
+      const incoming = data.artwork;
+      // 그림이 그대로면 서버가 문서를 빼고 보낸다 — 가진 문서를 이어 쓴다.
+      const next = !incoming ? null : incoming.document ? { ...incoming, document: incoming.document } : known && known.id === incoming.id ? { ...incoming, document: known.document } : null;
+      if (incoming && !next) { knownRef.current = null; return; }
+      if (!next || !known || next.id !== known.id || next.revision !== known.revision || next.status !== known.status) { knownRef.current = next; setArtwork(next); }
+      setMark(data.mark); setLoaded(true);
     } catch { /* 다음 주기에 다시 확인한다. 마지막으로 받은 그림을 그대로 둔다. */ }
   }, [classroomId, studentId]);
 
   useEffect(() => {
     void load();
-    const timer = window.setInterval(() => { if (document.visibilityState !== "hidden") void load(); }, 3000);
+    let busy = false;
+    const timer = window.setInterval(() => {
+      if (busy || document.visibilityState === "hidden") return;
+      busy = true;
+      void load().finally(() => { busy = false; });
+    }, 1000);
     return () => clearInterval(timer);
   }, [load]);
 
@@ -134,7 +148,7 @@ export function TeacherLiveView({ classroomId, studentId, nickname, onPost }: {
       <canvas ref={markRef} className={`teacher-live-marks${canMark ? " can-mark" : ""}`} aria-hidden="true"
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />
     </div>
-    <p className="tcw-preview-caption">{artwork.title} · {artwork.status === "complete" ? "완성" : "그리는 중"} · 3초마다 새로 봐요</p>
+    <p className="tcw-preview-caption">{artwork.title} · {artwork.status === "complete" ? "완성" : "그리는 중"} · 1초마다 새로 봐요</p>
     {canMark ? <div className="teacher-live-tools">
       <p>그림 위에 손가락이나 마우스로 동그라미·화살표를 그려 보내요. 아이 그림에는 섞이지 않고, 아이 도화지 위에 따로 떠요.</p>
       <label className="sr-only" htmlFor="teacher-live-note">표시와 함께 보낼 짧은 말</label>

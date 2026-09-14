@@ -22,6 +22,7 @@ import { TimelapsePlayer } from "./TimelapsePlayer";
 import { useModalDialog } from "./useModalDialog";
 import { ColorPickerDialog } from "./ColorPickerDialog";
 import { StudentMessageCenter, StudentTeacherMessage } from "./StudentMessageCenter";
+import { drawMarkStrokes, type MarkAnswer, type MarkStroke } from "@/lib/teacher-marks";
 
 const PALETTE = ["#1B3A57", "#E53935", "#FB8C00", "#FDD835", "#43A047", "#1E88E5", "#8E24AA", "#8D6E63", "#F06292", "#4DD0E1", "#FFCC80", "#FFFFFF"];
 const CHOICE_DRAWING_SETUP: Record<string, { color?: string; shade?: "base" | "light"; tool: BrushTool; width: StrokeWidth; feedback: string }> = {
@@ -536,6 +537,13 @@ export function DrawingStudio() {
   // 닫은 메시지 id를 기억하고, 새 메시지가 오면 다시 보여 준다.
   const [teacherMessages, setTeacherMessages] = useState<StudentTeacherMessage[]>([]);
   const [teacherViewing, setTeacherViewing] = useState(false);
+  // 선생님 표시(아이 원본과 따로 된 층)와 손들기(2026-09-14). 표시는 작품 ops에 넣지 않는다.
+  const [teacherMark, setTeacherMark] = useState<{ id: string; artworkId: string; strokes: MarkStroke[]; note: string } | null>(null);
+  const [handRaised, setHandRaised] = useState(false);
+  const [handBusy, setHandBusy] = useState(false);
+  const markRef = useRef<HTMLCanvasElement>(null);
+  const answeredMarkIds = useRef(new Set<string>());
+  const pollFastRef = useRef(false);
   const [conflictRevision, setConflictRevision] = useState<number | null>(null);
   const [conflictDraft, setConflictDraft] = useState<QueuedArtworkDraft | null>(null);
   const [grimiOpen, setGrimiOpen] = useState(false);
@@ -932,6 +940,36 @@ export function DrawingStudio() {
       guideAnimationRef.current = null;
     };
   }, [currentGuideTraces, guideDemoRun, guidePhase, markCurrentGuideSeen]);
+  const visibleMark = teacherMark && teacherMark.artworkId === artwork?.id ? teacherMark : null;
+  const markDocHeight = documentHeight(documentState);
+  useEffect(() => {
+    const canvas = markRef.current;
+    if (!canvas) return;
+    if (canvas.width !== DOCUMENT_SIZE) canvas.width = DOCUMENT_SIZE;
+    if (canvas.height !== markDocHeight) canvas.height = markDocHeight;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (visibleMark) drawMarkStrokes(context, visibleMark.strokes, DOCUMENT_SIZE, markDocHeight);
+  }, [visibleMark, markDocHeight]);
+  async function answerTeacherMark(answer: MarkAnswer) {
+    if (!visibleMark) return;
+    answeredMarkIds.current.add(visibleMark.id);
+    const markId = visibleMark.id;
+    setTeacherMark(null);
+    await studentFetch("/api/student", { method: "POST", body: JSON.stringify({ action: "answerMark", markId, answer }) }).catch(() => undefined);
+  }
+  async function toggleHand() {
+    if (handBusy) return;
+    const next = !handRaised;
+    setHandBusy(true); setHandRaised(next);
+    try {
+      const response = await studentFetch("/api/student", { method: "POST", body: JSON.stringify({ action: "raiseHand", raised: next }) });
+      if (!response.ok) setHandRaised(!next);
+      else pollFastRef.current = next || pollFastRef.current;
+    } catch { setHandRaised(!next); }
+    finally { setHandBusy(false); }
+  }
   useEffect(() => {
     let polling = false;
     const poll = async () => {
@@ -942,9 +980,17 @@ export function DrawingStudio() {
         const data = (await response.json()) as {
           messages?: StudentTeacherMessage[];
           teacherViewing?: boolean;
+          teacherMark?: { id: string; artworkId: string; strokes: MarkStroke[]; note: string } | null;
+          handRaised?: boolean;
         };
         setTeacherMessages(data.messages ?? []);
         setTeacherViewing(Boolean(data.teacherViewing));
+        // 방금 답한 표시가 늦게 온 응답으로 다시 뜨지 않게 거른다.
+        const mark = data.teacherMark && !answeredMarkIds.current.has(data.teacherMark.id) ? data.teacherMark : null;
+        setTeacherMark(mark);
+        setHandRaised(Boolean(data.handRaised));
+        // 선생님이 보고 있거나 손을 든 동안은 표시가 빨리 닿도록 3초마다, 평소에는 8초마다 확인한다.
+        pollFastRef.current = Boolean(data.teacherViewing || data.handRaised || mark);
       } catch {
         /* 다음 주기에 다시 확인한다 */
       } finally {
@@ -952,7 +998,11 @@ export function DrawingStudio() {
       }
     };
     void poll();
-    const timer = window.setInterval(poll, 8000);
+    let tick = 0;
+    const timer = window.setInterval(() => {
+      tick += 1;
+      if (pollFastRef.current ? tick % 3 === 0 : tick % 8 === 0) void poll();
+    }, 1000);
     const visible = () => {
       if (document.visibilityState === "visible") void poll();
     };
@@ -2536,6 +2586,10 @@ export function DrawingStudio() {
           <SparklesIcon size={18} />
           <span className="grimi-button-label">몽그리 부르기</span>
         </button>
+        <button type="button" className={`button ghost compact hand-raise-button${handRaised ? " is-raised" : ""}`} aria-pressed={handRaised} disabled={handBusy} onClick={() => void toggleHand()} aria-label={handRaised ? "선생님 부른 손 내리기" : "선생님 부르기"}>
+          <span aria-hidden="true">🙋</span>
+          <span className="hand-raise-label">{handRaised ? "손 내리기" : "선생님"}</span>
+        </button>
         <StudentMessageCenter messages={teacherMessages} floating compact />
         <button className="button primary compact" disabled={Boolean(conflictDraft)} onClick={requestArtworkCompletion}>
           완성
@@ -2552,7 +2606,17 @@ export function DrawingStudio() {
           <button onClick={saveAsCopy}>새 사본으로 저장</button>
         </div>
       )}
-      {teacherViewing && (
+      {visibleMark && (
+        <div className="teacher-mark-card" role="alert">
+          <b><span aria-hidden="true">✏️</span> 선생님이 표시를 보냈어요</b>
+          {visibleMark.note && <p>{visibleMark.note}</p>}
+          <div className="teacher-mark-answers">
+            <button type="button" className="button primary" onClick={() => void answerTeacherMark("ok")}><span aria-hidden="true">👍</span> 알겠어요</button>
+            <button type="button" className="button secondary" onClick={() => void answerTeacherMark("unsure")}><span aria-hidden="true">🤔</span> 잘 모르겠어요</button>
+          </div>
+        </div>
+      )}
+      {teacherViewing && !visibleMark && (
         <div className="teacher-viewing" role="status">
           선생님이 지금 내 그림을 보고 있어요.
         </div>
@@ -2785,6 +2849,7 @@ export function DrawingStudio() {
               }}
             >
               <canvas ref={guideRef} className={guidePhase !== "independent" && lessonGuideAvailable ? "guide-canvas" : "guide-canvas hidden"} aria-hidden="true" />
+              <canvas ref={markRef} className={visibleMark ? "mark-canvas" : "mark-canvas hidden"} aria-hidden="true" />
               {mirror && <div className="mirror-axis" aria-hidden="true" />}
               {shapeStartPoint && (
                 <div

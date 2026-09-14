@@ -43,6 +43,8 @@ const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS teacher_messages (id TEXT PRIMARY KEY NOT NULL, classroom_id TEXT NOT NULL REFERENCES classrooms(id), student_id TEXT REFERENCES student_profiles(id), teacher_id TEXT NOT NULL REFERENCES teachers(id), body TEXT NOT NULL, reference_url TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS message_receipts (message_id TEXT NOT NULL REFERENCES teacher_messages(id) ON DELETE CASCADE, student_id TEXT NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, seen_at TEXT NOT NULL, PRIMARY KEY(message_id, student_id))`,
   `CREATE TABLE IF NOT EXISTS teacher_views (teacher_id TEXT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE, classroom_id TEXT NOT NULL REFERENCES classrooms(id) ON DELETE CASCADE, student_id TEXT NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, expires_at TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(teacher_id, student_id))`,
+  `CREATE TABLE IF NOT EXISTS teacher_marks (id TEXT PRIMARY KEY NOT NULL, classroom_id TEXT NOT NULL REFERENCES classrooms(id) ON DELETE CASCADE, student_id TEXT NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, teacher_id TEXT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE, artwork_id TEXT NOT NULL REFERENCES artworks(id) ON DELETE CASCADE, strokes_json TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', answer TEXT, answered_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS hand_raises (student_id TEXT PRIMARY KEY NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, classroom_id TEXT NOT NULL REFERENCES classrooms(id) ON DELETE CASCADE, raised_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS teacher_coaching_drafts (id TEXT PRIMARY KEY NOT NULL, teacher_id TEXT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE, classroom_id TEXT NOT NULL REFERENCES classrooms(id) ON DELETE CASCADE, student_id TEXT NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, artwork_id TEXT NOT NULL REFERENCES artworks(id) ON DELETE CASCADE, body TEXT NOT NULL, observation TEXT NOT NULL, next_action TEXT NOT NULL, model TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'draft', approved_message_id TEXT REFERENCES teacher_messages(id), approved_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS rate_limits (key TEXT PRIMARY KEY NOT NULL, count INTEGER NOT NULL, window_ends_at TEXT NOT NULL)`,
   // 만료 행 청소가 전체 스캔이 되지 않게 한다. 키에 외부 입력이 섞이는 지점이 있어 행 수가 커질 수 있다.
@@ -71,6 +73,8 @@ const schemaStatements = [
   `CREATE INDEX IF NOT EXISTS messages_classroom_idx ON teacher_messages(classroom_id, created_at)`,
   `CREATE INDEX IF NOT EXISTS message_receipts_student_idx ON message_receipts(student_id, seen_at)`,
   `CREATE INDEX IF NOT EXISTS teacher_views_student_idx ON teacher_views(student_id, expires_at)`,
+  `CREATE INDEX IF NOT EXISTS teacher_marks_student_idx ON teacher_marks(student_id, answered_at, created_at)`,
+  `CREATE INDEX IF NOT EXISTS hand_raises_classroom_idx ON hand_raises(classroom_id, raised_at)`,
   `CREATE INDEX IF NOT EXISTS teacher_drafts_owner_idx ON teacher_coaching_drafts(teacher_id, classroom_id, created_at)`,
   `CREATE INDEX IF NOT EXISTS teacher_drafts_student_idx ON teacher_coaching_drafts(student_id, created_at)`,
   `CREATE INDEX IF NOT EXISTS family_share_teacher_idx ON family_share_links(teacher_id, created_at)`,

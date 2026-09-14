@@ -9,6 +9,7 @@ import { createFamilyShare, revokeFamilyShare } from "@/lib/family-sharing";
 import { activityLabel, DEFAULT_ACTIVITY_KEY, normalizeActivityKey } from "@/lib/lesson-content";
 import { nicknameKeySql } from "@/lib/nickname";
 import { rotateClassroomEntry, updateClassroomAdmission, upsertTeacherView } from "@/lib/teacher-classroom-mutations";
+import { HAND_RAISE_TTL_MS, MARK_NOTE_MAX, validateMarkStrokes } from "@/lib/teacher-marks";
 
 type ClassroomRow = { id: string; displayName: string; classCode: string; joinToken: string; admissionOpen: number; currentActivity: string; studentCount: number; updatedAt: string };
 
@@ -109,6 +110,24 @@ async function classroomArtworkArchive(url: URL, teacherId: string, classroomId:
   return noStoreJson({ artworks, total: Number(total?.count ?? 0), hasMore, nextCursor: hasMore && last ? Buffer.from(JSON.stringify([last.updatedAt, last.id])).toString("base64url") : null });
 }
 
+/* 선생님 미리보기의 거의 실시간 보기(2026-09-14). 썸네일(256px)이 아니라 그림 문서 자체를 내려
+ * 선생님 화면이 같은 렌더러로 원본 크기로 다시 그린다. 미리보기가 열린 동안에만 3초마다 부른다.
+ * 가장 최근 작품과, 그 작품에 보낸 가장 최근 표시(답 포함)를 함께 준다. */
+async function liveStudentView(teacherId: string, classroomId: string, studentId: string) {
+  const db = bindings().DB;
+  const artwork = await db.prepare(`SELECT a.id, a.title, a.status, a.revision, a.updated_at AS updatedAt, a.ops_json AS opsJson FROM artworks a JOIN student_profiles s ON s.id = a.student_id JOIN classrooms c ON c.id = s.classroom_id WHERE s.id = ? AND s.classroom_id = ? AND s.archived_at IS NULL AND a.classroom_id = s.classroom_id AND c.teacher_id = ? AND c.active = 1 ORDER BY a.updated_at DESC, a.id DESC LIMIT 1`).bind(studentId, classroomId, teacherId).first<{ id: string; title: string; status: string; revision: number; updatedAt: string; opsJson: string }>();
+  if (!artwork) {
+    const student = await db.prepare(`SELECT 1 FROM student_profiles s JOIN classrooms c ON c.id = s.classroom_id WHERE s.id = ? AND s.classroom_id = ? AND s.archived_at IS NULL AND c.teacher_id = ? AND c.active = 1`).bind(studentId, classroomId, teacherId).first();
+    return student ? noStoreJson({ artwork: null, mark: null }) : jsonError("이 학급의 학생 기록을 찾을 수 없어요.", 404);
+  }
+  const mark = await db.prepare(`SELECT id, strokes_json AS strokesJson, note, answer, answered_at AS answeredAt, created_at AS createdAt FROM teacher_marks WHERE student_id = ? AND artwork_id = ? ORDER BY created_at DESC, id DESC LIMIT 1`).bind(studentId, artwork.id).first<{ id: string; strokesJson: string; note: string; answer: string | null; answeredAt: string | null; createdAt: string }>();
+  const { opsJson, ...rest } = artwork;
+  return noStoreJson({
+    artwork: { ...rest, document: JSON.parse(opsJson) },
+    mark: mark ? { id: mark.id, strokes: JSON.parse(mark.strokesJson), note: mark.note, answer: mark.answer, answeredAt: mark.answeredAt, createdAt: mark.createdAt } : null,
+  });
+}
+
 export async function GET(request: Request) {
   const teacher = await requireTeacher() ?? await localAutoTeacher(request);
   if (!teacher) return noStoreJson({ error: "교사 로그인이 필요해요.", localDemo: isLocalDemoRequest(request) }, { status: 401 });
@@ -123,6 +142,8 @@ export async function GET(request: Request) {
   const classroom = await ownedClassroom(teacher.id, classroomId);
   if (!classroom) return jsonError("이 학급을 볼 권한이 없어요.", 403);
   if (url.searchParams.get("artworks") === "1") return classroomArtworkArchive(url, teacher.id, classroomId);
+  const liveStudentId = cleanText(url.searchParams.get("liveStudentId"), 40);
+  if (liveStudentId) return liveStudentView(teacher.id, classroomId, liveStudentId);
   const historyStudentId = cleanText(url.searchParams.get("studentId"), 40);
   if (historyStudentId) {
     const ownedStudent = await db.prepare(`SELECT s.id, s.nickname, s.animal FROM student_profiles s JOIN classrooms c ON c.id = s.classroom_id WHERE s.id = ? AND s.classroom_id = ? AND s.archived_at IS NULL AND c.teacher_id = ? AND c.active = 1`).bind(historyStudentId, classroomId, teacher.id).first<{ id: string; nickname: string; animal: string }>();
@@ -134,8 +155,8 @@ export async function GET(request: Request) {
     const artworks = await Promise.all(page.map(async ({ imageKey, ...artwork }) => ({ ...artwork, thumbnail: await toDataUrl(imageKey) })));
     return noStoreJson({ student: ownedStudent, artworks, hasMore: rows.results.length > pageSize, nextOffset: offset + page.length });
   }
-  type StudentRow = { id: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null; entryCode: string | null; claimedAt: string | null; createdAt: string; lastActivityAt: string; artworkId: string | null; artworkTitle: string | null; status: string | null; currentStep: number | null; revision: number | null; thumbnailKey: string | null; artworkUpdatedAt: string | null; completedArtworkId: string | null; artworkCount: number; drawingArtworkCount: number; completedArtworkCount: number; duplicateNicknameCount: number };
-  const students = await db.prepare(`SELECT s.id, s.nickname, s.animal, s.seat_number AS seatNumber, s.real_name AS realName, s.entry_code AS entryCode, s.claimed_at AS claimedAt, s.created_at AS createdAt, s.last_activity_at AS lastActivityAt, a.id AS artworkId, a.title AS artworkTitle, a.status, a.current_step AS currentStep, a.revision, a.thumbnail_key AS thumbnailKey, a.updated_at AS artworkUpdatedAt, (SELECT a3.id FROM artworks a3 WHERE a3.student_id = s.id AND a3.classroom_id = s.classroom_id AND a3.status = 'complete' AND a3.final_image_key IS NOT NULL ORDER BY a3.completed_at DESC, a3.id DESC LIMIT 1) AS completedArtworkId, (SELECT COUNT(*) FROM artworks ac WHERE ac.student_id = s.id AND ac.classroom_id = s.classroom_id) AS artworkCount, (SELECT COUNT(*) FROM artworks ad WHERE ad.student_id = s.id AND ad.classroom_id = s.classroom_id AND ad.status = 'drawing') AS drawingArtworkCount, (SELECT COUNT(*) FROM artworks af WHERE af.student_id = s.id AND af.classroom_id = s.classroom_id AND af.status = 'complete') AS completedArtworkCount, (SELECT COUNT(*) FROM student_profiles sd WHERE sd.classroom_id = s.classroom_id AND sd.archived_at IS NULL AND ${nicknameKeySql("sd.nickname")} = ${nicknameKeySql("s.nickname")} COLLATE NOCASE) AS duplicateNicknameCount FROM student_profiles s LEFT JOIN artworks a ON a.id = (SELECT a2.id FROM artworks a2 WHERE a2.student_id = s.id ORDER BY a2.updated_at DESC LIMIT 1) WHERE s.classroom_id = ? AND s.archived_at IS NULL ORDER BY s.seat_number IS NULL, s.seat_number, s.nickname COLLATE NOCASE, s.id`).bind(classroomId).all<StudentRow>();
+  type StudentRow = { id: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null; entryCode: string | null; claimedAt: string | null; createdAt: string; lastActivityAt: string; artworkId: string | null; artworkTitle: string | null; status: string | null; currentStep: number | null; revision: number | null; thumbnailKey: string | null; handRaisedAt: string | null; artworkUpdatedAt: string | null; completedArtworkId: string | null; artworkCount: number; drawingArtworkCount: number; completedArtworkCount: number; duplicateNicknameCount: number };
+  const students = await db.prepare(`SELECT s.id, s.nickname, s.animal, s.seat_number AS seatNumber, s.real_name AS realName, s.entry_code AS entryCode, s.claimed_at AS claimedAt, s.created_at AS createdAt, s.last_activity_at AS lastActivityAt, a.id AS artworkId, a.title AS artworkTitle, a.status, a.current_step AS currentStep, a.revision, a.thumbnail_key AS thumbnailKey, a.updated_at AS artworkUpdatedAt, (SELECT a3.id FROM artworks a3 WHERE a3.student_id = s.id AND a3.classroom_id = s.classroom_id AND a3.status = 'complete' AND a3.final_image_key IS NOT NULL ORDER BY a3.completed_at DESC, a3.id DESC LIMIT 1) AS completedArtworkId, (SELECT COUNT(*) FROM artworks ac WHERE ac.student_id = s.id AND ac.classroom_id = s.classroom_id) AS artworkCount, (SELECT COUNT(*) FROM artworks ad WHERE ad.student_id = s.id AND ad.classroom_id = s.classroom_id AND ad.status = 'drawing') AS drawingArtworkCount, (SELECT COUNT(*) FROM artworks af WHERE af.student_id = s.id AND af.classroom_id = s.classroom_id AND af.status = 'complete') AS completedArtworkCount, (SELECT COUNT(*) FROM student_profiles sd WHERE sd.classroom_id = s.classroom_id AND sd.archived_at IS NULL AND ${nicknameKeySql("sd.nickname")} = ${nicknameKeySql("s.nickname")} COLLATE NOCASE) AS duplicateNicknameCount, h.raised_at AS handRaisedAt FROM student_profiles s LEFT JOIN hand_raises h ON h.student_id = s.id AND h.raised_at > ? LEFT JOIN artworks a ON a.id = (SELECT a2.id FROM artworks a2 WHERE a2.student_id = s.id ORDER BY a2.updated_at DESC LIMIT 1) WHERE s.classroom_id = ? AND s.archived_at IS NULL ORDER BY s.seat_number IS NULL, s.seat_number, s.nickname COLLATE NOCASE, s.id`).bind(new Date(Date.now() - HAND_RAISE_TTL_MS).toISOString(), classroomId).all<StudentRow>();
   // 회차 개념이 사라져(2026-09-12) 오늘 수업은 학생별 **최근 그림**을 보여 준다.
   const thumbnailCache = new Map<string, Promise<string | null>>();
   const thumbnailFor = (key: string | null) => {
@@ -259,6 +280,7 @@ export async function POST(request: Request) {
       db.prepare(`UPDATE device_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE revoked_at IS NULL AND student_id IN (SELECT id FROM student_profiles WHERE classroom_id = ?)`).bind(classroomId),
       db.prepare(`UPDATE family_share_links SET revoked_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE revoked_at IS NULL AND teacher_id = ? AND student_id IN (SELECT id FROM student_profiles WHERE classroom_id = ?)`).bind(teacher.id, classroomId),
       db.prepare(`DELETE FROM teacher_views WHERE classroom_id = ?`).bind(classroomId),
+      db.prepare(`DELETE FROM hand_raises WHERE classroom_id = ?`).bind(classroomId),
     ]);
     return noStoreJson({ deleted: Boolean(results[0]?.meta.changes), classroomId });
   }
@@ -298,6 +320,7 @@ export async function POST(request: Request) {
       db.prepare(`UPDATE device_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE student_id = ? AND revoked_at IS NULL AND EXISTS (SELECT 1 FROM student_profiles s JOIN classrooms c ON c.id = s.classroom_id WHERE s.id = ? AND s.classroom_id = ? AND s.archived_at IS NOT NULL AND c.teacher_id = ? AND c.active = 1)`).bind(studentId, studentId, classroomId, teacher.id),
       db.prepare(`UPDATE family_share_links SET revoked_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE student_id = ? AND teacher_id = ? AND revoked_at IS NULL AND EXISTS (SELECT 1 FROM student_profiles s WHERE s.id = ? AND s.classroom_id = ? AND s.archived_at IS NOT NULL)`).bind(studentId, teacher.id, studentId, classroomId),
       db.prepare(`DELETE FROM teacher_views WHERE student_id = ? AND classroom_id = ? AND teacher_id = ?`).bind(studentId, classroomId, teacher.id),
+      db.prepare(`DELETE FROM hand_raises WHERE student_id = ? AND classroom_id = ?`).bind(studentId, classroomId),
     ]);
     if (!results[0]?.meta.changes) return jsonError("삭제할 학생을 찾지 못했어요.", 404);
     return noStoreJson({ archived: true, studentId });
@@ -327,6 +350,8 @@ export async function POST(request: Request) {
     if (!validated.ok) return jsonError(validated.reason === "student_forbidden" ? "이 학급 학생이 아니에요." : "이 학급을 바꿀 권한이 없어요.", 403);
     const inserted = await prepareTeacherMessageInsert(db, validated.target).run();
     if (!inserted.meta.changes) return jsonError("메시지 대상을 다시 확인해 주세요.", 403);
+    // 한 아이에게 말을 건넸으면 그 아이의 든 손에 답한 것이다.
+    if (studentId) await db.prepare(`DELETE FROM hand_raises WHERE student_id = ? AND classroom_id = ?`).bind(studentId, classroomId).run();
     return noStoreJson({ messageId: validated.target.messageId }, { status: 201 });
   }
   if (action === "toggleAdmission") {
@@ -349,6 +374,37 @@ export async function POST(request: Request) {
     const viewed = await upsertTeacherView(db, { teacherId: teacher.id, classroomId, studentId, expiresAt });
     if (!viewed) return jsonError("활성 학급의 학생을 다시 확인해 주세요.", 403);
     return noStoreJson({ viewing: true, expiresAt });
+  }
+  if (action === "sendMark") {
+    // 선생님 표시: 그리는 중인 그림에만 보낸다. 아이 원본 ops는 건드리지 않는다.
+    const studentId = cleanText(payload.studentId, 40);
+    const artworkId = cleanText(payload.artworkId, 80);
+    const strokes = validateMarkStrokes(payload.strokes);
+    if (!strokes) return jsonError("표시를 다시 그려 주세요.");
+    const note = cleanText(payload.note, MARK_NOTE_MAX);
+    const target = await db.prepare(`SELECT a.status FROM artworks a JOIN student_profiles s ON s.id = a.student_id JOIN classrooms c ON c.id = s.classroom_id WHERE a.id = ? AND s.id = ? AND s.classroom_id = ? AND a.classroom_id = s.classroom_id AND s.archived_at IS NULL AND c.teacher_id = ? AND c.active = 1`).bind(artworkId, studentId, classroomId, teacher.id).first<{ status: string }>();
+    if (!target) return jsonError("이 학급 학생의 그림이 아니에요.", 403);
+    if (target.status === "complete") return jsonError("완성한 그림에는 표시를 보낼 수 없어요.", 409);
+    const markId = id("mark");
+    const now = new Date().toISOString();
+    // 아이 화면에는 한 번에 표시 하나만 뜬다. 답하지 않은 옛 표시는 새 표시로 바뀐 것으로 닫는다.
+    await db.batch([
+      db.prepare(`UPDATE teacher_marks SET answer = 'replaced', answered_at = ? WHERE student_id = ? AND answered_at IS NULL`).bind(now, studentId),
+      db.prepare(`INSERT INTO teacher_marks(id, classroom_id, student_id, teacher_id, artwork_id, strokes_json, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).bind(markId, classroomId, studentId, teacher.id, artworkId, JSON.stringify(strokes), note, now),
+      // 표시를 보냈으면 선생님이 손든 아이에게 답한 것이다.
+      db.prepare(`DELETE FROM hand_raises WHERE student_id = ? AND classroom_id = ?`).bind(studentId, classroomId),
+    ]);
+    return noStoreJson({ markId, createdAt: now }, { status: 201 });
+  }
+  if (action === "clearMark") {
+    const studentId = cleanText(payload.studentId, 40);
+    await db.prepare(`UPDATE teacher_marks SET answer = 'cleared', answered_at = ? WHERE student_id = ? AND classroom_id = ? AND answered_at IS NULL`).bind(new Date().toISOString(), studentId, classroomId).run();
+    return noStoreJson({ cleared: true });
+  }
+  if (action === "lowerHand") {
+    const studentId = cleanText(payload.studentId, 40);
+    await db.prepare(`DELETE FROM hand_raises WHERE student_id = ? AND classroom_id = ?`).bind(studentId, classroomId).run();
+    return noStoreJson({ lowered: true });
   }
   if (action === "rotateEntryCode") {
     // 코드 종이가 새어 나갔거나 잃어버렸을 때 교사가 그 아이 코드만 새로 뽑는다. 그림·별명은 그대로다.

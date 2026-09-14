@@ -3,6 +3,7 @@ import { cleanText, clientIp, isLocalDemoRequest, jsonError, noStoreJson, random
 import { FALLBACK_NICKNAME, NICKNAME_IDEAS } from "@/lib/nickname-ideas";
 import { activityLabel, normalizeActivityKey } from "@/lib/lesson-content";
 import { ensureLocalStorybookStudent } from "@/lib/dev-only/demo-seed";
+import { HAND_RAISE_TTL_MS, isMarkAnswer } from "@/lib/teacher-marks";
 
 async function prepareDeviceSession() {
   const token = randomToken(32); const now = new Date();
@@ -45,13 +46,16 @@ export async function GET(request: Request) {
   // 학생 홈은 12초마다 이 응답을 다시 부른다. 서로 의존하지 않는 조회를 순서대로 await 하면
   // D1 왕복이 그대로 쌓이므로 한 번에 보내고, 현재 활동 작품만 학급 활동을 읽은 뒤 이어서 조회한다.
   const now = new Date().toISOString();
-  const [artworkRows, classroom, latestUnfinishedArtwork, artworkTotalRow, messages, teacherView] = await Promise.all([
+  const [artworkRows, classroom, latestUnfinishedArtwork, artworkTotalRow, messages, teacherView, markRow, handRow] = await Promise.all([
     db.prepare(`SELECT id, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, revision, CASE WHEN thumbnail_key IS NOT NULL OR final_image_key IS NOT NULL THEN 1 ELSE 0 END AS hasImage, updated_at AS updatedAt, completed_at AS completedAt FROM artworks WHERE student_id = ? ORDER BY updated_at DESC, id DESC LIMIT ? OFFSET ?`).bind(student.id, artworkPageSize + 1, artworkOffset).all(),
     db.prepare(`SELECT current_activity AS currentActivity FROM classrooms WHERE id = ?`).bind(student.classroomId).first<{ currentActivity: string }>(),
     db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND status <> 'complete' ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id).first(),
     db.prepare(`SELECT COUNT(*) AS count FROM artworks WHERE student_id = ?`).bind(student.id).first<{ count: number }>(),
     db.prepare(`SELECT id, body, createdAt, audience, seenAt FROM (SELECT m.id, m.body, m.created_at AS createdAt, CASE WHEN m.student_id IS NULL THEN 'all' ELSE 'student' END AS audience, r.seen_at AS seenAt FROM teacher_messages m LEFT JOIN message_receipts r ON r.message_id = m.id AND r.student_id = ? WHERE m.classroom_id = ? AND (m.student_id IS NULL OR m.student_id = ?) ORDER BY m.created_at DESC, m.id DESC LIMIT 50) recent ORDER BY createdAt ASC, id ASC`).bind(student.id, student.classroomId, student.id).all<{ id: string; body: string; createdAt: string; audience: string; seenAt: string | null }>(),
     db.prepare(`SELECT 1 FROM teacher_views WHERE student_id = ? AND classroom_id = ? AND expires_at > ? LIMIT 1`).bind(student.id, student.classroomId, now).first(),
+    // 선생님 표시는 답하지 않은 가장 최근 것 하나만 아이 화면에 뜬다. 선생님 실명·학급 명단은 싣지 않는다.
+    db.prepare(`SELECT id, artwork_id AS artworkId, strokes_json AS strokesJson, note, created_at AS createdAt FROM teacher_marks WHERE student_id = ? AND classroom_id = ? AND answered_at IS NULL ORDER BY created_at DESC, id DESC LIMIT 1`).bind(student.id, student.classroomId).first<{ id: string; artworkId: string; strokesJson: string; note: string; createdAt: string }>(),
+    db.prepare(`SELECT 1 FROM hand_raises WHERE student_id = ? AND raised_at > ? LIMIT 1`).bind(student.id, new Date(Date.now() - HAND_RAISE_TTL_MS).toISOString()).first(),
   ]);
   const artworks = artworkRows.results.slice(0, artworkPageSize);
   const currentActivityKey = normalizeActivityKey(classroom?.currentActivity);
@@ -59,7 +63,8 @@ export async function GET(request: Request) {
   const currentActivityArtwork = await db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND learning_mode = 'free' ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id).first();
   const artworkTotal = Number(artworkTotalRow?.count ?? 0);
   const teacherViewing = Boolean(teacherView);
-  return noStoreJson({ student, artworks, artworkTotal, currentActivityArtwork, latestUnfinishedArtwork, artworkHasMore: artworkRows.results.length > artworkPageSize, artworkNextOffset: artworkOffset + artworks.length, messages: messages.results, teacherViewing, currentActivityKey, currentActivityLabel: activityLabel(currentActivityKey) });
+  const teacherMark = markRow ? { id: markRow.id, artworkId: markRow.artworkId, strokes: JSON.parse(markRow.strokesJson), note: markRow.note, createdAt: markRow.createdAt } : null;
+  return noStoreJson({ student, artworks, artworkTotal, currentActivityArtwork, latestUnfinishedArtwork, artworkHasMore: artworkRows.results.length > artworkPageSize, artworkNextOffset: artworkOffset + artworks.length, messages: messages.results, teacherViewing, teacherMark, handRaised: Boolean(handRow), currentActivityKey, currentActivityLabel: activityLabel(currentActivityKey) });
 }
 
 async function studentPost(request: Request) {
@@ -95,6 +100,26 @@ async function studentPost(request: Request) {
     if (!accessible) return jsonError("확인할 선생님 말씀을 찾지 못했어요.", 404);
     await db.prepare(`INSERT OR IGNORE INTO message_receipts(message_id, student_id, seen_at) VALUES (?, ?, CURRENT_TIMESTAMP)`).bind(messageId, student.id).run();
     return noStoreJson({ ok: true });
+  }
+
+  if (action === "answerMark") {
+    // 아이는 선생님 표시에 큰 버튼 두 개로만 답한다. 글자 입력은 받지 않는다.
+    const student = await studentFromRequest(request);
+    if (!student) return jsonError("활성 학생 세션이 없어요.", 401);
+    const markId = cleanText(payload.markId, 80);
+    if (!markId || !isMarkAnswer(payload.answer)) return jsonError("답을 다시 골라 주세요.", 400);
+    const updated = await bindings().DB.prepare(`UPDATE teacher_marks SET answer = ?, answered_at = ? WHERE id = ? AND student_id = ? AND classroom_id = ? AND answered_at IS NULL`).bind(payload.answer, new Date().toISOString(), markId, student.id, student.classroomId).run();
+    return noStoreJson({ ok: true, answered: Boolean(updated.meta.changes) });
+  }
+
+  if (action === "raiseHand") {
+    const student = await studentFromRequest(request);
+    if (!student) return jsonError("활성 학생 세션이 없어요.", 401);
+    if (!(await rateLimit(`hand-raise:${student.id}`, 30, 10 * 60))) return jsonError("잠깐 기다렸다가 다시 눌러 줘.", 429);
+    const db = bindings().DB;
+    if (payload.raised === true) await db.prepare(`INSERT INTO hand_raises(student_id, classroom_id, raised_at) VALUES (?, ?, ?) ON CONFLICT(student_id) DO UPDATE SET classroom_id = excluded.classroom_id, raised_at = excluded.raised_at`).bind(student.id, student.classroomId, new Date().toISOString()).run();
+    else await db.prepare(`DELETE FROM hand_raises WHERE student_id = ?`).bind(student.id).run();
+    return noStoreJson({ ok: true, handRaised: payload.raised === true });
   }
 
   if (action === "ackTeacherMessages") {

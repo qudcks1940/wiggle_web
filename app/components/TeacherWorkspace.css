@@ -39,3 +39,19 @@ body:has(.teacher-workspace){background:#fff}
 @media(max-width:1100px){.teacher-workspace{padding:0 24px 30px}.tcw-header{flex-wrap:wrap;padding:18px 0}.teacher-workspace .tcw-header{gap:18px}.teacher-workspace .tcw-header h1{font-size:23px}.tcw-header-actions{gap:8px}.tcw-student-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.teacher-workspace .tcw-session h2{font-size:23px}.teacher-workspace .tcw-session p{font-size:18px}.teacher-workspace .tcw-header .brand span{display:none}}
 @media(max-width:760px){.teacher-workspace{padding:0 20px 24px}.teacher-workspace .tcw-header{gap:14px}.teacher-workspace .tcw-header h1{font-size:21px;flex:1;padding-left:14px}.tcw-header-actions{width:100%;margin:0;justify-content:flex-end}.teacher-workspace .tcw-tabs{height:58px;gap:28px}.tcw-tabs a{font-size:16px}.tcw-session{align-items:flex-start;flex-direction:column;gap:16px;padding:22px 0}.tcw-session-actions{gap:10px}.tcw-student-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 16px}.tcw-student-caption{align-items:flex-start;flex-wrap:wrap}.tcw-student-caption b{font-size:17px}.teacher-workspace .tcw-section-title h2{font-size:22px}.teacher-workspace .tcw-status{padding:3px 10px;font-size:12px}.tcw-dialog-backdrop{padding:12px}.tcw-dialog{padding:18px;max-height:calc(100dvh - 24px)}.teacher-workspace .tcw-artwork{font-size:12px}}
 @media(max-width:380px){.teacher-workspace{padding:0 14px 24px}.teacher-workspace .tcw-header{gap:10px}.teacher-workspace .tcw-header h1{font-size:18px}.teacher-workspace .tcw-header .brand img{width:32px;height:32px}.teacher-workspace .tcw-back{font-size:13px;gap:3px}.teacher-workspace .tcw-tabs{gap:20px}.tcw-tabs a{font-size:14px}.tcw-student-grid{grid-template-columns:1fr}.teacher-workspace .tcw-header-actions button{font-size:14px;padding:8px 12px}.teacher-workspace .tcw-session h2{font-size:21px}}
+/* 선생님 실시간 보기 + 표시(2026-09-14). 아이 그림 캔버스 위에 표시 캔버스를 겹친다. */
+.teacher-live{display:grid;gap:10px}
+.teacher-live-paper{position:relative;width:100%;border:1px solid var(--tw-line,#dfe7df);border-radius:12px;overflow:hidden;background:#fff}
+.teacher-live-paper canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.teacher-live-marks{touch-action:none}
+.teacher-live-marks.can-mark{cursor:crosshair}
+.teacher-live-tools{display:grid;gap:8px;padding:12px;border:1px solid #f3c9b3;border-radius:10px;background:#fff7f2}
+.teacher-live-tools p{margin:0;font-size:14px}
+.teacher-live-tools input{min-height:44px;padding:0 12px;border:1px solid #e3cbbd;border-radius:8px;font:inherit}
+.teacher-live-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.teacher-live-actions .button{min-height:44px}
+.teacher-live-answer{margin:0;font-weight:800;color:#6b3a1f}
+.teacher-hand-raised{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:10px 12px;border-radius:10px;background:#fff3d6;color:#6a4a00;font-weight:900}
+.tcw-hand{margin-left:6px;font-size:18px;line-height:1}
+.tcw-hand-count{margin-left:10px;color:#8a5a00;font-weight:900}
+.teacher-hand-raised .text-button,.teacher-live-answer .text-button{display:inline-flex;align-items:center;width:auto;min-height:44px;padding:0 8px;text-decoration:underline}

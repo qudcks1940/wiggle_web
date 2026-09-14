@@ -57,6 +57,13 @@
       "when": 1788765034168,
       "tag": "0007_tense_nightshade",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1789352313967,
+      "tag": "0008_thin_rogue",
+      "breakpoints": true
     }
   ]
 }

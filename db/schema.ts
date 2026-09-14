@@ -255,6 +255,27 @@ export const messageReceipts = sqliteTable("message_receipts", {
   index("message_receipts_student_idx").on(table.studentId, table.seenAt),
 ]);
 
+// 선생님 표시(2026-09-14): 아이 원본과 따로 된 층. 작품 ops에 넣지 않는다(lib/teacher-marks.ts).
+export const teacherMarks = sqliteTable("teacher_marks", {
+  id: text("id").primaryKey(),
+  classroomId: text("classroom_id").notNull().references(() => classrooms.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  teacherId: text("teacher_id").notNull().references(() => teachers.id, { onDelete: "cascade" }),
+  artworkId: text("artwork_id").notNull().references(() => artworks.id, { onDelete: "cascade" }),
+  strokesJson: text("strokes_json").notNull(),
+  note: text("note").notNull().default(""),
+  answer: text("answer"),
+  answeredAt: text("answered_at"),
+  createdAt: createdAt(),
+}, (table) => [index("teacher_marks_student_idx").on(table.studentId, table.answeredAt, table.createdAt)]);
+
+// 아이 손들기(2026-09-14). 한 아이당 한 행, 내리면 지운다.
+export const handRaises = sqliteTable("hand_raises", {
+  studentId: text("student_id").primaryKey().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  classroomId: text("classroom_id").notNull().references(() => classrooms.id, { onDelete: "cascade" }),
+  raisedAt: text("raised_at").notNull(),
+}, (table) => [index("hand_raises_classroom_idx").on(table.classroomId, table.raisedAt)]);
+
 export const teacherViews = sqliteTable("teacher_views", {
   teacherId: text("teacher_id").notNull().references(() => teachers.id, { onDelete: "cascade" }),
   classroomId: text("classroom_id").notNull().references(() => classrooms.id, { onDelete: "cascade" }),

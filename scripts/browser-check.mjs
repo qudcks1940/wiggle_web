@@ -432,20 +432,16 @@ async function main() {
         const tools = await evaluate(cdp, session, `(async () => {
           const wait = (ms) => new Promise((done) => setTimeout(done, ms));
           const body = document.querySelector('.studio-body');
-          const targets = [...document.querySelectorAll('.tool-panel button')].filter((button) => window.__wiggle.visible(button));
+          // 2026-09-14 도구 막대(B안): 도구는 화면 아래 .tool-dock의 세워진 도구 6개(붓 4·지우개·대칭).
+          const targets = [...document.querySelectorAll('.tool-dock button')].filter((button) => window.__wiggle.visible(button));
           if (!targets.length) return { error: 'no-tools' };
-          const primaryTools = [...document.querySelectorAll('.tool-panel .tool-group button')].map((button) => {
-            const photo = button.querySelector('.tool-photo');
-            const emoji = button.querySelector('.tool-icon');
-            const icon = photo && window.__wiggle.visible(photo) ? photo : emoji;
-            const name = button.querySelector('.tool-name');
+          const primaryTools = [...document.querySelectorAll('.tool-dock .dock-tool')].map((button) => {
+            const art = button.querySelector('.dock-tool-art img');
             const buttonBox = window.__wiggle.box(button);
-            const iconBox = icon ? window.__wiggle.box(icon) : null;
             return {
               label: button.getAttribute('aria-label') ?? '', title: button.getAttribute('title') ?? '',
-              visible: window.__wiggle.visible(button),
-              buttonBox, iconBox, nameDisplay: name ? getComputedStyle(name).display : '',
-              iconInside: Boolean(iconBox && iconBox.left >= buttonBox.left && iconBox.right <= buttonBox.right && iconBox.top >= buttonBox.top && iconBox.bottom <= buttonBox.bottom),
+              visible: window.__wiggle.visible(button), buttonBox,
+              artLoaded: Boolean(art && art.complete && art.naturalWidth > 0),
             };
           });
           const unreachable = [];
@@ -460,11 +456,10 @@ async function main() {
         check(!tools.error, `${viewport.name} 도구 패널 재현`, tools.error);
         if (!tools.error) {
           check(tools.unreachable.length === 0, `${viewport.name} 모든 그리기 도구에 닿을 수 있음`, tools.unreachable);
-          check(tools.primaryTools.length === 9 && tools.primaryTools.every((tool) => tool.label && tool.title), `${viewport.name} 아이콘 도구 이름을 접근성 정보로 제공`, tools.primaryTools);
-          check(tools.primaryTools.every((tool) => tool.nameDisplay === 'none'), `${viewport.name} 좁은 도구 버튼의 글자를 숨김`, tools.primaryTools);
+          check(tools.primaryTools.length === 6 && tools.primaryTools.every((tool) => tool.label && tool.title), `${viewport.name} 도구 이름을 접근성 정보로 제공`, tools.primaryTools);
           const shownTools = tools.primaryTools.filter((tool) => tool.visible);
-          check(shownTools.length > 0 && shownTools.every((tool) => Math.min(tool.buttonBox.w, tool.buttonBox.h) >= 44), `${viewport.name} 아이콘 도구 터치 목표 44px 이상`, shownTools);
-          check(shownTools.every((tool) => tool.iconInside), `${viewport.name} 모든 도구 아이콘이 버튼 안에 온전히 보임`, shownTools);
+          check(shownTools.length === 6 && shownTools.every((tool) => Math.min(tool.buttonBox.w, tool.buttonBox.h) >= 44), `${viewport.name} 도구 막대 도구 6개가 보이고 터치 목표 44px 이상`, shownTools);
+          check(shownTools.every((tool) => tool.artLoaded), `${viewport.name} 세워진 도구 그림이 모두 불러와짐`, shownTools);
         }
 
         // 4.5) 새 도구 실동작: 대칭 쌍·그룹 되돌리기·채우기·도형 2탭을 실제 입력 파이프라인으로 검증.
@@ -490,8 +485,18 @@ async function main() {
         if (!firstProbe.error) {
           const at = (rect, fx, fy) => ({ x: rect.left + rect.width * fx, y: rect.top + rect.height * fy });
           const clickPanelButton = (label) => evaluate(cdp, session, `(() => {
-            const target = [...document.querySelectorAll('.tool-panel button')].find((item) => (item.textContent || item.getAttribute('aria-label') || '').includes(${JSON.stringify(label)}));
-            if (!target) return false; target.scrollIntoView({ block: 'center' }); target.click(); return true;
+            const find = () => [...document.querySelectorAll('.tool-dock button')].find((item) => window.__wiggle.visible(item) && (item.getAttribute('aria-label') || item.textContent || '').includes(${JSON.stringify(label)}));
+            let target = find();
+            // 채우기·도형은 ⋯ 더보기 안에 있다.
+            if (!target) { document.querySelector('.dock-more')?.click(); }
+            return new Promise((done) => setTimeout(() => { target = target ?? find(); if (!target) return done(false); target.click(); done(true); }, 150));
+          })()`);
+          // 색: 넓은 화면은 막대의 색 점, 좁은 화면은 지금 색 버튼으로 12색 창을 연다.
+          const pickSwatch = (label) => evaluate(cdp, session, `(async () => {
+            const visibleSwatch = () => [...document.querySelectorAll('.dock-color')].find((item) => window.__wiggle.visible(item) && item.getAttribute('aria-label') === ${JSON.stringify(label)});
+            let swatch = visibleSwatch();
+            if (!swatch) { (document.querySelector('.dock-current-color') && window.__wiggle.visible(document.querySelector('.dock-current-color')) ? document.querySelector('.dock-current-color') : document.querySelector('.dock-more-colors'))?.click(); await new Promise((done) => setTimeout(done, 150)); swatch = visibleSwatch(); }
+            if (!swatch) return false; swatch.click(); return true;
           })()`);
           const pixel = (fx, fy) => evaluate(cdp, session, `(() => {
             const canvas = document.querySelector('.draw-canvas'); const context = canvas.getContext('2d');
@@ -507,7 +512,7 @@ async function main() {
           const mirrorY = 0.85 - rowShift;
 
           // 대칭: 남색을 고르고 왼쪽에 그은 획이 오른쪽 반사 지점에도 나타난다.
-          await evaluate(cdp, session, `(() => { const navy = [...document.querySelectorAll('.palette button')].find((item) => item.getAttribute('aria-label') === '남색'); if (navy) navy.click(); })()`);
+          await pickSwatch('남색');
           const mirrorClicked = await clickPanelButton("대칭"); await sleep(150);
           const beforeLeft = await pixel(0.25, mirrorY); const beforeRight = await pixel(0.75, mirrorY);
           let rect = await probeCanvas();
@@ -529,7 +534,7 @@ async function main() {
           ];
           const fillPlan = fillPlans[VIEWPORTS.findIndex((item) => item.name === viewport.name)] ?? fillPlans[0];
           await clickPanelButton("채우기"); await sleep(120);
-          await evaluate(cdp, session, `(() => { const swatch = [...document.querySelectorAll('.palette button')].find((item) => item.getAttribute('aria-label') === ${JSON.stringify(fillPlan.label)}); if (swatch) swatch.click(); })()`);
+          await pickSwatch(fillPlan.label);
           await sleep(120);
           const beforeFill = await pixel(0.9, 0.08);
           rect = await probeCanvas();
@@ -540,7 +545,7 @@ async function main() {
           // 도형 2탭: 남색으로 시작점 탭 → 안내 → 끝점 탭으로 네모가 그려진다 (드래그 대안 경로).
           await clickPanelButton("도형"); await sleep(150);
           await evaluate(cdp, session, `(() => { const shape = [...document.querySelectorAll('.shape-kind-row button')].find((item) => item.getAttribute('aria-label') === '네모'); if (shape) shape.click(); })()`);
-          await evaluate(cdp, session, `(() => { const navy = [...document.querySelectorAll('.palette button')].find((item) => item.getAttribute('aria-label') === '남색'); if (navy) navy.click(); })()`);
+          await pickSwatch('남색');
           await sleep(120);
           // 세로 변이 뷰포트 간 겹치지 않도록 x도 함께 민다.
           const shapeLeft = 0.55 + rowShift; const shapeTop = 0.3 + rowShift; const shapeBottom = 0.5 + rowShift; const shapeProbeY = 0.4 + rowShift;

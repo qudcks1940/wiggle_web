@@ -57,13 +57,13 @@ test("guide controls and notices remain touch friendly on mobile", () => {
   const narrowPortraitIndex = css.indexOf("@media (max-width:460px) and (orientation:portrait)");
   const compactStepPanelIndex = css.indexOf(".step-panel { padding:6px 8px; }", narrowPortraitIndex);
   assert.ok(narrowPortraitIndex >= 0 && compactStepPanelIndex > narrowPortraitIndex, "압축된 레슨 패널 규칙이 좁은 세로 화면 구간 안에 있어야 한다");
-  assert.match(css, /min-height:min\(calc\(100vw - 16px\),320px\)/);
-  assert.match(css, /@media \(max-width:900px\) and \(max-height:500px\) and \(orientation:landscape\)[\s\S]*grid-template-columns:180px minmax\(0,1fr\) 200px/);
-  assert.ok(css.indexOf("@media (max-width:900px) and (max-height:500px) and (orientation:landscape)") > css.indexOf(".tool-panel { padding-right:max(7px,env(safe-area-inset-right))"), "landscape rules must win the mobile cascade");
+  // 2026-09-14: 320px 고정 도화지 최소 높이는 없앴다 — 도구가 고정 막대가 되어 도화지와 흐름에서 자리를 다투지 않는다.
+  assert.match(css, /@media \(max-width:900px\) and \(max-height:500px\) and \(orientation:landscape\)[\s\S]*grid-template-columns:180px minmax\(0,1fr\);/);
   assert.match(css, /\.step-panel \{ display:block; order:initial; grid-column:1;/);
   assert.match(css, /\.grimi-panel \{ order:initial; grid-column:1;/);
   assert.match(css, /\.canvas-zone \{ order:initial; grid-column:2;/);
-  assert.match(css, /\.tool-panel \{ display:flex; order:initial; grid-column:3;/);
+  // 도구는 격자 칸이 아니라 화면 아래 고정 막대다(2026-09-14).
+  assert.match(css, /\.tool-dock \{[^}]*position:fixed;/);
 });
 
 test("no trace has a numbered or ordered start marker", () => {

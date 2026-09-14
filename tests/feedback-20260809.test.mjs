@@ -231,10 +231,10 @@ test("the UI source keeps completion, archive, palette, help-choice and touch pr
   assert.doesNotMatch(studio, /lastTwoFingerTapRef|두 손가락 짧은 탭 두 번/);
   assert.match(studio, /lastSingleFingerTapRef[\s\S]*resetViewToFit/);
   assert.match(globalCss, /max-height:480px[\s\S]*orientation:landscape[\s\S]*guide-choice-card/);
-  // 2026-08-17: dock+tray 실험은 되돌렸다 — 도구 패널은 다시 12열 grid로 캔버스 아래
-  // 상시 자리를 차지하고, 세로가 짧은 좁은 폰에서만 "패널로 스크롤" 힌트가 뜬다.
-  assert.match(globalCss, /\.tool-panel \.selected-color \{ grid-column:1\/4; margin:0; min-width:0; \}/);
-  assert.match(globalCss, /\.mobile-tool-peek \{ display:none; \}/);
+  // 2026-08-17의 "도구 패널은 캔버스 아래 격자" 계약은 2026-09-14 사용자 결정(도구 막대 B안)으로 바뀌었다.
+  // 2026-09-14 도구 막대: 좁은 화면은 색 점 대신 지금 색 버튼 하나(누르면 12색 창)를 보인다.
+  assert.match(globalCss, /\.dock-current-color \{ display:block; \}/);
+  assert.doesNotMatch(globalCss, /mobile-tool-peek/);
   assert.match(globalCss, /\.teacher-history-drawer\s*\{[^}]*position:static/);
   assert.match(teacher, /<TeacherHistoryDrawer[\s\S]*<\/section><\/div>}<\/main>/);
 });

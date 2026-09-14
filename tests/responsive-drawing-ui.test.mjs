@@ -32,62 +32,42 @@ test("the collapsible tool tray (toggle, backdrop, tray-open state) has been ful
   assert.doesNotMatch(studio, /tool-tray-toggle|tool-tray-backdrop|tool-tray-sheet/, "DrawingStudio에 트레이 관련 클래스/id가 남아 있으면 안 된다");
 });
 
-test("the tool panel renders unconditionally and is never gated behind an open/closed toggle", async () => {
+test("the tool dock renders unconditionally and is never gated behind an open/closed toggle", async () => {
   const studio = await read("../app/components/DrawingStudio.tsx");
   const compact = studio.replace(/\s+/g, " ");
-  // aside.tool-panel은 조건부 렌더({open && <aside...) 없이 항상 그려지고, ref로만
-  // (mobile-tool-peek 버튼이 스크롤시켜 보여주는 용도로) 참조된다.
-  assert.match(compact, /<aside className="tool-panel" ref=\{toolPanelRef\} aria-label="그리기 도구 모음">/);
-  assert.doesNotMatch(compact, /\{toolTrayOpen && <aside/, "tool-panel이 조건부로만 렌더되면 안 된다");
-  assert.doesNotMatch(compact, /className=\{`tool-panel\$\{/, "tool-panel에 열림 상태에 따른 동적 클래스가 남아 있으면 안 된다");
+  // 2026-09-14 도구 막대(B안): aside.tool-dock은 조건부 렌더 없이 항상 그려진다. 굵기·색 창·더보기만 눌렀을 때 뜬다.
+  assert.match(compact, /<aside className="tool-dock" aria-label="그리기 도구 모음"/);
+  assert.doesNotMatch(compact, /\{[a-zA-Z]+ && <aside className="tool-dock"/, "도구 막대가 조건부로만 렌더되면 안 된다");
+  assert.doesNotMatch(compact, /className=\{`tool-dock\$\{/, "도구 막대에 열림 상태에 따른 동적 클래스가 남아 있으면 안 된다");
 });
 
-test("the mobile tool-panel peek button scrolls the always-visible panel into view, it does not open a hidden tray", async () => {
+test("the tool dock is always on screen, so the old scroll-to-tools peek button is gone", async () => {
   const css = await read("../app/globals.css");
   const studio = await read("../app/components/DrawingStudio.tsx");
-  const compact = studio.replace(/\s+/g, " ");
-  assert.match(
-    compact,
-    /<button type="button" className="mobile-tool-peek" onClick=\{\(\) => toolPanelRef\.current\?\.scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)\}>/,
-  );
-  // 데스크톱/일반 화면에서는 숨기고, 세로가 짧은 좁은 폰 화면에서만 뜬 힌트로 보여준다.
-  assert.match(css, /\.mobile-tool-peek \{ display:none; \}/);
-  const shortNarrowStart = css.indexOf("@media (max-width:460px) and (max-height:650px)");
-  const shortNarrow = css.slice(shortNarrowStart, css.indexOf("}", css.indexOf(".mobile-tool-peek {", shortNarrowStart)) + 1);
-  assert.match(shortNarrow, /\.mobile-tool-peek \{ position:fixed;/);
+  // 도구가 도화지 아래 문서 흐름에 있던 시절에는 "도구로 스크롤" 버튼이 필요했다. 막대는 늘 화면 아래에 떠 있다.
+  assert.doesNotMatch(studio, /mobile-tool-peek|toolPanelInView|scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)/);
+  assert.doesNotMatch(css, /mobile-tool-peek/);
+  assert.match(css, /\.tool-dock \{[^}]*position:fixed;[^}]*bottom:calc\(10px \+ env\(safe-area-inset-bottom\)\);/);
 });
 
-test("narrow portrait canvas keeps an explicit floor so a tall tool panel can't squeeze it to nothing", async () => {
+test("the studio body reserves the dock height so the fixed dock never covers the paper", async () => {
   const css = await read("../app/globals.css");
-  const narrowPortraitStart = css.indexOf("@media (max-width:460px) and (orientation:portrait)");
-  const narrowPortraitEnd = css.indexOf("@media (max-width:360px) and (orientation:portrait)", narrowPortraitStart);
-  const narrowPortrait = css.slice(narrowPortraitStart, narrowPortraitEnd);
-  // 회귀(2026-08-17): .studio-body는 flex-column이고 .canvas-zone은 flex:1(basis 0%)이라
-  // 물려받는데, 320x568 자유그리기처럼 도구 패널 내용(492px)이 studio-body 높이(508px)에
-  // 육박하면 캔버스의 성장분이 16px로 짜부라진다. container-type:size인 .canvas-wrap도
-  // 컨테이너가 명시적 크기를 못 받으면 0으로 붕괴한다. 도화지에 명시적 최소 높이를 주고
-  // flex 성장 경쟁에서 빼내야(flex:0 0 auto) 먼저 자리를 확보한다 — 순수 flex:1 + container
-  // query 성장만으로는 이 폭에서 재현 가능하게 무너진다.
-  assert.match(narrowPortrait, /\.canvas-zone \{ flex:0 0 auto; min-height:min\(calc\(100vw - 16px\),320px\); container-type:normal; \}/,
-    "도화지가 명시적 최소 높이로 flex 성장 경쟁에서 자리를 먼저 확보해야 한다");
-  assert.match(narrowPortrait, /\.canvas-zone \.canvas-wrap \{ width:min\(calc\(100vw - 16px\),320px\); height:auto; max-width:100%; max-height:none; \}/,
-    "도화지 그림판은 컨테이너 쿼리가 아니라 뷰포트 폭 기반 고정 정사각형이어야 한다");
-  assert.match(narrowPortrait, /\.tool-panel \{ flex:0 0 auto; \}/,
-    "도구 패널은 flex 성장에 끼어들지 않고 자기 내용 높이만큼만 차지해야 한다");
+  // 회귀(2026-08-17)의 뜻을 잇는다: 도구가 도화지를 짜부라뜨리거나 가리면 안 된다.
+  // 막대는 고정이라 흐름에서 자리를 뺏지 않고, 대신 .studio-body가 막대 높이만큼 아래를 비운다.
+  // 실측(2026-09-14): 1440·1180·1024·820×1180·768×1024·844×390·390·320에서 도화지 아래끝이 막대 위끝보다 위.
+  assert.match(css, /\.studio \{ --dock-space:calc\(126px \+ env\(safe-area-inset-bottom\)\); \}/);
+  assert.match(css, /\.studio-body \{ padding-bottom:var\(--dock-space\); \}/);
+  assert.match(css, /\.tool-dock \{[^}]*height:106px;/);
+  // 옛 320px 고정 도화지(도구 판이 흐름에 있을 때의 우회)는 없어야 막대 위 남은 공간을 도화지가 다 쓴다.
+  assert.doesNotMatch(css, /min-height:min\(calc\(100vw - 16px\),320px\)/);
 });
 
-test("the tool panel occupies a fixed grid row alongside the canvas instead of floating over it as a fixed-position dock", async () => {
+test("small-screen Mongri sheet covers the dock from the bottom edge and releases the dock space while open", async () => {
   const css = await read("../app/globals.css");
-  const mobileStart = css.indexOf("@media (max-width:720px) {\n  .entry-shell");
-  const mobileEnd = css.indexOf("@media (max-width:460px) and (orientation:portrait)", mobileStart);
-  const mobile = css.slice(mobileStart, mobileEnd);
-  // 회귀: 이전에는 .tool-panel이 position:fixed 바텀시트 dock이라 캔버스 위에 떠 있었고,
-  // 그 높이만큼 .canvas-zone에 padding-bottom을 항상 남겨둬야 했다. 지금은 도구 패널이
-  // 캔버스와 나란히 문서 흐름에 자리 잡은 grid 셀이라 그런 예약 여백이 필요 없다.
-  assert.doesNotMatch(mobile, /\.tool-panel \{[^}]*position:fixed/, "도구 패널이 다시 fixed dock이 되면 안 된다");
-  assert.doesNotMatch(mobile, /var\(--tool-dock-height/, "고정 dock 높이 변수를 참조하는 예약 여백이 남아 있으면 안 된다");
-  assert.match(mobile, /\.canvas-zone \{ container-type:size; \}/);
-  assert.match(mobile, /\.tool-panel \{[^}]*display:grid;/, "도구 패널은 항상 보이는 grid 레이아웃이어야 한다");
+  // 판을 막대 위로 올리면 접은 판과 막대가 겹쳐 쌓여 좁은 화면에서 그릴 도화지가 사라진다(2026-09-14 실측).
+  assert.match(css, /\.studio-body\.grimi-open \{ padding-bottom:0; \}/);
+  assert.doesNotMatch(css, /\.grimi-panel \{ bottom:var\(--dock-space\)/);
+  assert.match(css, /\.step-panel,\.grimi-panel \{ max-height:calc\(100% - 28px - var\(--dock-space\)\); \}/);
 });
 
 test("the tool panel keeps every tool reachable at once on phone-width portrait screens, none are hidden behind nth-child dock-collapse rules", async () => {
@@ -101,11 +81,11 @@ test("the tool panel keeps every tool reachable at once on phone-width portrait 
   assert.doesNotMatch(mobile, /nth-child\(n\+\d\)\s*\{\s*display:none/, "숨겨진 도구가 있으면 안 된다 — 도구 패널은 항상 전체가 보여야 한다");
 });
 
-test("dock and tool panel CSS still honor the 44px minimum touch target on phone-width portrait screens", async () => {
+test("dock controls honor the 44px minimum touch target", async () => {
   const css = await read("../app/globals.css");
-  const mobileStart = css.indexOf("@media (max-width:720px) {\n  .entry-shell");
-  const mobileEnd = css.indexOf("@media (max-width:460px) and (orientation:portrait)", mobileStart);
-  const mobile = css.slice(mobileStart, mobileEnd);
-  assert.match(mobile, /\.tool-panel \.tool-group button \{ min-width:0; min-height:48px;/);
-  assert.match(mobile, /\.tool-panel \.history-row button \{ min-width:0; min-height:44px;/);
+  assert.match(css, /\.dock-tool \{[^}]*min-width:44px;[^}]*min-height:44px;/);
+  assert.match(css, /\.dock-history button,\.dock-more \{[^}]*width:48px; height:48px; min-height:48px;/);
+  assert.match(css, /\.dock-color,\.dock-current-color,\.dock-more-colors \{ width:44px; height:44px; min-width:44px; min-height:44px;/);
+  assert.match(css, /\.dock-width button \{[^}]*width:48px; height:48px;/);
+  assert.match(css, /@media \(max-height:500px\) and \(orientation:landscape\) \{[\s\S]*?\.dock-history button,\.dock-more \{ width:44px; height:44px; min-height:44px; \}/);
 });

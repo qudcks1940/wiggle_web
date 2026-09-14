@@ -10,7 +10,7 @@ import { DrawingInputMode, INPUT_MODE_EVENT } from "@/lib/input-mode";
 import { CanvasView, IDENTITY_VIEW, pinchView } from "@/lib/canvas-view";
 import { lessonBySlug, Lesson } from "@/lib/lesson-content";
 import { guideMarksForVariant } from "@/lib/lesson-guide-variants";
-import { ArrowLeftIcon, CheckIcon, ChevronUpIcon, GripHorizontalIcon, HandIcon, MoreHorizontalIcon, PlayCircleIcon, Redo2Icon, Undo2Icon } from "./StudioIcons";
+import { ArrowLeftIcon, CheckIcon, ChevronUpIcon, HandIcon, MoreHorizontalIcon, PlayCircleIcon, Redo2Icon, Undo2Icon } from "./StudioIcons";
 import { createLessonStepBaseline, isLessonStepProgress, lessonStepActionStatus, LessonStepProgress } from "@/lib/lesson-step-progress";
 import { lockGuideTrace, snapGuideTrace } from "@/lib/trace-guidance.mjs";
 import { clampTextPlacement, suggestTextPlacement } from "@/lib/text-placement";
@@ -77,14 +77,16 @@ const COLOR_NAMES: Record<string, string> = {
   "#7E57C2": "연보라",
   "#EC407A": "진한 분홍",
 };
-/* 시안의 세로 도구 레일은 이모지 대신 실제 도구 사진을 56×22 슬롯에 놓는다.
- * 경로와 srcSet은 public/drawing-tools/manifest.json의 계약과 같다. */
-const TOOL_PHOTOS: Record<string, { label: string; src: string; srcSet: string }> = {
-  pencil: { label: "연필", src: "/drawing-tools/pencil.png", srcSet: "/drawing-tools/pencil.png 1x, /drawing-tools/pencil@2x.png 2x, /drawing-tools/pencil@3x.png 3x" },
-  crayon: { label: "크레용", src: "/drawing-tools/crayon.png", srcSet: "/drawing-tools/crayon.png 1x, /drawing-tools/crayon@2x.png 2x, /drawing-tools/crayon@3x.png 3x" },
-  marker: { label: "마커", src: "/drawing-tools/marker.png", srcSet: "/drawing-tools/marker.png 1x, /drawing-tools/marker@2x.png 2x, /drawing-tools/marker@3x.png 3x" },
-  watercolor: { label: "수채붓", src: "/drawing-tools/watercolor.png", srcSet: "/drawing-tools/watercolor.png 1x, /drawing-tools/watercolor@2x.png 2x, /drawing-tools/watercolor@3x.png 3x" },
-};
+/* 도구 막대의 세워진 도구(2026-09-14, public/drawing-tools/dock/). tint가 있는 붓은 끝·띠 마스크(<id>-tint.webp)를 지금 색으로 칠한다. */
+const DOCK_TOOLS: { id: "pencil" | "crayon" | "marker" | "watercolor" | "eraser"; label: string; tint: boolean }[] = [
+  { id: "pencil", label: "연필", tint: true },
+  { id: "crayon", label: "크레용", tint: true },
+  { id: "marker", label: "마커", tint: true },
+  { id: "watercolor", label: "수채붓", tint: true },
+  { id: "eraser", label: "지우개", tint: false },
+];
+/* 막대에 늘 보이는 색 수. 나머지는 무지개 버튼의 12색 창에 있다. */
+const DOCK_QUICK_COLORS = 8;
 
 const STROKE_WIDTH_LABELS: Record<StrokeWidth, string> = {
   3: "아주 얇게",
@@ -495,6 +497,7 @@ export function DrawingStudio() {
   const [toolSheetOpen, setToolSheetOpen] = useState(false);
   // 선택된 펜을 다시 누르면 그 펜 왼쪽에 굵기 슬라이더가 열린다 (2026-08-30 결정).
   const [widthSliderOpen, setWidthSliderOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [guideCollapsed, setGuideCollapsed] = useState(false);
   const [shapeKind, setShapeKind] = useState<ShapeKind>("line");
   const [shapeFilled, setShapeFilled] = useState(false);
@@ -560,7 +563,6 @@ export function DrawingStudio() {
   const [grimiCollapsed, setGrimiCollapsed] = useState(false);
   // 도구로 이동하는 플로팅 버튼이 정작 도구 패널·몽그리 시트 위까지 떠서
   // 320px 세로에서 전체 지우기·탈출 버튼을 가렸다. 도구가 이미 보이면 숨긴다.
-  const [toolPanelInView, setToolPanelInView] = useState(false);
   const [coaching, setCoaching] = useState<(StudentCoaching & { eventId: string }) | null>(null);
   const [answer, setAnswer] = useState("");
   const [answerLabel, setAnswerLabel] = useState("");
@@ -576,7 +578,6 @@ export function DrawingStudio() {
   const activePoints = useRef(new Map<number, Array<{ x: number; y: number; pressure: number }>>());
   const guideTraceLocksRef = useRef(new Map<number, { traceIndex: number; pointIndex: number }>());
   const wrapRef = useRef<HTMLDivElement>(null);
-  const toolPanelRef = useRef<HTMLElement>(null);
   const canvasZoneRef = useRef<HTMLElement>(null);
   const viewRef = useRef<CanvasView>(IDENTITY_VIEW);
   const penModeRef = useRef(true);
@@ -733,17 +734,6 @@ export function DrawingStudio() {
   useEffect(() => {
     createOrLoad().catch((cause) => setSaveState(cause instanceof Error ? cause.message : "불러오지 못했어요"));
   }, [createOrLoad]);
-  useEffect(() => {
-    // 로딩 분기(if (!artwork) return ...)가 지나간 뒤에야 tool-panel이 렌더되므로
-    // artwork가 준비된 뒤에 관찰을 시작해야 한다. mount 시점에는 ref가 비어 있다.
-    const panel = toolPanelRef.current;
-    if (!panel || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver((entries) => {
-      setToolPanelInView(entries.some((entry) => entry.isIntersecting));
-    }, { threshold: 0.2 });
-    observer.observe(panel);
-    return () => observer.disconnect();
-  }, [artwork]);
   useEffect(() => {
     documentStateRef.current = documentState;
     if (canvasRef.current) renderDocument(canvasRef.current, documentState);
@@ -1502,11 +1492,19 @@ export function DrawingStudio() {
       setSaveState("빈 곳에 글씨를 놓지 못했어요. 종이의 저장 공간을 확인해 주세요");
     }
   }
+  function pickColor(value: string) {
+    setColor(value);
+    if (studioTool === "text" && selectedText) updateTextObject(selectedText, { color: value });
+    if (studioTool === "text" && pendingText) setPendingText({ ...pendingText, color: value });
+    if (studioTool === "eraser") chooseStudioTool(lastBrushRef.current);
+  }
   function chooseStudioTool(next: StudioTool) {
-    // 시안: 이미 고른 펜을 다시 누르면 그 펜 왼쪽에 굵기 슬라이더가 펼쳐지고,
+    // 시안: 이미 고른 도구를 다시 누르면 그 위에 굵기 5단이 뜨고,
     // 다른 도구를 누르면 닫힌다. 화면 바깥 누름은 아래 pointerdown 감시가 닫는다.
-    setWidthSliderOpen(next === studioTool);
-    if (next !== studioTool) setToolSheetOpen(false);
+    setWidthSliderOpen(next === studioTool && !widthSliderOpen);
+    setPaletteOpen(false);
+    // 도형·글씨는 더보기 안에서 모양·글씨 옵션을 이어서 고르므로 창을 열어 둔다. 붓·지우개·채우기는 닫는다.
+    if (next !== studioTool && next !== "shape" && next !== "text") setToolSheetOpen(false);
     setStudioTool(next);
     if (next !== "eraser") hideEraserFootprint();
     if (next === "pencil" || next === "crayon" || next === "marker" || next === "watercolor") lastBrushRef.current = next;
@@ -1518,17 +1516,19 @@ export function DrawingStudio() {
     }
   }
   useEffect(() => {
-    if (!widthSliderOpen && !toolSheetOpen) return;
+    if (!widthSliderOpen && !toolSheetOpen && !paletteOpen) return;
     function closeOnOutside(event: PointerEvent) {
       const target = event.target as Element | null;
-      if (target?.closest(".tool-width-popover, .brush-group, .tool-sheet, .tool-more-button")) return;
+      if (target?.closest(".dock-tools, .dock-sheet, .dock-more, .dock-colors")) return;
       setWidthSliderOpen(false);
       setToolSheetOpen(false);
+      setPaletteOpen(false);
     }
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
       setWidthSliderOpen(false);
       setToolSheetOpen(false);
+      setPaletteOpen(false);
     }
     window.addEventListener("pointerdown", closeOnOutside, true);
     window.addEventListener("keydown", closeOnEscape);
@@ -1536,7 +1536,7 @@ export function DrawingStudio() {
       window.removeEventListener("pointerdown", closeOnOutside, true);
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [widthSliderOpen, toolSheetOpen]);
+  }, [widthSliderOpen, toolSheetOpen, paletteOpen]);
 
   /* 시안의 도화지는 화면을 가득 채운다. 아직 아무것도 그리지 않은 새 작품이면 화면 비율에
    * 맞춰 도화지 세로를 정한다. 한 획이라도 그은 뒤에는 절대 바꾸지 않는다 — 좌표가 0~1로
@@ -2918,276 +2918,189 @@ export function DrawingStudio() {
               </button>
             )}
           </div>
-          {!grimiOpen && !toolPanelInView && (
-            <button type="button" className="mobile-tool-peek" onClick={() => toolPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-              🎨 색·지우개·되돌리기 <span aria-hidden="true">↓</span>
-            </button>
-          )}
         </section>
-        <aside className="tool-panel" ref={toolPanelRef} aria-label="그리기 도구 모음">
-          <div className="tool-rail">
-            <span className="panel-grip" aria-hidden="true"><GripHorizontalIcon size={18} /></span>
-            <div className="history-row" role="group" aria-label="그리기 기록">
-              <button type="button" onClick={undo} disabled={Boolean(conflictDraft) || (!documentState.ops.length && !hasClearToUndo)}>
-                <Undo2Icon size={20} /><b>되돌리기</b>
-              </button>
-              <button type="button" onClick={redoLast} disabled={Boolean(conflictDraft) || (!redo.length && !hasClearToRedo)}>
-                <Redo2Icon size={20} /><b>다시하기</b>
-              </button>
-            </div>
-            <p className="tool-section-label tools-label">도구</p>
-            <div className="tool-group brush-group" role="group" aria-label="브러시">
-              <button type="button" aria-label="연필" title="연필" aria-pressed={studioTool === "pencil"} onClick={() => chooseStudioTool("pencil")}>
-                <img className="tool-photo" src={TOOL_PHOTOS.pencil.src} srcSet={TOOL_PHOTOS.pencil.srcSet} width={56} height={22} alt="" aria-hidden="true" />
-                <span className="tool-icon" aria-hidden="true">
-                  ✏️
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  연필
-                </span>
-              </button>
-              <button type="button" aria-label="크레용" title="크레용" aria-pressed={studioTool === "crayon"} onClick={() => chooseStudioTool("crayon")}>
-                <img className="tool-photo" src={TOOL_PHOTOS.crayon.src} srcSet={TOOL_PHOTOS.crayon.srcSet} width={56} height={22} alt="" aria-hidden="true" />
-                <span className="tool-icon" aria-hidden="true">
-                  🖍️
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  크레용
+        {/* 도구 막대(2026-09-14 사용자 결정 — 시안 docs/design-assets/studio-tool-dock/B-crayon-box.webp).
+            화면 아래에 떠 있는 크림색 막대에 세워진 도구, 고른 도구는 올라오고 진초록 바탕. 붓 끝·띠는 지금 색으로 칠한다.
+            고른 도구를 한 번 더 누르면 굵기 5단이 위에 뜬다. 채우기·도형·글씨·입력 방법·전체 지우기는 ⋯ 안에 있다. */}
+        <aside className="tool-dock" aria-label="그리기 도구 모음" style={{ "--dock-color": selectedColor } as React.CSSProperties}>
+          <span className="dock-grip" aria-hidden="true" />
+          <div className="dock-history" role="group" aria-label="그리기 기록">
+            <button type="button" aria-label="되돌리기" title="되돌리기" onClick={undo} disabled={Boolean(conflictDraft) || (!documentState.ops.length && !hasClearToUndo)}>
+              <Undo2Icon size={22} />
+            </button>
+            <button type="button" aria-label="다시하기" title="다시하기" onClick={redoLast} disabled={Boolean(conflictDraft) || (!redo.length && !hasClearToRedo)}>
+              <Redo2Icon size={22} />
+            </button>
+          </div>
+          <div className="dock-tools" role="group" aria-label="도구">
+            {DOCK_TOOLS.map((tool) => (
+              <button type="button" className={`dock-tool dock-tool-${tool.id}`} aria-label={tool.label} title={tool.label} aria-pressed={studioTool === tool.id} onClick={() => chooseStudioTool(tool.id)} key={tool.id}>
+                <span className="dock-tool-art" aria-hidden="true">
+                  <img src={`/drawing-tools/dock/${tool.id}.webp`} alt="" width={96} height={144} draggable={false} />
+                  {tool.tint && <i className="dock-tool-tint" style={{ WebkitMaskImage: `url(/drawing-tools/dock/${tool.id}-tint.webp)`, maskImage: `url(/drawing-tools/dock/${tool.id}-tint.webp)` }} />}
                 </span>
               </button>
-              <button type="button" aria-label="마커" title="마커" aria-pressed={studioTool === "marker"} onClick={() => chooseStudioTool("marker")}>
-                <img className="tool-photo" src={TOOL_PHOTOS.marker.src} srcSet={TOOL_PHOTOS.marker.srcSet} width={56} height={22} alt="" aria-hidden="true" />
-                <span className="tool-icon" aria-hidden="true">
-                  🖊️
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  마커
-                </span>
-              </button>
-              <button type="button" aria-label="수채붓" title="수채붓" aria-pressed={studioTool === "watercolor"} onClick={() => chooseStudioTool("watercolor")}>
-                <img className="tool-photo" src={TOOL_PHOTOS.watercolor.src} srcSet={TOOL_PHOTOS.watercolor.srcSet} width={56} height={22} alt="" aria-hidden="true" />
-                <span className="tool-icon" aria-hidden="true">
-                  🖌️
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  수채붓
-                </span>
-              </button>
-              {studioTool !== "text" && widthSliderOpen && (
-                <div
-                className="tool-width-popover"
-                role="group"
-                aria-label="선 굵기"
-                /* 시안: 슬라이더는 고른 펜 바로 왼쪽에 열린다. 레일 버튼 간격(46px + 2px)은
-                   globals.css의 .tool-panel .brush-group 규칙과 짝이며 둘을 함께 바꿔야 한다. */
-                style={{ "--tool-row-top": `${["pencil", "crayon", "marker", "watercolor"].indexOf(studioTool) * 48 + 23}px` } as React.CSSProperties}
-              >
-                  <i className="tool-width-preview tool-width-preview-small" aria-hidden="true" style={{ background: studioTool === "eraser" ? undefined : selectedColor }} />
-                  <input
-                    type="range"
-                    className="tool-width-slider"
-                    min={0}
-                    max={STROKE_WIDTHS.length - 1}
-                    step={1}
-                    value={STROKE_WIDTHS.indexOf(width)}
-                    aria-label="선 굵기"
-                    aria-valuetext={STROKE_WIDTH_LABELS[width]}
-                    onChange={(event) => chooseWidth(STROKE_WIDTHS[Number(event.target.value)])}
-                  />
-                  <i className="tool-width-preview tool-width-preview-large" aria-hidden="true" style={{ background: studioTool === "eraser" ? undefined : selectedColor }} />
-                </div>
-              )}
-            </div>
-            {studioTool !== "text" && (
-              <div className="width-row" role="group" aria-label="선 굵기">
+            ))}
+            <button type="button" className="dock-tool dock-tool-mirror" aria-label="좌우 대칭" title="좌우 대칭" aria-pressed={mirror} onClick={() => setMirror((value) => !value)}>
+              <span className="dock-tool-art" aria-hidden="true"><img src="/drawing-tools/dock/mirror.webp" alt="" width={96} height={144} draggable={false} /></span>
+            </button>
+            {studioTool !== "text" && widthSliderOpen && (
+              <div className="dock-width" role="group" aria-label="선 굵기">
                 {STROKE_WIDTHS.map((value) => (
                   <button type="button" aria-label={STROKE_WIDTH_LABELS[value]} title={STROKE_WIDTH_LABELS[value]} aria-pressed={width === value} onClick={() => chooseWidth(value)} key={value}>
-                    <i
-                      aria-hidden="true"
-                      style={{
-                        width: Math.max(6, Math.min(34, value * 0.72)),
-                        height: Math.max(6, Math.min(34, value * 0.72)),
-                        // 지우개는 색을 쓰지 않는 도구라 점을 기본 잉크색으로 남겨 "지우는 크기"임을 구분한다.
-                        background: studioTool === "eraser" ? undefined : selectedColor,
-                      }}
-                    />
-                    <small>{STROKE_WIDTH_LABELS[value]}</small>
+                    {/* 지우개는 색을 쓰지 않는 도구라 점을 기본 잉크색으로 남겨 "지우는 크기"임을 구분한다. */}
+                    <i aria-hidden="true" style={{ width: Math.max(6, Math.min(32, value * 0.66)), height: Math.max(6, Math.min(32, value * 0.66)), background: studioTool === "eraser" ? undefined : selectedColor }} />
                   </button>
                 ))}
               </div>
             )}
-            <div className="tool-group edit-group" role="group" aria-label="고치기">
-              <button type="button" aria-label="지우개" title="지우개" aria-pressed={studioTool === "eraser"} onClick={() => chooseStudioTool("eraser")}>
-                <span className="tool-icon eraser-icon" aria-hidden="true">
-                  <i />
-                  <i />
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  지우개
-                </span>
-              </button>
-              <button type="button" aria-label="좌우 대칭" title="좌우 대칭" aria-pressed={mirror} onClick={() => setMirror((value) => !value)}>
-                <span className="tool-icon" aria-hidden="true">
-                  🦋
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  대칭
-                </span>
-              </button>
-            </div>
-            <button
-              type="button"
-              className="tool-more-button"
-              aria-label={toolSheetOpen ? "다른 도구 닫기" : "다른 도구 더 보기"}
-              aria-expanded={toolSheetOpen}
-              onClick={() => { setToolSheetOpen((value) => !value); setWidthSliderOpen(false); }}
-            >
-              <MoreHorizontalIcon />
-            </button>
           </div>
-          <div className={`tool-sheet${toolSheetOpen ? " open" : ""}`}>
-            <div className="tool-group make-group" role="group" aria-label="채우기와 도형">
-              <button type="button" aria-label="채우기" title="채우기" aria-pressed={studioTool === "fill"} onClick={() => chooseStudioTool("fill")}>
-                <span className="tool-icon" aria-hidden="true">
-                  🪣
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  채우기
-                </span>
-              </button>
-              <button type="button" aria-label="도형" title="도형" aria-pressed={studioTool === "shape"} onClick={() => chooseStudioTool("shape")}>
-                <span className="tool-icon" aria-hidden="true">
-                  ⬠
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  도형
-                </span>
-              </button>
-              <button
-                type="button"
-                aria-label="글씨"
-                title="글씨"
-                aria-pressed={studioTool === "text"}
-                onClick={() => {
-                  chooseStudioTool("text");
-                  openTextComposer(selectedText);
-                }}
-              >
-                <span className="tool-icon text-tool-icon" aria-hidden="true">Aa</span>
-                <span className="tool-name" aria-hidden="true">글씨</span>
-              </button>
-            </div>
-            {studioTool === "shape" && (
-              <div className="shape-options">
-                <div className="shape-kind-row" role="group" aria-label="도형 고르기">
-                  {SHAPE_KINDS.slice(0, moreShapes ? SHAPE_KINDS.length : BASIC_SHAPE_COUNT).map((item) => (
-                    <button
-                      type="button"
-                      aria-label={item.label}
-                      title={item.label}
-                      aria-pressed={shapeKind === item.kind}
-                      onClick={() => {
-                        setShapeKind(item.kind);
-                        if (item.kind === "line" || item.kind === "curve") setShapeFilled(false);
-                        clearShapeStart();
-                      }}
-                      key={item.kind}
-                    >
-                      {item.icon}
-                    </button>
-                  ))}
-                  <button type="button" className="shape-more" aria-label={moreShapes ? "도형 접기" : "더 많은 도형"} title={moreShapes ? "도형 접기" : "더 많은 도형"} aria-expanded={moreShapes} onClick={() => setMoreShapes((value) => !value)}>
-                    {moreShapes ? "−" : "＋"}
-                  </button>
-                </div>
-                <div className="shape-fill-row" role="group" aria-label="도형 안쪽">
-                  <button type="button" aria-pressed={!shapeFilled} onClick={() => setShapeFilled(false)}>
-                    테두리
-                  </button>
-                  <button type="button" aria-pressed={shapeFilled} disabled={shapeKind === "line" || shapeKind === "curve"} onClick={() => setShapeFilled(true)}>
-                    색 채움
-                  </button>
-                </div>
+          <div className="dock-colors" role="group" aria-label="색 고르기">
+            {PALETTE.slice(0, DOCK_QUICK_COLORS).map((value) => (
+              <button type="button" className="dock-color" aria-label={COLOR_NAMES[value]} title={COLOR_NAMES[value]} aria-pressed={selectedColor === value} onClick={() => pickColor(value)} key={value} style={{ background: value }} />
+            ))}
+            {/* 좁은 화면은 색 점 대신 지금 색 하나를 두고, 누르면 12색 창이 열린다. */}
+            <button type="button" className="dock-current-color" aria-label={`색 고르기, 지금 ${COLOR_NAMES[selectedColor] ?? "고른 색"}`} aria-haspopup="true" aria-expanded={paletteOpen} onClick={() => { setPaletteOpen((value) => !value); setToolSheetOpen(false); setWidthSliderOpen(false); }} style={{ background: selectedColor }} />
+            {/* 무지개: 12색 창. 팔레트 밖의 색을 쓰는 동안은 눌린 상태로 두고 고른 색을 안쪽 테두리로 보여 준다. */}
+            <button type="button" className="dock-more-colors" aria-label="다른 색 고르기" title="다른 색 고르기" aria-haspopup="true" aria-expanded={paletteOpen} aria-pressed={customColor} style={customColor ? { boxShadow: `inset 0 0 0 6px ${selectedColor}` } : undefined} onClick={() => { setPaletteOpen((value) => !value); setToolSheetOpen(false); setWidthSliderOpen(false); }} />
+            {paletteOpen && (
+              <div className="dock-palette" role="group" aria-label="모든 색">
+                {PALETTE.map((value) => (
+                  <button type="button" className="dock-color" aria-label={COLOR_NAMES[value]} title={COLOR_NAMES[value]} aria-pressed={selectedColor === value} onClick={() => { pickColor(value); setPaletteOpen(false); }} key={value} style={{ background: value }} />
+                ))}
+                <button type="button" className="dock-palette-wheel" aria-haspopup="dialog" aria-expanded={colorPickerOpen} onClick={() => { setPaletteOpen(false); setColorPickerOpen(true); }}>🎨 색 더보기</button>
               </div>
             )}
-            {studioTool === "text" && (
-              <div className="text-options" aria-label="글씨 고치기">
-                {pendingText ? (
-                  <div className="text-pending-card" role="status">
-                    <b>“{pendingText.text}”</b>
-                    <span>도화지에 놓을 곳을 눌러요.</span>
-                    <button type="button" onClick={() => setPendingText(null)}>취소</button>
-                  </div>
-                ) : selectedText ? (
-                  <>
-                    <div className="text-edit-heading"><span>고른 글씨</span><b>{selectedText.text}</b></div>
-                    <div className="text-edit-actions">
-                      <button type="button" onClick={() => openTextComposer(selectedText)}>✏️ 내용</button>
-                      <button
-                        type="button"
-                        aria-label="글씨 작게"
-                        disabled={selectedText.fontSize === TEXT_SIZES[0]}
-                        onClick={() => {
-                          const index = TEXT_SIZES.indexOf(selectedText.fontSize);
-                          if (index > 0) updateTextObject(selectedText, { fontSize: TEXT_SIZES[index - 1] });
-                        }}
-                      >Aa−</button>
-                      <button
-                        type="button"
-                        aria-label="글씨 크게"
-                        disabled={selectedText.fontSize === TEXT_SIZES.at(-1)}
-                        onClick={() => {
-                          const index = TEXT_SIZES.indexOf(selectedText.fontSize);
-                          if (index >= 0 && index < TEXT_SIZES.length - 1) updateTextObject(selectedText, { fontSize: TEXT_SIZES[index + 1] });
-                        }}
-                      >Aa＋</button>
-                      <button type="button" className="text-delete" onClick={() => updateTextObject(selectedText, { deleted: true })}>🗑️ 지우기</button>
+          </div>
+          <button
+            type="button"
+            className="dock-more"
+            aria-label={toolSheetOpen ? "다른 도구 닫기" : "다른 도구 더 보기"}
+            aria-expanded={toolSheetOpen}
+            onClick={() => { setToolSheetOpen((value) => !value); setWidthSliderOpen(false); setPaletteOpen(false); }}
+          >
+            <MoreHorizontalIcon />
+          </button>
+          {toolSheetOpen && (
+            <div className="dock-sheet">
+                <div className="tool-group make-group" role="group" aria-label="채우기와 도형">
+                  <button type="button" aria-label="채우기" title="채우기" aria-pressed={studioTool === "fill"} onClick={() => chooseStudioTool("fill")}>
+                    <span className="tool-icon" aria-hidden="true">
+                      🪣
+                    </span>
+                    <span className="tool-name" aria-hidden="true">
+                      채우기
+                    </span>
+                  </button>
+                  <button type="button" aria-label="도형" title="도형" aria-pressed={studioTool === "shape"} onClick={() => chooseStudioTool("shape")}>
+                    <span className="tool-icon" aria-hidden="true">
+                      ⬠
+                    </span>
+                    <span className="tool-name" aria-hidden="true">
+                      도형
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="글씨"
+                    title="글씨"
+                    aria-pressed={studioTool === "text"}
+                    onClick={() => {
+                      chooseStudioTool("text");
+                      openTextComposer(selectedText);
+                    }}
+                  >
+                    <span className="tool-icon text-tool-icon" aria-hidden="true">Aa</span>
+                    <span className="tool-name" aria-hidden="true">글씨</span>
+                  </button>
+                </div>
+                {studioTool === "shape" && (
+                  <div className="shape-options">
+                    <div className="shape-kind-row" role="group" aria-label="도형 고르기">
+                      {SHAPE_KINDS.slice(0, moreShapes ? SHAPE_KINDS.length : BASIC_SHAPE_COUNT).map((item) => (
+                        <button
+                          type="button"
+                          aria-label={item.label}
+                          title={item.label}
+                          aria-pressed={shapeKind === item.kind}
+                          onClick={() => {
+                            setShapeKind(item.kind);
+                            if (item.kind === "line" || item.kind === "curve") setShapeFilled(false);
+                            clearShapeStart();
+                          }}
+                          key={item.kind}
+                        >
+                          {item.icon}
+                        </button>
+                      ))}
+                      <button type="button" className="shape-more" aria-label={moreShapes ? "도형 접기" : "더 많은 도형"} title={moreShapes ? "도형 접기" : "더 많은 도형"} aria-expanded={moreShapes} onClick={() => setMoreShapes((value) => !value)}>
+                        {moreShapes ? "−" : "＋"}
+                      </button>
                     </div>
-                    <button type="button" className="text-new-button" disabled={textObjects.length >= MAX_TEXT_OBJECTS} onClick={() => openTextComposer()}>＋ 새 글씨</button>
-                  </>
-                ) : (
-                  <button type="button" className="text-new-button" disabled={textObjects.length >= MAX_TEXT_OBJECTS} onClick={() => openTextComposer()}>＋ 새 글씨 쓰기</button>
+                    <div className="shape-fill-row" role="group" aria-label="도형 안쪽">
+                      <button type="button" aria-pressed={!shapeFilled} onClick={() => setShapeFilled(false)}>
+                        테두리
+                      </button>
+                      <button type="button" aria-pressed={shapeFilled} disabled={shapeKind === "line" || shapeKind === "curve"} onClick={() => setShapeFilled(true)}>
+                        색 채움
+                      </button>
+                    </div>
+                  </div>
                 )}
-              </div>
-            )}
-            <div className="input-mode-control" role="group" aria-label="그리기 입력 방법">
-              <button type="button" aria-pressed={inputMode === "pen"} onClick={enablePenMode}><span>✍️</span><b>펜 모드</b><small>손바닥은 그려지지 않아요</small></button>
-              <button type="button" aria-pressed={inputMode === "finger"} onClick={disablePenMode}><span>☝️</span><b>손가락 모드</b><small>손가락으로 그려요</small></button>
-            </div>
-            <button
-              type="button"
-              className="clear-all-button"
-              disabled={Boolean(conflictDraft) || !documentState.ops.length}
-              onClick={() => setClearConfirmOpen(true)}
-            >
-              <span aria-hidden="true">🗑️</span><b>전체 지우기</b>
-            </button>
-          </div>
-          <div className="tool-colors">
-            <span className="panel-grip" aria-hidden="true"><GripHorizontalIcon size={18} /></span>
-            <p className="tool-section-label color-label">색</p>
-            <div className="selected-color" role="status" aria-live="polite"><i style={{ background: selectedColor }} aria-hidden="true" /><span>현재 색 · <b>{COLOR_NAMES[selectedColor] ?? "고른 색"}</b></span></div>
-            <div className="palette" role="group" aria-label="색 고르기">
-              {PALETTE.map((value) => (
+                {studioTool === "text" && (
+                  <div className="text-options" aria-label="글씨 고치기">
+                    {pendingText ? (
+                      <div className="text-pending-card" role="status">
+                        <b>“{pendingText.text}”</b>
+                        <span>도화지에 놓을 곳을 눌러요.</span>
+                        <button type="button" onClick={() => setPendingText(null)}>취소</button>
+                      </div>
+                    ) : selectedText ? (
+                      <>
+                        <div className="text-edit-heading"><span>고른 글씨</span><b>{selectedText.text}</b></div>
+                        <div className="text-edit-actions">
+                          <button type="button" onClick={() => openTextComposer(selectedText)}>✏️ 내용</button>
+                          <button
+                            type="button"
+                            aria-label="글씨 작게"
+                            disabled={selectedText.fontSize === TEXT_SIZES[0]}
+                            onClick={() => {
+                              const index = TEXT_SIZES.indexOf(selectedText.fontSize);
+                              if (index > 0) updateTextObject(selectedText, { fontSize: TEXT_SIZES[index - 1] });
+                            }}
+                          >Aa−</button>
+                          <button
+                            type="button"
+                            aria-label="글씨 크게"
+                            disabled={selectedText.fontSize === TEXT_SIZES.at(-1)}
+                            onClick={() => {
+                              const index = TEXT_SIZES.indexOf(selectedText.fontSize);
+                              if (index >= 0 && index < TEXT_SIZES.length - 1) updateTextObject(selectedText, { fontSize: TEXT_SIZES[index + 1] });
+                            }}
+                          >Aa＋</button>
+                          <button type="button" className="text-delete" onClick={() => updateTextObject(selectedText, { deleted: true })}>🗑️ 지우기</button>
+                        </div>
+                        <button type="button" className="text-new-button" disabled={textObjects.length >= MAX_TEXT_OBJECTS} onClick={() => openTextComposer()}>＋ 새 글씨</button>
+                      </>
+                    ) : (
+                      <button type="button" className="text-new-button" disabled={textObjects.length >= MAX_TEXT_OBJECTS} onClick={() => openTextComposer()}>＋ 새 글씨 쓰기</button>
+                    )}
+                  </div>
+                )}
+                <div className="input-mode-control" role="group" aria-label="그리기 입력 방법">
+                  <button type="button" aria-pressed={inputMode === "pen"} onClick={enablePenMode}><span>✍️</span><b>펜 모드</b><small>손바닥은 그려지지 않아요</small></button>
+                  <button type="button" aria-pressed={inputMode === "finger"} onClick={disablePenMode}><span>☝️</span><b>손가락 모드</b><small>손가락으로 그려요</small></button>
+                </div>
                 <button
                   type="button"
-                  aria-label={COLOR_NAMES[value]}
-                  title={COLOR_NAMES[value]}
-                  aria-pressed={selectedColor === value}
-                  onClick={() => {
-                    setColor(value);
-                    if (studioTool === "text" && selectedText) updateTextObject(selectedText, { color: value });
-                    if (studioTool === "text" && pendingText) setPendingText({ ...pendingText, color: value });
-                    if (studioTool === "eraser") chooseStudioTool(lastBrushRef.current);
-                  }}
-                  key={value}
-                  style={{ background: value }}
-                />
-              ))}
+                  className="clear-all-button"
+                  disabled={Boolean(conflictDraft) || !documentState.ops.length}
+                  onClick={() => setClearConfirmOpen(true)}
+                >
+                  <span aria-hidden="true">🗑️</span><b>전체 지우기</b>
+                </button>
             </div>
-            {/* 무지개 버튼: 상세 색 고르기 대화상자. 팔레트 밖의 색을 쓰는 동안은 눌린 상태로 두고 고른 색을 안쪽 테두리로 보여 준다. */}
-            <button type="button" className="more-colors-button" aria-label="다른 색 고르기" title="다른 색 고르기" aria-haspopup="dialog" aria-expanded={colorPickerOpen} aria-pressed={customColor} style={customColor ? { boxShadow: `inset 0 0 0 6px ${selectedColor}` } : undefined} onClick={() => setColorPickerOpen(true)}>🎨 색 더보기</button>
-          </div>
+          )}
         </aside>
       </div>
       {clearConfirmOpen && (
@@ -3204,10 +3117,7 @@ export function DrawingStudio() {
         </div>
       )}
       {colorPickerOpen && <ColorPickerDialog color={selectedColor} names={COLOR_NAMES} onPick={(value) => {
-        setColor(value);
-        if (studioTool === "text" && selectedText) updateTextObject(selectedText, { color: value });
-        if (studioTool === "text" && pendingText) setPendingText({ ...pendingText, color: value });
-        if (studioTool === "eraser") chooseStudioTool(lastBrushRef.current);
+        pickColor(value);
         setColorPickerOpen(false);
       }} onClose={() => setColorPickerOpen(false)} />}
       {timelapseOpen && <TimelapsePlayer document={documentState} onClose={() => setTimelapseOpen(false)} />}

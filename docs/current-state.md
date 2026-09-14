@@ -1046,3 +1046,11 @@ typecheck·lint(오류 0), `npm test` 323/324(실패 1은 Node 22.13 환경 문�
 
 **검증.** 개발 서버(3301, 이 폴더 소유 확인)에서 1689·1180·1024·820·390·320·844×390: 처음 1쪽(앞 화살표 막힘, 솔이부터 10장), 다음 → 2쪽(도리부터 10장, 다음 화살표 막힘, 점 이동), 앞 → 1쪽 복귀, 화살표 44px 이상, 가로 넘침 0, 태블릿·데스크톱 세로 넘침 0. 2쪽 도리를 고르면 "도리와 시작하기" → `/student` 이동, 서버 별명 "도리"·🐧 저장. 반복 렌더로 로컬 입장 한도(IP 180회/10분)에 두 번 걸려 기다렸다.
 - `browser-check`(3301): 친구 고르기 항목 전부 통과. 동물 수 기대값을 10에서 20으로 고쳤다(처음 실행에서 "동물 선택이 10개 :: 20"으로 실패). 남은 실패 1은 844×390 캔버스 두 손가락 핀치 — 기존 CDP 터치 전달 환경 항목이고 캔버스는 건드리지 않았다. typecheck·lint(오류 0), 관련 테스트 27/27.
+
+## 2026-09-14 선생님 음성 귓속말 코드 제거 (`claude/remove-voice-whisper-20260914`)
+
+사용자: "음성 귓속말 기능 코드는 아예 제거해줘". 지운 것: `app/api/voice/route.ts`, `lib/voice-whisper.ts`, `lib/voice-whisper-validation.ts`, `app/components/VoiceWhisper.tsx`(선생님 녹음 버튼은 이미 어디서도 안 쓰였고, 학생 도화지는 음성이 켜졌을 때 1.5초마다 받아 가는 표시만 남아 있었다), `db/runtime.ts`의 `WHISPER_RELAY` 릴레이 연결, 전역 CSS의 `.voice-whisper`·`.button.whisper`·`.voice-speaking` 규칙, `.env.example`·README의 `WIGGLE_VOICE_WHISPER_ENABLED`·`WHISPER_RELAY_URL`. DB 테이블은 원래 없었다. `tests/mvp3.test.mjs`의 음성 계약 테스트는 "네 파일이 없고 런타임에 릴레이가 없다"는 되살아남 방지 검사로 바꿨다. 옛 계획·인수인계 문서의 언급은 이력이라 두었다.
+
+검증: typecheck 0(개발 서버가 만든 `.next/dev/types/app/api/voice` 생성 파일이 남아 오류가 나 그 폴더만 지웠다), lint 오류 0, `npm test` 326/327(실패 1은 Node 22.13 환경), `/api/voice` 404, `browser-check`(3301) 실패 1은 기존 844×390 캔버스 핀치 환경 항목.
+
+같은 작업에서 선생님 관여 방식 결정(따로 된 층)을 `product-decisions.md` 교사와 메시지 5항에 기록했다.

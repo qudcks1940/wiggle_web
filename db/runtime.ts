@@ -6,23 +6,6 @@ import { runtimeEnvironment } from "@/lib/runtime/environment";
 export interface WiggleEnv {
   DB: D1Database;
   ARTWORKS: R2Bucket;
-  WHISPER_RELAY?: Fetcher;
-}
-
-// 릴레이는 예전 Workers 서비스 바인딩과 같은 fetch 표면만 노출한다.
-// 호출부는 절대 주소로 Request를 만들므로 경로만 유지한 채 릴레이 주소로 보낸다.
-function whisperRelayFetcher(): Fetcher | undefined {
-  const base = process.env.WHISPER_RELAY_URL;
-  if (!base) return undefined;
-  const relay = {
-    async fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-      const request = input instanceof Request ? input : new Request(input, init);
-      const requested = new URL(request.url);
-      const target = new URL(requested.pathname + requested.search, base);
-      return fetch(new Request(target, request));
-    },
-  };
-  return relay as unknown as Fetcher;
 }
 
 let cachedEnv: WiggleEnv | undefined;
@@ -35,7 +18,6 @@ export function bindings(): WiggleEnv {
     cachedEnv = {
       DB: createTursoD1(environment) as unknown as D1Database,
       ARTWORKS: createArtworksStore(environment) as unknown as R2Bucket,
-      WHISPER_RELAY: whisperRelayFetcher(),
     };
   }
   return cachedEnv;

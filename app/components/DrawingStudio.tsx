@@ -19,7 +19,6 @@ import { activeProfile, clearQueuedArtworkSaves, createSerialTaskQueue, deleteQu
 import type { QueuedArtworkDraft } from "@/lib/client-session";
 import { Logo } from "./Logo";
 import { TimelapsePlayer } from "./TimelapsePlayer";
-import { VoiceWhisperStatus } from "./VoiceWhisper";
 import { useModalDialog } from "./useModalDialog";
 import { ColorPickerDialog } from "./ColorPickerDialog";
 import { StudentMessageCenter, StudentTeacherMessage } from "./StudentMessageCenter";
@@ -2558,7 +2557,6 @@ export function DrawingStudio() {
           선생님이 지금 내 그림을 보고 있어요.
         </div>
       )}
-      <VoiceWhisperStatus />
       <div className={`studio-body ${grimiOpen || lesson ? "" : "without-step-panel"}${grimiOpen ? " grimi-open" : ""}${grimiOpen && grimiCollapsed ? " grimi-collapsed" : ""}${studioTool === "shape" || studioTool === "text" ? " tool-options-open" : ""}`}>
         {grimiOpen ? (
           <aside className={`grimi-panel${grimiCollapsed ? " collapsed" : ""}`} aria-live="polite">

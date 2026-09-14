@@ -18,11 +18,6 @@ import { buildWeeklyGrowthReport, canonicalEvaluationPolicyText, compactFamilyPo
 import { sha256 } from "../lib/token-crypto.ts";
 import { subscriptionCapability, verifyAndApplySubscriptionWebhook } from "../lib/subscriptions.ts";
 import { upgradeMvp3Schema } from "../lib/mvp3-schema-upgrade.ts";
-import {
-  validateRelayDeliveryResponse,
-  validateRelayReceiveResponse,
-  validateWhisperAudio,
-} from "../lib/voice-whisper-validation.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const TOKEN_A = "A".repeat(43); const TOKEN_B = "B".repeat(43); const TOKEN_C = "C".repeat(43);
@@ -460,40 +455,12 @@ test("subscription webhooks apply only the newest verified provider event with d
   } finally { await handle.dispose(); }
 });
 
-function webmBytes() {
-  const bytes = new Uint8Array(12); bytes.set([0x1a, 0x45, 0xdf, 0xa3]); return bytes.buffer;
-}
-
-test("voice input and relay contracts reject MIME smuggling, invalid duration, bad magic and replay responses", () => {
-  const valid = { bytes: webmBytes(), contentType: "audio/webm;codecs=opus", durationMs: 1200 };
-  assert.deepEqual(validateWhisperAudio(valid), { ok: true, contentType: "audio/webm" });
-  for (const durationMs of [Number("banana"), Number.NaN, Number.POSITIVE_INFINITY, 0, 12001, 1.5]) assert.equal(validateWhisperAudio({ ...valid, durationMs }).ok, false);
-  assert.equal(validateWhisperAudio({ ...valid, contentType: "audio/webmtext/html" }).ok, false);
-  assert.equal(validateWhisperAudio({ ...valid, contentType: "text/html;audio/webm" }).ok, false);
-  assert.equal(validateWhisperAudio({ ...valid, bytes: new Uint8Array(12).buffer }).ok, false);
-  assert.equal(validateWhisperAudio({ ...valid, bytes: new Uint8Array([0x1a, 0x45, 0xdf, 0xa3]).buffer }).ok, false);
-
-  const deliveryNonce = "delivery_nonce_123456";
-  const receipt = "receipt_123456789012";
-  const deliveryHeaders = { "x-wiggle-relay-ttl-seconds": "30", "x-wiggle-single-consume": "enforced", "x-wiggle-replay-protection": "enforced", "x-wiggle-delivery-nonce": deliveryNonce, "x-wiggle-receipt": receipt };
-  assert.equal(validateRelayDeliveryResponse(new Response(null, { status: 201, headers: deliveryHeaders }), deliveryNonce), true);
-  assert.equal(validateRelayDeliveryResponse(new Response(null, { status: 201, headers: { ...deliveryHeaders, "x-wiggle-relay-ttl-seconds": "31" } }), deliveryNonce), false);
-  assert.equal(validateRelayDeliveryResponse(new Response(null, { status: 201, headers: { ...deliveryHeaders, "x-wiggle-single-consume": "unsupported" } }), deliveryNonce), false);
-
-  const now = new Date("2026-07-22T12:00:00.000Z"); const receiveNonce = "receive_nonce_1234567";
-  const receiveHeaders = { ...deliveryHeaders, "x-wiggle-replay-denied": "true", "x-wiggle-consumed": "true", "x-wiggle-receive-nonce": receiveNonce, "x-wiggle-expires-at": "2026-07-22T12:00:20.000Z" };
-  assert.equal(validateRelayReceiveResponse(new Response(null, { status: 200, headers: receiveHeaders }), receiveNonce, now), true);
-  assert.equal(validateRelayReceiveResponse(new Response(null, { status: 200, headers: receiveHeaders }), "fresh_nonce_12345678", now), false, "a repeated receipt bound to an old nonce is denied");
-  assert.equal(validateRelayReceiveResponse(new Response(null, { status: 200, headers: { ...receiveHeaders, "x-wiggle-consumed": "false" } }), receiveNonce, now), false);
-  assert.equal(validateRelayReceiveResponse(new Response(null, { status: 200, headers: { ...receiveHeaders, "x-wiggle-expires-at": "2026-07-22T12:00:31.000Z" } }), receiveNonce, now), false);
-});
-
 test("routes and UI preserve token-free family history, consent, no-store, and disabled-provider boundaries", async () => {
   const headers = familySecurityHeaders();
   assert.equal(headers.get("cache-control"), "no-store, max-age=0"); assert.equal(headers.get("referrer-policy"), "no-referrer"); assert.equal(headers.get("x-frame-options"), "DENY"); assert.match(headers.get("content-security-policy"), /frame-ancestors 'none'/);
   assert.equal(familySessionCookieHeader(TOKEN_B, "2026-07-22T13:00:00.000Z", new Date("2026-07-22T12:00:00.000Z")), `wiggle_family=${TOKEN_B}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600`);
-  const [exchangeRoute, sessionRoute, inviteRoute, familyPage, teacherRoute, teacherUi, edgeHeaders, familyUi, voiceRoute, voiceCore, voiceUi, subscriptionRoute, webhookRoute, schema, runtime, migration] = await Promise.all([
-    read("../app/family/[token]/route.ts"), read("../app/api/family/session/route.ts"), read("../app/api/family/invite/route.ts"), read("../app/family/view/page.tsx"), read("../app/api/teacher/route.ts"), read("../app/components/TeacherApp.tsx"), read("../next.config.ts"), read("../app/components/FamilyView.tsx"), read("../app/api/voice/route.ts"), read("../lib/voice-whisper.ts"), read("../app/components/VoiceWhisper.tsx"), read("../app/api/subscription/route.ts"), read("../app/api/subscription/webhook/route.ts"), read("../db/schema.ts"), read("../db/runtime.ts"), read("../drizzle/0003_perfect_smasher.sql"),
+  const [exchangeRoute, sessionRoute, inviteRoute, familyPage, teacherRoute, teacherUi, edgeHeaders, familyUi, subscriptionRoute, webhookRoute, schema, runtime, migration] = await Promise.all([
+    read("../app/family/[token]/route.ts"), read("../app/api/family/session/route.ts"), read("../app/api/family/invite/route.ts"), read("../app/family/view/page.tsx"), read("../app/api/teacher/route.ts"), read("../app/components/TeacherApp.tsx"), read("../next.config.ts"), read("../app/components/FamilyView.tsx"), read("../app/api/subscription/route.ts"), read("../app/api/subscription/webhook/route.ts"), read("../db/schema.ts"), read("../db/runtime.ts"), read("../drizzle/0003_perfect_smasher.sql"),
   ]);
   assert.match(exchangeRoute, /exchangeFamilyInvite/); assert.match(exchangeRoute, /status: 303/); assert.match(exchangeRoute, /familySessionCookieHeader/); assert.match(exchangeRoute, /\/family\/view/);
   // 1회용 초대는 사람이 누른 POST에서만 소비된다. GET은 확인 화면만 그린다.
@@ -507,7 +474,10 @@ test("routes and UI preserve token-free family history, consent, no-store, and d
   assert.match(teacherUi, /familySharePanelOpen/); assert.match(teacherUi, /setFamilySharePanelOpen\(true\)/); assert.match(teacherUi, /!familySharePanelOpen/); assert.match(teacherUi, /나중에 하기/);
   // 전역 보안 헤더는 워커 프록시 대신 next.config headers()가 재현한다 (경로별 실측은 배포 검증에서).
   assert.match(edgeHeaders, /referrer-policy/); assert.match(edgeHeaders, /x-frame-options/); assert.match(edgeHeaders, /content-security-policy/);
-  assert.match(voiceUi, /onPointerDown/); assert.match(voiceUi, /MediaRecorder/); assert.match(voiceCore, /x-wiggle-single-consume/); assert.match(voiceCore, /x-wiggle-replay-protection/); assert.doesNotMatch(voiceCore + voiceRoute, /INSERT|UPDATE|ARTWORKS\.put|ARTWORKS\.get/);
+  // 선생님 음성 귓속말은 2026-09-14 사용자 지시("음성 귓속말 기능 코드는 아예 제거해줘")로 코드째 지웠다. 되살아나지 않게 막는다.
+  const { existsSync } = await import("node:fs");
+  for (const gone of ["../app/api/voice/route.ts", "../lib/voice-whisper.ts", "../lib/voice-whisper-validation.ts", "../app/components/VoiceWhisper.tsx"]) assert.equal(existsSync(new URL(gone, import.meta.url)), false, gone);
+  assert.doesNotMatch(runtime, /WHISPER_RELAY/);
   assert.match(teacherUi, /async function sendPreviewMessage/); assert.match(teacherUi, /studentId: recipientId/); assert.match(teacherUi, /학생에게 메시지/); assert.match(teacherUi, /학생 화면에 보냈어요/);
   assert.match(subscriptionRoute, /SUBSCRIPTIONS_DISABLED/); assert.match(webhookRoute, /verifyAndApplySubscriptionWebhook/);
   assert.match(schema + runtime + migration, /guardian_consent_at/); assert.match(schema + runtime + migration, /family_share_sessions/); assert.match(schema + runtime + migration, /provider_event_at/); assert.match(schema + runtime + migration, /occurred_at/);

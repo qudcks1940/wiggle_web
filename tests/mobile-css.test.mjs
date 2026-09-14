@@ -67,12 +67,12 @@ test("mobile studio and teacher layouts finish in two rows without horizontal te
   assert.match(css, /\.teacher-room \.teacher-header \{ display:grid; grid-template-columns:auto minmax\(0,1fr\) auto;/);
   assert.match(css, /\.message-history p,\.family-link-history p \{ display:grid; grid-template-columns:minmax\(0,1fr\) auto;/);
   assert.match(css, /html,body \{ width:100%; max-width:100%; overflow-x:hidden; \}/);
-  assert.match(studio, /className="button ghost compact"/);
-  assert.match(studio, /className="button grimi-button compact"/);
-  assert.match(studio, /className="button primary compact"/);
-  assert.match(css, /\.studio-header>\.button\.ghost\.compact:before \{ content:"⏱"; \}/);
-  assert.match(css, /\.studio-header>\.grimi-button:before \{ content:"✨"; \}/);
-  assert.match(css, /\.studio-header>\.button\.primary\.compact:before \{ content:"✓"; \}/);
+  // 머리 줄 버튼 묶음(2026-09-14 사용자 결정, 시안 1): 조용한 선 아이콘+글자, 몽그리만 연노랑, 완성만 진초록.
+  // 좁은 화면에서 버튼을 이모지(⏱·✨·🙋·✓)로 접던 옛 규칙은 없앴다.
+  assert.match(studio, /<div className="studio-actions">[\s\S]*?className="studio-action"[\s\S]*?과정 보기[\s\S]*?className="studio-action is-helper"[\s\S]*?몽그리 부르기[\s\S]*?studio-action hand-raise-button[\s\S]*?<StudentMessageCenter messages=\{teacherMessages\} floating header \/>\s*<\/div>\s*<button type="button" className="studio-action is-primary studio-finish"/);
+  assert.doesNotMatch(css, /content:"⏱"|content:"✨"|content:"🙋"/);
+  assert.match(css, /\.studio-action\.is-primary \{[^}]*background:#184028;/);
+  assert.match(css, /@media \(max-width:720px\) and \(orientation:portrait\) \{[\s\S]*?\.studio-actions \{ order:3; width:100%;[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\);/);
   assert.match(css, /\.save-conflict \{ top:auto; bottom:calc\(72px \+ env\(safe-area-inset-bottom\)\); \}/);
   assert.match(studio, /aria-label="연필" title="연필"[\s\S]*?<span className="tool-icon" aria-hidden="true">\s*✏️\s*<\/span>\s*<span className="tool-name" aria-hidden="true">\s*연필\s*<\/span>/);
   assert.doesNotMatch(studio, /✒️|>펜<|>펜<\/button>/);

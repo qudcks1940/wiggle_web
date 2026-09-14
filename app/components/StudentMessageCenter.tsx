@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { studentFetch } from "@/lib/client-session";
 import { useModalDialog } from "./useModalDialog";
+import { MailIcon } from "./StudioIcons";
 
 export type StudentTeacherMessage = {
   id: string;
@@ -12,7 +13,7 @@ export type StudentTeacherMessage = {
   seenAt?: string | null;
 };
 
-export function StudentMessageCenter({ messages, floating = false, compact = false }: { messages: StudentTeacherMessage[]; floating?: boolean; compact?: boolean }) {
+export function StudentMessageCenter({ messages, floating = false, compact = false, header = false }: { messages: StudentTeacherMessage[]; floating?: boolean; compact?: boolean; header?: boolean }) {
   const [open, setOpen] = useState(false);
   const [locallySeen, setLocallySeen] = useState(() => new Set<string>());
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -46,9 +47,14 @@ export function StudentMessageCenter({ messages, floating = false, compact = fal
     </aside>}
     {/* .floating은 비컴팩트 버튼에서는 화면 고정(fixed) 배치 규칙이라, 헤더 안 인라인 버튼에는
         배너 스타일(floating prop)만 적용하고 버튼의 .floating 클래스는 컴팩트일 때만 붙인다. */}
-    <button type="button" className={`student-message-button${floating && compact ? " floating" : ""}${compact ? " compact" : ""}`} onClick={openHistory} aria-label={`선생님 말씀 ${unread.length ? `${unread.length}개 새로 옴` : "이력 보기"}`}>
+    {header
+      /* 그리기 화면 머리 줄: 조용한 선 아이콘 + "선생님 말씀" 글자, 안 읽은 말씀이 있으면 연노랑 바탕과 빨간 수(2026-09-14 시안 1). */
+      ? <button type="button" className={`studio-action student-message-action${unread.length ? " has-unread" : ""}`} onClick={openHistory} aria-label={`선생님 말씀 ${unread.length ? `${unread.length}개 새로 옴` : "이력 보기"}`}>
+          <MailIcon size={22} /><span>선생님 말씀</span>{unread.length > 0 && <b className="studio-action-badge">{unread.length}</b>}
+        </button>
+      : <button type="button" className={`student-message-button${floating && compact ? " floating" : ""}${compact ? " compact" : ""}`} onClick={openHistory} aria-label={`선생님 말씀 ${unread.length ? `${unread.length}개 새로 옴` : "이력 보기"}`}>
       <span className="teacher-message-icon" aria-hidden="true">💌</span>{compact ? <span className="sr-only">선생님 말씀</span> : <span className="student-message-label">선생님 말씀</span>}{unread.length > 0 && <b>{unread.length}</b>}
-    </button>
+    </button>}
     {open && <div className="modal-backdrop" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="student-message-title">
       <section className="student-message-history">
         <button type="button" className="modal-close" onClick={() => setOpen(false)} aria-label="선생님 말씀 이력 닫기">×</button>

@@ -10,7 +10,7 @@ import { DrawingInputMode, INPUT_MODE_EVENT } from "@/lib/input-mode";
 import { CanvasView, IDENTITY_VIEW, pinchView } from "@/lib/canvas-view";
 import { lessonBySlug, Lesson } from "@/lib/lesson-content";
 import { guideMarksForVariant } from "@/lib/lesson-guide-variants";
-import { ArrowLeftIcon, CheckIcon, ChevronUpIcon, GripHorizontalIcon, MoreHorizontalIcon, Redo2Icon, SparklesIcon, Undo2Icon } from "./StudioIcons";
+import { ArrowLeftIcon, CheckIcon, ChevronUpIcon, GripHorizontalIcon, HandIcon, MoreHorizontalIcon, PlayCircleIcon, Redo2Icon, Undo2Icon } from "./StudioIcons";
 import { createLessonStepBaseline, isLessonStepProgress, lessonStepActionStatus, LessonStepProgress } from "@/lib/lesson-step-progress";
 import { lockGuideTrace, snapGuideTrace } from "@/lib/trace-guidance.mjs";
 import { clampTextPlacement, suggestTextPlacement } from "@/lib/text-placement";
@@ -2589,20 +2589,24 @@ export function DrawingStudio() {
             {step + 1}/{lesson.steps.length}
           </span>
         )}
-        <button className="button ghost compact" onClick={() => setTimelapseOpen(true)}>
-          과정 보기
-        </button>
-        <button className="button grimi-button compact" disabled={grimiLoading || Boolean(conflictDraft)} onClick={() => void askGrimi()}>
-          <SparklesIcon size={18} />
-          <span className="grimi-button-label">몽그리 부르기</span>
-        </button>
-        <button type="button" className={`button ghost compact hand-raise-button${handRaised ? " is-raised" : ""}`} aria-pressed={handRaised} disabled={handBusy} onClick={() => void toggleHand()} aria-label={handRaised ? "선생님 부른 손 내리기" : "선생님 부르기"}>
-          <span aria-hidden="true">🙋</span>
-          <span className="hand-raise-label">{handRaised ? "손 내리기" : "선생님"}</span>
-        </button>
-        <StudentMessageCenter messages={teacherMessages} floating compact />
-        <button className="button primary compact" disabled={Boolean(conflictDraft)} onClick={requestArtworkCompletion}>
-          완성
+        {/* 버튼 묶음(2026-09-14 사용자 결정, 시안 docs/design-assets/studio-header-actions/1-quiet-ghost.webp):
+            과정 보기·선생님·선생님 말씀은 조용한 선 아이콘+글자, 몽그리는 연노랑 도움 버튼, 완성만 진초록.
+            휴대폰 세로에서는 네 버튼이 둘째 줄로 내려가고 완성은 첫 줄에 남는다. */}
+        <div className="studio-actions">
+          <button type="button" className="studio-action" onClick={() => setTimelapseOpen(true)}>
+            <PlayCircleIcon size={22} /><span>과정 보기</span>
+          </button>
+          <button type="button" className="studio-action is-helper" disabled={grimiLoading || Boolean(conflictDraft)} onClick={() => void askGrimi()}>
+            {grimiLoading ? <span className="studio-action-spinner" aria-hidden="true" /> : <img className="studio-action-mongri" src="/brand/mongri/listening.png" alt="" aria-hidden="true" width={28} height={28} />}
+            <span>몽그리 부르기</span>
+          </button>
+          <button type="button" className={`studio-action hand-raise-button${handRaised ? " is-raised" : ""}`} aria-pressed={handRaised} disabled={handBusy} onClick={() => void toggleHand()} aria-label={handRaised ? "선생님 부른 손 내리기" : "선생님 부르기"}>
+            <HandIcon size={22} /><span>{handRaised ? "손 내리기" : "선생님"}</span>
+          </button>
+          <StudentMessageCenter messages={teacherMessages} floating header />
+        </div>
+        <button type="button" className="studio-action is-primary studio-finish" disabled={Boolean(conflictDraft)} onClick={requestArtworkCompletion}>
+          <CheckIcon size={20} /><span>완성</span>
         </button>
       </header>
       {conflictDraft && (

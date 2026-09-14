@@ -11,6 +11,7 @@ import { entryPathFor, parseEntryQr, readEntryHash } from "@/lib/qr-entry";
 import { QrScanner } from "./QrScanner";
 
 export const ENTRY_CODE_LENGTH = 4;
+const PICK_PAGE_SIZE = 10;
 /* 입장은 두 단계다: 반을 정하고(QR이 기본, 못 쓰면 수업 코드 4자리) 아이 참여 코드 4자리를 누른다.
  * 코드가 곧 그 아이의 자리라, 다음 시간에 같은 코드를 넣으면 같은 아이로 돌아온다.
  * 참여 코드는 2026-09-12에 네 자리로 줄였다 — 여섯 자리는 아이가 누르기 벅찼다. */
@@ -31,6 +32,9 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
   // 첫 입장이 확인된 참여 코드. 친구 고르기 뒤 다시 제출할 때 이 코드를 쓴다 — 그 사이 반 확인이
   // 다시 돌면 codeInput이 비워져 "참여 코드 네 자리를 눌러 주세요"로 막혔다(2026-09-13 실측).
   const claimCode = useRef("");
+  // 친구 고르기 쪽 넘기기(2026-09-14, 20종). 쪽 번호는 가로 스크롤 위치에서 읽는다 — 손가락으로 밀어도 맞는다.
+  const [pickPage, setPickPage] = useState(0);
+  const pagesRef = useRef<HTMLDivElement>(null);
   const entry = initialEntry;
 
   useEffect(() => {
@@ -249,6 +253,8 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
     // 첫 입장 친구 고르기(2026-09-13 사용자 시안, docs/design-assets/animal-picker/mockup-2026-09-13.png).
     // 고른 친구의 이름이 곧 별명이 된다 — 이름은 서버 기본 별명을 읽으므로 둘이 어긋나지 않는다.
     const chosen = ANIMAL_CHARACTERS.find((character) => character.emoji === animal);
+    const pickPages = Array.from({ length: Math.ceil(ANIMAL_CHARACTERS.length / PICK_PAGE_SIZE) }, (_, index) => ANIMAL_CHARACTERS.slice(index * PICK_PAGE_SIZE, (index + 1) * PICK_PAGE_SIZE));
+    const goToPickPage = (page: number) => { const el = pagesRef.current; if (el) el.scrollTo({ left: page * el.clientWidth }); };
     return <main className={check.pickShell}>
       {/* 장식(코덱스 그림 2026-09-14). 카드 격자 옆 여백이 있는 큰 화면에서만 보인다. */}
       <div className={check.pickDeco} aria-hidden="true">
@@ -269,16 +275,26 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
         </div>
         <fieldset className={check.pickFieldset} aria-labelledby="pick-title">
           <legend className={check.pickHidden}>친구 고르기</legend>
-          <div className={check.pickGrid}>
-            {ANIMAL_CHARACTERS.map((character) => {
-              const selected = animal === character.emoji;
-              return <button type="button" key={character.emoji} className={check.pickCard} aria-pressed={selected} aria-label={`${character.name}, ${character.species}`} onClick={() => { setAnimal(character.emoji); clearEntryError(); }}>
-                {selected && <span className={check.pickCheck} aria-hidden="true">✓</span>}
-                <img className={check.pickImage} src={character.image} alt="" aria-hidden="true" width="512" height="512" loading="eager" />
-                <b className={check.pickName}>{character.name}</b>
-                <small className={check.pickSpecies}>{character.species}</small>
-              </button>;
-            })}
+          <div className={check.pickPager}>
+            <button type="button" className={`${check.pickArrow} ${check.pickPrev}`} disabled={pickPage === 0} onClick={() => goToPickPage(pickPage - 1)} aria-label={`앞 친구들 보기 (${pickPage + 1}/${pickPages.length}쪽)`}>‹</button>
+            {/* 쪽마다 5×2. 가로 스크롤 + 스냅이라 태블릿에서 밀어서 넘길 수 있다. 다른 쪽 카드에 초점이 가면 브라우저가 그 쪽으로 넘겨 준다. */}
+            <div ref={pagesRef} className={check.pickPages} onScroll={(event) => { const el = event.currentTarget; setPickPage(Math.round(el.scrollLeft / Math.max(1, el.clientWidth))); }}>
+              {pickPages.map((page, pageIndex) => <div key={pageIndex} className={check.pickGrid} aria-label={`${pageIndex + 1}쪽`} role="group">
+                {page.map((character) => {
+                  const selected = animal === character.emoji;
+                  return <button type="button" key={character.emoji} className={check.pickCard} aria-pressed={selected} aria-label={`${character.name}, ${character.species}`} onClick={() => { setAnimal(character.emoji); clearEntryError(); }}>
+                    {selected && <span className={check.pickCheck} aria-hidden="true">✓</span>}
+                    <img className={check.pickImage} src={character.image} alt="" aria-hidden="true" width="512" height="512" loading="eager" />
+                    <b className={check.pickName}>{character.name}</b>
+                    <small className={check.pickSpecies}>{character.species}</small>
+                  </button>;
+                })}
+              </div>)}
+            </div>
+            <button type="button" className={`${check.pickArrow} ${check.pickNext}`} disabled={pickPage >= pickPages.length - 1} onClick={() => goToPickPage(pickPage + 1)} aria-label={`다음 친구들 보기 (${pickPage + 1}/${pickPages.length}쪽)`}>›</button>
+            <div className={check.pickDots} aria-hidden="true">
+              {pickPages.map((_, pageIndex) => <span key={pageIndex} className={pageIndex === pickPage ? check.pickDotOn : check.pickDot} />)}
+            </div>
           </div>
         </fieldset>
         {errorNotice()}

@@ -5,7 +5,7 @@ import { startTestServer } from "./harness/server.mjs";
 import { nicknameKeySql, nicknameMatchKey, nicknameRateKeyPart } from "../lib/nickname.ts";
 import { FALLBACK_NICKNAME, NICKNAME_IDEAS, pickDifferentNickname } from "../lib/nickname-ideas.ts";
 
-const ANIMALS = ["🐰", "🐻", "🦊", "🐯", "🐼", "🐶", "🐱", "🐨", "🦁", "🐸"];
+const ANIMALS = ["🐰", "🐻", "🦊", "🐯", "🐼", "🐶", "🐱", "🐨", "🦁", "🐸", "🐧", "🐹", "🐷", "🐵", "🐮", "🐑", "🦒", "🐘", "🦉", "🦦"];
 
 // Next 서버 기동은 프로세스 하나 값이라 테스트마다 띄우면 비싸다. 파일 하나에 서버 하나만 띄우고,
 // 테스트가 끝날 때마다 행을 비워 격리한다. 학급 코드 4321은 UNIQUE라 초기화 없이는 두 번째 시드가 깨진다.

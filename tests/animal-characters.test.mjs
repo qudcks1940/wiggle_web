@@ -6,7 +6,9 @@ import { NICKNAME_IDEAS } from "../lib/nickname-ideas.ts";
 
 test("친구 이름은 서버가 붙이는 기본 별명과 같다 — 화면과 들어간 뒤 별명이 어긋나지 않는다", () => {
   const expected = [["🐰", "솔이", "토끼"], ["🐻", "보리", "곰"], ["🦊", "루루", "여우"], ["🐯", "호두", "호랑이"], ["🐼", "모모", "판다"],
-    ["🐶", "두부", "강아지"], ["🐱", "나비", "고양이"], ["🐨", "코코", "코알라"], ["🦁", "해솔", "사자"], ["🐸", "초롱", "개구리"]];
+    ["🐶", "두부", "강아지"], ["🐱", "나비", "고양이"], ["🐨", "코코", "코알라"], ["🦁", "해솔", "사자"], ["🐸", "초롱", "개구리"],
+    ["🐧", "도리", "펭귄"], ["🐹", "콩이", "햄스터"], ["🐷", "봄이", "돼지"], ["🐵", "미소", "원숭이"], ["🐮", "누리", "송아지"],
+    ["🐑", "구름", "양"], ["🦒", "키키", "기린"], ["🐘", "다솜", "코끼리"], ["🦉", "별이", "부엉이"], ["🦦", "하루", "수달"]];
   assert.deepEqual(ANIMAL_CHARACTERS.map((c) => [c.emoji, c.name, c.species]), expected);
   for (const character of ANIMAL_CHARACTERS) {
     assert.equal(character.name, NICKNAME_IDEAS[character.emoji][0], `${character.species}의 이름은 첫 별명 후보여야 함`);
@@ -40,4 +42,9 @@ test("친구 고르기 화면: 첫 입장 코드를 붙잡아 친구를 고른 �
   assert.match(join, /나랑 닮은 친구를 골라요/);
   assert.match(join, /withGwaWa\(chosen\.name\)\} 시작하기/);
   assert.match(join, /참여 코드 다시 누르기/);
+  // 20종은 10종씩 쪽을 넘긴다. 화살표는 끝 쪽에서 막히고, 쪽 번호는 스크롤 위치에서 읽어 밀어 넘겨도 맞는다.
+  assert.match(join, /const PICK_PAGE_SIZE = 10;/);
+  assert.match(join, /disabled=\{pickPage === 0\}/);
+  assert.match(join, /disabled=\{pickPage >= pickPages\.length - 1\}/);
+  assert.match(join, /Math\.round\(el\.scrollLeft \/ Math\.max\(1, el\.clientWidth\)\)/);
 });

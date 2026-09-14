@@ -337,7 +337,7 @@ async function main() {
         if (!createFlow.error) {
           check(createFlow.wrongCode, `${viewport.name} 틀린 참여 코드가 선생님 불러요로 이어짐`);
           check(createFlow.wrongSmall.length === 0, `${viewport.name} 오류 화면 터치 목표 44px 이상`, createFlow.wrongSmall);
-          check(createFlow.animals === 10, `${viewport.name} 동물 선택이 10개`, createFlow.animals);
+          check(createFlow.animals === 20, `${viewport.name} 동물 선택이 20개(10개씩 두 쪽)`, createFlow.animals);
           check(createFlow.disabledBefore === true && createFlow.disabledAfter === false, `${viewport.name} 친구를 고르면 시작하기가 열림`, { before: createFlow.disabledBefore, after: createFlow.disabledAfter });
           check(createFlow.startLabel.startsWith('솔이와 시작하기'), `${viewport.name} 시작 버튼이 고른 친구 이름을 부름`, createFlow.startLabel);
           check(createFlow.startVisible, `${viewport.name} 친구를 고른 뒤 시작 버튼이 화면 안에 보임`, createFlow);

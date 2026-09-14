@@ -42,8 +42,10 @@ test("the code and animal screens reuse the keypad notebook and never scroll sid
   assert.match(join, /type Mode = "checking" \| "code" \| "animal" \| "noRoster"/);
   assert.match(join, /className=\{`code-card \$\{check\.pad\}`\}/);
   // 친구 고르기는 2026-09-13 시안대로 수첩이 아니라 카드 격자다(넓으면 5열, 휴대폰 2열).
-  assert.match(join, /<div className=\{check\.pickGrid\}>/);
-  assert.match(css, /\.pickGrid \{ display: grid; grid-template-columns: repeat\(5, minmax\(0, 1fr\)\);/);
+  // 2026-09-14 20종: 격자 한 장이 한 쪽이고, 쪽들은 가로 스냅 스크롤 상자 안에 있다(가로 넘침은 상자 안에서만).
+  assert.match(join, /<div key=\{pageIndex\} className=\{check\.pickGrid\}/);
+  assert.match(css, /\.pickGrid \{ flex: 0 0 100%;[^}]*scroll-snap-align: start;[^}]*grid-template-columns: repeat\(5, minmax\(0, 1fr\)\);/);
+  assert.match(css, /\.pickPages \{[^}]*overflow-x: auto;[^}]*scroll-snap-type: x mandatory;/);
   assert.match(css, /@media \(max-width: 700px\) \{[^}]*\.pickTop \{ position: static;[\s\S]*?\.pickGrid \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}/);
   assert.match(css, /\.pad \.display :global\(\.entry-code-input\)/);
   assert.doesNotMatch(css, /animal-choice-grid|emoji-chip/);

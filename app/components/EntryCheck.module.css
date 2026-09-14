@@ -509,9 +509,24 @@
 .pickTitle::before, .pickTitle::after { content: ""; display: inline-block; width: 0.42em; height: 0.7em; margin: 0 0.4em; vertical-align: 0.05em; background: url("/entry-green/picker/title-sparkle.webp") center / contain no-repeat; }
 .pickTitle::after { transform: scaleX(-1); }
 .pickLead { margin: clamp(4px, 0.5vw, 8px) 0 0; font-size: clamp(16px, 1.4vw, 24px); font-weight: 800; color: #307040; }
-.pickFieldset { margin: 0; padding: 0; border: 0; min-width: 0; width: min(100%, 1220px); }
+.pickFieldset { margin: 0; padding: 0; border: 0; min-width: 0; width: min(100%, 1348px); }
+/* 쪽 넘기기(2026-09-14, 20종): 양옆 화살표 + 아래 점. 화살표 칸만큼 격자가 좁아지지만 카드 높이는 그림 높이(vh)가 정해 거의 같다. */
+.pickPager { --arrow: clamp(44px, 4vw, 60px); display: grid; grid-template-columns: var(--arrow) minmax(0, 1fr) var(--arrow); grid-template-areas: "prev pages next" ". dots ."; align-items: center; column-gap: clamp(4px, 0.4vw, 8px); }
+.pickPages { grid-area: pages; display: flex; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; }
+.pickPages::-webkit-scrollbar { display: none; }
+@media (prefers-reduced-motion: reduce) { .pickPages { scroll-behavior: auto; } }
+.pickArrow { width: var(--arrow); height: var(--arrow); display: grid; place-items: center; padding: 0 0 0.12em; border: 2px solid #d9e7c4; border-radius: 50%; background: #fefdf5; box-shadow: 0 3px 0 #cfdcb8; color: var(--pick-green); font: inherit; font-size: calc(var(--arrow) * 0.7); font-weight: 900; line-height: 1; cursor: pointer; }
+.pickPrev { grid-area: prev; }
+.pickNext { grid-area: next; }
+.pickArrow:active { transform: translateY(2px); box-shadow: 0 1px 0 #cfdcb8; }
+.pickArrow:disabled { opacity: .3; cursor: default; transform: none; }
+.pickArrow:focus-visible { outline: 4px solid var(--pick-green); outline-offset: 3px; }
+.pickDots { grid-area: dots; display: flex; justify-content: center; gap: 10px; padding-top: clamp(2px, 0.3vw, 6px); }
+.pickDot, .pickDotOn { width: 10px; height: 10px; border-radius: 999px; background: #d9e7c4; transition: width .2s; }
+.pickDotOn { width: 28px; background: var(--pick-green); }
 .pickHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.pickGrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(8px, 1.15vw, 19px); }
+/* 한 쪽. 테두리 그림자·초점 테가 스크롤 상자에 잘리지 않게 안쪽 여백을 둔다. */
+.pickGrid { flex: 0 0 100%; box-sizing: border-box; scroll-snap-align: start; padding: 6px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(8px, 1.15vw, 19px); }
 .pickCard {
   position: relative;
   min-width: 0;
@@ -560,11 +575,11 @@
 .pickStart:focus-visible { outline: 4px solid var(--pick-green); outline-offset: 4px; }
 .pickAgain { min-height: 44px; padding: 4px 12px; border: 0; background: none; color: #388048; font: inherit; font-size: clamp(15px, 1.35vw, 23px); font-weight: 900; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
 .pickAgain:focus-visible { outline: 4px solid var(--pick-green); outline-offset: 3px; border-radius: 8px; }
-/* 장식: 격자(최대 1220px) 옆 여백에만 둔다. 여백이 좁은 태블릿에서는 카드를 가리므로 숨긴다.
+/* 장식: 격자와 화살표(최대 1348px) 옆 여백에만 둔다. 여백이 좁은 태블릿에서는 카드를 가리므로 숨긴다.
    크기는 옆 여백 폭(--gut, 최대 250px)을 따른다. 시안 1689×931에서 여백 약 235px. */
 .pickDeco { display: none; }
 @media (min-width: 1600px) and (min-height: 760px) {
-  .pickDeco { --gut: min(calc((100vw - 1220px) / 2), 250px); display: block; position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .pickDeco { --gut: min(calc((100vw - 1348px) / 2), 250px); display: block; position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
   .pickDeco img { position: absolute; display: block; height: auto; }
   .decoWriting { left: calc(var(--gut) * 0.12); top: 27%; width: calc(var(--gut) * 0.78); transform: rotate(-8deg); opacity: .9; }
   .decoMongri { left: calc(var(--gut) * -0.3); bottom: -3%; width: calc(var(--gut) * 1.5); }
@@ -579,6 +594,9 @@
   .pickStart { position: sticky; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 2; }
   .pickImage { width: 80%; }
   .pickGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* 휴대폰은 화살표를 점 양옆에 두고 격자 위로 올린다 — 옆에 두면 두 칸 카드가 너무 좁고, 아래에 두면 카드 10장을 내려야 보인다. */
+  .pickPager { grid-template-areas: "prev dots next" "pages pages pages"; row-gap: 4px; }
+  .pickDots { padding-top: 0; }
   .pickName { font-size: 20px; }
   .pickSpecies { font-size: 14px; }
 }

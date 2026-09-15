@@ -55,8 +55,10 @@ test("all tools have recognizable visual icons and child-readable size labels", 
   assert.match(studio, /src=\{`\/drawing-tools\/dock\/\$\{tool\.id\}\.webp`\}/);
   assert.match(studio, /maskImage: `url\(\/drawing-tools\/dock\/\$\{tool\.id\}-tint\.webp\)`/);
   assert.match(studio, /aria-label="좌우 대칭" title="좌우 대칭"/);
-  assert.match(studio, /STROKE_WIDTH_LABELS\[value\]/);
-  assert.match(studio, /3: "아주 얇게",\s*8: "얇게",\s*16: "보통",\s*30: "굵게",\s*48: "아주 굵게"/);
+  // 굵기는 5단 버튼이 아니라 1픽셀 단위로 끄는 슬라이더다.
+  assert.match(studio, /<input type="range" min=\{STROKE_WIDTH_MIN\} max=\{STROKE_WIDTH_MAX\} step=\{1\} value=\{width\} aria-label="선 굵기"/);
+  assert.match(studio, /aria-label="1픽셀 얇게"[\s\S]*aria-label="1픽셀 굵게"/);
+  assert.doesNotMatch(studio, /STROKE_WIDTH_LABELS|STROKE_WIDTHS/);
   assert.match(css, /\.dock-tool-tint \{[^}]*var\(--dock-color/);
   assert.match(css, /\.dock-tool\[aria-pressed="true"\] \{ background:#184028; \}/);
   assert.match(studio, /"#E53935": "빨간색"/);

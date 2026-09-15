@@ -2,7 +2,7 @@
 
 import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { activeTextObjects, clampDocumentHeight, DOCUMENT_SIZE, documentHeight, DrawDocument, DrawOp, drawingTextGraphemes, emptyDocument, estimateDocumentBytes, estimateStrokeBytes, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_OPS, MAX_STROKE_POINTS, MAX_TEXT_GRAPHEMES, MAX_TEXT_OBJECTS, normalizeDrawingText, roundUnit, ShapeKind, STROKE_WIDTHS, StrokeWidth, TextKind, TEXT_SIZES, TextSize, validateDrawDocument } from "@/lib/drawing-model";
+import { activeTextObjects, clampDocumentHeight, DOCUMENT_SIZE, documentHeight, DrawDocument, DrawOp, drawingTextGraphemes, emptyDocument, estimateDocumentBytes, estimateStrokeBytes, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_OPS, MAX_STROKE_POINTS, MAX_TEXT_GRAPHEMES, MAX_TEXT_OBJECTS, normalizeDrawingText, roundUnit, ShapeKind, STROKE_WIDTH_MAX, STROKE_WIDTH_MIN, StrokeWidth, TextKind, TEXT_SIZES, TextSize, validateDrawDocument } from "@/lib/drawing-model";
 import { renderDrawDocument, renderDrawOperation, resetDrawingCanvas } from "@/lib/draw-renderer";
 import { mirrorOp } from "@/lib/symmetry";
 import { clearAllDrawing, redoDrawing, undoDrawing } from "@/lib/drawing-history";
@@ -88,13 +88,6 @@ const DOCK_TOOLS: { id: "pencil" | "crayon" | "marker" | "watercolor" | "eraser"
 /* 막대에 늘 보이는 색 수. 나머지는 무지개 버튼의 12색 창에 있다. */
 const DOCK_QUICK_COLORS = 8;
 
-const STROKE_WIDTH_LABELS: Record<StrokeWidth, string> = {
-  3: "아주 얇게",
-  8: "얇게",
-  16: "보통",
-  30: "굵게",
-  48: "아주 굵게",
-};
 const SHAPE_KINDS = [
   { kind: "line", icon: "─", label: "선" },
   { kind: "circle", icon: "○", label: "동그라미" },
@@ -1563,7 +1556,8 @@ export function DrawingStudio() {
     return () => observer.disconnect();
   }, [artwork?.id, documentState.ops.length]);
 
-  function chooseWidth(value: StrokeWidth) {
+  function chooseWidth(next: number) {
+    const value = Math.min(STROKE_WIDTH_MAX, Math.max(STROKE_WIDTH_MIN, Math.round(next)));
     if (studioTool === "eraser") setEraserWidth(value);
     else {
       drawWidthRef.current = value;
@@ -2946,12 +2940,15 @@ export function DrawingStudio() {
             </button>
             {studioTool !== "text" && widthSliderOpen && (
               <div className="dock-width" role="group" aria-label="선 굵기">
-                {STROKE_WIDTHS.map((value) => (
-                  <button type="button" aria-label={STROKE_WIDTH_LABELS[value]} title={STROKE_WIDTH_LABELS[value]} aria-pressed={width === value} onClick={() => chooseWidth(value)} key={value}>
-                    {/* 지우개는 색을 쓰지 않는 도구라 점을 기본 잉크색으로 남겨 "지우는 크기"임을 구분한다. */}
-                    <i aria-hidden="true" style={{ width: Math.max(6, Math.min(32, value * 0.66)), height: Math.max(6, Math.min(32, value * 0.66)), background: studioTool === "eraser" ? undefined : selectedColor }} />
-                  </button>
-                ))}
+                {/* 끌어서 1픽셀씩 고르고, 손끝으로 맞추기 어려운 마지막 한두 칸은 −·+로 옮긴다. */}
+                <button type="button" aria-label="1픽셀 얇게" disabled={width <= STROKE_WIDTH_MIN} onClick={() => chooseWidth(width - 1)}>−</button>
+                <input type="range" min={STROKE_WIDTH_MIN} max={STROKE_WIDTH_MAX} step={1} value={width} aria-label="선 굵기" aria-valuetext={`${width}픽셀`} onChange={(event) => chooseWidth(Number(event.target.value))} style={{ "--dock-width-fill": `${((width - STROKE_WIDTH_MIN) / (STROKE_WIDTH_MAX - STROKE_WIDTH_MIN)) * 100}%` } as React.CSSProperties} />
+                <button type="button" aria-label="1픽셀 굵게" disabled={width >= STROKE_WIDTH_MAX} onClick={() => chooseWidth(width + 1)}>+</button>
+                <output className="dock-width-value" aria-hidden="true">
+                  {/* 지우개는 색을 쓰지 않는 도구라 점을 기본 잉크색으로 남겨 "지우는 크기"임을 구분한다. */}
+                  <i style={{ width: Math.max(2, Math.round(width * 0.53)), height: Math.max(2, Math.round(width * 0.53)), background: studioTool === "eraser" ? undefined : selectedColor }} />
+                  <b>{width}</b>
+                </output>
               </div>
             )}
           </div>

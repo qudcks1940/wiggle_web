@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { estimateDocumentBytes, estimateStrokeBytes, SHAPE_KINDS, STROKE_TOOLS, STROKE_WIDTHS, validateDrawDocument } from "../lib/drawing-model.ts";
+import { estimateDocumentBytes, estimateStrokeBytes, SHAPE_KINDS, STROKE_TOOLS, STROKE_WIDTH_MAX, STROKE_WIDTH_MIN, validateDrawDocument } from "../lib/drawing-model.ts";
 import { isMirrorOf, mirrorOp, undoGroupSize } from "../lib/symmetry.ts";
 import { clampView, IDENTITY_VIEW, pinchView } from "../lib/canvas-view.ts";
 
@@ -18,21 +18,25 @@ const stroke = (suffix, overrides = {}) => ({
 
 const documentWith = (ops) => ({ schemaVersion: 1, rendererVersion: 1, size: 1024, ops });
 
-test("server validation accepts every shipped tool and width, and only those", () => {
+test("server validation accepts every shipped tool and every whole-pixel width, and only those", () => {
   for (const tool of STROKE_TOOLS) {
-    for (const width of STROKE_WIDTHS) {
+    // 1~60 픽셀 정수. 예전 5단 값(3·8·16·30·48)도 범위 안이라 옛 작품이 열린다.
+    for (const width of [STROKE_WIDTH_MIN, 3, 8, 12, 16, 30, 48, STROKE_WIDTH_MAX]) {
       const op = stroke(`t${tool}${width}`, { tool, width, color: tool === "eraser" ? undefined : "#E53935" });
       assert.ok(validateDrawDocument(documentWith([op])), `${tool}/${width}는 통과해야 한다`);
     }
   }
   // 목록 밖 도구·굵기가 통과하면 구버전 클라이언트와의 계약이 깨진다.
   assert.equal(validateDrawDocument(documentWith([stroke("spray", { tool: "spray" })])), null);
-  assert.equal(validateDrawDocument(documentWith([stroke("w12", { width: 12 })])), null);
   assert.equal(validateDrawDocument(documentWith([stroke("w0", { width: 0 })])), null);
-  // 도형도 굵기 목록을 공유한다.
+  assert.equal(validateDrawDocument(documentWith([stroke("w61", { width: STROKE_WIDTH_MAX + 1 })])), null);
+  assert.equal(validateDrawDocument(documentWith([stroke("w12.5", { width: 12.5 })])), null);
+  assert.equal(validateDrawDocument(documentWith([stroke("wstr", { width: "12" })])), null);
+  // 도형도 같은 굵기 범위를 쓴다.
   const shape = (width) => ({ ...stroke(`sh${width}`, { width }), type: "shape", shape: "circle", tool: undefined, points: [{ x: 0.2, y: 0.2 }, { x: 0.6, y: 0.6 }] });
   assert.ok(validateDrawDocument(documentWith([shape(48)])));
-  assert.equal(validateDrawDocument(documentWith([shape(12)])), null);
+  assert.ok(validateDrawDocument(documentWith([shape(12)])));
+  assert.equal(validateDrawDocument(documentWith([shape(STROKE_WIDTH_MAX + 1)])), null);
 });
 
 test("new shape, smoothing and square eraser metadata survive validation without changing legacy strokes", () => {

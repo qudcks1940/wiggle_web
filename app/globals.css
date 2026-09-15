@@ -1956,11 +1956,22 @@ body {
 .dock-tool-mirror[aria-pressed="true"] .dock-tool-art { transform:translateY(-6px); }
 @media (prefers-reduced-motion:reduce) { .dock-tool-art { transition:none; } }
 
-/* 굵기 5단: 고른 도구를 한 번 더 누르면 도구 줄 위에 뜬다. */
-.dock-width { position:absolute; z-index:2; bottom:calc(100% + 14px); left:50%; transform:translateX(-50%); display:flex; gap:6px; padding:8px; border:1px solid #ece2c4; border-radius:999px; background:#fffdf6; box-shadow:0 10px 28px rgba(70,55,20,.18); }
-.dock-width button { display:grid; place-items:center; width:48px; height:48px; min-height:48px; padding:0; border:2px solid transparent; border-radius:50%; background:transparent; cursor:pointer; }
-.dock-width button[aria-pressed="true"] { border-color:#184028; background:#fff; }
-.dock-width i { display:block; border-radius:50%; background:var(--ink); }
+/* 굵기: 고른 도구를 한 번 더 누르면 도구 줄 위에 뜬다. 1~60픽셀을 끌어서 고른다. */
+.dock-width { position:absolute; z-index:2; bottom:calc(100% + 14px); left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:4px; padding:6px; border:1px solid #ece2c4; border-radius:999px; background:#fffdf6; box-shadow:0 10px 28px rgba(70,55,20,.18); }
+.dock-width button { display:grid; place-items:center; width:44px; height:44px; min-height:44px; padding:0; border:1px solid #e4d9ba; border-radius:50%; background:#fff; color:#184028; font-size:26px; font-weight:800; line-height:1; cursor:pointer; }
+.dock-width button:disabled { opacity:.35; cursor:default; }
+.dock-width input[type="range"] { width:clamp(120px,40vw,220px); height:44px; min-height:44px; margin:0; padding:0; border:0; border-radius:0; box-shadow:none; background:transparent; touch-action:none; cursor:pointer; -webkit-appearance:none; appearance:none; }
+.dock-width input[type="range"]::-webkit-slider-runnable-track { height:10px; border-radius:999px; background:linear-gradient(90deg,#184028 var(--dock-width-fill),#e8ddbf var(--dock-width-fill)); }
+.dock-width input[type="range"]::-moz-range-track { height:10px; border-radius:999px; background:linear-gradient(90deg,#184028 var(--dock-width-fill),#e8ddbf var(--dock-width-fill)); }
+.dock-width input[type="range"]::-webkit-slider-thumb { width:32px; height:32px; margin-top:-11px; border:3px solid #184028; border-radius:50%; background:#fff; box-shadow:0 2px 6px rgba(24,40,28,.25); -webkit-appearance:none; appearance:none; }
+.dock-width input[type="range"]::-moz-range-thumb { width:26px; height:26px; border:3px solid #184028; border-radius:50%; background:#fff; box-shadow:0 2px 6px rgba(24,40,28,.25); }
+.dock-width input[type="range"]:focus { outline:none; box-shadow:none; }
+.dock-width input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow:0 0 0 4px #fffdf6,0 0 0 7px #184028; }
+.dock-width input[type="range"]:focus-visible::-moz-range-thumb { box-shadow:0 0 0 4px #fffdf6,0 0 0 7px #184028; }
+.dock-width button:focus-visible { outline:3px solid #184028; outline-offset:2px; }
+.dock-width-value { display:grid; grid-template-rows:34px 14px; place-items:center; width:48px; height:52px; }
+.dock-width-value i { display:block; border-radius:50%; background:var(--ink); }
+.dock-width-value b { font-size:13px; line-height:1; color:#184028; }
 
 /* 색: 자주 쓰는 8색 두 줄 + 무지개. 좁은 화면은 지금 색 하나 + 무지개. */
 .dock-colors { position:relative; align-self:center; display:grid; grid-template-columns:repeat(4,44px) 44px; grid-auto-rows:44px; gap:6px; }

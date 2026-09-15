@@ -86,6 +86,7 @@ test("dock controls honor the 44px minimum touch target", async () => {
   assert.match(css, /\.dock-tool \{[^}]*min-width:44px;[^}]*min-height:44px;/);
   assert.match(css, /\.dock-history button,\.dock-more \{[^}]*width:48px; height:48px; min-height:48px;/);
   assert.match(css, /\.dock-color,\.dock-current-color,\.dock-more-colors \{ width:44px; height:44px; min-width:44px; min-height:44px;/);
-  assert.match(css, /\.dock-width button \{[^}]*width:48px; height:48px;/);
+  assert.match(css, /\.dock-width button \{[^}]*width:44px; height:44px; min-height:44px;/);
+  assert.match(css, /\.dock-width input\[type="range"\] \{[^}]*height:44px;/);
   assert.match(css, /@media \(max-height:500px\) and \(orientation:landscape\) \{[\s\S]*?\.dock-history button,\.dock-more \{ width:44px; height:44px; min-height:44px; \}/);
 });

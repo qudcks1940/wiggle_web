@@ -33,7 +33,9 @@ export const STICKER_ALLOWLIST = ["star", "heart", "leaf", "cloud", "sparkle"] a
 // 있으므로, pen에 필압 배율을 적용하면 저장된 썸네일·최종 PNG와 재생 렌더가 어긋난다.
 // 새 연필 획은 "pencil"로 저장해 필압 렌더를 새 획에만 적용한다.
 export const STROKE_TOOLS = ["pen", "pencil", "crayon", "marker", "watercolor", "eraser"] as const;
-export const STROKE_WIDTHS = [3, 8, 16, 30, 48] as const;
+// 굵기는 1024 도화지 기준 픽셀 정수다. 예전 5단 값(3·8·16·30·48)도 이 범위 안이라 옛 작품이 그대로 열린다.
+export const STROKE_WIDTH_MIN = 1;
+export const STROKE_WIDTH_MAX = 60;
 export const SHAPE_KINDS = ["line", "circle", "triangle", "rectangle", "rounded-rectangle", "star", "heart", "arrow", "curve", "cloud"] as const;
 export const TEXT_KINDS = ["label", "title", "speech"] as const;
 export const TEXT_SIZES = [48, 64, 84] as const;
@@ -91,7 +93,8 @@ export function estimateStrokeBytes(pointCount: number) {
 type Point = { x: number; y: number; pressure?: number };
 
 export type StrokeTool = (typeof STROKE_TOOLS)[number];
-export type StrokeWidth = (typeof STROKE_WIDTHS)[number];
+export type StrokeWidth = number;
+export const isStrokeWidth = (value: unknown): value is StrokeWidth => Number.isInteger(value) && (value as number) >= STROKE_WIDTH_MIN && (value as number) <= STROKE_WIDTH_MAX;
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
 export type TextKind = (typeof TEXT_KINDS)[number];
 export type TextSize = (typeof TEXT_SIZES)[number];
@@ -206,7 +209,7 @@ export function validateDrawDocument(value: unknown): DrawDocument | null {
     // 제어문자가 섞인 날짜도 Date.parse는 통과시킨다. JSON에서 이스케이프되며 길이가 폭증하므로 길이를 먼저 막는다.
     if (!["stroke", "fill", "shape", "sticker", "text"].includes(op.type) || op.at.length > 40 || !Number.isFinite(Date.parse(op.at))) return null;
     if (op.type === "stroke") {
-      if (!op.tool || !STROKE_TOOLS.includes(op.tool) || !STROKE_WIDTHS.includes((op.width ?? 0) as StrokeWidth) || !Array.isArray(op.points) || op.points.length < 1 || op.points.length > MAX_STROKE_POINTS) return null;
+      if (!op.tool || !STROKE_TOOLS.includes(op.tool) || !isStrokeWidth(op.width) || !Array.isArray(op.points) || op.points.length < 1 || op.points.length > MAX_STROKE_POINTS) return null;
       if (op.tool !== "eraser" && !isHexColor(op.color)) return null;
       if (op.smoothed !== undefined && typeof op.smoothed !== "boolean") return null;
       if (op.squareEraser !== undefined && typeof op.squareEraser !== "boolean") return null;
@@ -216,7 +219,7 @@ export function validateDrawDocument(value: unknown): DrawDocument | null {
       if (!isHexColor(op.color) || !Array.isArray(op.points) || op.points.length !== 1 || op.points.some(invalidPoint)) return null;
     }
     if (op.type === "shape") {
-      if (!op.shape || !SHAPE_KINDS.includes(op.shape) || !isHexColor(op.color) || !STROKE_WIDTHS.includes((op.width ?? 0) as StrokeWidth) || !Array.isArray(op.points) || op.points.length !== 2 || op.points.some(invalidPoint)) return null;
+      if (!op.shape || !SHAPE_KINDS.includes(op.shape) || !isHexColor(op.color) || !isStrokeWidth(op.width) || !Array.isArray(op.points) || op.points.length !== 2 || op.points.some(invalidPoint)) return null;
       if (op.filled !== undefined && typeof op.filled !== "boolean") return null;
     }
     if (op.type === "sticker" && (!STICKER_ALLOWLIST.includes(op.sticker as (typeof STICKER_ALLOWLIST)[number]) || !Array.isArray(op.points) || op.points.length !== 1 || op.points.some(invalidPoint))) return null;

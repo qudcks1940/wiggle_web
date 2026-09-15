@@ -11,19 +11,26 @@ type Touch = { x: number; y: number };
 
 // 확대 배율과 이동량을 화면(래퍼) 크기 안에 가둔다. 캔버스 가장자리가
 // 래퍼 안쪽으로 끌려 들어와 빈 회색이 보이는 상태를 만들지 않는다.
-export function clampView(view: CanvasView, wrapSize: number): CanvasView {
+// 도화지가 정사각이 아니면 세로는 세로 길이로 가둬야 긴 도화지 아래쪽까지 옮길 수 있다.
+export function clampView(view: CanvasView, wrapSize: number, wrapHeight = wrapSize): CanvasView {
   const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, view.scale));
-  const minOffset = wrapSize * (1 - scale);
   return {
     scale,
-    x: Math.max(minOffset, Math.min(0, view.x)),
-    y: Math.max(minOffset, Math.min(0, view.y)),
+    x: Math.max(wrapSize * (1 - scale), Math.min(0, view.x)),
+    y: Math.max(wrapHeight * (1 - scale), Math.min(0, view.y)),
   };
+}
+
+// 한 점(단추로 누르면 도화지 가운데, 트랙패드면 커서 자리)을 붙잡은 채 배율만 바꾼다.
+export function zoomView(view: CanvasView, nextScale: number, center: Touch, wrapWidth: number, wrapHeight: number): CanvasView {
+  const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, nextScale));
+  const applied = scale / view.scale;
+  return clampView({ scale, x: center.x - (center.x - view.x) * applied, y: center.y - (center.y - view.y) * applied }, wrapWidth, wrapHeight);
 }
 
 // 두 손가락의 이전/현재 위치로 다음 뷰를 만든다. 두 손가락 중점이 가리키던
 // 문서 지점이 손가락을 따라오도록 scale과 translate를 함께 푼다.
-export function pinchView(view: CanvasView, before: [Touch, Touch], after: [Touch, Touch], wrapSize: number): CanvasView {
+export function pinchView(view: CanvasView, before: [Touch, Touch], after: [Touch, Touch], wrapSize: number, wrapHeight = wrapSize): CanvasView {
   const spanBefore = Math.hypot(before[0].x - before[1].x, before[0].y - before[1].y);
   const spanAfter = Math.hypot(after[0].x - after[1].x, after[0].y - after[1].y);
   const ratio = spanBefore > 0 ? spanAfter / spanBefore : 1;
@@ -35,5 +42,5 @@ export function pinchView(view: CanvasView, before: [Touch, Touch], after: [Touc
     scale,
     x: centerAfter.x - (centerBefore.x - view.x) * applied,
     y: centerAfter.y - (centerBefore.y - view.y) * applied,
-  }, wrapSize);
+  }, wrapSize, wrapHeight);
 }

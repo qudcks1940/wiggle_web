@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { estimateDocumentBytes, estimateStrokeBytes, SHAPE_KINDS, STROKE_TOOLS, STROKE_WIDTH_MAX, STROKE_WIDTH_MIN, validateDrawDocument } from "../lib/drawing-model.ts";
 import { isMirrorOf, mirrorOp, undoGroupSize } from "../lib/symmetry.ts";
-import { clampView, IDENTITY_VIEW, pinchView } from "../lib/canvas-view.ts";
+import { clampView, IDENTITY_VIEW, pinchView, zoomView } from "../lib/canvas-view.ts";
 
 const stroke = (suffix, overrides = {}) => ({
   opId: `op_${suffix}`.padEnd(12, "0"),
@@ -120,4 +120,18 @@ test("pinch view stays clamped so the paper never leaves the frame", () => {
   assert.equal(clamped.scale, 4);
   assert.equal(clamped.x, 0);
   assert.equal(clamped.y, wrap * (1 - 4));
+});
+
+test("zoom buttons and trackpad keep the anchor point and let a tall paper pan to its bottom", () => {
+  // 세로로 긴 휴대폰 도화지(390×720): 세로 이동은 세로 길이로 가둬야 아래쪽까지 닿는다.
+  const tall = clampView({ scale: 2, x: 0, y: -99999 }, 390, 720);
+  assert.equal(tall.y, 720 * (1 - 2));
+  assert.equal(clampView({ scale: 2, x: -99999, y: 0 }, 390, 720).x, 390 * (1 - 2));
+  // 가운데를 붙잡고 1.5배: 가운데 점이 제자리에 남는다.
+  const zoomed = zoomView(IDENTITY_VIEW, 1.5, { x: 195, y: 360 }, 390, 720);
+  assert.equal(zoomed.scale, 1.5);
+  assert.ok(Math.abs((195 - zoomed.x) / zoomed.scale - 195) < 1e-9 && Math.abs((360 - zoomed.y) / zoomed.scale - 360) < 1e-9);
+  // 4배 위·1배 아래로는 가지 않는다.
+  assert.equal(zoomView(zoomed, 99, { x: 0, y: 0 }, 390, 720).scale, 4);
+  assert.deepEqual(zoomView(zoomed, 0.1, { x: 300, y: 600 }, 390, 720), IDENTITY_VIEW);
 });

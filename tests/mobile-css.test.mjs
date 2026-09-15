@@ -69,21 +69,22 @@ test("mobile studio and teacher layouts finish in two rows without horizontal te
   assert.match(css, /html,body \{ width:100%; max-width:100%; overflow-x:hidden; \}/);
   // 머리 줄 버튼 묶음(2026-09-14 사용자 결정, 시안 1): 조용한 선 아이콘+글자, 몽그리만 연노랑, 완성만 진초록.
   // 좁은 화면에서 버튼을 이모지(⏱·✨·🙋·✓)로 접던 옛 규칙은 없앴다.
-  assert.match(studio, /<div className="studio-actions">[\s\S]*?className="studio-action"[\s\S]*?과정 보기[\s\S]*?className="studio-action is-helper"[\s\S]*?몽그리 부르기[\s\S]*?studio-action hand-raise-button[\s\S]*?<StudentMessageCenter messages=\{teacherMessages\} floating header \/>\s*<\/div>\s*<button type="button" className="studio-action is-primary studio-finish"/);
+  assert.doesNotMatch(studio, /<span>과정 보기<\/span>|TimelapsePlayer|setTimelapseOpen/, "과정 보기는 2026-09-15 사용자 지시로 뺐다");
+  assert.match(studio, /<div className="studio-actions">[\s\S]*?className="studio-action is-helper"[\s\S]*?몽그리 부르기[\s\S]*?studio-action hand-raise-button[\s\S]*?<StudentMessageCenter messages=\{teacherMessages\} floating header \/>\s*<\/div>\s*<button type="button" className="studio-action is-primary studio-finish"/);
   assert.doesNotMatch(css, /content:"⏱"|content:"✨"|content:"🙋"/);
   assert.match(css, /\.studio-action\.is-primary \{[^}]*background:#184028;/);
-  assert.match(css, /@media \(max-width:720px\) and \(orientation:portrait\) \{[\s\S]*?\.studio-actions \{ order:3; width:100%;[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\);/);
+  assert.match(css, /@media \(max-width:720px\) and \(orientation:portrait\) \{[\s\S]*?\.studio-actions \{ order:3; width:100%;[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\);/);
   assert.match(css, /\.save-conflict \{ top:auto; bottom:calc\(72px \+ env\(safe-area-inset-bottom\)\); \}/);
   // 도구 막대(2026-09-14 사용자 결정, 시안 B): 모든 화면에서 화면 아래 고정 막대 하나가 도구·색을 맡는다.
-  // 예전의 "도화지 아래 격자 행" 계약을 대신한다 — 막대가 고정이라 .studio-body 아래에 막대 높이(--dock-space)를 비워 도화지를 가리지 않는다.
-  assert.match(studio, /<aside className="tool-dock" aria-label="그리기 도구 모음"/);
+  // 2026-09-15부터 도화지는 화면을 꽉 채우고 막대는 그 위에 떠 있다(접을 수 있다). --dock-space는 안내 문구가 막대를 피하는 데 쓴다.
+  assert.match(studio, /<aside className=\{`tool-dock\$\{dockOpen \? "" : " is-collapsed"\}`\} aria-label="그리기 도구 모음"/);
   assert.match(studio, /className="dock-tools" role="group" aria-label="도구"/);
   assert.match(studio, /className="dock-colors" role="group" aria-label="색 고르기"/);
   assert.match(studio, /className="dock-history" role="group" aria-label="그리기 기록"[\s\S]*aria-label="되돌리기"[\s\S]*aria-label="다시하기"/);
   assert.match(studio, /className="dock-width" role="group" aria-label="선 굵기"/);
   assert.match(studio, /className="tool-group make-group" role="group" aria-label="채우기와 도형"/);
   assert.match(css, /\.tool-dock \{[^}]*position:fixed;/);
-  assert.match(css, /\.studio-body \{ padding-bottom:var\(--dock-space\); \}/);
+  assert.match(css, /\.canvas-start-hint,\.canvas-full-hint \{ bottom:calc\(var\(--dock-space\) \+ 40px\); \}/);
   assert.match(css, /@media \(max-width:720px\) and \(orientation:portrait\) \{\s*\.studio \{ --dock-space:calc\(160px \+ env\(safe-area-inset-bottom\)\); \}/);
   assert.match(css, /@media \(max-height:500px\) and \(orientation:landscape\) \{\s*\.studio \{ --dock-space:calc\(80px \+ env\(safe-area-inset-bottom\)\); \}/);
   // 옛 도구 판(오른쪽 카드·도화지 아래 격자)과 도구로 스크롤하는 힌트 버튼은 남아 있으면 안 된다.

@@ -32,13 +32,16 @@ test("the collapsible tool tray (toggle, backdrop, tray-open state) has been ful
   assert.doesNotMatch(studio, /tool-tray-toggle|tool-tray-backdrop|tool-tray-sheet/, "DrawingStudio에 트레이 관련 클래스/id가 남아 있으면 안 된다");
 });
 
-test("the tool dock renders unconditionally and is never gated behind an open/closed toggle", async () => {
+test("the tool dock always renders and folds like an accordion from its own handle", async () => {
   const studio = await read("../app/components/DrawingStudio.tsx");
+  const css = await read("../app/globals.css");
   const compact = studio.replace(/\s+/g, " ");
-  // 2026-09-14 도구 막대(B안): aside.tool-dock은 조건부 렌더 없이 항상 그려진다. 굵기·색 창·더보기만 눌렀을 때 뜬다.
-  assert.match(compact, /<aside className="tool-dock" aria-label="그리기 도구 모음"/);
-  assert.doesNotMatch(compact, /\{[a-zA-Z]+ && <aside className="tool-dock"/, "도구 막대가 조건부로만 렌더되면 안 된다");
-  assert.doesNotMatch(compact, /className=\{`tool-dock\$\{/, "도구 막대에 열림 상태에 따른 동적 클래스가 남아 있으면 안 된다");
+  // 2026-09-15 사용자 요청: 막대를 접었다 펼친다. 접어도 aside는 남고 "도구" 단추 하나만 보인다(조건부 렌더로 사라지면 다시 펼 수 없다).
+  assert.match(compact, /<aside className=\{`tool-dock\$\{dockOpen \? "" : " is-collapsed"\}`\} aria-label="그리기 도구 모음"/);
+  assert.doesNotMatch(compact, /\{[a-zA-Z]+ && <aside className/, "도구 막대가 조건부로만 렌더되면 안 된다");
+  assert.match(compact, /className="dock-toggle" aria-expanded=\{dockOpen\} aria-label=\{dockOpen \? "그리기 도구 접기" : "그리기 도구 펼치기"\}/);
+  assert.match(css, /\.tool-dock\.is-collapsed>:not\(\.dock-toggle\) \{ display:none; \}/);
+  assert.match(css, /\.dock-toggle \{[^}]*height:44px; min-height:44px;/);
 });
 
 test("the tool dock is always on screen, so the old scroll-to-tools peek button is gone", async () => {
@@ -50,22 +53,21 @@ test("the tool dock is always on screen, so the old scroll-to-tools peek button 
   assert.match(css, /\.tool-dock \{[^}]*position:fixed;[^}]*bottom:calc\(10px \+ env\(safe-area-inset-bottom\)\);/);
 });
 
-test("the studio body reserves the dock height so the fixed dock never covers the paper", async () => {
+test("the paper fills the screen edge to edge and the fixed dock floats over it", async () => {
   const css = await read("../app/globals.css");
-  // 회귀(2026-08-17)의 뜻을 잇는다: 도구가 도화지를 짜부라뜨리거나 가리면 안 된다.
-  // 막대는 고정이라 흐름에서 자리를 뺏지 않고, 대신 .studio-body가 막대 높이만큼 아래를 비운다.
-  // 실측(2026-09-14): 1440·1180·1024·820×1180·768×1024·844×390·390·320에서 도화지 아래끝이 막대 위끝보다 위.
+  // 2026-09-15 사용자 결정: 도화지는 어떤 기기든 화면을 꽉 채운다. 막대는 흐름에서 자리를 뺏지 않고 도화지 위에 뜨며 접을 수 있다.
+  // 실측(2026-09-15): 1440·1180·1024·820×1180·768×1024·844×390·390·320에서 새 도화지와 화면 사이 여백 0.
   assert.match(css, /\.studio \{ --dock-space:calc\(126px \+ env\(safe-area-inset-bottom\)\); \}/);
-  assert.match(css, /\.studio-body \{ padding-bottom:var\(--dock-space\); \}/);
+  assert.doesNotMatch(css, /\.studio-body \{ padding-bottom:var\(--dock-space\); \}/);
+  assert.match(css, /\.canvas-zone \{ padding:0; \}/);
   assert.match(css, /\.tool-dock \{[^}]*height:106px;/);
   // 옛 320px 고정 도화지(도구 판이 흐름에 있을 때의 우회)는 없어야 막대 위 남은 공간을 도화지가 다 쓴다.
   assert.doesNotMatch(css, /min-height:min\(calc\(100vw - 16px\),320px\)/);
 });
 
-test("small-screen Mongri sheet covers the dock from the bottom edge and releases the dock space while open", async () => {
+test("small-screen Mongri sheet covers the dock from the bottom edge", async () => {
   const css = await read("../app/globals.css");
   // 판을 막대 위로 올리면 접은 판과 막대가 겹쳐 쌓여 좁은 화면에서 그릴 도화지가 사라진다(2026-09-14 실측).
-  assert.match(css, /\.studio-body\.grimi-open \{ padding-bottom:0; \}/);
   assert.doesNotMatch(css, /\.grimi-panel \{ bottom:var\(--dock-space\)/);
   assert.match(css, /\.step-panel,\.grimi-panel \{ max-height:calc\(100% - 28px - var\(--dock-space\)\); \}/);
 });

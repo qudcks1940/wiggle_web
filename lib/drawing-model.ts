@@ -8,10 +8,13 @@ export const DOCUMENT_SIZE = 1024;
  * 세로를 정한다(아래 clampDocumentHeight). 한 번이라도 그리면 그 비율로 굳는다 — 그린 뒤에
  * 비율을 바꾸면 이미 그린 선이 늘어나기 때문이다.
  * 범위를 둔 이유: 아무 값이나 받으면 저장된 그림의 비율을 마음대로 바꿀 수 있고, 극단적인
- * 비율은 썸네일·그림책 배치를 깨뜨린다. 16의 배수로 맞춰 값이 무한히 늘어나지 않게 한다. */
-export const DOCUMENT_MIN_HEIGHT = 512;
-export const DOCUMENT_MAX_HEIGHT = 1024;
-export const DOCUMENT_HEIGHT_STEP = 16;
+ * 비율은 썸네일·그림책 배치를 깨뜨린다. 세로는 정수로 저장한다.
+ * 2026-09-15 사용자 결정("도화지는 항상 어떤기기 든지 화면을 꽉채우게")으로 가로로 눕힌 휴대폰(약 3:1)과
+ * 세로 휴대폰(약 1:2)까지 넓혔다. 예전 범위(512~1024)는 그대로 안에 있어 옛 작품이 열린다.
+ * 같은 결정으로 16 단위 반올림을 1로 바꿨다 — 16 단위면 가로 휴대폰에서 도화지 양옆에 6px씩 초록 여백이 남았다. */
+export const DOCUMENT_MIN_HEIGHT = 320;
+export const DOCUMENT_MAX_HEIGHT = 2240;
+export const DOCUMENT_HEIGHT_STEP = 1;
 export const DEFAULT_DOCUMENT_HEIGHT = 640;
 
 export function isDocumentHeight(value: unknown): value is number {

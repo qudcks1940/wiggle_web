@@ -38,10 +38,11 @@ test("가로 도화지의 height는 검증을 지나도 보존된다", () => {
 
 test("범위 밖이거나 단위가 맞지 않는 세로는 거절한다", () => {
   // 아무 값이나 받으면 저장된 그림의 비율을 마음대로 바꿀 수 있고, 극단적 비율은 썸네일을 깨뜨린다.
-  for (const height of [DOCUMENT_MIN_HEIGHT - 16, DOCUMENT_MAX_HEIGHT + 16, 0, -768, "768", null, 768.5, 777]) {
+  for (const height of [DOCUMENT_MIN_HEIGHT - 16, DOCUMENT_MAX_HEIGHT + 16, 0, -768, "768", null, 768.5]) {
     assert.equal(validateDrawDocument(document({ height })), null, `height ${height}는 거절해야 한다`);
   }
-  for (const height of [DOCUMENT_MIN_HEIGHT, 640, 768, DOCUMENT_MAX_HEIGHT]) {
+  // 416: 가로로 눕힌 휴대폰, 1920: 세로 휴대폰(2026-09-15 화면 가득 채우기).
+  for (const height of [DOCUMENT_MIN_HEIGHT, 416, 640, 768, 1024, 1920, DOCUMENT_MAX_HEIGHT]) {
     assert.ok(validateDrawDocument(document({ height })), `height ${height}는 통과해야 한다`);
   }
 });
@@ -55,8 +56,9 @@ test("화면에서 잰 비율은 저장 가능한 값으로 맞춰진다", () =>
   }
   assert.equal(clampDocumentHeight(DOCUMENT_MIN_HEIGHT - 100), DOCUMENT_MIN_HEIGHT);
   assert.equal(clampDocumentHeight(DOCUMENT_MAX_HEIGHT + 100), DOCUMENT_MAX_HEIGHT);
-  // 16의 배수로 맞춰 값이 무한히 늘어나지 않게 한다.
-  assert.equal(clampDocumentHeight(700) % DOCUMENT_HEIGHT_STEP, 0);
+  // 세로는 정수로 맞춘다(2026-09-15부터 1 단위 — 화면을 빈틈 없이 채우려고).
+  assert.equal(DOCUMENT_HEIGHT_STEP, 1);
+  assert.equal(clampDocumentHeight(700.4), 700);
 });
 
 test("새 문서는 가로 도화지이고, 그 값은 저장 가능하다", () => {

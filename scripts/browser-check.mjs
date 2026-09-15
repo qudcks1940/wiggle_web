@@ -509,7 +509,8 @@ async function main() {
           // 뷰포트마다 다른 줄에 그린다. 같은 좌표를 재사용하면 앞 뷰포트에서 저장된 그림 위에
           // 같은 색을 다시 그려 "달라졌는가" 판정이 무력해진다.
           const rowShift = VIEWPORTS.findIndex((item) => item.name === viewport.name) * 0.07;
-          const mirrorY = 0.85 - rowShift;
+          // 2026-09-15부터 도화지가 화면 끝까지 차고 도구 막대가 그 위에 뜬다 — 아래쪽은 막대에 가리므로 위쪽 절반에 긋는다.
+          const mirrorY = 0.45 - rowShift;
 
           // 대칭: 남색을 고르고 왼쪽에 그은 획이 오른쪽 반사 지점에도 나타난다.
           await pickSwatch('남색');
@@ -536,16 +537,19 @@ async function main() {
           await clickPanelButton("채우기"); await sleep(120);
           await pickSwatch(fillPlan.label);
           await sleep(120);
-          const beforeFill = await pixel(0.9, 0.08);
+          // 오른쪽 위는 확대·축소 단추 자리라 왼쪽 위를 채운다.
+          const beforeFill = await pixel(0.1, 0.08);
           rect = await probeCanvas();
-          await tapOn(at(rect, 0.9, 0.08)); await sleep(400);
-          const filled = await pixel(0.9, 0.08);
+          await tapOn(at(rect, 0.1, 0.08)); await sleep(400);
+          const filled = await pixel(0.1, 0.08);
           check(differs(beforeFill, filled) && fillPlan.ok(filled), `${viewport.name} 채우기 탭 한 번으로 영역이 채워짐`, { beforeFill, filled, color: fillPlan.label });
 
           // 도형 2탭: 남색으로 시작점 탭 → 안내 → 끝점 탭으로 네모가 그려진다 (드래그 대안 경로).
           await clickPanelButton("도형"); await sleep(150);
           await evaluate(cdp, session, `(() => { const shape = [...document.querySelectorAll('.shape-kind-row button')].find((item) => item.getAttribute('aria-label') === '네모'); if (shape) shape.click(); })()`);
           await pickSwatch('남색');
+          // 모양을 고른 뒤에도 더보기 창이 열려 있어 도화지를 가린다. 아이처럼 ⋯를 다시 눌러 닫고 도화지를 누른다.
+          await evaluate(cdp, session, `(() => { const more = document.querySelector('.dock-more'); if (more && more.getAttribute('aria-expanded') === 'true') more.click(); })()`);
           await sleep(120);
           // 세로 변이 뷰포트 간 겹치지 않도록 x도 함께 민다.
           const shapeLeft = 0.55 + rowShift; const shapeTop = 0.3 + rowShift; const shapeBottom = 0.5 + rowShift; const shapeProbeY = 0.4 + rowShift;
@@ -580,7 +584,7 @@ async function main() {
             await sleep(250);
             const zoomScale = await evaluate(cdp, session, `(() => { const stack = document.querySelector('.canvas-stack'); const matrix = new DOMMatrix(getComputedStyle(stack).transform); return matrix.a; })()`);
             check(zoomScale > 1.05, `${viewport.name} 손가락 두 개 핀치로 확대됨`, zoomScale);
-            await evaluate(cdp, session, `(() => { const reset = document.querySelector('.zoom-reset'); if (reset) reset.click(); })()`);
+            await evaluate(cdp, session, `(() => { const reset = document.querySelector('.zoom-fit'); if (reset && !reset.disabled) reset.click(); })()`);
             await sleep(200);
           }
 

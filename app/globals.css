@@ -164,9 +164,8 @@ legend small { color:var(--primary-dark); }
 .text-composer-actions .button { min-height:50px; }
 .mirror-axis { position:absolute; left:50%; top:0; bottom:0; width:0; border-left:2px dashed rgba(38,138,49,.55); z-index:3; pointer-events:none; }
 .shape-start-dot { position:absolute; width:18px; height:18px; border-radius:50%; background:#43A047; transform:translate(-50%,-50%); box-shadow:0 0 0 3px rgba(255,255,255,.85); z-index:3; pointer-events:none; }
-.zoom-reset { position:absolute; right:10px; top:10px; z-index:5; min-height:44px; padding:0 14px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.95); font-weight:900; font-size:13px; box-shadow:0 4px 12px rgba(39,79,47,.15); }
 /* 수업 안내 필이 위 중앙에 떠 있을 때는 확대 배지를 그 아래로 내려 겹침을 피한다. */
-.guide-notice ~ .zoom-reset { top:64px; }
+.guide-notice ~ .zoom-controls { top:64px; }
 .modal-backdrop { position:fixed; inset:0; z-index:20; background:rgba(23,52,28,.55); display:grid; place-items:center; padding:20px; }.reflection-modal { width:min(640px,100%); max-height:95vh; overflow:auto; background:#fff; border-radius:28px; padding:32px; position:relative; box-shadow:0 30px 80px rgba(0,0,0,.2); }.modal-close { position:absolute; right:18px; top:16px; width:48px; height:48px; border:0; border-radius:50%; background:#f0f7f1; font-size:28px; }.modal-emoji { font-size:45px; }.reflection-modal h2 { font-size:30px; margin:8px 0 12px; }.reflection-modal textarea { min-height:90px; resize:vertical; }.modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
 .reflection-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }.reflection-choice-note { margin:0; padding:10px 13px; border-radius:13px; background:#fff7cc; color:#594d17; font-size:14px; font-weight:900; line-height:1.45; }.reflection-question { margin-top:18px; }.reflection-question>p { margin:0 0 8px; font-size:18px; font-weight:900; }.reflection-choice-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }.reflection-choice-grid button { min-width:0; min-height:84px; padding:10px 12px; border:2px solid var(--soft-border); border-radius:16px; background:#fafefb; display:grid; grid-template-columns:44px minmax(0,1fr); align-items:center; gap:8px; text-align:left; font-weight:900; font-size:15px; }.reflection-choice-grid button span { font-size:31px; text-align:center; }.reflection-choice-grid button[aria-pressed=true] { border-color:var(--primary); background:#e5f9e7; box-shadow:0 0 0 2px rgba(52,177,63,.12); }/* 틀리는 해석자 — 몽그리 짐작은 소감 맨 위에 둔다. 아이가 고친 말이 이야기 한 줄이 된다. */.mongri-guess { padding:12px 13px; border:2px solid #f2e2b6; border-radius:16px; background:#fffdf3; }.mongri-guess-head { margin:0 0 6px; font-size:15px; font-weight:900; color:#7a6420; }.mongri-guess-waiting { margin:0; font-size:15px; font-weight:800; color:#8a7a4a; }.mongri-guess-text { margin:0 0 10px; font-size:18px; font-weight:900; line-height:1.45; }.mongri-guess-own { display:block; margin:10px 0 0; font-size:14px; font-weight:900; color:#594d17; }.mongri-guess-own input { margin-top:6px; }.reflection-write-more { margin-top:16px; border:1px solid var(--border); border-radius:14px; padding:0 12px; }.reflection-write-more summary { min-height:48px; display:flex; align-items:center; cursor:pointer; color:var(--primary-dark); font-weight:900; }.reflection-write-more label { margin:10px 0; }
 
@@ -1909,7 +1908,7 @@ body {
 @media (max-width:720px) and (orientation:portrait) {
   .studio { grid-template-rows:auto minmax(0,1fr); }
   .studio-header { flex-wrap:wrap; row-gap:4px; overflow:visible; }
-  .studio-actions { order:3; width:100%; margin:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; }
+  .studio-actions { order:3; width:100%; margin:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }
   .studio-actions .studio-action { flex-direction:column; gap:2px; min-height:56px; padding:4px 2px; font-size:12px; white-space:normal; text-align:center; }
   .studio-actions .studio-action>span { word-break:keep-all; }
   .studio-actions .studio-action-badge { top:2px; right:calc(50% - 26px); }
@@ -1925,19 +1924,45 @@ body {
 }
 
 /* ── 2026-09-14 도구 막대(B안, 시안 docs/design-assets/studio-tool-dock/B-crayon-box.webp) ──────────────
- * 모든 화면에서 도구·색은 화면 아래에 떠 있는 크림색 막대 하나가 맡는다. 막대는 고정 위치라 격자 칸을 차지하지 않고,
- * 대신 .studio-body 아래에 막대 높이만큼(--dock-space) 비워 도화지가 막대에 가리지 않게 한다.
+ * 모든 화면에서 도구·색은 화면 아래에 떠 있는 크림색 막대 하나가 맡는다. 막대는 고정 위치라 격자 칸을 차지하지 않는다.
+ * 2026-09-15 사용자 결정("도화지는 항상 어떤기기 든지 화면을 꽉채우게")으로 도화지는 머리 줄 아래 끝까지 채우고 막대는 그 위에 뜬다.
+ * 막대는 손잡이로 접을 수 있다. --dock-space는 막대가 차지하는 높이로, 도화지 위 안내 문구·안내 카드가 막대를 피하는 데 쓴다.
  * 세워진 도구 그림은 public/drawing-tools/dock/(scripts/build-dock-tools.mjs). 붓 끝·띠는 칠하기 틀로 지금 색(--dock-color)을 칠한다.
  */
 .studio { --dock-space:calc(126px + env(safe-area-inset-bottom)); }
-.studio-body { padding-bottom:var(--dock-space); }
+.studio.dock-collapsed { --dock-space:calc(64px + env(safe-area-inset-bottom)); }
+/* 도화지는 여백 없이 끝까지. 새 작품은 첫 획 전까지 이 자리 비율로 세로가 정해진다(fitPaperToScreen). */
+.canvas-zone { padding:0; }
+.canvas-wrap { border-radius:0; box-shadow:none; }
+/* 펼친 막대 위에는 접기 탭(30px)이 있어 그만큼 더 올린다. */
+.canvas-start-hint,.canvas-full-hint { bottom:calc(var(--dock-space) + 40px); }
+.studio.dock-collapsed .canvas-start-hint,.studio.dock-collapsed .canvas-full-hint { bottom:calc(var(--dock-space) + 8px); }
 .tool-dock {
   position:fixed; z-index:12; left:50%; bottom:calc(10px + env(safe-area-inset-bottom)); transform:translateX(-50%);
   width:max-content; max-width:calc(100vw - 24px); height:106px;
   display:flex; align-items:flex-end; gap:12px; padding:0 16px;
   border:1px solid #ece2c4; border-radius:30px; background:#fbf6e8; box-shadow:0 10px 30px rgba(70,55,20,.16);
 }
-.dock-grip { position:absolute; top:6px; left:50%; width:44px; height:5px; margin-left:-22px; border-radius:999px; background:#e2d6b4; }
+/* 접기 손잡이: 막대 위에 붙은 탭. 누르는 자리는 44px, 보이는 탭은 아래 30px. */
+.dock-toggle { position:absolute; left:50%; bottom:100%; transform:translateX(-50%); display:flex; align-items:flex-end; justify-content:center; gap:6px; min-width:76px; height:44px; min-height:44px; padding:0 18px 5px; border:0; background:transparent; color:#184028; font-size:15px; font-weight:800; cursor:pointer; }
+.dock-toggle::before { content:""; position:absolute; z-index:-1; left:0; right:0; bottom:-1px; height:30px; border:1px solid #ece2c4; border-bottom:0; border-radius:16px 16px 0 0; background:#fbf6e8; }
+.dock-toggle>svg { transform:rotate(180deg); }
+.dock-toggle:focus-visible { outline:3px solid #184028; outline-offset:-3px; border-radius:16px 16px 0 0; }
+.tool-dock.is-collapsed { display:flex; justify-content:center; height:auto; padding:0; border:0; background:transparent; box-shadow:none; pointer-events:none; }
+.tool-dock.is-collapsed>:not(.dock-toggle) { display:none; }
+.tool-dock.is-collapsed>.dock-toggle { position:static; transform:none; align-items:center; height:52px; padding:0 22px; border:1px solid #ece2c4; border-radius:999px; background:#fbf6e8; box-shadow:0 8px 24px rgba(70,55,20,.18); pointer-events:auto; }
+.tool-dock.is-collapsed>.dock-toggle::before { display:none; }
+.tool-dock.is-collapsed>.dock-toggle>svg { transform:none; }
+.tool-dock.is-collapsed>.dock-toggle:focus-visible { outline-offset:3px; border-radius:999px; }
+
+/* 확대·축소: 도화지 오른쪽 위의 세로 단추 묶음 */
+.zoom-controls { position:absolute; z-index:6; top:10px; right:10px; display:grid; gap:2px; padding:3px; border:1px solid #e4d9ba; border-radius:16px; background:rgba(255,253,246,.96); box-shadow:0 4px 14px rgba(39,79,47,.15); }
+.zoom-controls button { display:grid; place-items:center; width:44px; height:44px; min-height:44px; padding:0; border:0; border-radius:12px; background:transparent; color:#184028; font-size:24px; font-weight:800; line-height:1; cursor:pointer; }
+.zoom-controls .zoom-fit { font-size:12px; }
+.zoom-controls button:disabled { opacity:.35; cursor:default; }
+.zoom-controls .zoom-fit:disabled { opacity:.7; }
+.zoom-controls button:not(:disabled):hover { background:#f1ead3; }
+.zoom-controls button:focus-visible { outline:3px solid #184028; outline-offset:-3px; }
 .dock-history { display:flex; gap:8px; align-self:center; }
 .dock-history button,.dock-more { display:grid; place-items:center; width:48px; height:48px; min-height:48px; padding:0; border:1px solid #e4d9ba; border-radius:50%; background:#fffdf6; color:#184028; box-shadow:0 2px 4px rgba(70,55,20,.08); cursor:pointer; }
 .dock-history button:disabled { opacity:.35; cursor:default; }
@@ -1999,10 +2024,7 @@ body {
 }
 /* 작은 화면에서 아래에서 올라오는 몽그리 판은 예전처럼 화면 맨 아래에서 막대를 덮는다(도구 판 시절과 같다).
    판을 막대 위로 올리면 접은 판과 막대가 겹쳐 쌓여 320×568·844×390에서 그릴 도화지가 사라졌다(2026-09-14 실측).
-   그래서 판이 열린 동안은 막대 자리를 따로 비우지 않고, 접은 판의 자리는 기존 규칙(.grimi-collapsed>.canvas-zone)이 비운다. */
-@media (max-width:720px), (min-width:721px) and (max-width:1024px) and (orientation:portrait), (max-width:900px) and (max-height:500px) and (orientation:landscape) {
-  .studio-body.grimi-open { padding-bottom:0; }
-}
+   접은 판의 자리는 기존 규칙(.grimi-collapsed>.canvas-zone)이 비운다. */
 /* 폭이 900px 아래(세로 태블릿 등): 색은 지금 색 하나 + 무지개로 줄여 막대가 화면 안에 들어오게 한다. */
 @media (max-width:900px) {
   .dock-colors { display:flex; gap:10px; }
@@ -2014,7 +2036,6 @@ body {
 @media (max-width:720px) and (orientation:portrait) {
   .studio { --dock-space:calc(160px + env(safe-area-inset-bottom)); }
   .tool-dock { left:8px; right:8px; bottom:calc(6px + env(safe-area-inset-bottom)); transform:none; width:auto; max-width:none; height:auto; display:grid; grid-template-columns:auto minmax(0,1fr) auto; grid-template-rows:86px 48px; gap:6px 8px; align-items:center; padding:4px 8px 8px; border-radius:24px; }
-  .dock-grip { display:none; }
   .dock-tools { grid-column:1 / -1; grid-row:1; height:86px; padding:10px 0 0; border:0; justify-content:space-between; }
   .dock-tool { flex:1 1 0; width:auto; height:76px; }
   .dock-tool-art { top:14px; width:38px; height:114px; margin-left:-19px; }
@@ -2029,7 +2050,6 @@ body {
 @media (max-height:500px) and (orientation:landscape) {
   .studio { --dock-space:calc(80px + env(safe-area-inset-bottom)); }
   .tool-dock { bottom:calc(4px + env(safe-area-inset-bottom)); height:70px; gap:8px; padding:0 10px; border-radius:22px; }
-  .dock-grip { display:none; }
   .dock-tools { padding-top:8px; gap:4px; }
   .dock-tool { width:46px; height:62px; }
   .dock-tool-art { top:12px; width:36px; height:108px; margin-left:-18px; }

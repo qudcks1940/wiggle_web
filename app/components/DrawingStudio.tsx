@@ -7,10 +7,10 @@ import { renderDrawDocument, renderDrawOperation, resetDrawingCanvas } from "@/l
 import { mirrorOp } from "@/lib/symmetry";
 import { clearAllDrawing, redoDrawing, undoDrawing } from "@/lib/drawing-history";
 import { DrawingInputMode, INPUT_MODE_EVENT } from "@/lib/input-mode";
-import { CanvasView, IDENTITY_VIEW, pinchView } from "@/lib/canvas-view";
+import { CanvasView, clampView, IDENTITY_VIEW, MAX_SCALE, pinchView, zoomView } from "@/lib/canvas-view";
 import { lessonBySlug, Lesson } from "@/lib/lesson-content";
 import { guideMarksForVariant } from "@/lib/lesson-guide-variants";
-import { ArrowLeftIcon, CheckIcon, ChevronUpIcon, HandIcon, MoreHorizontalIcon, PlayCircleIcon, Redo2Icon, Undo2Icon } from "./StudioIcons";
+import { ArrowLeftIcon, CheckIcon, ChevronUpIcon, HandIcon, MoreHorizontalIcon, Redo2Icon, Undo2Icon } from "./StudioIcons";
 import { createLessonStepBaseline, isLessonStepProgress, lessonStepActionStatus, LessonStepProgress } from "@/lib/lesson-step-progress";
 import { lockGuideTrace, snapGuideTrace } from "@/lib/trace-guidance.mjs";
 import { clampTextPlacement, suggestTextPlacement } from "@/lib/text-placement";
@@ -18,7 +18,6 @@ import { activeProfile, clearQueuedArtworkSaves, createSerialTaskQueue, deleteQu
 
 import type { QueuedArtworkDraft } from "@/lib/client-session";
 import { Logo } from "./Logo";
-import { TimelapsePlayer } from "./TimelapsePlayer";
 import { useModalDialog } from "./useModalDialog";
 import { ColorPickerDialog } from "./ColorPickerDialog";
 import { StudentMessageCenter, StudentTeacherMessage } from "./StudentMessageCenter";
@@ -490,6 +489,7 @@ export function DrawingStudio() {
   const [toolSheetOpen, setToolSheetOpen] = useState(false);
   // 선택된 펜을 다시 누르면 그 펜 왼쪽에 굵기 슬라이더가 열린다 (2026-08-30 결정).
   const [widthSliderOpen, setWidthSliderOpen] = useState(false);
+  const [dockOpen, setDockOpen] = useState(true);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [guideCollapsed, setGuideCollapsed] = useState(false);
   const [shapeKind, setShapeKind] = useState<ShapeKind>("line");
@@ -561,7 +561,6 @@ export function DrawingStudio() {
   const [answerLabel, setAnswerLabel] = useState("");
   const [answerSaved, setAnswerSaved] = useState(false);
   const [childChoice, setChildChoice] = useState("");
-  const [timelapseOpen, setTimelapseOpen] = useState(false);
   const [runSerial] = useState(createSerialTaskQueue);
   const [saveBranchId] = useState(() => `branch_${crypto.randomUUID().replaceAll("-", "")}`);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1556,6 +1555,27 @@ export function DrawingStudio() {
     return () => observer.disconnect();
   }, [artwork?.id, documentState.ops.length]);
 
+  /* 트랙패드·마우스: 두 손가락 벌리기(ctrl+휠)는 커서 자리를 붙잡고 확대·축소, 확대한 동안 스크롤은 도화지 옮기기.
+   * React onWheel은 passive라 브라우저 페이지 확대를 막지 못해 직접 붙인다. */
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    function onWheel(event: WheelEvent) {
+      const rect = wrap!.getBoundingClientRect();
+      const current = viewRef.current;
+      const unit = event.deltaMode === 1 ? 16 : 1;
+      let next: CanvasView;
+      if (event.ctrlKey || event.metaKey) next = zoomView(current, current.scale * Math.exp(-event.deltaY * unit * 0.01), { x: event.clientX - rect.left, y: event.clientY - rect.top }, rect.width, rect.height);
+      else if (current.scale > 1.001) next = clampView({ ...current, x: current.x - event.deltaX * unit, y: current.y - event.deltaY * unit }, rect.width, rect.height);
+      else return;
+      event.preventDefault();
+      viewRef.current = next;
+      setView(next);
+    }
+    wrap.addEventListener("wheel", onWheel, { passive: false });
+    return () => wrap.removeEventListener("wheel", onWheel);
+  }, [artwork?.id]);
+
   function chooseWidth(next: number) {
     const value = Math.min(STROKE_WIDTH_MAX, Math.max(STROKE_WIDTH_MIN, Math.round(next)));
     if (studioTool === "eraser") setEraserWidth(value);
@@ -1577,6 +1597,15 @@ export function DrawingStudio() {
   function resetViewToFit() {
     viewRef.current = IDENTITY_VIEW;
     setView(IDENTITY_VIEW);
+  }
+  // 확대·축소 단추는 도화지 가운데를 붙잡고 1.5배씩 움직인다. 1배(화면 맞춤) 아래로는 줄이지 않는다.
+  function zoomBy(factor: number) {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const rect = wrap.getBoundingClientRect();
+    const next = zoomView(viewRef.current, viewRef.current.scale * factor, { x: rect.width / 2, y: rect.height / 2 }, rect.width, rect.height);
+    viewRef.current = next;
+    setView(next);
   }
   function newOperationId() {
     return crypto.randomUUID().replaceAll("-", "");
@@ -1917,7 +1946,7 @@ export function DrawingStudio() {
             x: touch.x - rect.left,
             y: touch.y - rect.top,
           });
-          const next = pinchView(viewRef.current, [local(previous), local(other[1])], [local(current), local(other[1])], rect.width);
+          const next = pinchView(viewRef.current, [local(previous), local(other[1])], [local(current), local(other[1])], rect.width, rect.height);
           viewRef.current = next;
           setView(next);
         }
@@ -2568,7 +2597,7 @@ export function DrawingStudio() {
     : "listening";
 
   return (
-    <main className="studio">
+    <main className={`studio${dockOpen ? "" : " dock-collapsed"}`}>
       <header className="studio-header">
         <a className="icon-button studio-back" href="/student/archive" aria-label="내 그림으로 나가기">
           <ArrowLeftIcon />
@@ -2584,12 +2613,9 @@ export function DrawingStudio() {
           </span>
         )}
         {/* 버튼 묶음(2026-09-14 사용자 결정, 시안 docs/design-assets/studio-header-actions/1-quiet-ghost.webp):
-            과정 보기·선생님·선생님 말씀은 조용한 선 아이콘+글자, 몽그리는 연노랑 도움 버튼, 완성만 진초록.
-            휴대폰 세로에서는 네 버튼이 둘째 줄로 내려가고 완성은 첫 줄에 남는다. */}
+            선생님·선생님 말씀은 조용한 선 아이콘+글자, 몽그리는 연노랑 도움 버튼, 완성만 진초록.
+            과정 보기는 2026-09-15 사용자 지시로 뺐다(가족 보기의 과정 재생은 그대로). 휴대폰 세로에서는 버튼이 둘째 줄로 내려가고 완성은 첫 줄에 남는다. */}
         <div className="studio-actions">
-          <button type="button" className="studio-action" onClick={() => setTimelapseOpen(true)}>
-            <PlayCircleIcon size={22} /><span>과정 보기</span>
-          </button>
           <button type="button" className="studio-action is-helper" disabled={grimiLoading || Boolean(conflictDraft)} onClick={() => void askGrimi()}>
             {grimiLoading ? <span className="studio-action-spinner" aria-hidden="true" /> : <img className="studio-action-mongri" src="/brand/mongri/listening.png" alt="" aria-hidden="true" width={28} height={28} />}
             <span>몽그리 부르기</span>
@@ -2906,18 +2932,23 @@ export function DrawingStudio() {
                 </button>
               )}
             </div>
-            {view.scale > 1.01 && (
-              <button type="button" className="zoom-reset" onClick={resetViewToFit}>
-                🔍 {Math.round(view.scale * 100)}% · 화면 맞춤
-              </button>
-            )}
+            {/* 확대·축소(2026-09-15 사용자 요청). 가운데 숫자를 누르면 화면 맞춤으로 돌아간다.
+                두 손가락 벌리기·트랙패드도 같은 배율을 쓴다. */}
+            <div className="zoom-controls" role="group" aria-label="확대와 축소">
+              <button type="button" aria-label="확대" title="확대" disabled={view.scale >= MAX_SCALE - 0.001} onClick={() => zoomBy(1.5)}>+</button>
+              <button type="button" className="zoom-fit" aria-label={`지금 ${Math.round(view.scale * 100)}%, 화면에 맞추기`} title="화면에 맞추기" disabled={view.scale <= 1.001} onClick={resetViewToFit}>{Math.round(view.scale * 100)}%</button>
+              <button type="button" aria-label="축소" title="축소" disabled={view.scale <= 1.001} onClick={() => zoomBy(1 / 1.5)}>−</button>
+            </div>
           </div>
         </section>
         {/* 도구 막대(2026-09-14 사용자 결정 — 시안 docs/design-assets/studio-tool-dock/B-crayon-box.webp).
             화면 아래에 떠 있는 크림색 막대에 세워진 도구, 고른 도구는 올라오고 진초록 바탕. 붓 끝·띠는 지금 색으로 칠한다.
             고른 도구를 한 번 더 누르면 굵기 5단이 위에 뜬다. 채우기·도형·글씨·입력 방법·전체 지우기는 ⋯ 안에 있다. */}
-        <aside className="tool-dock" aria-label="그리기 도구 모음" style={{ "--dock-color": selectedColor } as React.CSSProperties}>
-          <span className="dock-grip" aria-hidden="true" />
+        <aside className={`tool-dock${dockOpen ? "" : " is-collapsed"}`} aria-label="그리기 도구 모음" style={{ "--dock-color": selectedColor } as React.CSSProperties}>
+          {/* 아코디언(2026-09-15 사용자 요청): 막대 위 손잡이로 접고, 접으면 "도구" 단추 하나만 남는다. */}
+          <button type="button" className="dock-toggle" aria-expanded={dockOpen} aria-label={dockOpen ? "그리기 도구 접기" : "그리기 도구 펼치기"} onClick={() => { setDockOpen((open) => !open); setWidthSliderOpen(false); setPaletteOpen(false); setToolSheetOpen(false); }}>
+            <ChevronUpIcon size={20} />{!dockOpen && <span>도구</span>}
+          </button>
           <div className="dock-history" role="group" aria-label="그리기 기록">
             <button type="button" aria-label="되돌리기" title="되돌리기" onClick={undo} disabled={Boolean(conflictDraft) || (!documentState.ops.length && !hasClearToUndo)}>
               <Undo2Icon size={22} />
@@ -3117,7 +3148,6 @@ export function DrawingStudio() {
         pickColor(value);
         setColorPickerOpen(false);
       }} onClose={() => setColorPickerOpen(false)} />}
-      {timelapseOpen && <TimelapsePlayer document={documentState} onClose={() => setTimelapseOpen(false)} />}
       {textComposerOpen && (
         <div className="modal-backdrop" ref={textDialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="text-composer-title">
           <section className="text-composer-modal">

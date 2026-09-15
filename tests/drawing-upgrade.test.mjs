@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { estimateDocumentBytes, estimateStrokeBytes, SHAPE_KINDS, STROKE_TOOLS, STROKE_WIDTH_MAX, STROKE_WIDTH_MIN, validateDrawDocument } from "../lib/drawing-model.ts";
 import { isMirrorOf, mirrorOp, undoGroupSize } from "../lib/symmetry.ts";
-import { clampView, IDENTITY_VIEW, pinchView, zoomView } from "../lib/canvas-view.ts";
+import { clampView, coverPaper, IDENTITY_VIEW, pinchView, zoomView } from "../lib/canvas-view.ts";
 
 const stroke = (suffix, overrides = {}) => ({
   opId: `op_${suffix}`.padEnd(12, "0"),
@@ -134,4 +134,20 @@ test("zoom buttons and trackpad keep the anchor point and let a tall paper pan t
   // 4배 위·1배 아래로는 가지 않는다.
   assert.equal(zoomView(zoomed, 99, { x: 0, y: 0 }, 390, 720).scale, 4);
   assert.deepEqual(zoomView(zoomed, 0.1, { x: 300, y: 600 }, 390, 720), IDENTITY_VIEW);
+});
+
+test("the paper always covers its frame, and an overflowing paper pans at 1x without showing background", () => {
+  // 세로 720 그림을 1180×754 틀에: 폭에 맞추고 세로로 넘친다(양옆 여백 없음).
+  const wide = coverPaper(1180, 754, 720);
+  assert.equal(wide.width, 1180);
+  assert.ok(wide.height > 754 && Math.abs(wide.height - 1180 * 720 / 1024) < 1e-9);
+  // 세로로 긴 틀은 높이에 맞춘다(늘릴 수 있는 최대를 넘는 아주 긴 틀).
+  const tall = coverPaper(300, 900, 1024);
+  assert.equal(tall.height, 900);
+  assert.ok(tall.width >= 300);
+  // 1배에서도 넘친 만큼만 옮겨지고, 틀 밖 바탕이 드러나지 않는다.
+  const box = [1180, 754, wide.width, wide.height];
+  assert.equal(clampView({ scale: 1, x: 50, y: -99999 }, ...box).y, 754 - wide.height);
+  assert.equal(clampView({ scale: 1, x: 50, y: 20 }, ...box).x, 0);
+  assert.equal(clampView({ scale: 1, x: 50, y: 20 }, ...box).y, 0);
 });

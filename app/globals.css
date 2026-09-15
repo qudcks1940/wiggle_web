@@ -1943,17 +1943,18 @@ body {
   display:flex; align-items:flex-end; gap:12px; padding:0 16px;
   border:1px solid #ece2c4; border-radius:30px; background:#fbf6e8; box-shadow:0 10px 30px rgba(70,55,20,.16);
 }
-/* 접기 손잡이: 막대 위에 붙은 탭. 누르는 자리는 44px, 보이는 탭은 아래 30px. */
-.dock-toggle { position:absolute; left:50%; bottom:100%; transform:translateX(-50%); display:flex; align-items:flex-end; justify-content:center; gap:6px; min-width:76px; height:44px; min-height:44px; padding:0 18px 5px; border:0; background:transparent; color:#184028; font-size:15px; font-weight:800; cursor:pointer; }
+/* 접기 손잡이: 막대 위에 붙은 탭. 누르는 자리는 44px, 보이는 탭은 아래 30px.
+   접으면 막대가 화면 아래로 미끄러져 내려가고(translate) 탭만 화면 끝에 남는다. 펴면 다시 올라온다. */
+.tool-dock { transition:translate .32s cubic-bezier(.2,.8,.2,1),visibility 0s; }
+.tool-dock.is-collapsed { translate:0 calc(100% + 12px + env(safe-area-inset-bottom)); visibility:hidden; box-shadow:none; transition:translate .32s cubic-bezier(.2,.8,.2,1),visibility 0s .32s,box-shadow 0s .32s; }
+.dock-toggle { position:absolute; left:50%; bottom:100%; transform:translateX(-50%); display:flex; align-items:flex-end; justify-content:center; gap:6px; min-width:76px; height:44px; min-height:44px; padding:0 18px 5px; border:0; background:transparent; color:#184028; font-size:15px; font-weight:800; cursor:pointer; touch-action:none; visibility:visible; }
 .dock-toggle::before { content:""; position:absolute; z-index:-1; left:0; right:0; bottom:-1px; height:30px; border:1px solid #ece2c4; border-bottom:0; border-radius:16px 16px 0 0; background:#fbf6e8; }
-.dock-toggle>svg { transform:rotate(180deg); }
+.dock-toggle>svg { transform:rotate(180deg); transition:transform .32s ease; }
 .dock-toggle:focus-visible { outline:3px solid #184028; outline-offset:-3px; border-radius:16px 16px 0 0; }
-.tool-dock.is-collapsed { display:flex; justify-content:center; height:auto; padding:0; border:0; background:transparent; box-shadow:none; pointer-events:none; }
-.tool-dock.is-collapsed>:not(.dock-toggle) { display:none; }
-.tool-dock.is-collapsed>.dock-toggle { position:static; transform:none; align-items:center; height:52px; padding:0 22px; border:1px solid #ece2c4; border-radius:999px; background:#fbf6e8; box-shadow:0 8px 24px rgba(70,55,20,.18); pointer-events:auto; }
-.tool-dock.is-collapsed>.dock-toggle::before { display:none; }
+.tool-dock.is-collapsed>.dock-toggle { height:54px; min-width:104px; padding-bottom:calc(9px + env(safe-area-inset-bottom)); box-shadow:none; }
+.tool-dock.is-collapsed>.dock-toggle::before { height:44px; box-shadow:0 -6px 18px rgba(70,55,20,.14); }
 .tool-dock.is-collapsed>.dock-toggle>svg { transform:none; }
-.tool-dock.is-collapsed>.dock-toggle:focus-visible { outline-offset:3px; border-radius:999px; }
+@media (prefers-reduced-motion:reduce) { .tool-dock,.tool-dock.is-collapsed,.dock-toggle>svg { transition:none; } }
 
 /* 확대·축소: 도화지 오른쪽 위의 세로 단추 묶음 */
 .zoom-controls { position:absolute; z-index:6; top:10px; right:10px; display:grid; gap:2px; padding:3px; border:1px solid #e4d9ba; border-radius:16px; background:rgba(255,253,246,.96); box-shadow:0 4px 14px rgba(39,79,47,.15); }
@@ -2060,3 +2061,11 @@ body {
   .dock-current-color { display:block; }
   .dock-sheet { max-height:calc(100dvh - var(--dock-space) - 60px); }
 }
+
+/* ── 2026-09-15 도화지 틀 채우기 ─────────────────────────────────────────────────
+ * 사용자: "도화지 크기는 화면을 꽉채우지 안 잖아". .canvas-wrap은 이제 도화지 비율과 상관없이 자리를 꽉 채우는 틀이고,
+ * 그 안의 .canvas-stack(종이)은 틀을 빈틈 없이 덮는 크기(coverPaper)를 JS가 정한다. 이미 그린 그림이 틀보다 옆으로 좁은
+ * 비율이면 종이가 틀 폭에 맞춰 세로로 넘치고 스크롤·두 손가락으로 옮겨 본다(세로로 긴 틀은 종이를 늘려 딱 맞춘다). */
+.studio .canvas-zone .canvas-wrap,.studio .canvas-zone.has-canvas-status .canvas-wrap { width:100%; height:100%; max-width:none; max-height:none; aspect-ratio:auto; background:#fff; overflow:hidden; overflow:clip; }
+/* clip: 넘친 종이가 있으면 hidden 틀은 스크립트·초점 이동으로 몰래 스크롤돼 transform과 어긋난다. clip은 스크롤 자체가 없다. */
+.studio .canvas-stack { inset:auto; left:0; top:0; }

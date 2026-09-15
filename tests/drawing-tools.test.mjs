@@ -191,8 +191,11 @@ test("도화지 비율은 문서가 정하고, 화면·래스터·저장 이미�
   const cqWidths = css.match(/width:min\(100cqw,[^;]*/g) ?? [];
   assert.ok(cqWidths.length >= 3, `cq 기반 도화지 폭 규칙이 있어야 한다: ${cqWidths.length}`);
   for (const rule of cqWidths) assert.match(rule, /--paper-ratio/, `정사각을 가정한 규칙이 남아 있다: ${rule}`);
-  // 아직 아무것도 그리지 않은 새 작품만 화면 비율에 맞춘다. 한 획이라도 그으면 비율이 굳는다.
-  assert.match(studio, /if \(!current \|\| current\.ops\.length\) return;/);
+  // 새 작품은 화면 비율에 맞춘다. 이미 그린 그림은 화면이 세로로 길 때만 가운데 둔 채 늘리고(줄이지 않음),
+  // 옆으로 넓은 화면에서는 종이가 틀을 덮고 넘친 만큼 옮겨 본다(2026-09-15 "도화지 크기는 화면을 꽉채우지 안 잖아").
+  assert.match(studio, /if \(next < from \|\| activePoints\.current\.size \|\| artworkRef\.current\?\.status === "complete" \|\| conflictDraftRef\.current\) return;/);
+  assert.match(studio, /growDrawOps\(current\.ops, from, next\)/);
+  assert.match(studio, /const paper = coverPaper\(frame\.width, frame\.height, documentHeight\(documentState\)\);/);
   assert.match(studio, /clampDocumentHeight\(DOCUMENT_SIZE \* height \/ width\)/);
 });
 

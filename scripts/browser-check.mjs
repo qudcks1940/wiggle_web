@@ -415,7 +415,8 @@ async function main() {
             overflow: window.__wiggle.horizontalOverflow().overflow,
             small: window.__wiggle.smallTargets(44),
             canvasBox,
-            canvasFullyVisible: canvasBox.top >= -1 && canvasBox.bottom <= innerHeight + 1,
+            // 2026-09-15부터 도화지는 자리를 빈틈 없이 덮는다. 이미 그린 그림이 자리보다 옆으로 좁으면 위아래로 넘치고 옮겨 본다.
+            canvasCoversZone: (() => { const zone = window.__wiggle.box(document.querySelector('.canvas-zone')); return canvasBox.left <= zone.left + 1 && canvasBox.right >= zone.right - 1 && canvasBox.top <= zone.top + 1 && canvasBox.bottom >= zone.bottom - 1; })(),
             exitBox: exit ? window.__wiggle.box(exit) : null,
             canvasCenterHit: window.__wiggle.topElementAt(Math.round(canvasBox.left + canvasBox.w / 2), Math.round(canvasBox.top + canvasBox.h / 2)),
           };
@@ -425,7 +426,7 @@ async function main() {
           check(studio.overflow <= 0, `${viewport.name} 그리기 화면 가로 스크롤 없음`, studio.overflow);
           check(studio.small.length === 0, `${viewport.name} 그리기 화면 터치 목표 44px 이상`, studio.small);
           check(studio.exitBox && Math.min(studio.exitBox.w, studio.exitBox.h) >= 44, `${viewport.name} 나가기 버튼 44px 이상`, studio.exitBox);
-          check(studio.canvasFullyVisible, `${viewport.name} 도화지가 잘리지 않음`, studio.canvasBox);
+          check(studio.canvasCoversZone, `${viewport.name} 도화지가 자리를 빈틈 없이 채움`, studio.canvasBox);
           check(studio.canvasCenterHit && String(studio.canvasCenterHit.cls).includes("draw-canvas"), `${viewport.name} 도화지 중앙이 다른 요소에 가려지지 않음`, studio.canvasCenterHit);
         }
 
@@ -483,7 +484,10 @@ async function main() {
         const firstProbe = await probeCanvas();
         check(!firstProbe.error, `${viewport.name} 새 도구 검증용 도화지 확인`, firstProbe.error);
         if (!firstProbe.error) {
-          const at = (rect, fx, fy) => ({ x: rect.left + rect.width * fx, y: rect.top + rect.height * fy });
+          // 도화지가 자리보다 길게 넘치면(다른 모양 화면에서 그린 그림) 검사 좌표의 세로 비율을 화면에 보이는 띠(머리 줄 아래~막대 손잡이 위) 안으로 옮긴다.
+          const visibleBand = await evaluate(cdp, session, `(() => { const c = document.querySelector('.draw-canvas').getBoundingClientRect(); const z = document.querySelector('.canvas-zone').getBoundingClientRect(); const dock = document.querySelector('.tool-dock').getBoundingClientRect(); const top = Math.max(c.top, z.top); const bottom = Math.min(c.bottom, z.bottom, dock.top - 44); return c.height > z.height + 1 ? [(top - c.top) / c.height, (bottom - c.top) / c.height] : [0, 1]; })()`);
+          const bandY = (fy) => visibleBand[0] + fy * (visibleBand[1] - visibleBand[0]);
+          const at = (rect, fx, fy) => ({ x: rect.left + rect.width * fx, y: rect.top + rect.height * bandY(fy) });
           const clickPanelButton = (label) => evaluate(cdp, session, `(() => {
             const find = () => [...document.querySelectorAll('.tool-dock button')].find((item) => window.__wiggle.visible(item) && (item.getAttribute('aria-label') || item.textContent || '').includes(${JSON.stringify(label)}));
             let target = find();
@@ -500,7 +504,7 @@ async function main() {
           })()`);
           const pixel = (fx, fy) => evaluate(cdp, session, `(() => {
             const canvas = document.querySelector('.draw-canvas'); const context = canvas.getContext('2d');
-            const data = context.getImageData(Math.round(${fx} * canvas.width), Math.round(${fy} * canvas.height), 1, 1).data;
+            const data = context.getImageData(Math.round(${fx} * canvas.width), Math.round(${bandY(fy)} * canvas.height), 1, 1).data;
             return [data[0], data[1], data[2]];
           })()`);
           // 이전 뷰포트에서 저장된 그림이 남아 있으므로 절대색이 아니라 "그리기 전과 달라졌는가"로 판정한다.
@@ -559,7 +563,8 @@ async function main() {
           const hintShown = await evaluate(cdp, session, `Boolean([...document.querySelectorAll('.canvas-start-hint')].find((item) => item.textContent.includes('끝나는 곳')))`);
           check(hintShown, `${viewport.name} 도형 시작점 탭 뒤 끝점 안내가 보임`, hintShown);
           rect = await probeCanvas();
-          await tapOn(at(rect, 0.8 + rowShift, shapeBottom)); await sleep(400);
+          // 오른쪽 위 확대·축소 단추를 피해 끝점 x를 너무 오른쪽으로 밀지 않는다.
+          await tapOn(at(rect, 0.8 + rowShift * 0.5, shapeBottom)); await sleep(400);
           const shapeEdge = await pixel(shapeLeft, shapeProbeY);
           check(differs(beforeEdge, shapeEdge) && shapeEdge[2] > 40 && shapeEdge[0] < 120, `${viewport.name} 두 번째 탭으로 네모가 그려짐`, { beforeEdge, shapeEdge });
 

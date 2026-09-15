@@ -2,12 +2,12 @@
 
 import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { activeTextObjects, clampDocumentHeight, DOCUMENT_SIZE, documentHeight, DrawDocument, DrawOp, drawingTextGraphemes, emptyDocument, estimateDocumentBytes, estimateStrokeBytes, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_OPS, MAX_STROKE_POINTS, MAX_TEXT_GRAPHEMES, MAX_TEXT_OBJECTS, normalizeDrawingText, roundUnit, ShapeKind, STROKE_WIDTH_MAX, STROKE_WIDTH_MIN, StrokeWidth, TextKind, TEXT_SIZES, TextSize, validateDrawDocument } from "@/lib/drawing-model";
+import { activeTextObjects, clampDocumentHeight, DOCUMENT_SIZE, documentHeight, DrawDocument, DrawOp, drawingTextGraphemes, emptyDocument, estimateDocumentBytes, estimateStrokeBytes, growDrawOps, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_OPS, MAX_STROKE_POINTS, MAX_TEXT_GRAPHEMES, MAX_TEXT_OBJECTS, normalizeDrawingText, roundUnit, ShapeKind, STROKE_WIDTH_MAX, STROKE_WIDTH_MIN, StrokeWidth, TextKind, TEXT_SIZES, TextSize, validateDrawDocument } from "@/lib/drawing-model";
 import { renderDrawDocument, renderDrawOperation, resetDrawingCanvas } from "@/lib/draw-renderer";
 import { mirrorOp } from "@/lib/symmetry";
 import { clearAllDrawing, redoDrawing, undoDrawing } from "@/lib/drawing-history";
 import { DrawingInputMode, INPUT_MODE_EVENT } from "@/lib/input-mode";
-import { CanvasView, clampView, IDENTITY_VIEW, MAX_SCALE, pinchView, zoomView } from "@/lib/canvas-view";
+import { CanvasView, clampView, coverPaper, IDENTITY_VIEW, MAX_SCALE, pinchView, zoomView } from "@/lib/canvas-view";
 import { lessonBySlug, Lesson } from "@/lib/lesson-content";
 import { guideMarksForVariant } from "@/lib/lesson-guide-variants";
 import { ArrowLeftIcon, CheckIcon, ChevronUpIcon, HandIcon, MoreHorizontalIcon, Redo2Icon, Undo2Icon } from "./StudioIcons";
@@ -490,6 +490,7 @@ export function DrawingStudio() {
   // 선택된 펜을 다시 누르면 그 펜 왼쪽에 굵기 슬라이더가 열린다 (2026-08-30 결정).
   const [widthSliderOpen, setWidthSliderOpen] = useState(false);
   const [dockOpen, setDockOpen] = useState(true);
+  const dockSwipeRef = useRef<number | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [guideCollapsed, setGuideCollapsed] = useState(false);
   const [shapeKind, setShapeKind] = useState<ShapeKind>("line");
@@ -570,6 +571,9 @@ export function DrawingStudio() {
   const activePoints = useRef(new Map<number, Array<{ x: number; y: number; pressure: number }>>());
   const guideTraceLocksRef = useRef(new Map<number, { traceIndex: number; pointIndex: number }>());
   const wrapRef = useRef<HTMLDivElement>(null);
+  // 틀(도화지가 보이는 자리)과 그 틀을 빈틈 없이 덮는 1배 종이 크기. 확대·이동 계산이 함께 쓴다.
+  const [frame, setFrame] = useState({ width: 0, height: 0 });
+  const viewBoxRef = useRef<[number, number, number, number]>([1, 1, 1, 1]);
   const canvasZoneRef = useRef<HTMLElement>(null);
   const viewRef = useRef<CanvasView>(IDENTITY_VIEW);
   const penModeRef = useRef(true);
@@ -1538,16 +1542,33 @@ export function DrawingStudio() {
     if (!zone) return;
     function fitPaperToScreen() {
       const current = documentStateRef.current;
-      if (!current || current.ops.length) return;
+      if (!current) return;
       const style = window.getComputedStyle(zone!);
       const width = zone!.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
       const height = zone!.clientHeight - Number.parseFloat(style.paddingTop) - Number.parseFloat(style.paddingBottom);
       if (!(width >= 1) || !(height >= 1)) return;
       const next = clampDocumentHeight(DOCUMENT_SIZE * height / width);
-      if (next === documentHeight(current)) return;
-      const fitted = { ...current, height: next };
-      documentStateRef.current = fitted;
-      setDocumentState(fitted);
+      const from = documentHeight(current);
+      if (next === from) return;
+      if (!current.ops.length) {
+        const fitted = { ...current, height: next };
+        documentStateRef.current = fitted;
+        setDocumentState(fitted);
+        return;
+      }
+      /* 이미 그린 그림(2026-09-15 사용자: "도화지 크기는 화면을 꽉채우지 안 잖아"): 화면이 도화지보다 세로로 길면
+       * 그림을 가운데 둔 채 위아래로 종이를 덧대 채운다. 화면이 더 넓은 쪽(기기를 눕힘)은 그림을 줄이거나 잘라야 해
+       * 가운데 놓아 둔다. 긋는 중·완성·저장 충돌 중에는 좌표를 바꾸지 않는다. */
+      if (next < from || activePoints.current.size || artworkRef.current?.status === "complete" || conflictDraftRef.current) return;
+      const grown = { ...current, height: next, ops: growDrawOps(current.ops, from, next) };
+      redoRef.current = redoRef.current.map((group) => growDrawOps(group, from, next));
+      if (clearedOpsRef.current) clearedOpsRef.current = growDrawOps(clearedOpsRef.current, from, next);
+      editSeqRef.current += 1;
+      unsavedRef.current = true;
+      documentStateRef.current = grown;
+      setRedo(redoRef.current);
+      setDocumentState(grown);
+      setEditVersion((value) => value + 1);
     }
     fitPaperToScreen();
     const observer = new ResizeObserver(fitPaperToScreen);
@@ -1555,7 +1576,27 @@ export function DrawingStudio() {
     return () => observer.disconnect();
   }, [artwork?.id, documentState.ops.length]);
 
-  /* 트랙패드·마우스: 두 손가락 벌리기(ctrl+휠)는 커서 자리를 붙잡고 확대·축소, 확대한 동안 스크롤은 도화지 옮기기.
+  /* 틀 크기를 재고, 틀이나 종이 크기가 바뀌면 지금 확대·이동을 새 크기 안에 다시 가둔다. */
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const measure = () => setFrame((current) => (current.width === wrap.clientWidth && current.height === wrap.clientHeight ? current : { width: wrap.clientWidth, height: wrap.clientHeight }));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(wrap);
+    return () => observer.disconnect();
+  }, [artwork?.id]);
+  const paper = coverPaper(frame.width, frame.height, documentHeight(documentState));
+  viewBoxRef.current = [frame.width || 1, frame.height || 1, paper.width || 1, paper.height || 1];
+  // 틀이나 종이 크기가 바뀌면(화면 회전·도화지 늘림) 1배로 돌아가 종이 가운데를 보여 준다.
+  useEffect(() => {
+    const next = fitView();
+    if (next.x === viewRef.current.x && next.y === viewRef.current.y && next.scale === viewRef.current.scale) return;
+    viewRef.current = next;
+    setView(next);
+  }, [frame.width, frame.height, paper.width, paper.height]);
+
+  /* 트랙패드·마우스: 두 손가락 벌리기(ctrl+휠)는 커서 자리를 붙잡고 확대·축소, 확대했거나 종이가 틀보다 길면 스크롤은 도화지 옮기기.
    * React onWheel은 passive라 브라우저 페이지 확대를 막지 못해 직접 붙인다. */
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -1565,8 +1606,10 @@ export function DrawingStudio() {
       const current = viewRef.current;
       const unit = event.deltaMode === 1 ? 16 : 1;
       let next: CanvasView;
-      if (event.ctrlKey || event.metaKey) next = zoomView(current, current.scale * Math.exp(-event.deltaY * unit * 0.01), { x: event.clientX - rect.left, y: event.clientY - rect.top }, rect.width, rect.height);
-      else if (current.scale > 1.001) next = clampView({ ...current, x: current.x - event.deltaX * unit, y: current.y - event.deltaY * unit }, rect.width, rect.height);
+      const box = viewBoxRef.current;
+      const overflows = box[2] > box[0] + 1 || box[3] > box[1] + 1;
+      if (event.ctrlKey || event.metaKey) next = zoomView(current, current.scale * Math.exp(-event.deltaY * unit * 0.01), { x: event.clientX - rect.left, y: event.clientY - rect.top }, ...box);
+      else if (current.scale > 1.001 || overflows) next = clampView({ ...current, x: current.x - event.deltaX * unit, y: current.y - event.deltaY * unit }, ...box);
       else return;
       event.preventDefault();
       viewRef.current = next;
@@ -1594,16 +1637,22 @@ export function DrawingStudio() {
     penModeRef.current = false;
     setInputMode("finger");
   }
+  // 1배. 종이가 틀보다 길면 가운데가 보이게 둔다(그림은 늘릴 때 가운데에 놓인다).
+  function fitView() {
+    const [frameWidth, frameHeight, paperWidth, paperHeight] = viewBoxRef.current;
+    return clampView({ scale: 1, x: (frameWidth - paperWidth) / 2, y: (frameHeight - paperHeight) / 2 }, frameWidth, frameHeight, paperWidth, paperHeight);
+  }
   function resetViewToFit() {
-    viewRef.current = IDENTITY_VIEW;
-    setView(IDENTITY_VIEW);
+    const next = fitView();
+    viewRef.current = next;
+    setView(next);
   }
   // 확대·축소 단추는 도화지 가운데를 붙잡고 1.5배씩 움직인다. 1배(화면 맞춤) 아래로는 줄이지 않는다.
   function zoomBy(factor: number) {
     const wrap = wrapRef.current;
     if (!wrap) return;
     const rect = wrap.getBoundingClientRect();
-    const next = zoomView(viewRef.current, viewRef.current.scale * factor, { x: rect.width / 2, y: rect.height / 2 }, rect.width, rect.height);
+    const next = zoomView(viewRef.current, viewRef.current.scale * factor, { x: rect.width / 2, y: rect.height / 2 }, ...viewBoxRef.current);
     viewRef.current = next;
     setView(next);
   }
@@ -1946,7 +1995,7 @@ export function DrawingStudio() {
             x: touch.x - rect.left,
             y: touch.y - rect.top,
           });
-          const next = pinchView(viewRef.current, [local(previous), local(other[1])], [local(current), local(other[1])], rect.width, rect.height);
+          const next = pinchView(viewRef.current, [local(previous), local(other[1])], [local(current), local(other[1])], ...viewBoxRef.current);
           viewRef.current = next;
           setView(next);
         }
@@ -2879,6 +2928,8 @@ export function DrawingStudio() {
             <div
               className="canvas-stack"
               style={{
+                width: paper.width || undefined,
+                height: paper.height || undefined,
                 transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
               }}
             >
@@ -2945,8 +2996,22 @@ export function DrawingStudio() {
             화면 아래에 떠 있는 크림색 막대에 세워진 도구, 고른 도구는 올라오고 진초록 바탕. 붓 끝·띠는 지금 색으로 칠한다.
             고른 도구를 한 번 더 누르면 굵기 5단이 위에 뜬다. 채우기·도형·글씨·입력 방법·전체 지우기는 ⋯ 안에 있다. */}
         <aside className={`tool-dock${dockOpen ? "" : " is-collapsed"}`} aria-label="그리기 도구 모음" style={{ "--dock-color": selectedColor } as React.CSSProperties}>
-          {/* 아코디언(2026-09-15 사용자 요청): 막대 위 손잡이로 접고, 접으면 "도구" 단추 하나만 남는다. */}
-          <button type="button" className="dock-toggle" aria-expanded={dockOpen} aria-label={dockOpen ? "그리기 도구 접기" : "그리기 도구 펼치기"} onClick={() => { setDockOpen((open) => !open); setWidthSliderOpen(false); setPaletteOpen(false); setToolSheetOpen(false); }}>
+          {/* 아코디언(2026-09-15 사용자: "누르면 위로 올라가고 내리면 아래로 내려가는 느낌"): 막대가 화면 아래로 미끄러져 내려가고 손잡이 탭만 남는다. */}
+          <button
+            type="button"
+            className="dock-toggle"
+            aria-expanded={dockOpen}
+            aria-label={dockOpen ? "그리기 도구 접기" : "그리기 도구 펼치기"}
+            onPointerDown={(event) => { dockSwipeRef.current = event.clientY; event.currentTarget.setPointerCapture(event.pointerId); }}
+            onPointerUp={(event) => { dockSwipeRef.current = dockSwipeRef.current === null ? null : event.clientY - dockSwipeRef.current; }}
+            onClick={() => {
+              // 손잡이를 아래로 끌면 접고 위로 끌면 편다. 끌지 않고 누르면 번갈아 바꾼다.
+              const moved = dockSwipeRef.current ?? 0;
+              dockSwipeRef.current = null;
+              setDockOpen((open) => (moved > 16 ? false : moved < -16 ? true : !open));
+              setWidthSliderOpen(false); setPaletteOpen(false); setToolSheetOpen(false);
+            }}
+          >
             <ChevronUpIcon size={20} />{!dockOpen && <span>도구</span>}
           </button>
           <div className="dock-history" role="group" aria-label="그리기 기록">

@@ -40,7 +40,10 @@ test("the tool dock always renders and folds like an accordion from its own hand
   assert.match(compact, /<aside className=\{`tool-dock\$\{dockOpen \? "" : " is-collapsed"\}`\} aria-label="그리기 도구 모음"/);
   assert.doesNotMatch(compact, /\{[a-zA-Z]+ && <aside className/, "도구 막대가 조건부로만 렌더되면 안 된다");
   assert.match(compact, /className="dock-toggle" aria-expanded=\{dockOpen\} aria-label=\{dockOpen \? "그리기 도구 접기" : "그리기 도구 펼치기"\}/);
-  assert.match(css, /\.tool-dock\.is-collapsed>:not\(\.dock-toggle\) \{ display:none; \}/);
+  // "누르면 위로 올라가고 내리면 아래로 내려가는 느낌": 막대 자체가 화면 아래로 미끄러진다. 손잡이를 끌어도 된다.
+  assert.match(css, /\.tool-dock\.is-collapsed \{ translate:0 calc\(100% \+ 12px \+ env\(safe-area-inset-bottom\)\); visibility:hidden;/);
+  assert.match(css, /\.tool-dock \{ transition:translate/);
+  assert.match(studio, /moved > 16 \? false : moved < -16 \? true : !open/);
   assert.match(css, /\.dock-toggle \{[^}]*height:44px; min-height:44px;/);
 });
 

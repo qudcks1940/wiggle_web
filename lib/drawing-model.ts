@@ -138,6 +138,16 @@ export function documentHeight(document: Pick<DrawDocument, "height">): number {
   return document.height ?? DOCUMENT_SIZE;
 }
 
+/** 이미 그린 도화지를 세로로 늘린다(2026-09-15 "도화지는 항상 화면을 꽉 채우게").
+ * 그림은 가운데에 두고 위아래로 같은 만큼 종이를 덧댄다. 가로 1024 기준인 굵기·글자·스티커 크기는
+ * 그대로라 화면에 그려지는 모양이 한 픽셀도 바뀌지 않는다(세로 좌표만 새 높이로 다시 나눈다).
+ * 가운데 정렬이라 도화지 가운데에 놓이는 수업 점선과도 어긋나지 않는다. 줄이는 쪽은 그림을 잘라야 해 하지 않는다. */
+export function growDrawOps(ops: DrawOp[], fromHeight: number, toHeight: number): DrawOp[] {
+  if (!(toHeight > fromHeight)) return ops;
+  const offset = (toHeight - fromHeight) / 2;
+  return ops.map((op) => (op.points ? { ...op, points: op.points.map((point) => ({ ...point, y: roundUnit((point.y * fromHeight + offset) / toHeight) })) } : op));
+}
+
 function finiteUnit(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1;
 }

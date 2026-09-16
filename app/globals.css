@@ -2069,3 +2069,5 @@ body {
 .studio .canvas-zone .canvas-wrap,.studio .canvas-zone.has-canvas-status .canvas-wrap { width:100%; height:100%; max-width:none; max-height:none; aspect-ratio:auto; background:#fff; overflow:hidden; overflow:clip; }
 /* clip: 넘친 종이가 있으면 hidden 틀은 스크립트·초점 이동으로 몰래 스크롤돼 transform과 어긋난다. clip은 스크롤 자체가 없다. */
 .studio .canvas-stack { inset:auto; left:0; top:0; }
+/* Keep canvas text layers below the full-screen preview and other dialogs. */
+.storybook-stage { isolation:isolate; }

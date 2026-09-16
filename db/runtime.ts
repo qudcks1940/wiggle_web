@@ -1,3 +1,5 @@
+import { operationsSchema } from "@/lib/operations-schema";
+import { bookProductionSchema } from "@/lib/book-production-schema";
 import { createArtworksStore } from "@/db/adapters/artworks-store";
 import { createTursoD1 } from "@/db/adapters/turso-d1";
 import { upgradeMvp3Schema } from "@/lib/mvp3-schema-upgrade";
@@ -141,6 +143,8 @@ async function ensureArtworkMutationPrimaryKey(DB: D1Database) {
 // ensureSchema()는 프로세스당 한 번만 도는 캐시 래퍼일 뿐, 내용은 이 함수가 정본이다.
 export async function provisionSchema(DB: D1Database) {
   await DB.batch(schemaStatements.map((statement) => DB.prepare(statement)));
+  await DB.batch(bookProductionSchema.map((statement) => DB.prepare(statement)));
+  await DB.batch(operationsSchema.map((statement) => DB.prepare(statement)));
   await upgradeMvp3Schema(DB);
   const artworkColumns = await DB.prepare(`PRAGMA table_info(artworks)`).all<{ name: string }>();
   if (!artworkColumns.results.some((column) => column.name === "last_mutation_id")) await DB.prepare(`ALTER TABLE artworks ADD COLUMN last_mutation_id TEXT`).run();

@@ -1,14 +1,38 @@
 # Wiggle Web 현재 상태
 
-> 마지막 갱신: 2026-09-07
+> 마지막 갱신: 2026-09-16
 > 목적: 긴 대화가 압축되거나 담당 AI가 바뀌어도 실제 구현·검증·배포 상태를 잃지 않기 위한 기준 문서
+
+## 2026-09-16 관리자 운영·원고 주문 접수 (로컬 검증 완료)
+
+- 사용자 최신 지시대로 관리자 `qudcks1940@gmail.com` 허용 목록, `/admin` 화면과 API를 추가했다. 교사 직접 견적·결제 API는 403이며 원고 준비는 로컬 저장까지만 수행한다.
+- 교사는 완성책 또는 표지/내지 원본 PDF(각 30MB, 3MB 분할 업로드), 학교/학년/반/배송/수량을 제출한다. 모든 페이지의 크기·쪽 수·회전·잘림을 서버에서 검사하고 제출 원고 사본/해시/실측값을 보관한다.
+- 관리자만 원고 전송·최신 견적·발주·배송 조회를 실행한다. 책별 처리, 요청 lease, 생성/결제 멱등성, 20시간 이상 미확인 자동 재전송 차단을 적용했다.
+- 가입 교사/학급/명단/최초 입장/접속 인원, 30초 heartbeat와 90초 만료를 추가했다. CPU/RAM은 로컬 전체 또는 현재 함수 범위를 명시하고 운영 최대 인원은 부하 테스트 근거와 함께 설정한다. 자동 추정이나 접속 제한은 아니다.
+- 자기 브랜치 `codex/rubric-feedback-book-orders`, 작업 폴더 `new_wiggle`. 개인 원격 `personal`과 대상 `upstream`을 추가했다. 대상 main은 현재 HEAD의 조상이며 PR에 new_wiggle의 기존 학급 명단/화면 등 선행 변경도 함께 포함된다.
+- production build + 전체 테스트 **327/327**, typecheck, lint 0 errors(기존 경고 10), diff check 3종 통과. 모의 제공자 HTTP 검증에서 관리자/교사 경계, 마지막 PDF 페이지 규격 오류, 회전/잘림 거절, 수정 불가 접수 사본, 접속 중복/만료, 발주 응답 유실 복구를 확인했다.
+- `check-book-browser` 실제 Chrome에서 일괄 평가/재시도/ZIP, 외부 PDF 가져오기/편집, 인쇄 PDF 직접 업로드, 교사 요청 제출, 관리자 견적/발주, 교사 2화면+관리자 3탭의 320/390/844/1440 폭 및 초점 이동 통과. 기본 `check:browser` 3뷰포트 전 항목 통과.
+- 로컬 production 서버 `http://localhost:3012` 실행 중. 사용자 브라우저에서 `/admin`의 가입 교사/학급/CPU/RAM 화면까지 확인했다. 로컬 가상 교사를 무시되는 .env.local 허용 목록에만 추가했다. 운영 기본 관리자 계정은 승인된 Google 이메일뿐이다.
+- 실제 OpenAI/Sweetbook 키는 로컬에 없으므로 제공자 실접수/유료 발주는 실행하지 않았다. 운영 키·Sandbox 실검증, 배포 후 실제 수업 코드 운영 점검은 남아 있다. 기능 브랜치 커밋/push/PR 제출 진행, main 병합·배포 없음.
+
+## 2026-09-09 그림책 루브릭 평가·인쇄 주문 구현
+
+- `wwwiggle/new_wiggle` main에서 새 clone, `codex/rubric-feedback-book-orders`에서 작업. 커밋·push·배포 없음. 아래 옛 작업 기록은 당시 이력이다.
+- 제공 XLSX 원본을 `config/rubrics/storybook.xlsx`로 보관. 학급별 엑셀 업로드 교체, 영역·점수 검증, 실제 프롬프트 공개, 파일/프롬프트/책 버전별 평가 저장. OpenAI에 전체 페이지 글+그림 전달, 단권·50권 순차 큐·재시도·교사용 검토·한글 PDF/ZIP.
+- 학급 생성 학년·반 입력, 기존 명단 번호·실명 연동. 파일명 `학년_반_번호_이름_그림책이름.pdf`. 교사용 실명 필드를 AI 메타데이터에 보내지 않는다.
+- 별도 주문 화면, Sweetbook Sandbox 기본 연결, 표지/내지 생성·업로드·확정, 최신 판형/치수·견적, 단권/여러 종/수량, 배송지, 주문 이력·응답 유실 복구. Live는 production + 명시 환경 변수로만 실행.
+- DB 자동 provision 및 Drizzle 0008 신규 4개 테이블. 기존 피드백 POST도 새 큐로 연결. 운영 DB/R2와 은퇴한 `.openai/hosting.json`은 접근·수정하지 않음.
+- production build + 전체 테스트 **324/324**, typecheck 통과, lint 0 errors(기존 경고 10개), 두 git diff --check 통과. 실제 HTTP 테스트에서 제공자는 모의 응답이며, 실제 유료 호출·실물 발주는 하지 않음.
+- 신규 화면 브라우저: 320×568, 390×844, 844×390, 1440×1000에서 두 화면 가로 넘침·키보드 초점 확인. 일괄 평가·실패 재시도·ZIP 다운로드 및 일괄 인쇄 준비→견적→모의 Sandbox 주문 실제 브라우저 통과. 재현 스크립트: `scripts/check-book-browser.mjs`. 한글 PDF 렌더 육안 확인 및 인쇄 내지 쪽 수 테스트.
+- 기존 전체 `check:browser`는 844×390 QR 입장 번호 화면/빈 번호 입장 검사 2건이 `no-seat-input`으로 실패. 신규 그림책 두 화면 검사는 별도로 통과했으며, 학생 입장 검사 실패 원인은 이번 작업에서 확정하지 못함.
+- 설정과 사용자 절차는 `docs/book-feedback-and-printing.md`. 실제 키가 없어 실제 AI 품질/Sweetbook Sandbox 및 실물 교정은 남음. 사용자가 배포한 뒤 실제 수업 코드로 기존 deployed 검사와 신규 경로 운영 실측 필요.
 
 ## 상태 기준
 
-- 로컬 저장소: `C:\Users\user\Desktop\Project\wiggle_web`
+- 현재 작업 저장소: `C:\Users\user\Desktop\Project\new_wiggle` (신규 main clone; 기존 wiggle_web 보존)
 - 신규 개발 GitHub: `https://github.com/wwwiggle/new_wiggle`
 - 기존 운영 연결 GitHub: `https://github.com/yonghwan86/wiggle_web` — Vercel 프로젝트의 Git 연결을 바꾸기 전까지 현재 운영 배포 원본으로 유지한다.
-- 로컬 Git 원격: `origin`은 신규 개발 GitHub, `legacy-origin`은 기존 운영 연결 GitHub다. GitHub 접근은 사용자 승인에 따라 `qudcks1940` 계정 권한을 사용할 수 있다(자격증명은 저장소에 기록하지 않는다).
+- 현재 clone의 Git 원격: `origin`은 신규 개발 GitHub다. 기존 폴더의 `legacy-origin`은 이번 clone에 추가하지 않았다. GitHub 접근은 사용자 승인에 따라 `qudcks1940` 계정 권한을 사용할 수 있다(자격증명은 저장소에 기록하지 않는다).
 - **공개 운영: `https://wiggleweb.vercel.app`** — Vercel 프로젝트 `wiggle-web`, GitHub `main` push 시 자동 배포(서울 리전). `main` push는 사용자만 실행한다.
 - 옛 공개 Sites `https://wiggle-classroom-web.chan1940.chatgpt.site`는 2026-08-19 재플랫폼으로 은퇴 — 사이트·데이터는 보존(폐기는 사용자 승인 필요), 신규 서버는 데이터 이전 없이 새로 시작했다.
 - 운영 저장소: DB는 Turso(libSQL), 그림 파일은 Cloudflare R2 버킷 `wiggle-artworks`(S3 API). 운영 자격증명은 Vercel 대시보드에서만 관리한다.
@@ -448,3 +472,22 @@
 3. 요청이 확정 결정인지, 검토 의견인지 구분한다.
 4. 미결정 항목을 임의로 제품 정책으로 확정하지 않는다.
 5. 구현·검증·배포 상태가 바뀌면 이 문서를 함께 갱신한다.
+
+## 2026-09-09 사용자 로컬 체험 시작
+
+- 사용자 요청에 따라 `new_wiggle`에서 `npm.cmd run dev -- --port 3012` 실행. `/api/health`가 local/ok임을 확인했다.
+- `scripts/check-book-browser.mjs` 재실행 통과: 모의 제공자로 일괄 평가·재시도·ZIP·인쇄 준비·견적·주문 및 4개 화면 크기를 검증했다.
+- 직접 체험 주소: `http://localhost:3012/teacher/class/class_4cc7c5e4c05e4b4e/books`, 주문은 뒤에 `/orders`. 테스트 학급 수업 코드 7704, 학년 4·반 7, 가상 학생 2명과 글·배경색만 있는 3쪽 완성 그림책 2권을 로컬 파일 DB에 준비했다.
+- 사용자 체험 서버는 실제 앱이며 모의 AI/제작사 응답을 끼워 넣지 않았다. API 키가 없으면 평가 연결 대기·주문 연결 준비 안내가 정상이다. 운영 배포·원격 DB 변경 없음.
+
+## 2026-09-09 외부 PDF 가져오기·교사 편집
+
+- 교사 그림책 목록에 PDF 다중 선택·파일별 학생/제목 지정·진행/실패 표시를 추가했다. 30MB·1~24쪽·50권까지이며 각 학생을 명시적으로 선택한다. PDF.js로 쪽 전체를 비율 유지해 렌더링하고 3.5MB 이하 PNG로 나눠 전송한다. 원본 파일 자체는 서버에 저장하지 않는다.
+- 기존 그림책 모델/이미지 저장/피드백/주문을 재사용한다. 모든 쪽 저장 후에만 완성 처리하며 중간 저장은 초안으로 보존한다. ‘편집 중인 책’에서 초안을 열 수 있다.
+- 교사 `/api/teacher/book-editor/[id]` 경로는 학생 토큰 없이 교사 쿠키·담당 학급 소유권을 확인하고 기존 저장 충돌·이미지 소유권 검증을 공유한다. 기존 학생 경로는 학생 인증을 유지한다.
+- 기존 StorybookEditor를 교사 경로에서도 사용한다. 원본 PDF 글자 개별 편집은 지원하지 않으며, 쪽 배경으로 보존하고 글/그림 추가·배경 교체·쪽 구성 편집을 제공한다. 수정 후 완성하면 새 버전 평가·인쇄 준비에 반영된다.
+- 실측 중 ‘완성하기’ 뒤 예약 자동 저장이 초안으로 되돌리던 결함을 수정했다. 미리보기 위로 편집 화면 텍스트가 올라오던 z-index 결함은 stage isolation으로 수정했다.
+- production build + 전체 테스트 325/325, typecheck 통과, lint 0 errors(기존 경고 10), 두 diff check 통과. 브라우저에서 3쪽 PDF 렌더/가져오기→교사 편집→완성 상태 유지→모의 AI 평가→모의 인쇄 준비 통과 및 미리보기 육안 확인. 기존 일괄 평가/ZIP/주문과 4개 크기 화면 검증도 통과했다.
+- PDF.js worker/CMap/font/WASM 및 LICENSE는 predev/prebuild에서 설치 패키지로부터 public/pdfjs에 복사한다. 생성 파일은 Git/ESLint 대상에서 제외했다.
+- 로컬 3012 재시작. main 병합·커밋·push·배포 없음. 실제 제공자 호출은 하지 않았다.
+- 최종 기존 전체 `npm run check:browser -- http://localhost:3012`도 320×568·390×844·844×390 전 항목 통과. 이전 실행의 QR 번호 화면 2건 실패는 이번 재실행에서 재현되지 않았으므로 당시 기록은 이력으로 남긴다. 로컬 실제 사용자 URL에서도 업로드 패널·루브릭 로딩과 3개 폭 가로 넘침 없음을 확인했다.

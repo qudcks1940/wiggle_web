@@ -12,7 +12,7 @@ test("그림책 API는 학생 소유권·요청 출처·저장 충돌을 확인�
     read("../app/api/storybooks/[id]/assets/[assetId]/route.ts"),
   ]);
   for (const source of [collection, book, assets]) {
-    assert.match(source, /studentFromRequest/);
+    assert.match(source, /studentFromRequest|storybookEditorActor/);
     assert.match(source, /sameOrigin/);
     assert.match(source, /rateLimit/);
   }
@@ -58,13 +58,13 @@ test("교사 완성 그림책 화면은 소유권·완성 상태·개별 및 일
   for (const source of [collection, book, asset]) assert.match(source, /requireTeacher/);
   assert.match(collection, /c\.teacher_id = \?/);
   assert.match(collection, /b\.status = 'complete'/);
-  assert.match(collection, /waiting_rubric/);
+  assert.match(collection, /enqueueFeedback/);
   assert.doesNotMatch(collection, /object_key AS/);
   assert.match(asset, /c\.teacher_id = \?/);
   assert.match(asset, /private, no-store/);
   assert.match(library, /전체 선택/);
-  assert.match(library, /선택한 그림책 피드백 요청/);
-  assert.match(library, /피드백 요청/);
+  assert.match(library, /선택한 책 피드백 만들기/);
+  assert.match(library, /피드백 만들기/);
   assert.match(preview, /window\.print\(\)/);
   assert.match(preview, /PDF로 저장 · 인쇄/);
   assert.match(teacherApp, /완성 그림책/);

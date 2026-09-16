@@ -2749,3 +2749,5 @@ body {
 .join-card.join-seat-recover .join-step-2 { display:none; }
 .join-card.join-seat-recover .join-step-3 { display:block; }
 .join-card.join-seat-recover .mobile-step-back { display:none; }
+/* Keep canvas text layers below the full-screen preview and other dialogs. */
+.storybook-stage { isolation:isolate; }

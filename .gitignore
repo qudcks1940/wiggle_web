@@ -60,3 +60,5 @@ next-env.d.ts
 
 # 로컬 개발용 데이터 (libsql 파일 DB, 작품 파일 저장소)
 /.data/
+
+/public/pdfjs/

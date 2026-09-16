@@ -39,9 +39,17 @@ export const classrooms = sqliteTable("classrooms", {
   uniqueIndex("classrooms_join_token_uq").on(table.joinToken),
 ]);
 
+/* 교사가 학급을 만들 때 명단(번호 + 실명)을 미리 채운다.
+ * - seatNumber/realName: 교사 전용. 학생 화면·가족 공유·그림책·AI 요청에 실리지 않는다.
+ * - claimedAt: 그 자리에 아이가 처음 들어온 시각. null이면 아직 아무도 쓰지 않은 자리다.
+ * - nickname/animal: 아이가 첫 입장 때 직접 고른다. 아이 화면에는 이 이름만 보인다.
+ * 기존 학생 행은 seatNumber/realName이 없고 claimedAt이 채워진 것처럼 동작한다. */
 export const studentProfiles = sqliteTable("student_profiles", {
   id: text("id").primaryKey(),
   classroomId: text("classroom_id").notNull().references(() => classrooms.id),
+  seatNumber: integer("seat_number"),
+  realName: text("real_name"),
+  claimedAt: text("claimed_at"),
   nickname: text("nickname").notNull(),
   animal: text("animal").notNull(),
   lastActivityAt: text("last_activity_at").notNull(),
@@ -50,6 +58,8 @@ export const studentProfiles = sqliteTable("student_profiles", {
 }, (table) => [
   index("students_classroom_idx").on(table.classroomId, table.lastActivityAt),
   index("students_classroom_archived_idx").on(table.classroomId, table.archivedAt, table.nickname),
+  // 같은 학급에서 번호는 하나뿐이다. 빠진 학생(archived)의 번호는 다시 쓸 수 있어야 하므로 제외한다.
+  uniqueIndex("students_classroom_seat_uq").on(table.classroomId, table.seatNumber).where(sql`seat_number IS NOT NULL AND archived_at IS NULL`),
 ]);
 
 export const recoveryCredentials = sqliteTable("recovery_credentials", {
@@ -78,6 +88,7 @@ export const artworks = sqliteTable("artworks", {
   topic: text("topic").notNull(),
   learningMode: text("learning_mode", { enum: ["practice", "guided", "observe", "free"] }).notNull(),
   lessonSlug: text("lesson_slug"),
+  guideVariant: integer("guide_variant").notNull().default(0),
   intent: text("intent").notNull().default(""),
   opsJson: text("ops_json").notNull().default("[]"),
   schemaVersion: integer("schema_version").notNull().default(1),
@@ -149,6 +160,22 @@ export const storybookMutations = sqliteTable("storybook_mutations", {
 }, (table) => [
   primaryKey({ columns: [table.storybookId, table.studentId, table.requestId] }),
   index("storybook_mutations_book_idx").on(table.storybookId, table.createdAt),
+]);
+
+export const storybookFeedbackRequests = sqliteTable("storybook_feedback_requests", {
+  id: text("id").primaryKey(),
+  storybookId: text("storybook_id").notNull().references(() => storybooks.id, { onDelete: "cascade" }),
+  classroomId: text("classroom_id").notNull().references(() => classrooms.id, { onDelete: "cascade" }),
+  teacherId: text("teacher_id").notNull().references(() => teachers.id, { onDelete: "cascade" }),
+  status: text("status", { enum: ["waiting_rubric", "queued", "processing", "complete", "failed"] }).notNull().default("waiting_rubric"),
+  rubricVersion: text("rubric_version"),
+  feedbackJson: text("feedback_json"),
+  requestedAt: text("requested_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  completedAt: text("completed_at"),
+  updatedAt: updatedAt(),
+}, (table) => [
+  uniqueIndex("storybook_feedback_book_teacher_uq").on(table.storybookId, table.teacherId),
+  index("storybook_feedback_classroom_idx").on(table.classroomId, table.status, table.requestedAt),
 ]);
 
 export const coachingEvents = sqliteTable("coaching_events", {
@@ -329,3 +356,32 @@ export const subscriptionWebhookEvents = sqliteTable("subscription_webhook_event
   processedAt: text("processed_at"),
   createdAt: createdAt(),
 }, (table) => [primaryKey({ columns: [table.provider, table.eventId] })]);
+
+
+// Teacher-only book feedback and print workflow. DDL mirror: lib/book-production-schema.ts.
+export const classroomBookSettings = sqliteTable("classroom_book_settings", {
+  classroomId: text("classroom_id").primaryKey().references(() => classrooms.id, { onDelete: "cascade" }),
+  grade: integer("grade"), classNumber: integer("class_number"), rubricJson: text("rubric_json"), rubricVersion: text("rubric_version"), rubricFilename: text("rubric_filename"), updatedAt: updatedAt(),
+});
+export const bookFeedbackJobs = sqliteTable("book_feedback_jobs", {
+  id: text("id").primaryKey(), storybookId: text("storybook_id").notNull().references(() => storybooks.id, { onDelete: "cascade" }),
+  classroomId: text("classroom_id").notNull().references(() => classrooms.id, { onDelete: "cascade" }), teacherId: text("teacher_id").notNull().references(() => teachers.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull(), rubricVersion: text("rubric_version").notNull(), rubricJson: text("rubric_json").notNull(), prompt: text("prompt").notNull(), documentJson: text("document_json").notNull(), title: text("title").notNull(),
+  status: text("status").notNull().default("queued"), feedbackJson: text("feedback_json"), error: text("error"), lease: text("lease"), attempts: integer("attempts").notNull().default(0), updatedAt: updatedAt(), createdAt: createdAt(),
+}, (t) => [uniqueIndex("book_feedback_jobs_version_uq").on(t.storybookId, t.teacherId, t.revision, t.rubricVersion), index("book_feedback_jobs_queue").on(t.teacherId, t.classroomId, t.status, t.createdAt)]);
+export const bookPrintJobs = sqliteTable("book_print_jobs", {
+  id: text("id").primaryKey(), storybookId: text("storybook_id").notNull().references(() => storybooks.id, { onDelete: "cascade" }),
+  classroomId: text("classroom_id").notNull().references(() => classrooms.id, { onDelete: "cascade" }), teacherId: text("teacher_id").notNull().references(() => teachers.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull(), environment: text("environment").notNull(), specUid: text("spec_uid").notNull(), status: text("status").notNull().default("queued"), bookUid: text("book_uid"), layoutJson: text("layout_json"), error: text("error"), lease: text("lease"), createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [uniqueIndex("book_print_jobs_version_uq").on(t.storybookId, t.teacherId, t.revision, t.environment, t.specUid)]);
+export const bookPrintOrders = sqliteTable("book_print_orders", {
+  id: text("id").primaryKey(), teacherId: text("teacher_id").notNull().references(() => teachers.id, { onDelete: "cascade" }), classroomId: text("classroom_id").notNull().references(() => classrooms.id, { onDelete: "cascade" }),
+  environment: text("environment").notNull(), requestJson: text("request_json").notNull(), status: text("status").notNull().default("submitting"), responseJson: text("response_json"), error: text("error"), createdAt: createdAt(), updatedAt: updatedAt(),
+});
+
+export const classroomProfiles = sqliteTable("classroom_profiles", { classroomId: text("classroom_id").primaryKey().references(() => classrooms.id, { onDelete: "cascade" }), schoolName: text("school_name").notNull() });
+export const participantPresence = sqliteTable("participant_presence", { actorKey: text("actor_key").primaryKey(), role: text("role").notNull(), actorId: text("actor_id").notNull(), classroomId: text("classroom_id"), seenAt: integer("seen_at").notNull() }, (t) => [index("participant_presence_recent").on(t.seenAt)]);
+export const operationsSettings = sqliteTable("operations_settings", { id: text("id").primaryKey(), valueJson: text("value_json").notNull() });
+export const printUploads = sqliteTable("print_uploads", { id: text("id").primaryKey(), teacherId: text("teacher_id").notNull().references(() => teachers.id), classroomId: text("classroom_id").notNull().references(() => classrooms.id), environment: text("environment").notNull(), title: text("title").notNull(), layoutJson: text("layout_json").notNull(), status: text("status").notNull().default("uploading"), createdAt: createdAt() });
+export const printRequests = sqliteTable("print_requests", { id: text("id").primaryKey(), teacherId: text("teacher_id").notNull().references(() => teachers.id), classroomId: text("classroom_id").notNull().references(() => classrooms.id), environment: text("environment").notNull(), documentJson: text("document_json").notNull(), status: text("status").notNull().default("requested"), providerJson: text("provider_json"), error: text("error"), lease: text("lease"), leaseAt: integer("lease_at"), orderStartedAt: integer("order_started_at"), createdAt: createdAt(), updatedAt: updatedAt() }, (t) => [index("print_requests_teacher").on(t.teacherId,t.classroomId,t.createdAt)]);
+export const printRequestItems = sqliteTable("print_request_items", { id: text("id").primaryKey(), requestId: text("request_id").notNull().references(() => printRequests.id, { onDelete: "cascade" }), documentJson: text("document_json").notNull(), bookUid: text("book_uid"), remoteStartedAt: integer("remote_started_at"), ready: integer("ready").notNull().default(0) });

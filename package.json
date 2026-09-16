@@ -6,8 +6,8 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
     "start": "next start",
     "test": "npm run build && node --import ./tests/harness/register.mjs --test \"tests/*.test.mjs\"",
     "typecheck": "tsc --noEmit",
@@ -17,16 +17,25 @@
     "check:browser": "node scripts/browser-check.mjs",
     "check:deployed": "node --import ./tests/harness/register.mjs scripts/check-deployed.mjs",
     "test:adapters": "node --test tests/turso-adapters.test.mjs tests/google-auth.test.mjs tests/save-split.test.mjs",
-    "test:integration": "node --import ./tests/harness/register.mjs --test tests/classroom-entry-flow.test.mjs tests/student-join-atomic.test.mjs tests/student-profile-management.test.mjs tests/nickname-spacing.test.mjs tests/feedback-20260809.test.mjs"
+    "test:integration": "node --import ./tests/harness/register.mjs --test tests/classroom-entry-flow.test.mjs tests/student-join-atomic.test.mjs tests/student-profile-management.test.mjs tests/nickname-spacing.test.mjs tests/feedback-20260809.test.mjs",
+    "predev": "node scripts/prepare-pdf-assets.mjs",
+    "prebuild": "node scripts/prepare-pdf-assets.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",
+    "@pdf-lib/fontkit": "^1.1.1",
+    "@resvg/resvg-js": "^2.6.2",
     "aws4fetch": "^1.0.20",
-    "next": "16.2.6",
+    "exceljs": "^4.4.0",
+    "fflate": "^0.8.3",
+    "next": "16.3.3",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.3.289",
     "qrcode": "^1.5.4",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "react-moveable": "0.56.0"
+    "react-moveable": "0.56.0",
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260702.1",
@@ -38,7 +47,7 @@
     "drizzle-kit": "0.31.10",
     "drizzle-orm": "0.45.2",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.2.6",
+    "eslint-config-next": "16.3.3",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3"
   }

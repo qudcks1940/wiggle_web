@@ -103,14 +103,14 @@ test("mobile studio and teacher layouts finish in two rows without horizontal te
   // 도구 패널이 문서 흐름 안 grid 행이 됐으니, 캔버스에 dock 높이만큼의 예약 여백이 필요 없다.
   assert.match(finalMobile, /\.canvas-zone \{ container-type:size; \}/);
   assert.doesNotMatch(finalMobile, /var\(--tool-dock-height/);
-  assert.match(finalMobile, /@supports \(width:1cqh\) \{ \.canvas-zone \.canvas-wrap \{ width:min\(100cqw,100cqh\); height:auto; max-width:100%; max-height:100%; \} \}/);
+  assert.match(finalMobile, /@supports \(width:1cqh\) \{ \.canvas-zone \.canvas-wrap \{ width:min\(100cqw,calc\(100cqh \* var\(--paper-ratio,1\)\)\); height:auto; max-width:100%; max-height:100%; \} \}/);
   assert.match(finalMobile, /@supports not \(width:1cqh\) \{ \.canvas-zone \.canvas-wrap \{ width:auto; height:100%; max-width:100%; max-height:100%; \} \}/);
   // 도구 패널은 항상 보이므로, 세로가 짧은 좁은 폰에서만 "도구로 스크롤" 힌트가 뜬다 — 트레이를 여는 토글이 아니다.
   assert.match(css, /\.mobile-tool-peek \{ display:none; \}/);
   assert.doesNotMatch(css, /tool-tray-toggle|tool-tray-backdrop|tray-open/);
   assert.doesNotMatch(studio, /toolTrayOpen|setToolTrayOpen|tool-tray-toggle|tool-tray-backdrop/);
   assert.ok(css.lastIndexOf(".step-panel .choice-chips { display:flex") > css.lastIndexOf(".step-panel .choice-chips,.step-panel .step-actions,.step-panel>.text-button { display:none"));
-  // 숨김은 수업 패널에만 적용해야 한다. 범위를 넓히면 그리미 AI 가이드의 이전·다음 버튼까지 사라진다.
+  // 숨김은 수업 패널에만 적용해야 한다. 범위를 넓히면 몽그리 AI 가이드의 이전·다음 버튼까지 사라진다.
   assert.doesNotMatch(css, /,\.step-actions,[^{]*\{ display:none/);
   assert.match(css, /\.step-panel \.choice-chips \{ display:flex; grid-column:1\/-1;[^}]*overflow-x:auto;/);
   assert.match(css, /\.step-panel \.choice-chips button \{[^}]*min-height:50px;/);

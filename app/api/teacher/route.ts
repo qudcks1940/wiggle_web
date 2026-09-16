@@ -1,3 +1,4 @@
+import { isAdmin } from "@/lib/admin";
 import { cookies } from "next/headers";
 import { bindings } from "@/db/runtime";
 import { bytesToDataUrl } from "@/lib/image-data";
@@ -68,7 +69,7 @@ export async function GET(request: Request) {
   const db = bindings().DB;
   if (!classroomId) {
     const result = await db.prepare(`SELECT c.id, c.display_name AS displayName, c.class_code AS classCode, c.join_token AS joinToken, c.admission_open AS admissionOpen, c.current_activity AS currentActivity, c.updated_at AS updatedAt, COUNT(s.id) AS studentCount FROM classrooms c LEFT JOIN student_profiles s ON s.classroom_id = c.id AND s.archived_at IS NULL WHERE c.teacher_id = ? AND c.active = 1 GROUP BY c.id ORDER BY c.created_at DESC`).bind(teacher.id).all<ClassroomRow>();
-    return noStoreJson({ teacher, classrooms: result.results.map(presentClassroom) });
+    return noStoreJson({ teacher: { ...teacher, isAdmin: isAdmin(teacher) }, classrooms: result.results.map(presentClassroom) });
   }
 
   const classroom = await ownedClassroom(teacher.id, classroomId);
@@ -84,13 +85,49 @@ export async function GET(request: Request) {
     const artworks = await Promise.all(page.map(async ({ imageKey, ...artwork }) => ({ ...artwork, thumbnail: await toDataUrl(imageKey) })));
     return noStoreJson({ student: ownedStudent, artworks, hasMore: rows.results.length > pageSize, nextOffset: offset + page.length });
   }
-  type StudentRow = { id: string; nickname: string; animal: string; createdAt: string; lastActivityAt: string; artworkId: string | null; artworkTitle: string | null; status: string | null; currentStep: number | null; revision: number | null; thumbnailKey: string | null; artworkUpdatedAt: string | null; completedArtworkId: string | null; artworkCount: number; drawingArtworkCount: number; completedArtworkCount: number; duplicateNicknameCount: number };
-  const students = await db.prepare(`SELECT s.id, s.nickname, s.animal, s.created_at AS createdAt, s.last_activity_at AS lastActivityAt, a.id AS artworkId, a.title AS artworkTitle, a.status, a.current_step AS currentStep, a.revision, a.thumbnail_key AS thumbnailKey, a.updated_at AS artworkUpdatedAt, (SELECT a3.id FROM artworks a3 WHERE a3.student_id = s.id AND a3.classroom_id = s.classroom_id AND a3.status = 'complete' AND a3.final_image_key IS NOT NULL ORDER BY a3.completed_at DESC, a3.id DESC LIMIT 1) AS completedArtworkId, (SELECT COUNT(*) FROM artworks ac WHERE ac.student_id = s.id AND ac.classroom_id = s.classroom_id) AS artworkCount, (SELECT COUNT(*) FROM artworks ad WHERE ad.student_id = s.id AND ad.classroom_id = s.classroom_id AND ad.status = 'drawing') AS drawingArtworkCount, (SELECT COUNT(*) FROM artworks af WHERE af.student_id = s.id AND af.classroom_id = s.classroom_id AND af.status = 'complete') AS completedArtworkCount, (SELECT COUNT(*) FROM student_profiles sd WHERE sd.classroom_id = s.classroom_id AND sd.archived_at IS NULL AND ${nicknameKeySql("sd.nickname")} = ${nicknameKeySql("s.nickname")} COLLATE NOCASE) AS duplicateNicknameCount FROM student_profiles s LEFT JOIN artworks a ON a.id = (SELECT a2.id FROM artworks a2 WHERE a2.student_id = s.id ORDER BY a2.updated_at DESC LIMIT 1) WHERE s.classroom_id = ? AND s.archived_at IS NULL ORDER BY s.nickname COLLATE NOCASE, s.id`).bind(classroomId).all<StudentRow>();
+  type StudentRow = { id: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null; claimedAt: string | null; createdAt: string; lastActivityAt: string; artworkId: string | null; artworkTitle: string | null; status: string | null; currentStep: number | null; revision: number | null; thumbnailKey: string | null; artworkUpdatedAt: string | null; completedArtworkId: string | null; artworkCount: number; drawingArtworkCount: number; completedArtworkCount: number; duplicateNicknameCount: number };
+  const students = await db.prepare(`SELECT s.id, s.nickname, s.animal, s.seat_number AS seatNumber, s.real_name AS realName, s.claimed_at AS claimedAt, s.created_at AS createdAt, s.last_activity_at AS lastActivityAt, a.id AS artworkId, a.title AS artworkTitle, a.status, a.current_step AS currentStep, a.revision, a.thumbnail_key AS thumbnailKey, a.updated_at AS artworkUpdatedAt, (SELECT a3.id FROM artworks a3 WHERE a3.student_id = s.id AND a3.classroom_id = s.classroom_id AND a3.status = 'complete' AND a3.final_image_key IS NOT NULL ORDER BY a3.completed_at DESC, a3.id DESC LIMIT 1) AS completedArtworkId, (SELECT COUNT(*) FROM artworks ac WHERE ac.student_id = s.id AND ac.classroom_id = s.classroom_id) AS artworkCount, (SELECT COUNT(*) FROM artworks ad WHERE ad.student_id = s.id AND ad.classroom_id = s.classroom_id AND ad.status = 'drawing') AS drawingArtworkCount, (SELECT COUNT(*) FROM artworks af WHERE af.student_id = s.id AND af.classroom_id = s.classroom_id AND af.status = 'complete') AS completedArtworkCount, (SELECT COUNT(*) FROM student_profiles sd WHERE sd.classroom_id = s.classroom_id AND sd.archived_at IS NULL AND ${nicknameKeySql("sd.nickname")} = ${nicknameKeySql("s.nickname")} COLLATE NOCASE) AS duplicateNicknameCount FROM student_profiles s LEFT JOIN artworks a ON a.id = (SELECT a2.id FROM artworks a2 WHERE a2.student_id = s.id ORDER BY a2.updated_at DESC LIMIT 1) WHERE s.classroom_id = ? AND s.archived_at IS NULL ORDER BY s.seat_number IS NULL, s.seat_number, s.nickname COLLATE NOCASE, s.id`).bind(classroomId).all<StudentRow>();
   const hydrated = await Promise.all(students.results.map(async ({ thumbnailKey, duplicateNicknameCount, ...student }: StudentRow) => ({ ...student, duplicateNickname: duplicateNicknameCount > 1, thumbnail: await toDataUrl(thumbnailKey) })));
-  const archivedStudents = await db.prepare(`SELECT s.id, s.nickname, s.animal, s.last_activity_at AS lastActivityAt, s.archived_at AS archivedAt, COUNT(a.id) AS artworkCount FROM student_profiles s LEFT JOIN artworks a ON a.student_id = s.id WHERE s.classroom_id = ? AND s.archived_at IS NOT NULL GROUP BY s.id ORDER BY s.archived_at DESC, s.nickname COLLATE NOCASE`).bind(classroomId).all<{ id: string; nickname: string; animal: string; lastActivityAt: string; archivedAt: string; artworkCount: number }>();
+  const archivedStudents = await db.prepare(`SELECT s.id, s.nickname, s.animal, s.seat_number AS seatNumber, s.real_name AS realName, s.last_activity_at AS lastActivityAt, s.archived_at AS archivedAt, COUNT(a.id) AS artworkCount FROM student_profiles s LEFT JOIN artworks a ON a.student_id = s.id WHERE s.classroom_id = ? AND s.archived_at IS NOT NULL GROUP BY s.id ORDER BY s.archived_at DESC, s.nickname COLLATE NOCASE`).bind(classroomId).all<{ id: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null; lastActivityAt: string; archivedAt: string; artworkCount: number }>();
   const messages = await db.prepare(`SELECT m.id, m.student_id AS studentId, m.body, m.created_at AS createdAt, s.nickname, COUNT(r.student_id) AS seenCount FROM teacher_messages m LEFT JOIN student_profiles s ON s.id = m.student_id LEFT JOIN message_receipts r ON r.message_id = m.id WHERE m.classroom_id = ? GROUP BY m.id ORDER BY m.created_at DESC, m.id DESC LIMIT 30`).bind(classroomId).all();
   const familyLinks = await db.prepare(`SELECT l.id, l.student_id AS studentId, l.scope, l.expires_at AS expiresAt, l.revoked_at AS revokedAt, l.created_at AS createdAt, COUNT(f.artwork_id) AS artworkCount FROM family_share_links l JOIN student_profiles s ON s.id = l.student_id LEFT JOIN family_share_artworks f ON f.link_id = l.id WHERE l.teacher_id = ? AND s.classroom_id = ? GROUP BY l.id ORDER BY l.created_at DESC LIMIT 50`).bind(teacher.id, classroomId).all();
   return noStoreJson({ teacher, classroom, students: hydrated, archivedStudents: archivedStudents.results, messages: messages.results, familyLinks: familyLinks.results });
+}
+
+/* 교사가 입력하는 학급 명단. 번호는 학급 안에서 고유하고, 실명은 담임에게만 보인다.
+ * 상한을 두는 이유: 한 번의 요청으로 학급에 무한히 행을 넣지 못하게 한다. */
+const MAX_ROSTER_SIZE = 60;
+const MAX_SEAT_NUMBER = 99;
+/* 아이가 첫 입장 때 직접 고르기 전까지 쓰는 자리표시. 아이 화면에 실명이 새지 않게
+ * 번호만 쓴다. NOT NULL 컬럼이라 빈 값을 넣을 수 없다. */
+const UNCLAIMED_ANIMAL = "❔";
+
+type RosterEntry = { seatNumber: number; realName: string };
+
+function parseRoster(value: unknown): { entries: RosterEntry[] } | { error: string } {
+  if (!Array.isArray(value)) return { error: "명단을 확인해 주세요." };
+  if (!value.length) return { error: "학생을 한 명 이상 넣어 주세요." };
+  if (value.length > MAX_ROSTER_SIZE) return { error: `한 번에 ${MAX_ROSTER_SIZE}명까지 넣을 수 있어요.` };
+  const entries: RosterEntry[] = [];
+  const seen = new Set<number>();
+  for (const raw of value) {
+    if (!raw || typeof raw !== "object") return { error: "명단을 확인해 주세요." };
+    const item = raw as { seatNumber?: unknown; realName?: unknown };
+    const seatNumber = Number(item.seatNumber);
+    if (!Number.isInteger(seatNumber) || seatNumber < 1 || seatNumber > MAX_SEAT_NUMBER) return { error: `번호는 1부터 ${MAX_SEAT_NUMBER}까지 적어 주세요.` };
+    if (seen.has(seatNumber)) return { error: `${seatNumber}번이 두 번 있어요.` };
+    seen.add(seatNumber);
+    const realName = cleanText(item.realName, 20);
+    if (realName.length < 1) return { error: `${seatNumber}번 이름을 적어 주세요.` };
+    entries.push({ seatNumber, realName });
+  }
+  return { entries };
+}
+
+function insertRosterRow(db: ReturnType<typeof bindings>["DB"], classroomId: string, entry: RosterEntry) {
+  // claimed_at은 비워 둔다 — 아이가 그 번호로 처음 들어올 때 채워진다.
+  return db.prepare(`INSERT INTO student_profiles(id, classroom_id, seat_number, real_name, claimed_at, nickname, animal, last_activity_at) VALUES (?, ?, ?, ?, NULL, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))`)
+    .bind(id("student"), classroomId, entry.seatNumber, entry.realName, `${entry.seatNumber}번`, UNCLAIMED_ANIMAL);
 }
 
 export async function POST(request: Request) {
@@ -122,9 +159,22 @@ export async function POST(request: Request) {
   if (action === "createClassroom") {
     const displayName = cleanText(payload.displayName, 30);
     if (displayName.length < 2) return jsonError("학급 이름을 두 글자 이상 적어 주세요.");
+    // 명단은 필수다. 입장은 명단의 번호로만 하므로, 명단 없는 학급은 아무도 못 들어온다.
+    const parsedRoster = parseRoster(payload.roster);
+    if ("error" in parsedRoster) return jsonError(parsedRoster.error);
+    const roster = parsedRoster.entries;
+    const schoolName = cleanText(payload.schoolName, 100);
+    const grade = payload.grade === undefined ? null : Number(payload.grade);
+    const classNumber = payload.classNumber === undefined ? null : Number(payload.classNumber);
+    if ((grade !== null || classNumber !== null) && (!Number.isInteger(grade) || !Number.isInteger(classNumber) || grade! < 1 || grade! > 12 || classNumber! < 1 || classNumber! > 99)) return jsonError("학년(1~12)과 반(1~99)을 확인해 주세요.");
     const classroom = { id: id("class"), classCode: await uniqueClassCode(), joinToken: randomToken(18) };
-    await db.prepare(`INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token, admission_open, active, current_activity) VALUES (?, ?, ?, ?, ?, 1, 1, ?)`).bind(classroom.id, teacher.id, displayName, classroom.classCode, classroom.joinToken, DEFAULT_ACTIVITY_KEY).run();
-    return noStoreJson({ classroom }, { status: 201 });
+    await db.batch([
+      db.prepare(`INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token, admission_open, active, current_activity) VALUES (?, ?, ?, ?, ?, 1, 1, ?)`).bind(classroom.id, teacher.id, displayName, classroom.classCode, classroom.joinToken, DEFAULT_ACTIVITY_KEY),
+      db.prepare(`INSERT INTO classroom_profiles(classroom_id, school_name) VALUES (?, ?)`).bind(classroom.id, schoolName),
+      db.prepare(`INSERT INTO classroom_book_settings(classroom_id, grade, class_number) VALUES (?, ?, ?)`).bind(classroom.id, grade, classNumber),
+      ...roster.map((entry) => insertRosterRow(db, classroom.id, entry)),
+    ]);
+    return noStoreJson({ classroom, rosterSize: roster.length }, { status: 201 });
   }
 
   const classroomId = cleanText(payload.classroomId, 40);
@@ -138,6 +188,31 @@ export async function POST(request: Request) {
       db.prepare(`DELETE FROM teacher_views WHERE classroom_id = ?`).bind(classroomId),
     ]);
     return noStoreJson({ deleted: Boolean(results[0]?.meta.changes), classroomId });
+  }
+  if (action === "addStudents") {
+    const parsed = parseRoster(payload.roster);
+    if ("error" in parsed) return jsonError(parsed.error);
+    // 이미 쓰고 있는 번호와 부딪히면 통째로 거절한다. 일부만 들어가면 교사가
+    // 무엇이 들어갔는지 알 수 없어 명단이 조용히 어긋난다.
+    const taken = await db.prepare(`SELECT seat_number AS seatNumber FROM student_profiles WHERE classroom_id = ? AND archived_at IS NULL AND seat_number IS NOT NULL`).bind(classroomId).all<{ seatNumber: number }>();
+    const used = new Set(taken.results.map((row) => row.seatNumber));
+    const clash = parsed.entries.find((entry) => used.has(entry.seatNumber));
+    if (clash) return jsonError(`${clash.seatNumber}번은 이미 우리 반에 있어요.`, 409);
+    if (used.size + parsed.entries.length > MAX_ROSTER_SIZE) return jsonError(`한 학급은 ${MAX_ROSTER_SIZE}명까지예요.`);
+    await db.batch(parsed.entries.map((entry) => insertRosterRow(db, classroomId, entry)));
+    return noStoreJson({ added: parsed.entries.length }, { status: 201 });
+  }
+  if (action === "updateStudent") {
+    const studentId = cleanText(payload.studentId, 40);
+    const parsed = parseRoster([{ seatNumber: payload.seatNumber, realName: payload.realName }]);
+    if ("error" in parsed) return jsonError(parsed.error);
+    const [entry] = parsed.entries;
+    const clash = await db.prepare(`SELECT id FROM student_profiles WHERE classroom_id = ? AND seat_number = ? AND archived_at IS NULL AND id <> ?`).bind(classroomId, entry.seatNumber, studentId).first<{ id: string }>();
+    if (clash) return jsonError(`${entry.seatNumber}번은 이미 우리 반에 있어요.`, 409);
+    // 아이가 고른 별명은 건드리지 않는다. 아직 아무도 안 쓴 자리만 번호 표시를 따라 바꾼다.
+    const updated = await db.prepare(`UPDATE student_profiles SET seat_number = ?, real_name = ?, nickname = CASE WHEN claimed_at IS NULL THEN ? ELSE nickname END WHERE id = ? AND classroom_id = ? AND archived_at IS NULL AND EXISTS (SELECT 1 FROM classrooms c WHERE c.id = student_profiles.classroom_id AND c.teacher_id = ? AND c.active = 1)`).bind(entry.seatNumber, entry.realName, `${entry.seatNumber}번`, studentId, classroomId, teacher.id).run();
+    if (!updated.meta.changes) return jsonError("고칠 학생을 찾지 못했어요.", 404);
+    return noStoreJson({ updated: true, studentId });
   }
   if (action === "archiveStudent") {
     const studentId = cleanText(payload.studentId, 40);

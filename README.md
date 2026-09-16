@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  기초 선과 도형부터 관찰, 따라 그리기, 자유 창작, 말과 이야기까지.<br />
+  기초 선과 도형부터 관찰, 따라 그리기, 자유 창작, 말과 이야기, 그림책 완성까지.<br />
   아이가 직접 그리고, AI와 교사는 생각을 끌어내는 질문으로 돕습니다.
 </p>
 
@@ -32,7 +32,7 @@
   <img alt="React 19.2.6" src="https://img.shields.io/badge/React-19.2.6-149ECA?logo=react&logoColor=white" />
   <img alt="TypeScript 5.9" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white" />
   <img alt="Vercel with Turso and R2" src="https://img.shields.io/badge/Vercel-Turso%20%2B%20R2-000000?logo=vercel&logoColor=white" />
-  <img alt="Automated tests 288 passing" src="https://img.shields.io/badge/tests-288%20passing-2EA44F" />
+  <img alt="Automated tests 291 passing" src="https://img.shields.io/badge/tests-291%20passing-2EA44F" />
   <img alt="Status active development" src="https://img.shields.io/badge/status-active%20development-FFB020" />
 </p>
 
@@ -49,7 +49,7 @@
       <img src="./docs/images/entry-tablet.png" alt="학생 입장 — 태블릿 한 화면에서 동물·별명·그림 비밀번호를 고르는 2열 카드" />
     </td>
     <td width="55%">
-      <img src="./docs/images/studio-desktop.png" alt="그리기 화면 — 도화지, 펜 4종과 굵기 점, 색 팔레트, 그리미 부르기" />
+      <img src="./docs/images/studio-desktop.png" alt="그리기 화면 — 도화지, 펜 4종과 굵기 점, 색 팔레트, 몽그리 부르기" />
     </td>
   </tr>
   <tr>
@@ -76,10 +76,10 @@ Wiggle Web은 단순한 AI 그림 생성기가 아닙니다.
 ### 제품이 지키는 원칙
 
 - 🎨 **아이가 직접 그립니다.** AI가 원본 선을 수정하거나 그림을 대신 완성하지 않습니다.
-- ✋ **도움은 요청할 때만 옵니다.** 그리미가 자동으로 끼어들지 않습니다.
+- ✋ **도움은 요청할 때만 옵니다.** 몽그리가 자동으로 끼어들지 않습니다.
 - 💬 **한 번에 질문 하나만 합니다.** 짧고 쉬운 말과 실제 다음 행동을 제공합니다.
 - 🌟 **점수와 순위를 만들지 않습니다.** 창의력 점수, 재능 진단, 또래 순위가 없습니다.
-- 🔐 **학생 개인정보를 최소화합니다.** 학생 이메일·실명·학교명을 받지 않습니다.
+- 🔐 **학생 개인정보를 최소화합니다.** 학생 이메일·학교명을 받지 않습니다. 실명은 교사가 만든 학급 명단에만 있고 그 학급 담임 교사에게만 보이며, 학생 화면·가족 공유·AI 요청에는 실리지 않습니다.
 - 👩‍🏫 **교사가 수업의 중심입니다.** AI는 교사를 대체하지 않고 수업 운영과 개별 코칭을 보조합니다.
 - 👨‍👩‍👧 **공개 SNS보다 안전한 공유를 우선합니다.** 가족 공유는 제한 링크와 동의 기록을 전제로 합니다.
 
@@ -87,10 +87,10 @@ Wiggle Web은 단순한 AI 그림 생성기가 아닙니다.
 
 | 사용자 | 할 수 있는 일 |
 |---|---|
-| 🧒 학생 | 첫 화면의 4자리 수업 코드 또는 QR로 입장, 그림 비밀번호 선택, 단계별 학습, 자유 창작, 그리미 호출, 그림 소감 남기기 |
+| 🧒 학생 | 첫 화면의 4자리 수업 코드 또는 QR로 입장, 그림 비밀번호 선택, 단계별 학습, 자유 창작, 몽그리 호출, 그림책 만들기, 그림 소감 남기기 |
 | 👩‍🏫 교사 | 학급·수업 생성, QR 발급, 오늘의 활동 선택, 학생 진행·썸네일 확인, 전체·개별 메시지, 복구 초기화 |
 | 👨‍👩‍👧 가족 | 교사와 보호자 동의를 거친 제한 링크로 선택된 작품과 성장 기록 확인 |
-| ✨ 그리미 | 아이가 호출했을 때 그림을 보고 질문, 선택지, 바로 그려 볼 다음 행동 제안 |
+| ✨ 몽그리 | 아이가 호출했을 때 그림을 보고 질문, 선택지, 바로 그려 볼 다음 행동 제안 |
 
 ## 🪜 4단계 그림 교육과정
 
@@ -147,7 +147,7 @@ Wiggle Web은 단순한 AI 그림 생성기가 아닙니다.
 - 스타일러스가 있는 태블릿은 펜 입력을 기본으로 하고, 필요할 때만 손가락 그리기로 전환
 - 펜 모드의 손바닥 입력 차단, 두 손가락 확대·축소, 한 손가락 두 번 누르기 화면 맞춤
 
-### AI 그리미
+### AI 몽그리
 
 - 서버에서만 OpenAI API 호출
 - 현재 그림 이미지와 구조화된 최근 과정을 함께 사용
@@ -158,6 +158,27 @@ Wiggle Web은 단순한 AI 그림 생성기가 아닙니다.
 - 질문 전후 그림 버전과 `CoachingEvent` 저장
 - 교사용 AI 코칭 문구 초안
 - strict JSON schema와 안전 문구 검사
+
+### AI 그림책 편집기
+
+AI가 책을 대신 만들어 주는 기능이 아니라, 아이가 직접 쓴 이야기와 직접 그린 그림을 한 권의 책으로 엮는 편집 도구입니다. 기존 AI 몽그리가 생각을 끌어내는 질문을 돕고, 편집기에서는 아이가 최종 배치와 표현을 결정합니다. 외부 Canva 화면으로 이동하지 않고 Wiggle 안에서 처음부터 끝까지 작업합니다.
+
+```text
+학생 홈 또는 완성 작품 → 책 모양 선택 → 이야기·그림 배치 → 미리보기 → 저장·완성
+```
+
+- 편집기에 들어가기 전에 **가로형·세로형·정사각형** 중 책 모양 선택
+- 페이지마다 이야기 글은 하나만 제공하고 위쪽 가운데에 고정 — 내용·크기·색상만 변경
+- 그림은 글 아래의 지정 영역 안에서만 이동·비율 크기 조절·회전·스냅
+- 흰색·투명 여백을 분석해 실제 그림 경계에 선택 박스를 자동으로 맞추고, 필요하면 `빈 여백 없이 맞추기`로 다시 계산
+- 페이지 전체를 채우는 배경 위에 이야기와 그림을 독립 레이어로 배치
+- 페이지 추가·복제·순서 변경·삭제, 그림 앞뒤 순서·잠금·투명도, 실행 취소·다시 실행
+- 배경 오리기, 책 미리보기, 자동 저장, 완성 상태 전환
+- 완성 작품에서 `이 그림으로 그림책 만들기`를 누르면 원본 그림을 첫 페이지로 가져오기
+
+요소의 이동·크기 조절·회전은 MIT 라이선스 오픈소스인 [`react-moveable`](https://github.com/daybrush/moveable)을 사용합니다. 라이선스 고지는 [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md)에 보존합니다.
+
+그림책 문서와 변경 기록은 `/api/storybooks` API를 통해 Turso에, 각 그림·배경 자산은 기존 비공개 R2 저장소에 보관합니다. 이미지 업로드는 Vercel 요청 한도를 넘지 않도록 자산당 3.5MB 이하의 PNG로 제한하고, 모든 조회·수정 요청에서 현재 익명 학생 세션의 소유권을 확인합니다.
 
 ### 교사용 수업 진행실
 
@@ -174,7 +195,7 @@ Wiggle Web은 단순한 AI 그림 생성기가 아닙니다.
 
 ### 저학년 중심 UI·UX
 
-- 대문은 교실 그림과 4자리 코드 입력을 한 화면에 배치하고, 학생 이메일·실명 없이 입장한다는 점을 바로 안내
+- 대문은 전시관 그림과 4자리 코드 입력을 한 화면에 배치하고, 학생 이메일 없이 입장한다는 점을 바로 안내
 - 학생 가입 화면은 동물·별명·그림 비밀번호만 보여 주며 수업 코드를 중복 입력하지 않음
 - 학생 홈의 핵심 메뉴를 `이어 그리기 → 내 그림 → 활동 고르기` 순서로 단순화
 - 선생님이 고른 활동은 펼친 그림책 형태의 큰 카드와 완성 예시·연필 진행 표시로 제공
@@ -202,10 +223,13 @@ flowchart LR
     Q --> S["🧒 익명 학생 입장"]
     S --> L["✏️ 단계별 학습"]
     L --> C["🎨 캔버스 창작"]
-    C --> G["✨ 요청형 그리미"]
+    C --> G["✨ 요청형 몽그리"]
     G --> C
     C --> R["💬 그림 소감"]
+    R --> B["📖 AI 그림책 편집기"]
+    B --> K["한 권으로 완성"]
     R --> P["🌱 성장 기록"]
+    K --> P
     P --> T
     P -. "동의된 제한 공유" .-> F["👨‍👩‍👧 가족"]
 ```
@@ -226,8 +250,8 @@ flowchart TB
         Coach["OpenAI Coaching Service"]
     end
 
-    DB[("Turso libSQL<br/>관계형 기록")]
-    R2[("R2 (S3 API)<br/>썸네일·최종 이미지")]
+    DB[("Turso libSQL<br/>관계형 기록·그림책 문서")]
+    R2[("R2 (S3 API)<br/>작품·그림책 이미지")]
     AI["OpenAI Responses API"]
 
     UI --> Routes
@@ -245,14 +269,14 @@ flowchart TB
 
 ### 데이터 저장 원칙
 
-- **Turso(libSQL):** 교사, 학급, 익명 학생, 세션, 작품 동작, 버전, 코칭 사건, 소감, 메시지, 가족 공유
-- **R2(S3 API):** 학생 썸네일, AI 코칭 전후 이미지, 최종 이미지 — 공개 URL 없음, 인증 스트리밍만
+- **Turso(libSQL):** 교사, 학급, 익명 학생, 세션, 작품 동작, 버전, 코칭 사건, 소감, 메시지, 가족 공유, 그림책 문서·변경 기록
+- **R2(S3 API):** 학생 썸네일, AI 코칭 전후 이미지, 최종 이미지, 그림책 그림·배경 자산 — 공개 URL 없음, 인증 스트리밍만
 - **브라우저:** 짧은 활성 세션, 토큰 없는 최소 프로필 메타데이터, 전송 전 오프라인 큐
 - **서버 전용:** OpenAI API 키와 AI 요청
 
 ## 🔐 개인정보와 보안
 
-- 학생 이메일·실명·출생연도·학교명 미수집
+- 학생 이메일·출생연도·학교명 미수집 (실명은 교사 학급 명단에만, 담임 교사 전용)
 - 원본 device token과 개인 QR token 대신 SHA-256 해시 저장
 - 그림 비밀번호와 로컬 교사 PIN은 개인 salt를 사용한 PBKDF2-SHA256 100,000회
 - 학생 작품 요청마다 device session의 student ID 소유권 확인
@@ -278,8 +302,11 @@ flowchart TB
 | `/student/practice` | 1단계 선·도형 |
 | `/student/guided` | 2단계 따라 그리기 |
 | `/student/observe` | 3단계 관찰 그리기 |
-| `/student/draw/:id` | 캔버스와 그리미 |
+| `/student/draw/:id` | 캔버스와 몽그리 |
 | `/student/archive` | 작품·성장 기록 |
+| `/student/books` | 내 그림책 목록과 새 책 모양 선택 |
+| `/student/books/:id` | 이야기·그림·배경을 배치하는 그림책 편집기 |
+| `/student/books/demo` | localhost 전용 그림책 편집 데모 |
 | `/teacher` | 교사 홈과 학급 관리 |
 | `/teacher/class/:id` | 수업 진행실 |
 | `/family/:token` | 가족 제한 링크 진입 |
@@ -296,8 +323,8 @@ flowchart TB
 ### 1. 저장소 받기
 
 ```powershell
-git clone https://github.com/yonghwan86/wiggle_web.git
-cd wiggle_web
+git clone https://github.com/wwwiggle/new_wiggle.git
+cd new_wiggle
 npm.cmd ci
 ```
 
@@ -353,12 +380,12 @@ git diff --check
 현재 기준:
 
 ```text
-288 tests
-288 passed
+291 tests
+291 passed
 0 failed
 ```
 
-실제 브라우저 행동 검증은 별도 명령입니다. 로컬 서버를 띄운 뒤 실행하면 headless Chrome을 CDP로 몰아 `320×568`, `390×844`, `844×390`에서 computed size, 가로 스크롤, 가려진 버튼, 모달 초점, 그리미 시트 스크롤을 실제 DOM으로 측정합니다.
+실제 브라우저 행동 검증은 별도 명령입니다. 로컬 서버를 띄운 뒤 실행하면 headless Chrome을 CDP로 몰아 `320×568`, `390×844`, `844×390`에서 computed size, 가로 스크롤, 가려진 버튼, 모달 초점, 몽그리 시트 스크롤을 실제 DOM으로 측정합니다.
 
 ```powershell
 npm.cmd run dev            # 별도 창
@@ -395,9 +422,12 @@ npm.cmd run db:generate
 
 ## ☁️ 배포
 
-**GitHub `main` push → Vercel 자동 빌드·배포**입니다. 공개 주소는 [wiggleweb.vercel.app](https://wiggleweb.vercel.app)입니다.
+공개 주소는 [wiggleweb.vercel.app](https://wiggleweb.vercel.app)입니다. 운영 배포는 Vercel에 연결된 GitHub 저장소의 `main` push로 시작합니다.
 
-- Vercel 프로젝트 `wiggle-web`이 `main` 브랜치를 감시합니다. `main` push가 곧 운영 배포이므로 사용자만 실행합니다.
+> [!IMPORTANT]
+> 현재 소스 정본은 [`wwwiggle/new_wiggle`](https://github.com/wwwiggle/new_wiggle)이지만, 공개 Vercel 프로젝트의 Git 연결은 아직 기존 `yonghwan86/wiggle_web` 저장소를 가리킵니다. Vercel 연결을 새 저장소로 변경하기 전에는 `new_wiggle/main` push가 공개 앱을 자동 배포하지 않습니다.
+
+- Vercel 프로젝트 `wiggle-web`이 연결된 저장소의 `main` 브랜치를 감시합니다. 연결 변경 뒤 `main` push는 곧 운영 배포이므로 사용자만 실행합니다.
 - 기능 브랜치는 Vercel Preview에서 공동 개발·QA에 사용하며 Production 데이터와 분리합니다.
 - Preview에는 `WIGGLE_DATA_ENV=preview`와 Preview 전용 Turso·R2 자격증명을, Production에는 `WIGGLE_DATA_ENV=production`과 운영 자격증명을 각각의 Vercel 환경 범위에 등록합니다. 값에 따옴표를 넣지 않습니다.
 - DB는 Turso(libSQL), 그림 파일은 Cloudflare R2(S3 API)입니다. 호스트 중립 어댑터라 다른 호스팅으로 옮겨도 코드 재공사가 없습니다.
@@ -481,7 +511,7 @@ wiggle_web/
 - 연필로 첫 선 긋기
 - 굵은 지우개로 일부 지우기
 - 연필 시범과 점선으로 한 단계 완료
-- 그리미 호출과 거절
+- 몽그리 호출과 거절
 - 그림 선택으로 소감 완료
 - 틀린 그림 비밀번호에서 다시 복구
 
@@ -497,11 +527,12 @@ wiggle_web/
 ```text
 에이전트 (Claude·Codex)
   → 기능 브랜치에서 구현
-  → 게이트: typecheck · lint · npm test(268) · check:browser
+  → 게이트: typecheck · lint · npm test(291) · check:browser
   → 커밋·브랜치 push까지 준비, 남은 위험을 사실대로 보고
 
 사용자
-  → git push origin <브랜치>:main  ← 이 한 번이 곧 운영 배포 (Vercel 자동)
+  → Vercel Git 연결 확인
+  → git push origin <브랜치>:main  ← 새 저장소 연결 완료 뒤 운영 배포 (Vercel 자동)
 
 배포 후
   → 저장·이미지·인증 경로 변경 시 check:deployed 운영 실측

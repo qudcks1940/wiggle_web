@@ -5,6 +5,21 @@ import { clientIp } from "../lib/client-ip.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
+test("Next.js stays on the August 2026 security patch and keeps UTF-8-safe builds", async () => {
+  const pkg = JSON.parse(await read("../package.json"));
+  const installed = pkg.dependencies.next.split(".").map(Number);
+  const minimum = [16, 3, 3];
+  const isPatched = installed.some((part, index) => part > minimum[index] && installed.slice(0, index).every((value, prefix) => value === minimum[prefix]))
+    || installed.every((part, index) => part === minimum[index]);
+
+  assert.equal(isPatched, true, `Next.js ${pkg.dependencies.next} is below the patched 16.3.3 release`);
+  assert.equal(pkg.devDependencies["eslint-config-next"], pkg.dependencies.next);
+  // Next 16.3.3 Turbopack's code-frame renderer can panic while highlighting Korean
+  // source (vercel/next.js#92641). Webpack is the supported stable fallback until fixed.
+  assert.equal(pkg.scripts.dev, "next dev --webpack");
+  assert.equal(pkg.scripts.build, "next build --webpack");
+});
+
 // Cloudflare가 앞단에 있을 때만 cf-connecting-ip를 믿을 수 있었다. Vercel에는 그 대리인이
 // 없으므로 요청자가 헤더를 지어내면 그만이고, 그러면 요청마다 새 IP를 쓰는 것만으로
 // 그림 비밀번호 추측 방어(IP·학급 단위 상한)를 통째로 우회한다.
@@ -77,7 +92,9 @@ test("artwork CAS, idempotency, completion and R2 keys are race safe", async () 
 
 test("duplicate recovery, logout and protected response regressions stay fixed", async () => {
   const [student, teacher, security] = await Promise.all([read("../app/api/student/route.ts"), read("../app/api/teacher/route.ts"), read("../lib/security.ts")]);
-  assert.match(student, /\.all<RecoveredStudent>/); assert.match(student, /Promise\.all\(candidates\.results\.map/); assert.match(student, /matches\.length > 1/);
+  assert.match(student, /\.first<RecoveredStudent>/); assert.match(student, /verifySecret\(picture, seatStudent\.pictureSalt, seatStudent\.pictureHash\)/);
+  // 후보가 여럿이라 고르지 못하는 옛 별명 조회는 사라졌다. 번호는 학급 안에서 유일하므로 후보는 항상 0개나 1개다.
+  assert.doesNotMatch(student, /matches\.length/); assert.match(student, /WHERE s\.classroom_id = \? AND s\.seat_number = \? AND s\.archived_at IS NULL AND c\.active = 1/);
   assert.match(teacher, /revokeTeacherSession/); assert.match(security, /DELETE FROM teacher_sessions/); assert.match(security, /cache-control", "no-store/);
   assert.match(student, /ORDER BY m\.created_at DESC, m\.id DESC LIMIT 50/); assert.match(student, /ORDER BY createdAt ASC, id ASC/);
   assert.match(student, /LEFT JOIN message_receipts r ON r\.message_id = m\.id AND r\.student_id = \?/);

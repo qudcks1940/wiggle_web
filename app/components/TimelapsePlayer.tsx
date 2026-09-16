@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { DrawDocument, DrawOp } from "@/lib/drawing-model";
+import { DOCUMENT_SIZE, documentHeight, DrawDocument, DrawOp } from "@/lib/drawing-model";
 import { renderDrawDocument, renderDrawOperation, resetDrawingCanvas } from "@/lib/draw-renderer";
 import { advancePlaybackFrame, resolvePlayToggle } from "@/lib/timelapse-playback";
 import { useModalDialog } from "./useModalDialog";
@@ -15,8 +15,11 @@ export function TimelapsePlayer({ document, onClose }: { document: DrawDocument;
     // 재생 래스터는 스튜디오와 같은 1024로 맞춘다. 640이면 픽셀 기반 채우기(floodFill)의
     // 경계 판정이 스튜디오와 달라져, 얇은 굵기 + 밝은 색 조합에서 채우기가 선을 새어 나갈 수 있다.
     // 표시 크기는 CSS가 줄인다.
-    const canvas = canvasRef.current; if (!canvas) return; const size = 1024;
-    if (canvas.width !== size || canvas.height !== size) { canvas.width = size; canvas.height = size; renderedFrame.current = -1; renderedOps.current = null; }
+    // size는 가로·세로를 함께 담는다. 문서가 가로 도화지면 재생도 같은 비율이어야
+    // 저장된 썸네일·완성 PNG와 어긋나지 않는다.
+    const canvas = canvasRef.current; if (!canvas) return;
+    const size = { width: DOCUMENT_SIZE, height: documentHeight(document) };
+    if (canvas.width !== size.width || canvas.height !== size.height) { canvas.width = size.width; canvas.height = size.height; renderedFrame.current = -1; renderedOps.current = null; }
     const context = canvas.getContext("2d"); if (!context) return;
     const canAdvanceOne = renderedOps.current === document.ops && renderedFrame.current + 1 === frame;
     if (canAdvanceOne && document.ops[frame - 1]?.type !== "text") renderDrawOperation(context, document.ops[frame - 1], size);
@@ -42,5 +45,5 @@ export function TimelapsePlayer({ document, onClose }: { document: DrawDocument;
     if (next.frame !== frame) setFrame(next.frame);
     setPlaying(next.playing);
   }
-  return <div className="modal-backdrop" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="timelapse-title"><section className="timelapse-modal"><button className="modal-close" onClick={onClose} aria-label="닫기">×</button><h2 id="timelapse-title">내 그림이 자란 과정</h2><p>원본 선은 바뀌지 않아요.</p><canvas ref={canvasRef} aria-label={`${frame}번째 그리기 동작까지 재생`} /><input aria-label="타임랩스 위치" type="range" min="0" max={Math.max(0, document.ops.length)} value={frame} onChange={(event) => { setPlaying(false); setFrame(Number(event.target.value)); }} /><div className="timelapse-controls"><button className="button secondary" onClick={() => { setFrame(0); setPlaying(true); }} disabled={!document.ops.length}>처음부터</button><button className="button primary" onClick={togglePlay} disabled={!document.ops.length}>{playing ? "일시정지" : "재생"}</button><span>{frame}/{document.ops.length}</span></div></section></div>;
+  return <div className="modal-backdrop" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="timelapse-title"><section className="timelapse-modal"><button className="modal-close" onClick={onClose} aria-label="닫기">×</button><h2 id="timelapse-title">내 그림이 자란 과정</h2><p>원본 선은 바뀌지 않아요.</p><canvas ref={canvasRef} style={{ "--paper-aspect": `${DOCUMENT_SIZE} / ${documentHeight(document)}` } as React.CSSProperties} aria-label={`${frame}번째 그리기 동작까지 재생`} /><input aria-label="타임랩스 위치" type="range" min="0" max={Math.max(0, document.ops.length)} value={frame} onChange={(event) => { setPlaying(false); setFrame(Number(event.target.value)); }} /><div className="timelapse-controls"><button className="button secondary" onClick={() => { setFrame(0); setPlaying(true); }} disabled={!document.ops.length}>처음부터</button><button className="button primary" onClick={togglePlay} disabled={!document.ops.length}>{playing ? "일시정지" : "재생"}</button><span>{frame}/{document.ops.length}</span></div></section></div>;
 }

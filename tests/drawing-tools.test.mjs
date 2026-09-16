@@ -148,10 +148,37 @@ test("marker and watercolor render distinctly from pencil", () => {
 test("eraser footprint matches the square area removed from the document", () => {
   assert.match(studio, /className="eraser-footprint"/);
   assert.match(studio, /footprint\.style\.width = `\$\{eraserWidth \/ 10\.24\}%`/);
+  assert.match(studio, /footprint\.style\.height = "auto"/);
+  assert.match(css, /\.eraser-footprint \{ aspect-ratio:1; \}/);
   assert.match(renderer, /function eraseWithSquareFootprint/);
   assert.match(renderer, /globalCompositeOperation = "destination-out"/);
-  assert.match(renderer, /fillRect\(x \* size - half, y \* size - half, footprint, footprint\)/);
+  assert.match(renderer, /fillRect\(x \* size - half, y \* docH - half, footprint, footprint\)/);
   assert.match(css, /\.eraser-footprint \{[^}]*border:2px solid #1b3a57/);
+});
+
+test("도화지 비율은 문서가 정하고, 화면·래스터·저장 이미지가 같은 비율을 쓴다", () => {
+  // 화면 상자의 비율이 곧 그림의 비율이다 — 좌표가 x·y 모두 0~1로 정규화돼 있기 때문이다.
+  assert.match(studio, /"--paper-aspect": `\$\{DOCUMENT_SIZE\} \/ \$\{documentHeight\(documentState\)\}`/);
+  assert.match(css, /\.canvas-wrap \{[^}]*aspect-ratio:var\(--paper-aspect,1\);/);
+  // 래스터도 문서 비율을 따른다. 정사각으로 고정하면 저장 PNG와 화면이 어긋난다.
+  assert.match(studio, /function documentPixels\(document: Pick<DrawDocument, "height">, width: number\)/);
+  assert.match(studio, /height: Math\.round\(width \* documentHeight\(document\) \/ DOCUMENT_SIZE\)/);
+  // 저장 이미지는 화면 캔버스 비율을 그대로 쓴다.
+  assert.match(studio, /const height = Math\.max\(1, Math\.round\(size \* canvas\.height \/ Math\.max\(1, canvas\.width\)\)\)/);
+  // 점선 안내 좌표는 정사각 기준이라, 가운데 정사각 영역에 넣어 동그라미가 타원이 되지 않게 한다.
+  assert.match(studio, /function guideSquare\(canvas: HTMLCanvasElement\)/);
+  assert.match(studio, /context\.scale\(square\.side \/ 1024, square\.side \/ 1024\)/);
+  // 도화지는 화면을 채우되, 비율은 문서가 정한다. width·height를 둘 다 100%로 주면
+  // aspect-ratio가 무시돼 기존 정사각 작품이 늘어난다.
+  assert.match(css, /width:min\(100cqw,calc\(100cqh \* var\(--paper-ratio,1\)\)\)/);
+  assert.match(css, /\.canvas-zone \{ container-type:size; \}/);
+  // 좁은 화면 규칙도 정사각을 가정하면 안 된다 — cq로 폭을 잡는 곳은 모두 비율을 곱한다.
+  const cqWidths = css.match(/width:min\(100cqw,[^;]*/g) ?? [];
+  assert.ok(cqWidths.length >= 3, `cq 기반 도화지 폭 규칙이 있어야 한다: ${cqWidths.length}`);
+  for (const rule of cqWidths) assert.match(rule, /--paper-ratio/, `정사각을 가정한 규칙이 남아 있다: ${rule}`);
+  // 아직 아무것도 그리지 않은 새 작품만 화면 비율에 맞춘다. 한 획이라도 그으면 비율이 굳는다.
+  assert.match(studio, /if \(!current \|\| current\.ops\.length\) return;/);
+  assert.match(studio, /clampDocumentHeight\(DOCUMENT_SIZE \* height \/ width\)/);
 });
 
 test("shape tool offers ten child-friendly shapes and outline or filled drawing", () => {

@@ -1,10 +1,11 @@
+import { storybookEditorActor } from "@/lib/storybook-editor-auth";
 import { bindings } from "@/db/runtime";
 import { validateStorybookDocument } from "@/lib/storybook-model";
-import { cleanText, jsonError, noStoreJson, rateLimit, sameOrigin, studentFromRequest } from "@/lib/security";
+import { cleanText, jsonError, noStoreJson, rateLimit, sameOrigin } from "@/lib/security";
 import { ownedStorybook, priorStorybookMutation, storybookAssets, storybookResponse } from "@/lib/storybook-store";
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
-  const student = await studentFromRequest(request);
+  const student = await storybookEditorActor(request);
   if (!student) return jsonError("학생 로그인이 필요해요.", 401);
   const storybookId = cleanText((await context.params).id, 80);
   const book = await ownedStorybook(storybookId, student.id);
@@ -14,7 +15,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   if (!sameOrigin(request)) return jsonError("요청 출처를 확인할 수 없어요.", 403);
-  const student = await studentFromRequest(request);
+  const student = await storybookEditorActor(request);
   if (!student) return jsonError("학생 로그인이 필요해요.", 401);
   if (!(await rateLimit(`storybook-save:${student.id}`, 90, 60))) return jsonError("저장이 너무 빨라요. 잠깐 기다려 주세요.", 429);
   const storybookId = cleanText((await context.params).id, 80);

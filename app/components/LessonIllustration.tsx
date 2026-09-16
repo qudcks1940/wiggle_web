@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { GuideMark, Lesson } from "@/lib/lesson-content";
+import { guideMarksForVariant, guideVariantLabel } from "@/lib/lesson-guide-variants";
 
 const STEP_COLORS = ["#087da7", "#e2645f", "#d99516", "#2d9568", "#7962bd"];
 
@@ -22,7 +23,7 @@ function traceMark(context: CanvasRenderingContext2D, mark: GuideMark, size: num
   }
 }
 
-export function LessonIllustration({ lesson, currentStep, className = "" }: { lesson: Lesson; currentStep?: number; className?: string }) {
+export function LessonIllustration({ lesson, currentStep, guideVariant = 0, className = "" }: { lesson: Lesson; currentStep?: number; guideVariant?: number; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export function LessonIllustration({ lesson, currentStep, className = "" }: { le
     context.lineCap = "round";
     context.lineJoin = "round";
 
-    for (const mark of lesson.guide) {
+    for (const mark of guideMarksForVariant(lesson, guideVariant)) {
       const highlighted = currentStep !== undefined && mark.step === currentStep + 1;
       const future = currentStep !== undefined && mark.step > currentStep + 1;
       context.strokeStyle = currentStep === undefined
@@ -52,7 +53,7 @@ export function LessonIllustration({ lesson, currentStep, className = "" }: { le
       traceMark(context, mark, size);
       context.stroke();
     }
-  }, [currentStep, lesson]);
+  }, [currentStep, guideVariant, lesson]);
 
-  return <canvas ref={canvasRef} className={`lesson-illustration ${className}`.trim()} aria-label={`${lesson.title} 전체 참고 그림`} />;
+  return <canvas ref={canvasRef} className={`lesson-illustration ${className}`.trim()} aria-label={`${lesson.title} ${guideVariantLabel(guideVariant)} 전체 참고 그림`} />;
 }

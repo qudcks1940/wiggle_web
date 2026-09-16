@@ -1,3 +1,5 @@
+import { operationsSchema } from "@/lib/operations-schema";
+import { bookProductionSchema } from "@/lib/book-production-schema";
 import { createArtworksStore } from "@/db/adapters/artworks-store";
 import { createTursoD1 } from "@/db/adapters/turso-d1";
 import { upgradeMvp3Schema } from "@/lib/mvp3-schema-upgrade";
@@ -45,15 +47,16 @@ const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS teachers (id TEXT PRIMARY KEY NOT NULL, email TEXT NOT NULL UNIQUE, display_name TEXT NOT NULL, credential_hash TEXT, credential_salt TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS teacher_sessions (token_hash TEXT PRIMARY KEY NOT NULL, teacher_id TEXT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE, expires_at TEXT NOT NULL, last_used_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS classrooms (id TEXT PRIMARY KEY NOT NULL, teacher_id TEXT NOT NULL REFERENCES teachers(id), display_name TEXT NOT NULL, class_code TEXT NOT NULL UNIQUE, join_token TEXT NOT NULL UNIQUE, admission_open INTEGER NOT NULL DEFAULT 1, active INTEGER NOT NULL DEFAULT 1, current_activity TEXT NOT NULL DEFAULT '자유롭게 그리기', starts_at TEXT, ends_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
-  `CREATE TABLE IF NOT EXISTS student_profiles (id TEXT PRIMARY KEY NOT NULL, classroom_id TEXT NOT NULL REFERENCES classrooms(id), nickname TEXT NOT NULL, animal TEXT NOT NULL, last_activity_at TEXT NOT NULL, archived_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS student_profiles (id TEXT PRIMARY KEY NOT NULL, classroom_id TEXT NOT NULL REFERENCES classrooms(id), seat_number INTEGER, real_name TEXT, claimed_at TEXT, nickname TEXT NOT NULL, animal TEXT NOT NULL, last_activity_at TEXT NOT NULL, archived_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS recovery_credentials (student_id TEXT PRIMARY KEY NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, picture_hash TEXT NOT NULL, picture_salt TEXT NOT NULL, personal_qr_hash TEXT NOT NULL, reset_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS device_sessions (token_hash TEXT PRIMARY KEY NOT NULL, student_id TEXT NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, expires_at TEXT NOT NULL, last_used_at TEXT NOT NULL, revoked_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
-  `CREATE TABLE IF NOT EXISTS artworks (id TEXT PRIMARY KEY NOT NULL, student_id TEXT NOT NULL REFERENCES student_profiles(id), classroom_id TEXT NOT NULL REFERENCES classrooms(id), title TEXT NOT NULL, topic TEXT NOT NULL, learning_mode TEXT NOT NULL, lesson_slug TEXT, intent TEXT NOT NULL DEFAULT '', ops_json TEXT NOT NULL DEFAULT '[]', schema_version INTEGER NOT NULL DEFAULT 1, renderer_version INTEGER NOT NULL DEFAULT 1, revision INTEGER NOT NULL DEFAULT 0, current_step INTEGER NOT NULL DEFAULT 0, version_count INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'drawing', thumbnail_key TEXT, final_image_key TEXT, last_mutation_id TEXT, completed_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS artworks (id TEXT PRIMARY KEY NOT NULL, student_id TEXT NOT NULL REFERENCES student_profiles(id), classroom_id TEXT NOT NULL REFERENCES classrooms(id), title TEXT NOT NULL, topic TEXT NOT NULL, learning_mode TEXT NOT NULL, lesson_slug TEXT, guide_variant INTEGER NOT NULL DEFAULT 0, intent TEXT NOT NULL DEFAULT '', ops_json TEXT NOT NULL DEFAULT '[]', schema_version INTEGER NOT NULL DEFAULT 1, renderer_version INTEGER NOT NULL DEFAULT 1, revision INTEGER NOT NULL DEFAULT 0, current_step INTEGER NOT NULL DEFAULT 0, version_count INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'drawing', thumbnail_key TEXT, final_image_key TEXT, last_mutation_id TEXT, completed_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS artwork_versions (id TEXT PRIMARY KEY NOT NULL, artwork_id TEXT NOT NULL REFERENCES artworks(id) ON DELETE CASCADE, sequence INTEGER NOT NULL, ops_json TEXT NOT NULL, image_key TEXT, reason TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(artwork_id, sequence))`,
   `CREATE TABLE IF NOT EXISTS artwork_mutations (request_id TEXT NOT NULL, artwork_id TEXT NOT NULL REFERENCES artworks(id) ON DELETE CASCADE, student_id TEXT NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, result_revision INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(artwork_id, student_id, request_id))`,
   `CREATE TABLE IF NOT EXISTS storybooks (id TEXT PRIMARY KEY NOT NULL, student_id TEXT NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, classroom_id TEXT NOT NULL REFERENCES classrooms(id) ON DELETE CASCADE, title TEXT NOT NULL, document_json TEXT NOT NULL, schema_version INTEGER NOT NULL DEFAULT 1, revision INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'draft', last_mutation_id TEXT, completed_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS storybook_assets (id TEXT PRIMARY KEY NOT NULL, storybook_id TEXT NOT NULL REFERENCES storybooks(id) ON DELETE CASCADE, student_id TEXT NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, source_type TEXT NOT NULL, source_artwork_id TEXT REFERENCES artworks(id) ON DELETE SET NULL, object_key TEXT NOT NULL, content_type TEXT NOT NULL, byte_size INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS storybook_mutations (request_id TEXT NOT NULL, storybook_id TEXT NOT NULL REFERENCES storybooks(id) ON DELETE CASCADE, student_id TEXT NOT NULL REFERENCES student_profiles(id) ON DELETE CASCADE, result_revision INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(storybook_id, student_id, request_id))`,
+  `CREATE TABLE IF NOT EXISTS storybook_feedback_requests (id TEXT PRIMARY KEY NOT NULL, storybook_id TEXT NOT NULL REFERENCES storybooks(id) ON DELETE CASCADE, classroom_id TEXT NOT NULL REFERENCES classrooms(id) ON DELETE CASCADE, teacher_id TEXT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE, status TEXT NOT NULL DEFAULT 'waiting_rubric', rubric_version TEXT, feedback_json TEXT, requested_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, completed_at TEXT, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(storybook_id, teacher_id))`,
   `CREATE TABLE IF NOT EXISTS coaching_events (id TEXT PRIMARY KEY NOT NULL, artwork_id TEXT NOT NULL REFERENCES artworks(id) ON DELETE CASCADE, actor TEXT NOT NULL, question TEXT NOT NULL, student_answer TEXT, applied_hint TEXT, before_version_id TEXT, after_version_id TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS coaching_event_details (event_id TEXT PRIMARY KEY NOT NULL REFERENCES coaching_events(id) ON DELETE CASCADE, response_kind TEXT NOT NULL, choices_json TEXT NOT NULL DEFAULT '[]', guide_steps_json TEXT NOT NULL DEFAULT '[]', new_elements_json TEXT NOT NULL DEFAULT '[]', growth_event TEXT, current_step INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'open', updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS reflections (artwork_id TEXT PRIMARY KEY NOT NULL REFERENCES artworks(id) ON DELETE CASCADE, favorite_part TEXT NOT NULL, favorite_reason TEXT NOT NULL, spoken_description TEXT NOT NULL DEFAULT '', story_text TEXT NOT NULL DEFAULT '', next_suggestion TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
@@ -82,6 +85,8 @@ const schemaStatements = [
   `CREATE INDEX IF NOT EXISTS storybook_assets_book_idx ON storybook_assets(storybook_id, created_at)`,
   `CREATE INDEX IF NOT EXISTS storybook_assets_student_idx ON storybook_assets(student_id, created_at)`,
   `CREATE INDEX IF NOT EXISTS storybook_mutations_book_idx ON storybook_mutations(storybook_id, created_at)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS storybook_feedback_book_teacher_uq ON storybook_feedback_requests(storybook_id, teacher_id)`,
+  `CREATE INDEX IF NOT EXISTS storybook_feedback_classroom_idx ON storybook_feedback_requests(classroom_id, status, requested_at)`,
   `CREATE INDEX IF NOT EXISTS coaching_details_status_idx ON coaching_event_details(status, updated_at)`,
   `CREATE INDEX IF NOT EXISTS messages_classroom_idx ON teacher_messages(classroom_id, created_at)`,
   `CREATE INDEX IF NOT EXISTS message_receipts_student_idx ON message_receipts(student_id, seen_at)`,
@@ -152,13 +157,26 @@ async function ensureArtworkMutationPrimaryKey(DB: D1Database) {
 // ensureSchema()는 프로세스당 한 번만 도는 캐시 래퍼일 뿐, 내용은 이 함수가 정본이다.
 export async function provisionSchema(DB: D1Database) {
   await DB.batch(schemaStatements.map((statement) => DB.prepare(statement)));
+  await DB.batch(bookProductionSchema.map((statement) => DB.prepare(statement)));
+  await DB.batch(operationsSchema.map((statement) => DB.prepare(statement)));
   await upgradeMvp3Schema(DB);
   const artworkColumns = await DB.prepare(`PRAGMA table_info(artworks)`).all<{ name: string }>();
   if (!artworkColumns.results.some((column) => column.name === "last_mutation_id")) await DB.prepare(`ALTER TABLE artworks ADD COLUMN last_mutation_id TEXT`).run();
   if (!artworkColumns.results.some((column) => column.name === "lesson_slug")) await DB.prepare(`ALTER TABLE artworks ADD COLUMN lesson_slug TEXT`).run();
+  if (!artworkColumns.results.some((column) => column.name === "guide_variant")) await DB.prepare(`ALTER TABLE artworks ADD COLUMN guide_variant INTEGER NOT NULL DEFAULT 0`).run();
   const studentColumns = await DB.prepare(`PRAGMA table_info(student_profiles)`).all<{ name: string }>();
   if (!studentColumns.results.some((column) => column.name === "archived_at")) await DB.prepare(`ALTER TABLE student_profiles ADD COLUMN archived_at TEXT`).run();
+  // 교사 명단(번호·실명)과 자리 사용 여부. 기존 학생 행은 번호·실명이 없고 claimed_at을 채워 둔다.
+  if (!studentColumns.results.some((column) => column.name === "seat_number")) await DB.prepare(`ALTER TABLE student_profiles ADD COLUMN seat_number INTEGER`).run();
+  if (!studentColumns.results.some((column) => column.name === "real_name")) await DB.prepare(`ALTER TABLE student_profiles ADD COLUMN real_name TEXT`).run();
+  if (!studentColumns.results.some((column) => column.name === "claimed_at")) {
+    await DB.prepare(`ALTER TABLE student_profiles ADD COLUMN claimed_at TEXT`).run();
+    // 이미 있는 학생은 스스로 만든 프로필이므로 처음부터 자리를 쓰고 있던 것으로 본다.
+    await DB.prepare(`UPDATE student_profiles SET claimed_at = created_at WHERE claimed_at IS NULL`).run();
+  }
   await DB.prepare(`CREATE INDEX IF NOT EXISTS students_classroom_archived_idx ON student_profiles(classroom_id, archived_at, nickname)`).run();
+  // 같은 학급 안에서 번호는 하나뿐. 빠진 학생의 번호는 다시 쓸 수 있게 archived는 제외한다.
+  await DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS students_classroom_seat_uq ON student_profiles(classroom_id, seat_number) WHERE seat_number IS NOT NULL AND archived_at IS NULL`).run();
   await ensureArtworkMutationPrimaryKey(DB);
 }
 

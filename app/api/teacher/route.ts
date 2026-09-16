@@ -1,4 +1,3 @@
-import { isAdmin } from "@/lib/admin";
 import { cookies } from "next/headers";
 import { bindings, randomEntryCode } from "@/db/runtime";
 import { bytesToDataUrl } from "@/lib/image-data";
@@ -141,7 +140,7 @@ export async function GET(request: Request) {
   const db = bindings().DB;
   if (!classroomId) {
     const result = await db.prepare(`SELECT c.id, c.display_name AS displayName, c.class_code AS classCode, c.join_token AS joinToken, c.admission_open AS admissionOpen, c.current_activity AS currentActivity, c.updated_at AS updatedAt, COUNT(s.id) AS studentCount FROM classrooms c LEFT JOIN student_profiles s ON s.classroom_id = c.id AND s.archived_at IS NULL WHERE c.teacher_id = ? AND c.active = 1 GROUP BY c.id ORDER BY c.created_at DESC`).bind(teacher.id).all<ClassroomRow>();
-    return noStoreJson({ teacher: { ...teacher, isAdmin: isAdmin(teacher) }, classrooms: result.results.map(presentClassroom) });
+    return noStoreJson({ teacher, classrooms: result.results.map(presentClassroom) });
   }
 
   const classroom = await ownedClassroom(teacher.id, classroomId);
@@ -269,16 +268,10 @@ export async function POST(request: Request) {
     const parsedRoster = parseRoster(payload.roster);
     if ("error" in parsedRoster) return jsonError(parsedRoster.error);
     const roster = parsedRoster.entries;
-    const schoolName = cleanText(payload.schoolName, 100);
-    const grade = payload.grade === undefined ? null : Number(payload.grade);
-    const classNumber = payload.classNumber === undefined ? null : Number(payload.classNumber);
-    if ((grade !== null || classNumber !== null) && (!Number.isInteger(grade) || !Number.isInteger(classNumber) || grade! < 1 || grade! > 12 || classNumber! < 1 || classNumber! > 99)) return jsonError("학년(1~12)과 반(1~99)을 확인해 주세요.");
     const classroom = { id: id("class"), classCode: await uniqueClassCode(), joinToken: randomToken(18) };
     const codes = await freshEntryCodes(db, classroom.id, roster.length);
     await db.batch([
       db.prepare(`INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token, admission_open, active, current_activity) VALUES (?, ?, ?, ?, ?, 1, 1, ?)`).bind(classroom.id, teacher.id, displayName, classroom.classCode, classroom.joinToken, DEFAULT_ACTIVITY_KEY),
-      db.prepare(`INSERT INTO classroom_profiles(classroom_id, school_name) VALUES (?, ?)`).bind(classroom.id, schoolName),
-      db.prepare(`INSERT INTO classroom_book_settings(classroom_id, grade, class_number) VALUES (?, ?, ?)`).bind(classroom.id, grade, classNumber),
       ...roster.map((entry, index) => insertRosterRow(db, classroom.id, entry, codes[index])),
     ]);
     // 참여 코드는 교사 화면(명단·코드표)에서만 본다. 학생 응답에는 절대 싣지 않는다.

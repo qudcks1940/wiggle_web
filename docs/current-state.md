@@ -1191,8 +1191,8 @@ typecheck·lint(오류 0), `npm test` 323/324(실패 1은 Node 22.13 환경 문�
 운영 배포는 옛 저장소 `yonghwan86/wiggle_web`(Vercel 연결)이 빌드한다. 2026-09-13에 올린 PR #3(정본 동기화)은 2026-09-16에 병합 없이 닫혔고, 그 사이 같은 저장소에 PR #4(관리자 대시보드·그림책 루브릭 피드백·PDF 가져오기·인쇄 주문, 84파일 약 1.1만 줄)가 병합됐다. 그래서 정본(`wwwiggle/new_wiggle`) 83개 커밋과 PR #4를 한 나무로 합쳤다.
 
 - **충돌 12개 처리.** `.gitignore`·`app/globals.css`는 양쪽을 모두 남겼다(옛 저장소의 번호 재입장 CSS는 정본에서 이미 폐기된 흐름이라 가져오지 않았다). `package.json`은 양쪽 의존성을 합치고 `package-lock.json`을 다시 만들었다.
-- **교사 API.** `createClassroom`이 학교 이름·학년·반(`classroom_profiles`·`classroom_book_settings`)을 저장하면서 정본의 참여 코드 발급(`insertRosterRow(..., codes[index])`)을 그대로 유지한다. 관리자 여부(`isAdmin`)도 함께 내려준다.
-- **교사 화면.** 정본의 새 학급 목록(검색·표·QR·뼈대 로딩)을 유지하고, 옛 저장소가 더한 운영 관리 링크와 학교 이름·학년·반 입력을 그 화면에 옮겨 붙였다.
+- **교사 API·교사 화면·입장 흐름은 정본 그대로다**(2026-09-16 사용자 지시: "방 참여하는 거는 QR + 번호입장 즉 우리가 작업한게 맞고, 교사 API쪽도 우리쪽게 맞아, 교사화면도 내쪽이 맞고"). 한 번 합쳐 넣었던 옛 저장소의 학교 이름·학년·반 입력과 `isAdmin` 링크를 되돌렸다.
+- **되돌려도 인쇄 주문은 동작한다.** 학교 이름·학년·반은 `lib/print-requests.ts`가 주문할 때 `classroom_profiles`·`classroom_book_settings`에 upsert하고, 조회는 값이 없으면 빈 값으로 내려준다. 관리자 화면은 `/api/admin`이 서버에서 `isAdmin`을 직접 확인하므로 교사 화면 링크 없이도 주소로 열린다.
 - **마이그레이션.** 양쪽이 `0008`을 동시에 썼다. 옛 저장소의 `0008_huge_secret_warriors`·`0009_unknown_supernaut`를 살리고, 정본의 `0008_thin_rogue`(손들기·선생님 표시)는 지운 뒤 합친 스키마에서 `0010_red_speed_demon`으로 다시 만들었다. DB에는 실행하지 않았다 — 파일만 만든다.
 - **문서.** 제품 결정 6·7·8항은 정본 문장을 기준으로 두고, 옛 저장소가 더한 "완성 그림책 교사용 루브릭"을 예외로 덧붙였다.
 - **검증.** typecheck 0, lint 오류 0, `npm test` 346/346(양쪽 테스트 모두 — 관리자·인쇄·PDF·루브릭 통합 테스트 포함), `browser-check` 통과(핀치 SKIP은 기존 환경 항목).

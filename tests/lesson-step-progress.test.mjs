@@ -70,7 +70,7 @@ test("the studio gates next and complete but keeps an explicit child-controlled 
   assert.match(studio, /✏️ 더 그릴래/);
   assert.equal(studio.match(/⭐ 지금 완성/g)?.length, 2);
   assert.doesNotMatch(studio, /한 번 그리고 완성|이번 단계 넘기기|마지막으로 네 생각을 하나 더 그려 볼까/);
-  assert.match(css, /\.studio-body \{[^}]*grid-template-columns:240px minmax\(0,1fr\) 180px;/);
+  assert.match(css, /\.studio-body \{[^}]*grid-template-columns:240px minmax\(0,1fr\);/);
   assert.match(css, /\.lesson-step-prompt-actions button \{[^}]*white-space:nowrap;/);
   // 태블릿 세로: 시범·이전·다음 버튼들이 3행 한 줄로 합쳐져 프롬프트는 4행이다
   // (2026-08-20 iPad 실기기 높이 예산 수정). 전체 폭 한 행 차지가 이 단언의 핵심.

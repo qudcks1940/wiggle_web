@@ -2,8 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { studentFetch } from "@/lib/client-session";
-import { SpeakButton } from "./SpeakButton";
 import { useModalDialog } from "./useModalDialog";
+import { MailIcon } from "./StudioIcons";
 
 export type StudentTeacherMessage = {
   id: string;
@@ -13,7 +13,7 @@ export type StudentTeacherMessage = {
   seenAt?: string | null;
 };
 
-export function StudentMessageCenter({ messages, floating = false, compact = false }: { messages: StudentTeacherMessage[]; floating?: boolean; compact?: boolean }) {
+export function StudentMessageCenter({ messages, floating = false, compact = false, header = false }: { messages: StudentTeacherMessage[]; floating?: boolean; compact?: boolean; header?: boolean }) {
   const [open, setOpen] = useState(false);
   const [locallySeen, setLocallySeen] = useState(() => new Set<string>());
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -42,14 +42,19 @@ export function StudentMessageCenter({ messages, floating = false, compact = fal
 
   return <>
     {latestUnread && <aside className={floating ? "canvas-message" : "teacher-message"} role="status">
-      <b>👩‍🏫 선생님</b><p>{latestUnread.body}</p><SpeakButton text={`선생님이 말했어요. ${latestUnread.body}`} compact />
+      <b>👩‍🏫 선생님</b><p>{latestUnread.body}</p>
       <button type="button" className="canvas-message-close" onClick={dismissUnread} aria-label="새 선생님 말씀 모두 닫기">×</button>
     </aside>}
     {/* .floating은 비컴팩트 버튼에서는 화면 고정(fixed) 배치 규칙이라, 헤더 안 인라인 버튼에는
         배너 스타일(floating prop)만 적용하고 버튼의 .floating 클래스는 컴팩트일 때만 붙인다. */}
-    <button type="button" className={`student-message-button${floating && compact ? " floating" : ""}${compact ? " compact" : ""}`} onClick={openHistory} aria-label={`선생님 말씀 ${unread.length ? `${unread.length}개 새로 옴` : "이력 보기"}`}>
+    {header
+      /* 그리기 화면 머리 줄: 조용한 선 아이콘 + "선생님 말씀" 글자, 안 읽은 말씀이 있으면 연노랑 바탕과 빨간 수(2026-09-14 시안 1). */
+      ? <button type="button" className={`studio-action student-message-action${unread.length ? " has-unread" : ""}`} onClick={openHistory} aria-label={`선생님 말씀 ${unread.length ? `${unread.length}개 새로 옴` : "이력 보기"}`}>
+          <MailIcon size={22} /><span>선생님 말씀</span>{unread.length > 0 && <b className="studio-action-badge">{unread.length}</b>}
+        </button>
+      : <button type="button" className={`student-message-button${floating && compact ? " floating" : ""}${compact ? " compact" : ""}`} onClick={openHistory} aria-label={`선생님 말씀 ${unread.length ? `${unread.length}개 새로 옴` : "이력 보기"}`}>
       <span className="teacher-message-icon" aria-hidden="true">💌</span>{compact ? <span className="sr-only">선생님 말씀</span> : <span className="student-message-label">선생님 말씀</span>}{unread.length > 0 && <b>{unread.length}</b>}
-    </button>
+    </button>}
     {open && <div className="modal-backdrop" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="student-message-title">
       <section className="student-message-history">
         <button type="button" className="modal-close" onClick={() => setOpen(false)} aria-label="선생님 말씀 이력 닫기">×</button>
@@ -58,7 +63,6 @@ export function StudentMessageCenter({ messages, floating = false, compact = fal
         <div>{[...messages].reverse().map((message) => <article key={message.id}>
           <div><b>👩‍🏫 선생님</b><small>{message.audience === "all" ? "우리 반 모두" : "나에게"}</small></div>
           <p>{message.body}</p>
-          <SpeakButton text={`선생님이 말했어요. ${message.body}`} compact />
           <time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" })}</time>
         </article>)}</div>
         {!messages.length && <div className="empty-state">아직 선생님 말씀이 없어요.</div>}

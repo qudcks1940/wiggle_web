@@ -29,9 +29,10 @@ test("coloring starts broad without locking the child's width choice", () => {
 });
 
 test("every studio tool is reachable from the panel", () => {
-  for (const tool of ["pencil", "crayon", "marker", "watercolor", "fill", "shape", "eraser"]) {
-    assert.match(studio, new RegExp(`onClick=\\{\\(\\) => chooseStudioTool\\("${tool}"\\)\\}`));
-  }
+  // 2026-09-14 도구 막대(B안): 붓 4종·지우개는 DOCK_TOOLS 한 목록에서 그리고, 채우기·도형은 ⋯ 더보기 안에 있다.
+  for (const tool of ["pencil", "crayon", "marker", "watercolor", "eraser"]) assert.match(studio, new RegExp(`\\{ id: "${tool}", label: "`));
+  assert.match(studio, /DOCK_TOOLS\.map\(\(tool\) => \([\s\S]*?onClick=\{\(\) => chooseStudioTool\(tool\.id\)\}/);
+  for (const tool of ["fill", "shape"]) assert.match(studio, new RegExp(`onClick=\\{\\(\\) => chooseStudioTool\\("${tool}"\\)\\}`));
   assert.match(studio, /aria-pressed=\{mirror\}/);
   assert.match(studio, /SHAPE_KINDS\.slice/);
 });
@@ -44,28 +45,42 @@ test("new pencil strokes get pressure widths while legacy pen strokes render unc
 });
 
 test("all tools have recognizable visual icons and child-readable size labels", () => {
-  assert.match(studio, /aria-label="연필" title="연필"[\s\S]*?<span className="tool-icon" aria-hidden="true">\s*✏️\s*<\/span>\s*<span className="tool-name" aria-hidden="true">\s*연필\s*<\/span>/);
-  assert.match(studio, /aria-label="크레용" title="크레용"[\s\S]*?<span className="tool-icon" aria-hidden="true">\s*🖍️\s*<\/span>\s*<span className="tool-name" aria-hidden="true">\s*크레용\s*<\/span>/);
-  assert.match(studio, /aria-label="마커" title="마커"[\s\S]*?<span className="tool-icon" aria-hidden="true">\s*🖊️\s*<\/span>\s*<span className="tool-name" aria-hidden="true">\s*마커\s*<\/span>/);
-  assert.match(studio, /aria-label="수채붓" title="수채붓"[\s\S]*?<span className="tool-icon" aria-hidden="true">\s*🖌️\s*<\/span>\s*<span className="tool-name" aria-hidden="true">\s*수채붓\s*<\/span>/);
-  assert.match(studio, /aria-label="지우개" title="지우개"/);
+  // 세워진 도구 그림(public/drawing-tools/dock/)과 붓 끝·띠 칠하기 틀. 뜻은 aria-label·title로 전한다.
+  assert.match(studio, /\{ id: "pencil", label: "연필", tint: true \}/);
+  assert.match(studio, /\{ id: "crayon", label: "크레용", tint: true \}/);
+  assert.match(studio, /\{ id: "marker", label: "마커", tint: true \}/);
+  assert.match(studio, /\{ id: "watercolor", label: "수채붓", tint: true \}/);
+  assert.match(studio, /\{ id: "eraser", label: "지우개", tint: false \}/);
+  assert.match(studio, /aria-label=\{tool\.label\} title=\{tool\.label\}/);
+  assert.match(studio, /src=\{`\/drawing-tools\/dock\/\$\{tool\.id\}\.webp`\}/);
+  assert.match(studio, /maskImage: `url\(\/drawing-tools\/dock\/\$\{tool\.id\}-tint\.webp\)`/);
   assert.match(studio, /aria-label="좌우 대칭" title="좌우 대칭"/);
-  assert.match(studio, /className="tool-icon eraser-icon"/);
-  assert.match(studio, /STROKE_WIDTH_LABELS\[value\]/);
-  assert.match(studio, /3: "아주 얇게", 8: "얇게", 16: "보통", 30: "굵게", 48: "아주 굵게"/);
-  assert.match(css, /\.tool-group \.eraser-icon \{[^}]*grid-template-columns:1fr 1fr/);
-  assert.match(css, /\.tool-group button\[aria-pressed=true\]:after \{ content:"✓"/);
+  // 굵기는 5단 버튼이 아니라 1픽셀 단위로 끄는 슬라이더다.
+  assert.match(studio, /<input type="range" min=\{STROKE_WIDTH_MIN\} max=\{STROKE_WIDTH_MAX\} step=\{1\} value=\{width\} aria-label="선 굵기"/);
+  assert.match(studio, /aria-label="1픽셀 얇게"[\s\S]*aria-label="1픽셀 굵게"/);
+  assert.doesNotMatch(studio, /STROKE_WIDTH_LABELS|STROKE_WIDTHS/);
+  assert.match(css, /\.dock-tool-tint \{[^}]*var\(--dock-color/);
+  assert.match(css, /\.dock-tool\[aria-pressed="true"\] \{ background:#184028; \}/);
   assert.match(studio, /"#E53935": "빨간색"/);
   assert.match(studio, /"#F8A9A4": "밝은 빨간색"/);
   assert.match(studio, /aria-label=\{COLOR_NAMES\[value\]\}/);
 });
 
-test("palette offers named basic and expanded colors without shrinking buttons", () => {
-  assert.match(studio, /const MORE_PALETTE =/);
-  assert.match(studio, /colorsExpanded \? \[\.\.\.new Set\(\[\.\.\.PALETTE, \.\.\.MORE_PALETTE\]\)\] : PALETTE/);
-  assert.match(studio, /className="selected-color"/);
-  assert.match(studio, /aria-expanded=\{colorsExpanded\}/);
-  assert.match(css, /\.palette button \{ min-width:44px; min-height:44px;/);
+test("palette shows every basic color without scrolling and the rainbow button opens a detailed picker", async () => {
+  assert.doesNotMatch(studio, /colorsExpanded|MORE_PALETTE/);
+  assert.match(studio, /import \{ ColorPickerDialog \} from "\.\/ColorPickerDialog"/);
+  // 막대에는 자주 쓰는 8색 + 무지개. 무지개는 12색 창(스크롤 없음)을 열고, 거기서 색 더보기가 상세 고르기 대화상자를 연다.
+  assert.match(studio, /const DOCK_QUICK_COLORS = 8;/);
+  assert.match(studio, /className="dock-more-colors"[^>]*aria-haspopup="true"/);
+  assert.match(studio, /<div className="dock-palette" role="group" aria-label="모든 색">\s*\{PALETTE\.map/);
+  assert.match(studio, /className="dock-palette-wheel" aria-haspopup="dialog"[\s\S]*?setColorPickerOpen\(true\)/);
+  assert.match(studio, /<ColorPickerDialog color=\{selectedColor\} names=\{COLOR_NAMES\}/);
+  assert.match(css, /\.dock-color,\.dock-current-color,\.dock-more-colors \{[^}]*min-width:44px; min-height:44px;/);
+  assert.match(css, /\.dock-palette \{[^}]*grid-template-columns:repeat\(4,48px\)/);
+  const { hexToHsv, hsvToHex } = await import("../lib/color.ts");
+  for (const hex of ["#1B3A57", "#E53935", "#FFFFFF", "#000000", "#43A047", "#F8BBD0"]) assert.equal(hsvToHex(...hexToHsv(hex)), hex);
+  assert.deepEqual(hexToHsv("#FF0000"), [0, 1, 1]);
+  assert.equal(hsvToHex(120, 1, 1), "#00FF00");
 });
 
 test("strokes render during pointer input instead of waiting for pointer up", () => {
@@ -153,7 +168,7 @@ test("eraser footprint matches the square area removed from the document", () =>
   assert.match(renderer, /function eraseWithSquareFootprint/);
   assert.match(renderer, /globalCompositeOperation = "destination-out"/);
   assert.match(renderer, /fillRect\(x \* size - half, y \* docH - half, footprint, footprint\)/);
-  assert.match(css, /\.eraser-footprint \{[^}]*border:2px solid #1b3a57/);
+  assert.match(css, /\.eraser-footprint \{[^}]*border:2px solid #264c2e/);
 });
 
 test("도화지 비율은 문서가 정하고, 화면·래스터·저장 이미지가 같은 비율을 쓴다", () => {
@@ -176,8 +191,11 @@ test("도화지 비율은 문서가 정하고, 화면·래스터·저장 이미�
   const cqWidths = css.match(/width:min\(100cqw,[^;]*/g) ?? [];
   assert.ok(cqWidths.length >= 3, `cq 기반 도화지 폭 규칙이 있어야 한다: ${cqWidths.length}`);
   for (const rule of cqWidths) assert.match(rule, /--paper-ratio/, `정사각을 가정한 규칙이 남아 있다: ${rule}`);
-  // 아직 아무것도 그리지 않은 새 작품만 화면 비율에 맞춘다. 한 획이라도 그으면 비율이 굳는다.
-  assert.match(studio, /if \(!current \|\| current\.ops\.length\) return;/);
+  // 새 작품은 화면 비율에 맞춘다. 이미 그린 그림은 화면이 세로로 길 때만 가운데 둔 채 늘리고(줄이지 않음),
+  // 옆으로 넓은 화면에서는 종이가 틀을 덮고 넘친 만큼 옮겨 본다(2026-09-15 "도화지 크기는 화면을 꽉채우지 안 잖아").
+  assert.match(studio, /if \(next < from \|\| activePoints\.current\.size \|\| artworkRef\.current\?\.status === "complete" \|\| conflictDraftRef\.current\) return;/);
+  assert.match(studio, /growDrawOps\(current\.ops, from, next\)/);
+  assert.match(studio, /const paper = coverPaper\(frame\.width, frame\.height, documentHeight\(documentState\)\);/);
   assert.match(studio, /clampDocumentHeight\(DOCUMENT_SIZE \* height \/ width\)/);
 });
 
@@ -198,15 +216,16 @@ test("pointer cancel discards shapes and pending fills instead of committing the
 });
 
 test("an empty free canvas tells a first-time child what to do", () => {
-  assert.match(studio, /!lesson && !aiGuide && !documentState\.ops\.length/);
+  assert.match(studio, /!lesson && !documentState\.ops\.length/);
   assert.match(studio, /✏️ 하얀 종이에 그어 봐!/);
   assert.match(css, /\.guide-notice,\.canvas-start-hint \{[^}]*pointer-events:none/);
   // tool-options-open: 도형·글씨 옵션이 열리면 태블릿 세로에서 패널이 커지고 캔버스가
   // 양보한다 — 빌드가 :has() 조합을 떨어뜨려 React가 클래스로 알린다 (2026-08-20).
   assert.match(studio, /className=\{`studio-body \$\{grimiOpen \|\| lesson \? "" : "without-step-panel"\}\$\{grimiOpen \? " grimi-open" : ""\}\$\{grimiOpen && grimiCollapsed \? " grimi-collapsed" : ""\}\$\{studioTool === "shape" \|\| studioTool === "text" \? " tool-options-open" : ""\}`\}/);
-  assert.match(css, /\.studio-body\.without-step-panel \{ grid-template-columns:minmax\(0,1fr\) 180px; \}/);
+  // 도구는 격자 칸이 아니라 아래 도구 막대라 오른쪽 도구 칸이 없다(2026-09-14).
+  assert.match(css, /\.studio-body\.without-step-panel \{ grid-template-columns:minmax\(0,1fr\); \}/);
   assert.match(css, /@media \(max-width:720px\)[\s\S]*\.studio-body\.without-step-panel \{ display:flex; \}/);
-  assert.match(css, /@media \(max-width:900px\) and \(max-height:500px\) and \(orientation:landscape\)[\s\S]*\.studio-body\.without-step-panel \{ grid-template-columns:minmax\(0,1fr\) 200px; \}/);
+  assert.match(css, /@media \(max-width:900px\) and \(max-height:500px\) and \(orientation:landscape\)[\s\S]*\.studio-body\.without-step-panel \{ grid-template-columns:minmax\(0,1fr\); \}/);
 });
 
 test("lesson choices visibly select, persist and can be chosen again after navigation", () => {

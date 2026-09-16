@@ -1,2 +1,2 @@
-import { StudentHome } from "@/app/components/StudentHome";
-export default function StudentPage() { return <StudentHome />; }
+import { StudentEntry } from "@/app/components/StudentEntry";
+export default function StudentPage() { return <StudentEntry />; }

@@ -1,0 +1,79 @@
+.teacher-workspace{--tw-ink:#252b28;--tw-muted:#68716c;--tw-green:#315d46;--tw-line:#dce1de;max-width:1600px;margin:auto;padding:0 40px 32px;background:#fff;color:var(--tw-ink);min-height:100vh;font-family:var(--font-pretendard),Pretendard,sans-serif;font-size:16px;font-weight:400;line-height:1.5}
+body:has(.teacher-workspace){background:#fff}
+.teacher-workspace *{box-sizing:border-box}
+.teacher-workspace h1,.teacher-workspace h2,.teacher-workspace h3,.teacher-workspace p{margin:0}
+.teacher-workspace button,.teacher-workspace input,.teacher-workspace select,.teacher-workspace textarea{font:inherit}
+.teacher-workspace button,.teacher-workspace .tcw-link-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:9px 16px;border:1px solid #a7b0aa;border-radius:6px;background:#fff;color:var(--tw-ink);font-size:15px;font-weight:600;cursor:pointer;box-shadow:none;text-decoration:none;white-space:normal}
+.teacher-workspace button:hover,.teacher-workspace .tcw-link-button:hover{background:#f3f6f3}
+.teacher-workspace button:disabled{opacity:.5;cursor:default}
+.teacher-workspace .tcw-primary{background:var(--tw-green);color:#fff;border-color:var(--tw-green)}
+.teacher-workspace .tcw-primary:hover{background:#254b37}
+.teacher-workspace :is(button,a,input,select,textarea,summary):focus-visible{outline:3px solid #59826a;outline-offset:3px}
+.teacher-workspace input,.teacher-workspace select,.teacher-workspace textarea{min-width:0;max-width:100%;border:1px solid #c8cfca;border-radius:5px;color:var(--tw-ink);background:#fff;padding:10px 12px;box-shadow:none;min-height:44px}
+.teacher-workspace label{display:grid;gap:8px;font-weight:500}
+.teacher-workspace small{font-weight:400;color:var(--tw-muted)}
+.teacher-workspace .tcw-header{min-height:88px;display:flex;align-items:center;gap:25px}
+.tcw-header .brand{flex-shrink:0}.teacher-workspace .tcw-header .brand img{width:40px;height:40px}.teacher-workspace .tcw-header .brand span{font-size:18px}
+.teacher-workspace .tcw-back{display:flex;align-items:center;gap:8px;min-height:44px;color:var(--tw-ink);text-decoration:none;font-weight:600;font-size:16px;white-space:nowrap}
+.teacher-workspace .tcw-header h1{font-size:27px;line-height:1.3;padding-left:25px;border-left:1px solid #bcc5bf;font-weight:700;overflow-wrap:anywhere}
+.tcw-header-actions{display:flex;gap:14px;margin-left:auto;flex-shrink:0}
+.teacher-workspace .tcw-tabs{display:flex;gap:42px;border-bottom:1px solid var(--tw-line);height:64px;align-items:stretch}
+.tcw-tabs a{display:flex;align-items:center;text-decoration:none;color:var(--tw-muted);font-size:18px;font-weight:600;border-bottom:3px solid transparent;padding:0 2px}
+.tcw-tabs a[aria-current]{color:var(--tw-green);border-color:var(--tw-green)}
+.tcw-session{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:27px 0 28px;border-bottom:1px solid var(--tw-line)}
+.teacher-workspace .tcw-session h2{font-size:26px;font-weight:650;line-height:1.4}.teacher-workspace .tcw-session p{color:var(--tw-muted);font-size:20px;margin-top:7px}
+.tcw-session-actions{display:flex;gap:14px;flex-shrink:0}
+.tcw-section-title{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px 0 18px}.teacher-workspace .tcw-section-title h2{font-size:25px;font-weight:650}.teacher-workspace .tcw-section-title small{font-size:17px;margin-left:10px}.tcw-section-title>span{color:var(--tw-muted);font-size:14px}
+.tcw-student-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:23px}
+.teacher-workspace .tcw-artwork{width:100%;aspect-ratio:1.44;display:flex;overflow:hidden;padding:0;border:1px solid #d4dad6;border-radius:4px;background:#f7f8f7;position:relative;font-size:14px;font-weight:400;color:#727b75;box-shadow:none}
+.teacher-workspace .tcw-artwork:hover{border-color:var(--tw-green);background:#f3f5f3}.tcw-artwork img{width:100%;height:100%;object-fit:contain;background:#fff}.tcw-artwork>span{padding:16px;text-align:center}
+.tcw-student-caption{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px}.tcw-student-caption b{font-size:19px;font-weight:650;overflow-wrap:anywhere}
+.teacher-workspace .tcw-status{font-size:13px;border-radius:20px;padding:4px 14px;background:#f0f2f3;color:#53605a;flex-shrink:0}.teacher-workspace .tcw-status.is-complete{background:#e9f3e9;color:#315b3f}
+.teacher-workspace .tcw-updated{text-align:right;color:var(--tw-muted);font-size:13px;margin-top:25px}
+.teacher-workspace .tcw-empty{padding:60px 20px;text-align:center;border:1px dashed var(--tw-line);border-radius:5px;background:#fafbf9}.teacher-workspace .tcw-empty p{margin:8px 0 20px;color:var(--tw-muted)}
+.teacher-workspace .tcw-error{padding:12px 16px;border:1px solid #e2b6af;background:#fff6f4;color:#943b32;border-radius:5px;margin:12px 0;overflow-wrap:anywhere}.tcw-error button{margin-left:12px}.tcw-action-error{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);z-index:120;max-width:calc(100vw - 32px)}
+.tcw-dialog-backdrop{position:fixed;inset:0;background:#18221d66;display:flex;align-items:center;justify-content:center;z-index:100;padding:24px}.tcw-dialog{background:#fff;border:1px solid var(--tw-line);border-radius:8px;max-height:calc(100dvh - 48px);overflow:auto;width:580px;max-width:100%;padding:24px}.tcw-dialog>header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:24px}.teacher-workspace .tcw-dialog h2{font-size:23px}.tcw-dialog header button{padding:10px;flex-shrink:0}.tcw-dialog form{display:grid;gap:18px}.tcw-message-footer{display:flex;justify-content:space-between;align-items:center}.tcw-message-history{border-top:1px solid var(--tw-line);margin-top:24px;padding-top:18px}.tcw-message-history summary{cursor:pointer}.tcw-message-history article{padding:14px 0;border-bottom:1px solid var(--tw-line)}.tcw-guide{display:grid;gap:18px}.tcw-guide li{margin-bottom:10px}
+.teacher-workspace .arc-cockpit{display:grid;grid-template-columns:1fr;border:0;box-shadow:none;background:#fff;padding:0;gap:20px}.teacher-workspace .arc-cockpit-now{display:grid;gap:10px}.teacher-workspace .arc-cockpit-actions{display:grid;gap:15px}.teacher-workspace .arc-cockpit-jump button{width:100%;margin-top:8px}.teacher-workspace .arc-cockpit-jump summary{padding:10px 0}.teacher-workspace .arc-cockpit-discussion{display:none}
+.teacher-workspace .teacher-preview{background:#fff;border:1px solid var(--tw-line);border-radius:8px;color:var(--tw-ink);box-shadow:none}.teacher-workspace .teacher-preview>img{object-fit:contain}.teacher-workspace .teacher-preview-guide{border:1px solid var(--tw-line);border-radius:6px;background:#f8faf8;box-shadow:none}.teacher-workspace .student-profile-facts{background:#fff;border-radius:0;border-top:1px solid var(--tw-line);margin:18px 0}.teacher-workspace .tcw-preview-caption{font-weight:600;margin-top:10px}.teacher-workspace .teacher-preview h2{font-size:24px}.teacher-workspace .teacher-preview h3{font-size:18px}.teacher-workspace .teacher-preview .modal-close{min-width:44px}.teacher-workspace .large-qr-dialog{background:#fff;border-radius:8px;border:1px solid var(--tw-line)}
+@media(min-width:1600px){.teacher-workspace{padding-left:50px;padding-right:50px}}
+@media(max-width:1100px){.teacher-workspace{padding:0 24px 30px}.tcw-header{flex-wrap:wrap;padding:18px 0}.teacher-workspace .tcw-header{gap:18px}.teacher-workspace .tcw-header h1{font-size:23px}.tcw-header-actions{gap:8px}.tcw-student-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.teacher-workspace .tcw-session h2{font-size:23px}.teacher-workspace .tcw-session p{font-size:18px}.teacher-workspace .tcw-header .brand span{display:none}}
+@media(max-width:760px){.teacher-workspace{padding:0 20px 24px}.teacher-workspace .tcw-header{gap:14px}.teacher-workspace .tcw-header h1{font-size:21px;flex:1;padding-left:14px}.tcw-header-actions{width:100%;margin:0;justify-content:flex-end}.teacher-workspace .tcw-tabs{height:58px;gap:28px}.tcw-tabs a{font-size:16px}.tcw-session{align-items:flex-start;flex-direction:column;gap:16px;padding:22px 0}.tcw-session-actions{gap:10px}.tcw-student-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 16px}.tcw-student-caption{align-items:flex-start;flex-wrap:wrap}.tcw-student-caption b{font-size:17px}.teacher-workspace .tcw-section-title h2{font-size:22px}.teacher-workspace .tcw-status{padding:3px 10px;font-size:12px}.tcw-dialog-backdrop{padding:12px}.tcw-dialog{padding:18px;max-height:calc(100dvh - 24px)}.teacher-workspace .tcw-artwork{font-size:12px}}
+@media(max-width:380px){.teacher-workspace{padding:0 14px 24px}.teacher-workspace .tcw-header{gap:10px}.teacher-workspace .tcw-header h1{font-size:18px}.teacher-workspace .tcw-header .brand img{width:32px;height:32px}.teacher-workspace .tcw-back{font-size:13px;gap:3px}.teacher-workspace .tcw-tabs{gap:20px}.tcw-tabs a{font-size:14px}.tcw-student-grid{grid-template-columns:1fr}.teacher-workspace .tcw-header-actions button{font-size:14px;padding:8px 12px}.teacher-workspace .tcw-session h2{font-size:21px}}
+/* 선생님 실시간 보기 + 표시(2026-09-14). 아이 그림 캔버스 위에 표시 캔버스를 겹친다. */
+.teacher-live{display:grid;gap:10px}
+.teacher-live-paper{position:relative;width:100%;border:1px solid var(--tw-line,#dfe7df);border-radius:12px;overflow:hidden;background:#fff}
+.teacher-live-paper canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.teacher-live-marks{touch-action:none}
+.teacher-live-marks.can-mark{cursor:crosshair}
+.teacher-live-tools{display:grid;gap:8px;padding:12px;border:1px solid #f3c9b3;border-radius:10px;background:#fff7f2}
+.teacher-live-tools p{margin:0;font-size:14px}
+.teacher-live-tools input{min-height:44px;padding:0 12px;border:1px solid #e3cbbd;border-radius:8px;font:inherit}
+.teacher-live-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.teacher-live-actions .button{min-height:44px}
+.teacher-live-answer{margin:0;font-weight:800;color:#6b3a1f}
+.teacher-hand-raised{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:10px 12px;border-radius:10px;background:#fff3d6;color:#6a4a00;font-weight:900}
+.tcw-hand{margin-left:6px;font-size:18px;line-height:1}
+.tcw-hand-count{margin-left:10px;color:#8a5a00;font-weight:900}
+.teacher-hand-raised .text-button,.teacher-live-answer .text-button{display:inline-flex;align-items:center;width:auto;min-height:44px;padding:0 8px;text-decoration:underline}
+/* 첫 불러오기 뼈대(2026-09-14, 시안 docs/design-assets/teacher-loading/loading.png) */
+.tcw-skel{display:block;border-radius:6px;background:linear-gradient(100deg,#eceeed 30%,#f6f7f6 50%,#eceeed 70%) 0 0/300% 100%;animation:tcw-shimmer 1.4s ease-in-out infinite}
+@keyframes tcw-shimmer{from{background-position:100% 0}to{background-position:0 0}}
+@media (prefers-reduced-motion:reduce){.tcw-skel,.tcw-spinner{animation:none}}
+/* 불러오기에 실패하면 뼈대는 멈추고 흐리게 둔다 — 계속 반짝이면 아직 불러오는 중으로 읽힌다. */
+.tcw-loading.is-failed .tcw-skel{animation:none;opacity:.55}
+.tcw-skel-title{width:190px;height:32px}
+.tcw-loading .tcw-back{padding-right:25px;border-right:1px solid #bcc5bf}
+.tcw-skel-button{width:122px;height:44px}
+.tcw-loading-tabs{display:flex;gap:18px;align-items:center;height:64px;border-bottom:1px solid var(--tw-line)}
+.tcw-loading-tabs .tcw-skel{width:142px;height:30px}
+.teacher-workspace .tcw-loading-status{display:flex;align-items:center;gap:14px;margin:0;padding:26px 0;border-bottom:1px solid var(--tw-line);color:var(--tw-ink);font-size:17px;font-weight:500}
+.tcw-spinner{width:26px;height:26px;border:3px solid #d7e3dc;border-top-color:var(--tw-green);border-radius:50%;animation:tcw-spin .9s linear infinite;flex-shrink:0}
+@keyframes tcw-spin{to{transform:rotate(360deg)}}
+.teacher-workspace .tcw-loading-status.is-error{justify-content:space-between;flex-wrap:wrap;color:#8a2f22;font-weight:700}
+.tcw-loading-actions{display:flex;gap:10px;flex-wrap:wrap}
+.teacher-workspace .tcw-loading-actions .tcw-link-button{text-decoration:none}
+.teacher-workspace .tcw-loading-heading{font-size:25px;font-weight:650;padding:22px 0 18px;color:var(--tw-ink)}
+.tcw-skel-card{aspect-ratio:1.44;width:100%;border-radius:8px}
+.tcw-skel-caption{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+.tcw-skel-caption .tcw-skel{width:52%;height:22px}
+.tcw-skel-caption .tcw-skel-pill{width:20%;height:24px;border-radius:999px}

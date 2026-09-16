@@ -2,15 +2,15 @@
 
 import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { activeTextObjects, clampDocumentHeight, DOCUMENT_SIZE, documentHeight, DrawDocument, DrawOp, drawingTextGraphemes, emptyDocument, estimateDocumentBytes, estimateStrokeBytes, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_OPS, MAX_STROKE_POINTS, MAX_TEXT_GRAPHEMES, MAX_TEXT_OBJECTS, normalizeDrawingText, roundUnit, ShapeKind, STROKE_WIDTHS, StrokeWidth, TextKind, TEXT_SIZES, TextSize, validateDrawDocument } from "@/lib/drawing-model";
+import { activeTextObjects, clampDocumentHeight, DOCUMENT_SIZE, documentHeight, DrawDocument, DrawOp, drawingTextGraphemes, emptyDocument, estimateDocumentBytes, estimateStrokeBytes, growDrawOps, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_OPS, MAX_STROKE_POINTS, MAX_TEXT_GRAPHEMES, MAX_TEXT_OBJECTS, normalizeDrawingText, roundUnit, ShapeKind, STROKE_WIDTH_MAX, STROKE_WIDTH_MIN, StrokeWidth, TextKind, TEXT_SIZES, TextSize, validateDrawDocument } from "@/lib/drawing-model";
 import { renderDrawDocument, renderDrawOperation, resetDrawingCanvas } from "@/lib/draw-renderer";
 import { mirrorOp } from "@/lib/symmetry";
 import { clearAllDrawing, redoDrawing, undoDrawing } from "@/lib/drawing-history";
 import { DrawingInputMode, INPUT_MODE_EVENT } from "@/lib/input-mode";
-import { CanvasView, IDENTITY_VIEW, pinchView } from "@/lib/canvas-view";
+import { CanvasView, clampView, coverPaper, IDENTITY_VIEW, MAX_SCALE, pinchView, zoomView } from "@/lib/canvas-view";
 import { lessonBySlug, Lesson } from "@/lib/lesson-content";
 import { guideMarksForVariant } from "@/lib/lesson-guide-variants";
-import { ArrowLeftIcon, CheckIcon, ChevronUpIcon, GripHorizontalIcon, MoreHorizontalIcon, Redo2Icon, SparklesIcon, Undo2Icon } from "./StudioIcons";
+import { ArrowLeftIcon, CheckIcon, ChevronUpIcon, HandIcon, MoreHorizontalIcon, Redo2Icon, Undo2Icon } from "./StudioIcons";
 import { createLessonStepBaseline, isLessonStepProgress, lessonStepActionStatus, LessonStepProgress } from "@/lib/lesson-step-progress";
 import { lockGuideTrace, snapGuideTrace } from "@/lib/trace-guidance.mjs";
 import { clampTextPlacement, suggestTextPlacement } from "@/lib/text-placement";
@@ -18,20 +18,12 @@ import { activeProfile, clearQueuedArtworkSaves, createSerialTaskQueue, deleteQu
 
 import type { QueuedArtworkDraft } from "@/lib/client-session";
 import { Logo } from "./Logo";
-import { SpeakButton } from "./SpeakButton";
-import { TimelapsePlayer } from "./TimelapsePlayer";
-import { VoiceWhisperStatus } from "./VoiceWhisper";
 import { useModalDialog } from "./useModalDialog";
-import { LessonReference as LessonIllustration } from "./LessonReference";
+import { ColorPickerDialog } from "./ColorPickerDialog";
 import { StudentMessageCenter, StudentTeacherMessage } from "./StudentMessageCenter";
+import { drawMarkStrokes, type MarkAnswer, type MarkStroke } from "@/lib/teacher-marks";
 
 const PALETTE = ["#1B3A57", "#E53935", "#FB8C00", "#FDD835", "#43A047", "#1E88E5", "#8E24AA", "#8D6E63", "#F06292", "#4DD0E1", "#FFCC80", "#FFFFFF"];
-const MORE_PALETTE = [
-  "#000000", "#455A64", "#9AA7B1", "#D7DEE3",
-  "#5D4037", "#795548", "#A1887F", "#D7CCC8", "#F5E0C3", "#FFE0B2",
-  "#B71C1C", "#FF7043", "#C0CA33", "#00897B", "#80CBC4", "#26C6DA",
-  "#64B5F6", "#3949AB", "#7E57C2", "#EC407A", "#F8BBD0", "#FFF0A6",
-];
 const CHOICE_DRAWING_SETUP: Record<string, { color?: string; shade?: "base" | "light"; tool: BrushTool; width: StrokeWidth; feedback: string }> = {
   "초록 눈": { color: "#43A047", shade: "base", tool: "pencil", width: 16, feedback: "초록 연필을 골랐어요. 눈 안쪽을 초록색으로 그려요." },
   "파란 눈": { color: "#1E88E5", shade: "base", tool: "pencil", width: 16, feedback: "파란 연필을 골랐어요. 눈 안쪽을 파란색으로 그려요." },
@@ -84,22 +76,17 @@ const COLOR_NAMES: Record<string, string> = {
   "#7E57C2": "연보라",
   "#EC407A": "진한 분홍",
 };
-/* 시안의 세로 도구 레일은 이모지 대신 실제 도구 사진을 56×22 슬롯에 놓는다.
- * 경로와 srcSet은 public/drawing-tools/manifest.json의 계약과 같다. */
-const TOOL_PHOTOS: Record<string, { label: string; src: string; srcSet: string }> = {
-  pencil: { label: "연필", src: "/drawing-tools/pencil.png", srcSet: "/drawing-tools/pencil.png 1x, /drawing-tools/pencil@2x.png 2x, /drawing-tools/pencil@3x.png 3x" },
-  crayon: { label: "크레용", src: "/drawing-tools/crayon.png", srcSet: "/drawing-tools/crayon.png 1x, /drawing-tools/crayon@2x.png 2x, /drawing-tools/crayon@3x.png 3x" },
-  marker: { label: "마커", src: "/drawing-tools/marker.png", srcSet: "/drawing-tools/marker.png 1x, /drawing-tools/marker@2x.png 2x, /drawing-tools/marker@3x.png 3x" },
-  watercolor: { label: "수채붓", src: "/drawing-tools/watercolor.png", srcSet: "/drawing-tools/watercolor.png 1x, /drawing-tools/watercolor@2x.png 2x, /drawing-tools/watercolor@3x.png 3x" },
-};
+/* 도구 막대의 세워진 도구(2026-09-14, public/drawing-tools/dock/). tint가 있는 붓은 끝·띠 마스크(<id>-tint.webp)를 지금 색으로 칠한다. */
+const DOCK_TOOLS: { id: "pencil" | "crayon" | "marker" | "watercolor" | "eraser"; label: string; tint: boolean }[] = [
+  { id: "pencil", label: "연필", tint: true },
+  { id: "crayon", label: "크레용", tint: true },
+  { id: "marker", label: "마커", tint: true },
+  { id: "watercolor", label: "수채붓", tint: true },
+  { id: "eraser", label: "지우개", tint: false },
+];
+/* 막대에 늘 보이는 색 수. 나머지는 무지개 버튼의 12색 창에 있다. */
+const DOCK_QUICK_COLORS = 8;
 
-const STROKE_WIDTH_LABELS: Record<StrokeWidth, string> = {
-  3: "아주 얇게",
-  8: "얇게",
-  16: "보통",
-  30: "굵게",
-  48: "아주 굵게",
-};
 const SHAPE_KINDS = [
   { kind: "line", icon: "─", label: "선" },
   { kind: "circle", icon: "○", label: "동그라미" },
@@ -113,12 +100,6 @@ const SHAPE_KINDS = [
   { kind: "cloud", icon: "☁", label: "구름" },
 ] as const;
 const BASIC_SHAPE_COUNT = 4;
-const QUICK_DRAW_TOPICS = [
-  { emoji: "🚀", label: "우주" },
-  { emoji: "🐶", label: "강아지" },
-  { emoji: "🌳", label: "마법 숲" },
-  { emoji: "🚲", label: "자전거" },
-];
 type ReflectionChoice = { emoji: string; label: string; value: string };
 
 function favoritePartChoices(lesson?: Lesson): ReflectionChoice[] {
@@ -173,13 +154,10 @@ type StudentCoaching = {
   uncertain: boolean;
   growthEvent: string;
 };
-type GuideStep = {
-  instruction: string;
-  openChoice: boolean;
-  choices: string[];
-  guideShape: "none" | "line" | "circle" | "triangle" | "rectangle";
-};
-type AiGuide = { topic: string; steps: GuideStep[] };
+/** 틀리는 해석자 — 몽그리가 먼저 짐작을 내놓고 아이가 고친다 (product-decisions 학습 과정 4항). */
+type StoryInterpretation = { guess: string; choices: CoachingChoice[] };
+/** 점선 시범이 쓰는 도형 종류. 수업 카탈로그가 몰던 값이라 단계 가이드 은퇴 뒤에도 남는다. */
+type GuideShape = "none" | "line" | "circle" | "triangle" | "rectangle";
 type SaveOptions = {
   complete?: boolean;
   reflection?: Record<string, string>;
@@ -267,7 +245,7 @@ function sampleCurve(points: [[number, number], [number, number], [number, numbe
   return trace;
 }
 
-function guideTraces(lesson: Lesson | undefined, lessonStep = 0, aiShape: GuideStep["guideShape"] = "none", guideVariant = 0) {
+function guideTraces(lesson: Lesson | undefined, lessonStep = 0, aiShape: GuideShape = "none", guideVariant = 0) {
   const traces: GuideTrace[] = [];
   const lessonMarks = lesson ? guideMarksForVariant(lesson, guideVariant) : [];
   for (const mark of lessonMarks.filter((item) => item.step === lessonStep + 1)) {
@@ -465,6 +443,10 @@ const OPS_WARN_THRESHOLD = MAX_DOCUMENT_OPS - 200;
 const DOCUMENT_BYTES_WARN = MAX_DOCUMENT_BYTES - 100_000;
 const AUTOSAVE_DEBOUNCE_MS = 1500;
 const AUTOSAVE_MAX_WAIT_MS = 6000;
+// 선생님이 보고 있는 동안(2026-09-14 사용자 결정): 선생님 실시간 보기가 덜 늦도록 짧게 저장한다.
+// 보지 않을 때는 위 값 그대로라 평소 저장 요청은 늘지 않는다.
+const WATCHED_AUTOSAVE_DEBOUNCE_MS = 500;
+const WATCHED_AUTOSAVE_MAX_WAIT_MS = 2000;
 
 function documentTooLarge(document: DrawDocument) {
   // 한 획도 더 담을 수 없으면 이미 가득 찬 것이다. 여유를 남기지 않으면 pointerDown이
@@ -492,6 +474,7 @@ export function DrawingStudio() {
   const search = useSearchParams();
   const requestedLesson = useMemo(() => lessonBySlug(search.get("lesson") ?? ""), [search]);
   const [artwork, setArtwork] = useState<ArtworkPayload | null>(null);
+  // 지난 회차 서랍(Story 3.1) — 같은 아크의 다른 회차 그림. 보기 전용이며 도화지를 딤 처리하지 않는다.
   const [documentState, setDocumentState] = useState<DrawDocument>(emptyDocument());
   const lesson = useMemo(() => (params.id === "new" ? requestedLesson : lessonBySlug(artwork?.lessonSlug)), [artwork?.lessonSlug, params.id, requestedLesson]);
   const reflectionPartChoices = useMemo(() => favoritePartChoices(lesson), [lesson]);
@@ -501,11 +484,14 @@ export function DrawingStudio() {
   // 아이가 고른 그리기 굵기가 말없이 리셋된다.
   const [drawWidth, setDrawWidth] = useState<StrokeWidth>(16);
   const [eraserWidth, setEraserWidth] = useState<StrokeWidth>(48);
-  const [colorsExpanded, setColorsExpanded] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   // 시안의 좁은 세로 레일에는 브러시·지우개만 남기고 나머지 도구는 더보기 시트로 접는다.
   const [toolSheetOpen, setToolSheetOpen] = useState(false);
   // 선택된 펜을 다시 누르면 그 펜 왼쪽에 굵기 슬라이더가 열린다 (2026-08-30 결정).
   const [widthSliderOpen, setWidthSliderOpen] = useState(false);
+  const [dockOpen, setDockOpen] = useState(true);
+  const dockSwipeRef = useRef<number | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [guideCollapsed, setGuideCollapsed] = useState(false);
   const [shapeKind, setShapeKind] = useState<ShapeKind>("line");
   const [shapeFilled, setShapeFilled] = useState(false);
@@ -544,10 +530,23 @@ export function DrawingStudio() {
   const [completionError, setCompletionError] = useState("");
   const [favoritePart, setFavoritePart] = useState("");
   const [favoriteReason, setFavoriteReason] = useState("");
+  // 틀리는 해석자. 몽그리가 쉬고 있어도 완성은 그대로 되어야 하므로 전부 선택 항목이다.
+  const [interpretation, setInterpretation] = useState<StoryInterpretation | null>(null);
+  const [interpretLoading, setInterpretLoading] = useState(false);
+  const [storyText, setStoryText] = useState("");
   // 선생님 말씀 배너는 고정 오버레이라 닫을 수 없으면 밑의 버튼을 영영 가린다.
   // 닫은 메시지 id를 기억하고, 새 메시지가 오면 다시 보여 준다.
   const [teacherMessages, setTeacherMessages] = useState<StudentTeacherMessage[]>([]);
   const [teacherViewing, setTeacherViewing] = useState(false);
+  // 선생님 표시(아이 원본과 따로 된 층)와 손들기(2026-09-14). 표시는 작품 ops에 넣지 않는다.
+  const [teacherMark, setTeacherMark] = useState<{ id: string; artworkId: string; strokes: MarkStroke[]; note: string } | null>(null);
+  const [handRaised, setHandRaised] = useState(false);
+  const [handBusy, setHandBusy] = useState(false);
+  const markRef = useRef<HTMLCanvasElement>(null);
+  const answeredMarkIds = useRef(new Set<string>());
+  const pollFastRef = useRef(false);
+  // 자동 저장 간격만 바꾸면 되므로 ref로 읽는다. 저장 효과의 의존성에 넣으면 보기 시작·끝마다 바뀐 것 없는 저장이 한 번 더 나간다.
+  const teacherViewingRef = useRef(false);
   const [conflictRevision, setConflictRevision] = useState<number | null>(null);
   const [conflictDraft, setConflictDraft] = useState<QueuedArtworkDraft | null>(null);
   const [grimiOpen, setGrimiOpen] = useState(false);
@@ -558,16 +557,11 @@ export function DrawingStudio() {
   const [grimiCollapsed, setGrimiCollapsed] = useState(false);
   // 도구로 이동하는 플로팅 버튼이 정작 도구 패널·몽그리 시트 위까지 떠서
   // 320px 세로에서 전체 지우기·탈출 버튼을 가렸다. 도구가 이미 보이면 숨긴다.
-  const [toolPanelInView, setToolPanelInView] = useState(false);
   const [coaching, setCoaching] = useState<(StudentCoaching & { eventId: string }) | null>(null);
   const [answer, setAnswer] = useState("");
   const [answerLabel, setAnswerLabel] = useState("");
   const [answerSaved, setAnswerSaved] = useState(false);
-  const [guideTopic, setGuideTopic] = useState("");
-  const [aiGuide, setAiGuide] = useState<(AiGuide & { eventId: string }) | null>(null);
-  const [aiGuideStep, setAiGuideStep] = useState(0);
   const [childChoice, setChildChoice] = useState("");
-  const [timelapseOpen, setTimelapseOpen] = useState(false);
   const [runSerial] = useState(createSerialTaskQueue);
   const [saveBranchId] = useState(() => `branch_${crypto.randomUUID().replaceAll("-", "")}`);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -577,7 +571,9 @@ export function DrawingStudio() {
   const activePoints = useRef(new Map<number, Array<{ x: number; y: number; pressure: number }>>());
   const guideTraceLocksRef = useRef(new Map<number, { traceIndex: number; pointIndex: number }>());
   const wrapRef = useRef<HTMLDivElement>(null);
-  const toolPanelRef = useRef<HTMLElement>(null);
+  // 틀(도화지가 보이는 자리)과 그 틀을 빈틈 없이 덮는 1배 종이 크기. 확대·이동 계산이 함께 쓴다.
+  const [frame, setFrame] = useState({ width: 0, height: 0 });
+  const viewBoxRef = useRef<[number, number, number, number]>([1, 1, 1, 1]);
   const canvasZoneRef = useRef<HTMLElement>(null);
   const viewRef = useRef<CanvasView>(IDENTITY_VIEW);
   const penModeRef = useRef(true);
@@ -710,6 +706,11 @@ export function DrawingStudio() {
       currentStepRef.current = loadedStep;
       documentStateRef.current = loadedDocument;
       setArtwork({ ...data.artwork, currentStep: loadedStep });
+      // 자동 몽그리 시계는 도화지를 열 때 처음부터 센다.
+      openedAtRef.current = Date.now();
+      lastStrokeAtRef.current = Date.now();
+      autoGrimiCountRef.current = 0;
+      lastAutoGrimiAtRef.current = 0;
       setDocumentState(loadedDocument);
       resetDocumentHistory();
       setEditVersion(0);
@@ -730,17 +731,6 @@ export function DrawingStudio() {
     createOrLoad().catch((cause) => setSaveState(cause instanceof Error ? cause.message : "불러오지 못했어요"));
   }, [createOrLoad]);
   useEffect(() => {
-    // 로딩 분기(if (!artwork) return ...)가 지나간 뒤에야 tool-panel이 렌더되므로
-    // artwork가 준비된 뒤에 관찰을 시작해야 한다. mount 시점에는 ref가 비어 있다.
-    const panel = toolPanelRef.current;
-    if (!panel || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver((entries) => {
-      setToolPanelInView(entries.some((entry) => entry.isIntersecting));
-    }, { threshold: 0.2 });
-    observer.observe(panel);
-    return () => observer.disconnect();
-  }, [artwork]);
-  useEffect(() => {
     documentStateRef.current = documentState;
     if (canvasRef.current) renderDocument(canvasRef.current, documentState);
   }, [documentState]);
@@ -750,19 +740,38 @@ export function DrawingStudio() {
   }, [artwork]);
   // 편집 표시는 effect가 아니라 편집이 일어나는 즉시(markEdited) 동기로 올린다.
   // effect는 저장 응답보다 늦게 돌 수 있어 미저장 표시를 놓친다.
+  /* 자동 몽그리(2026-09-12 사용자 결정). 종전 원칙은 "아이가 부를 때만"이었지만,
+   * 아이가 버튼을 먼저 찾는 일이 드물어 기능이 없는 것과 같았다. 그래서 몽그리가 먼저 말을 건다.
+   * 대신 그리는 것을 막지 않는다 — 옆 패널로 열리고, 아이가 다시 그리기 시작하면 스스로 접힌다.
+   * 뜨는 때와 뜨지 않는 때는 AUTO_GRIMI가 정본이다. */
+  const AUTO_GRIMI = {
+    minOps: 8,            // 도화지가 비었으면 확장할 것이 없다 — 무엇을 그릴지는 선생님 몫
+    settleMs: 120_000,    // 자리 잡기 전에 말 걸지 않는다
+    idleMs: 75_000,       // 손이 멈춘 뒤
+    afterManualMs: 30_000,// 직접 부른 직후는 건너뛴다
+    gapMs: 300_000,       // 자동끼리 최소 간격
+    maxPerArtwork: 2,
+    tickMs: 5_000,
+  } as const;
+  const lastStrokeAtRef = useRef(0);
+  const openedAtRef = useRef(0);
+  const lastManualGrimiAtRef = useRef(0);
+  const lastAutoGrimiAtRef = useRef(0);
+  const autoGrimiCountRef = useRef(0);
+  const [autoGrimi, setAutoGrimi] = useState(false);
   const markEdited = useCallback(() => {
     editSeqRef.current += 1;
     unsavedRef.current = true;
+    lastStrokeAtRef.current = Date.now();
   }, []);
-  const aiGuideShape = aiGuide?.steps[aiGuideStep]?.guideShape ?? "none";
-  const currentGuideTraces = useMemo(() => guideTraces(aiGuide ? undefined : lesson, artwork?.currentStep ?? 0, aiGuideShape, artwork?.guideVariant ?? 0), [aiGuide, aiGuideShape, artwork?.currentStep, artwork?.guideVariant, lesson]);
+  const currentGuideTraces = useMemo(() => guideTraces(lesson, artwork?.currentStep ?? 0, "none", artwork?.guideVariant ?? 0), [artwork?.currentStep, artwork?.guideVariant, lesson]);
   const currentLessonActivity = lesson?.steps[artwork?.currentStep ?? 0]?.activity;
   const lessonGuideAvailable = currentGuideTraces.length > 0;
   const currentLessonStepStatus = useMemo(
     () => lessonStepActionStatus(documentState.ops, lessonStepProgress, currentGuideTraces.length, currentLessonActivity),
     [currentGuideTraces.length, currentLessonActivity, documentState.ops, lessonStepProgress],
   );
-  const guideSourceKey = aiGuide ? `ai:${aiGuide.eventId}:${aiGuideStep}` : lesson ? `lesson:${lesson.slug}:${artwork?.guideVariant ?? 0}:${artwork?.currentStep ?? 0}` : "none";
+  const guideSourceKey = lesson ? `lesson:${lesson.slug}:${artwork?.guideVariant ?? 0}:${artwork?.currentStep ?? 0}` : "none";
   const lessonArtworkId = artwork?.id;
   const lessonArtworkStep = artwork?.currentStep;
 
@@ -798,13 +807,13 @@ export function DrawingStudio() {
     if (currentLessonStepStatus.ready && lessonStepPrompt === "step-action") setLessonStepPrompt(null);
   }, [currentLessonStepStatus.ready, lessonStepPrompt]);
   const markCurrentGuideSeen = useCallback(() => {
-    if (lesson?.stage !== 1 || aiGuide || guideSourceKey === "none") return;
+    if (lesson?.stage !== 1 || guideSourceKey === "none") return;
     const profile = activeProfile();
     if (!profile) return;
     try {
       localStorage.setItem(`wiggle:guide-demo:v1:${profile.studentId}:${guideSourceKey}`, "seen");
     } catch {}
-  }, [aiGuide, guideSourceKey, lesson?.stage]);
+  }, [guideSourceKey, lesson?.stage]);
   const startGuideDemo = useCallback(() => {
     if (!lessonGuideAvailable) return;
     setGuidePracticeTried(false);
@@ -876,7 +885,7 @@ export function DrawingStudio() {
     } catch {}
     setGuideChoiceOpen(choice !== "help" && choice !== "solo");
     setGuidePhase(choice === "help" ? "practice" : "independent");
-  }, [aiGuide, artwork?.currentStep, artwork?.id, currentLessonActivity, currentLessonStepStatus.actionCount, guideSourceKey, lessonGuideAvailable]);
+  }, [artwork?.currentStep, artwork?.id, currentLessonActivity, currentLessonStepStatus.actionCount, guideSourceKey, lessonGuideAvailable]);
 
   useEffect(() => {
     if (guideAnimationRef.current !== null) cancelAnimationFrame(guideAnimationRef.current);
@@ -923,6 +932,36 @@ export function DrawingStudio() {
       guideAnimationRef.current = null;
     };
   }, [currentGuideTraces, guideDemoRun, guidePhase, markCurrentGuideSeen]);
+  const visibleMark = teacherMark && teacherMark.artworkId === artwork?.id ? teacherMark : null;
+  const markDocHeight = documentHeight(documentState);
+  useEffect(() => {
+    const canvas = markRef.current;
+    if (!canvas) return;
+    if (canvas.width !== DOCUMENT_SIZE) canvas.width = DOCUMENT_SIZE;
+    if (canvas.height !== markDocHeight) canvas.height = markDocHeight;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (visibleMark) drawMarkStrokes(context, visibleMark.strokes, DOCUMENT_SIZE, markDocHeight);
+  }, [visibleMark, markDocHeight]);
+  async function answerTeacherMark(answer: MarkAnswer) {
+    if (!visibleMark) return;
+    answeredMarkIds.current.add(visibleMark.id);
+    const markId = visibleMark.id;
+    setTeacherMark(null);
+    await studentFetch("/api/student", { method: "POST", body: JSON.stringify({ action: "answerMark", markId, answer }) }).catch(() => undefined);
+  }
+  async function toggleHand() {
+    if (handBusy) return;
+    const next = !handRaised;
+    setHandBusy(true); setHandRaised(next);
+    try {
+      const response = await studentFetch("/api/student", { method: "POST", body: JSON.stringify({ action: "raiseHand", raised: next }) });
+      if (!response.ok) setHandRaised(!next);
+      else pollFastRef.current = next || pollFastRef.current;
+    } catch { setHandRaised(!next); }
+    finally { setHandBusy(false); }
+  }
   useEffect(() => {
     let polling = false;
     const poll = async () => {
@@ -933,9 +972,18 @@ export function DrawingStudio() {
         const data = (await response.json()) as {
           messages?: StudentTeacherMessage[];
           teacherViewing?: boolean;
+          teacherMark?: { id: string; artworkId: string; strokes: MarkStroke[]; note: string } | null;
+          handRaised?: boolean;
         };
         setTeacherMessages(data.messages ?? []);
         setTeacherViewing(Boolean(data.teacherViewing));
+        teacherViewingRef.current = Boolean(data.teacherViewing);
+        // 방금 답한 표시가 늦게 온 응답으로 다시 뜨지 않게 거른다.
+        const mark = data.teacherMark && !answeredMarkIds.current.has(data.teacherMark.id) ? data.teacherMark : null;
+        setTeacherMark(mark);
+        setHandRaised(Boolean(data.handRaised));
+        // 선생님이 보고 있거나 손을 든 동안은 표시가 빨리 닿도록 3초마다, 평소에는 8초마다 확인한다.
+        pollFastRef.current = Boolean(data.teacherViewing || data.handRaised || mark);
       } catch {
         /* 다음 주기에 다시 확인한다 */
       } finally {
@@ -943,7 +991,11 @@ export function DrawingStudio() {
       }
     };
     void poll();
-    const timer = window.setInterval(poll, 8000);
+    let tick = 0;
+    const timer = window.setInterval(() => {
+      tick += 1;
+      if (pollFastRef.current ? tick % 3 === 0 : tick % 8 === 0) void poll();
+    }, 1000);
     const visible = () => {
       if (document.visibilityState === "visible") void poll();
     };
@@ -981,7 +1033,6 @@ export function DrawingStudio() {
     if (!setup) return;
     setStudioTool(setup.tool);
     lastBrushRef.current = setup.tool;
-    if (setup.shade === "light") setColorsExpanded(true);
     if (setup.color) setColor(setup.color);
     drawWidthRef.current = setup.width;
     setDrawWidth(setup.width);
@@ -1174,7 +1225,10 @@ export function DrawingStudio() {
     // 최초 미저장 편집 시각부터 최대 대기 시간을 두어 상한을 강제한다.
     if (!pendingSinceRef.current) pendingSinceRef.current = Date.now();
     const waited = Date.now() - pendingSinceRef.current;
-    const delay = Math.max(0, Math.min(AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_MAX_WAIT_MS - waited));
+    const watched = teacherViewingRef.current;
+    const debounce = watched ? WATCHED_AUTOSAVE_DEBOUNCE_MS : AUTOSAVE_DEBOUNCE_MS;
+    const maxWait = watched ? WATCHED_AUTOSAVE_MAX_WAIT_MS : AUTOSAVE_MAX_WAIT_MS;
+    const delay = Math.max(0, Math.min(debounce, maxWait - waited));
     saveTimer.current = window.setTimeout(() => {
       pendingSinceRef.current = 0;
       void save(documentState, { currentStep: artwork.currentStep });
@@ -1223,8 +1277,14 @@ export function DrawingStudio() {
   const textObjects = useMemo(() => activeTextObjects(documentState.ops), [documentState.ops]);
   const selectedText = useMemo(() => textObjects.find((op) => op.textObjectId === selectedTextObjectId) ?? null, [selectedTextObjectId, textObjects]);
   const reflectionDialogRef = useRef<HTMLDivElement>(null);
+  // 소감을 닫으면 몽그리 짐작도 함께 접는다. 남겨 두면 다시 열었을 때
+  // 지금 그림과 맞지 않는 옛 짐작이 그대로 보인다.
   const closeReflection = useCallback(() => {
+    // 저장 중에는 아무것도 건드리지 않는다. 여기서 초기화하면 저장이 도는 동안
+    // 아이가 쓴 이야기 한 줄이 화면에서 사라진다.
     if (completionState === "saving") return;
+    setInterpretation(null);
+    setStoryText("");
     setReflectionOpen(false);
   }, [completionState]);
   useModalDialog(reflectionDialogRef, closeReflection, reflectionOpen);
@@ -1428,11 +1488,19 @@ export function DrawingStudio() {
       setSaveState("빈 곳에 글씨를 놓지 못했어요. 종이의 저장 공간을 확인해 주세요");
     }
   }
+  function pickColor(value: string) {
+    setColor(value);
+    if (studioTool === "text" && selectedText) updateTextObject(selectedText, { color: value });
+    if (studioTool === "text" && pendingText) setPendingText({ ...pendingText, color: value });
+    if (studioTool === "eraser") chooseStudioTool(lastBrushRef.current);
+  }
   function chooseStudioTool(next: StudioTool) {
-    // 시안: 이미 고른 펜을 다시 누르면 그 펜 왼쪽에 굵기 슬라이더가 펼쳐지고,
+    // 시안: 이미 고른 도구를 다시 누르면 그 위에 굵기 5단이 뜨고,
     // 다른 도구를 누르면 닫힌다. 화면 바깥 누름은 아래 pointerdown 감시가 닫는다.
-    setWidthSliderOpen(next === studioTool);
-    if (next !== studioTool) setToolSheetOpen(false);
+    setWidthSliderOpen(next === studioTool && !widthSliderOpen);
+    setPaletteOpen(false);
+    // 도형·글씨는 더보기 안에서 모양·글씨 옵션을 이어서 고르므로 창을 열어 둔다. 붓·지우개·채우기는 닫는다.
+    if (next !== studioTool && next !== "shape" && next !== "text") setToolSheetOpen(false);
     setStudioTool(next);
     if (next !== "eraser") hideEraserFootprint();
     if (next === "pencil" || next === "crayon" || next === "marker" || next === "watercolor") lastBrushRef.current = next;
@@ -1444,17 +1512,19 @@ export function DrawingStudio() {
     }
   }
   useEffect(() => {
-    if (!widthSliderOpen && !toolSheetOpen) return;
+    if (!widthSliderOpen && !toolSheetOpen && !paletteOpen) return;
     function closeOnOutside(event: PointerEvent) {
       const target = event.target as Element | null;
-      if (target?.closest(".tool-width-popover, .brush-group, .tool-sheet, .tool-more-button")) return;
+      if (target?.closest(".dock-tools, .dock-sheet, .dock-more, .dock-colors")) return;
       setWidthSliderOpen(false);
       setToolSheetOpen(false);
+      setPaletteOpen(false);
     }
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
       setWidthSliderOpen(false);
       setToolSheetOpen(false);
+      setPaletteOpen(false);
     }
     window.addEventListener("pointerdown", closeOnOutside, true);
     window.addEventListener("keydown", closeOnEscape);
@@ -1462,7 +1532,7 @@ export function DrawingStudio() {
       window.removeEventListener("pointerdown", closeOnOutside, true);
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [widthSliderOpen, toolSheetOpen]);
+  }, [widthSliderOpen, toolSheetOpen, paletteOpen]);
 
   /* 시안의 도화지는 화면을 가득 채운다. 아직 아무것도 그리지 않은 새 작품이면 화면 비율에
    * 맞춰 도화지 세로를 정한다. 한 획이라도 그은 뒤에는 절대 바꾸지 않는다 — 좌표가 0~1로
@@ -1472,16 +1542,33 @@ export function DrawingStudio() {
     if (!zone) return;
     function fitPaperToScreen() {
       const current = documentStateRef.current;
-      if (!current || current.ops.length) return;
+      if (!current) return;
       const style = window.getComputedStyle(zone!);
       const width = zone!.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
       const height = zone!.clientHeight - Number.parseFloat(style.paddingTop) - Number.parseFloat(style.paddingBottom);
       if (!(width >= 1) || !(height >= 1)) return;
       const next = clampDocumentHeight(DOCUMENT_SIZE * height / width);
-      if (next === documentHeight(current)) return;
-      const fitted = { ...current, height: next };
-      documentStateRef.current = fitted;
-      setDocumentState(fitted);
+      const from = documentHeight(current);
+      if (next === from) return;
+      if (!current.ops.length) {
+        const fitted = { ...current, height: next };
+        documentStateRef.current = fitted;
+        setDocumentState(fitted);
+        return;
+      }
+      /* 이미 그린 그림(2026-09-15 사용자: "도화지 크기는 화면을 꽉채우지 안 잖아"): 화면이 도화지보다 세로로 길면
+       * 그림을 가운데 둔 채 위아래로 종이를 덧대 채운다. 화면이 더 넓은 쪽(기기를 눕힘)은 그림을 줄이거나 잘라야 해
+       * 가운데 놓아 둔다. 긋는 중·완성·저장 충돌 중에는 좌표를 바꾸지 않는다. */
+      if (next < from || activePoints.current.size || artworkRef.current?.status === "complete" || conflictDraftRef.current) return;
+      const grown = { ...current, height: next, ops: growDrawOps(current.ops, from, next) };
+      redoRef.current = redoRef.current.map((group) => growDrawOps(group, from, next));
+      if (clearedOpsRef.current) clearedOpsRef.current = growDrawOps(clearedOpsRef.current, from, next);
+      editSeqRef.current += 1;
+      unsavedRef.current = true;
+      documentStateRef.current = grown;
+      setRedo(redoRef.current);
+      setDocumentState(grown);
+      setEditVersion((value) => value + 1);
     }
     fitPaperToScreen();
     const observer = new ResizeObserver(fitPaperToScreen);
@@ -1489,7 +1576,51 @@ export function DrawingStudio() {
     return () => observer.disconnect();
   }, [artwork?.id, documentState.ops.length]);
 
-  function chooseWidth(value: StrokeWidth) {
+  /* 틀 크기를 재고, 틀이나 종이 크기가 바뀌면 지금 확대·이동을 새 크기 안에 다시 가둔다. */
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const measure = () => setFrame((current) => (current.width === wrap.clientWidth && current.height === wrap.clientHeight ? current : { width: wrap.clientWidth, height: wrap.clientHeight }));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(wrap);
+    return () => observer.disconnect();
+  }, [artwork?.id]);
+  const paper = coverPaper(frame.width, frame.height, documentHeight(documentState));
+  viewBoxRef.current = [frame.width || 1, frame.height || 1, paper.width || 1, paper.height || 1];
+  // 틀이나 종이 크기가 바뀌면(화면 회전·도화지 늘림) 1배로 돌아가 종이 가운데를 보여 준다.
+  useEffect(() => {
+    const next = fitView();
+    if (next.x === viewRef.current.x && next.y === viewRef.current.y && next.scale === viewRef.current.scale) return;
+    viewRef.current = next;
+    setView(next);
+  }, [frame.width, frame.height, paper.width, paper.height]);
+
+  /* 트랙패드·마우스: 두 손가락 벌리기(ctrl+휠)는 커서 자리를 붙잡고 확대·축소, 확대했거나 종이가 틀보다 길면 스크롤은 도화지 옮기기.
+   * React onWheel은 passive라 브라우저 페이지 확대를 막지 못해 직접 붙인다. */
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    function onWheel(event: WheelEvent) {
+      const rect = wrap!.getBoundingClientRect();
+      const current = viewRef.current;
+      const unit = event.deltaMode === 1 ? 16 : 1;
+      let next: CanvasView;
+      const box = viewBoxRef.current;
+      const overflows = box[2] > box[0] + 1 || box[3] > box[1] + 1;
+      if (event.ctrlKey || event.metaKey) next = zoomView(current, current.scale * Math.exp(-event.deltaY * unit * 0.01), { x: event.clientX - rect.left, y: event.clientY - rect.top }, ...box);
+      else if (current.scale > 1.001 || overflows) next = clampView({ ...current, x: current.x - event.deltaX * unit, y: current.y - event.deltaY * unit }, ...box);
+      else return;
+      event.preventDefault();
+      viewRef.current = next;
+      setView(next);
+    }
+    wrap.addEventListener("wheel", onWheel, { passive: false });
+    return () => wrap.removeEventListener("wheel", onWheel);
+  }, [artwork?.id]);
+
+  function chooseWidth(next: number) {
+    const value = Math.min(STROKE_WIDTH_MAX, Math.max(STROKE_WIDTH_MIN, Math.round(next)));
     if (studioTool === "eraser") setEraserWidth(value);
     else {
       drawWidthRef.current = value;
@@ -1506,9 +1637,24 @@ export function DrawingStudio() {
     penModeRef.current = false;
     setInputMode("finger");
   }
+  // 1배. 종이가 틀보다 길면 가운데가 보이게 둔다(그림은 늘릴 때 가운데에 놓인다).
+  function fitView() {
+    const [frameWidth, frameHeight, paperWidth, paperHeight] = viewBoxRef.current;
+    return clampView({ scale: 1, x: (frameWidth - paperWidth) / 2, y: (frameHeight - paperHeight) / 2 }, frameWidth, frameHeight, paperWidth, paperHeight);
+  }
   function resetViewToFit() {
-    viewRef.current = IDENTITY_VIEW;
-    setView(IDENTITY_VIEW);
+    const next = fitView();
+    viewRef.current = next;
+    setView(next);
+  }
+  // 확대·축소 단추는 도화지 가운데를 붙잡고 1.5배씩 움직인다. 1배(화면 맞춤) 아래로는 줄이지 않는다.
+  function zoomBy(factor: number) {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const rect = wrap.getBoundingClientRect();
+    const next = zoomView(viewRef.current, viewRef.current.scale * factor, { x: rect.width / 2, y: rect.height / 2 }, ...viewBoxRef.current);
+    viewRef.current = next;
+    setView(next);
   }
   function newOperationId() {
     return crypto.randomUUID().replaceAll("-", "");
@@ -1734,6 +1880,9 @@ export function DrawingStudio() {
     renderDocument(event.currentTarget, documentStateRef.current);
   }
   function pointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
+    lastStrokeAtRef.current = Date.now();
+    // 몽그리가 먼저 띄운 카드는 아이가 다시 그리기 시작하면 스스로 접힌다 — 그리기를 막지 않는다.
+    if (autoGrimi && grimiOpen && !grimiCollapsed) setGrimiCollapsed(true);
     if (event.pointerType === "pen") enablePenMode();
     // 펜 모드: 손 터치는 절대 편집하지 않는다(손바닥 안전). 한 손가락은 아무 일도 하지 않고,
     // 두 손가락만 확대/축소한다. 한 손가락 두 번 탭은 화면 맞춤으로만 쓴다.
@@ -1846,7 +1995,7 @@ export function DrawingStudio() {
             x: touch.x - rect.left,
             y: touch.y - rect.top,
           });
-          const next = pinchView(viewRef.current, [local(previous), local(other[1])], [local(current), local(other[1])], rect.width);
+          const next = pinchView(viewRef.current, [local(previous), local(other[1])], [local(current), local(other[1])], ...viewBoxRef.current);
           viewRef.current = next;
           setView(next);
         }
@@ -2131,7 +2280,7 @@ export function DrawingStudio() {
           favoritePart,
           favoriteReason,
           spokenDescription: `${favoritePart}을(를) 그렸어요.`,
-          storyText: "",
+          storyText,
         },
       });
       if (ok) {
@@ -2221,8 +2370,38 @@ export function DrawingStudio() {
     location.replace(draft.complete ? "/student/archive" : `/student/draw/${createdData.artwork.id}`);
   }
 
-  async function askGrimi() {
+  /* 조건이 맞는 순간에만 몽그리가 먼저 말을 건다. 획을 긋는 도중에는 절대 뜨지 않는다 —
+   * 마지막 획에서 idleMs가 지나야 하고, 완성·소감·저장 충돌·선생님 보기 중에도 뜨지 않는다. */
+  const autoGrimiReady = useCallback(() => {
+    const now = Date.now();
+    if (!artwork || artwork.status === "complete") return false;
+    if (grimiLoading || grimiOpen || reflectionOpen || interpretLoading) return false;
+    if (conflictDraftRef.current || teacherViewing) return false;
+    if (documentStateRef.current.ops.length < AUTO_GRIMI.minOps) return false;
+    if (autoGrimiCountRef.current >= AUTO_GRIMI.maxPerArtwork) return false;
+    if (now - openedAtRef.current < AUTO_GRIMI.settleMs) return false;
+    if (now - lastStrokeAtRef.current < AUTO_GRIMI.idleMs) return false;
+    if (now - lastManualGrimiAtRef.current < AUTO_GRIMI.afterManualMs) return false;
+    if (lastAutoGrimiAtRef.current && now - lastAutoGrimiAtRef.current < AUTO_GRIMI.gapMs) return false;
+    return true;
+  }, [AUTO_GRIMI.afterManualMs, AUTO_GRIMI.gapMs, AUTO_GRIMI.idleMs, AUTO_GRIMI.maxPerArtwork, AUTO_GRIMI.minOps, AUTO_GRIMI.settleMs, artwork, grimiLoading, grimiOpen, interpretLoading, reflectionOpen, teacherViewing]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      if (autoGrimiReady()) void askGrimi({ auto: true });
+    }, AUTO_GRIMI.tickMs);
+    return () => window.clearInterval(timer);
+  // askGrimi는 렌더마다 새로 만들어지지만 조건 판정은 autoGrimiReady가 모두 한다.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoGrimiReady, AUTO_GRIMI.tickMs]);
+
+  async function askGrimi(options: { auto?: boolean } = {}) {
     if (!artwork || !canvasRef.current || grimiLoading) return;
+    const auto = options.auto === true;
+    if (auto) { autoGrimiCountRef.current += 1; lastAutoGrimiAtRef.current = Date.now(); }
+    else lastManualGrimiAtRef.current = Date.now();
+    setAutoGrimi(auto);
     setGrimiOpen(true);
     setGrimiCollapsed(false);
     setGrimiLoading(true);
@@ -2231,7 +2410,6 @@ export function DrawingStudio() {
     setAnswer("");
     setAnswerLabel("");
     setAnswerSaved(false);
-    setAiGuide(null);
     setGuidePhase("independent");
     window.clearTimeout(saveTimer.current);
     // 선행 저장은 반드시 try 안에서 기다린다. 밖에서 던지면 grimiLoading이 영구히 잠긴다.
@@ -2251,6 +2429,7 @@ export function DrawingStudio() {
           document: documentStateRef.current,
           imageDataUrl: imageData(canvasRef.current, 1024),
           childChoice,
+          openedBy: auto ? "mongri" : "child",
         }),
       });
       const data = (await response.json()) as {
@@ -2262,49 +2441,6 @@ export function DrawingStudio() {
       setCoaching({ ...data.coaching, eventId: data.eventId });
     } catch (cause) {
       setGrimiError(cause instanceof Error ? cause.message : "몽그리를 부르지 못했어요.");
-    } finally {
-      setGrimiLoading(false);
-    }
-  }
-
-  async function requestAiGuide() {
-    if (!artwork || !canvasRef.current || guideTopic.trim().length < 2 || grimiLoading) return;
-    setGrimiLoading(true);
-    setGrimiError("");
-    setCoaching(null);
-    setAnswer("");
-    setGuidePhase("independent");
-    window.clearTimeout(saveTimer.current);
-    try {
-      const saved = await save();
-      if (!saved) {
-        setGrimiError("그림을 먼저 저장한 뒤 다시 해 줘.");
-        return;
-      }
-      const response = await studentFetch("/api/ai/coaching", {
-        method: "POST",
-        body: JSON.stringify({
-          action: "guide",
-          requestId: coachingRequestId(),
-          artworkId: artwork.id,
-          expectedRevision: revisionRef.current,
-          document: documentStateRef.current,
-          imageDataUrl: imageData(canvasRef.current, 1024),
-          requestedTopic: guideTopic,
-          childChoice,
-        }),
-      });
-      const data = (await response.json()) as {
-        error?: string;
-        eventId?: string;
-        guide?: AiGuide;
-      };
-      if (!response.ok || !data.eventId || !data.guide) throw new Error(data.error ?? "가이드를 만들지 못했어요.");
-      setAiGuide({ ...data.guide, eventId: data.eventId });
-      setAiGuideStep(0);
-      setGuidePhase("independent");
-    } catch (cause) {
-      setGrimiError(cause instanceof Error ? cause.message : "가이드를 만들지 못했어요.");
     } finally {
       setGrimiLoading(false);
     }
@@ -2339,22 +2475,6 @@ export function DrawingStudio() {
     } finally {
       setGrimiLoading(false);
     }
-  }
-
-  function chooseGuideStep(next: number) {
-    if (!aiGuide || conflictDraftRef.current) {
-      if (conflictDraftRef.current) setSaveState("먼저 보관한 그림을 새 사본으로 저장해 주세요");
-      return;
-    }
-    const bounded = Math.max(0, Math.min(aiGuide.steps.length - 1, next));
-    setAiGuideStep(bounded);
-    setGuidePhase("independent");
-    if (artwork?.currentStep !== bounded) {
-      currentStepRef.current = bounded;
-      markEdited();
-      setEditVersion((value) => value + 1);
-    }
-    setArtwork((value) => value && { ...value, currentStep: bounded });
   }
 
   function saveLessonStepProgress(next: LessonStepProgress) {
@@ -2408,11 +2528,34 @@ export function DrawingStudio() {
     setReflectionOpen(true);
   }
 
+  /**
+   * 틀리는 해석자 요청. 완성 흐름을 막지 않는다 — 실패하면 조용히 접고
+   * 소감 화면은 지금까지처럼 동작한다.
+   */
+  async function askInterpretation() {
+    if (!artwork || !canvasRef.current || interpretLoading) return;
+    setInterpretLoading(true);
+    setInterpretation(null);
+    try {
+      const response = await studentFetch("/api/ai/coaching", {
+        method: "POST",
+        body: JSON.stringify({ action: "interpret", artworkId: artwork.id, imageDataUrl: imageData(canvasRef.current, 1024) }),
+      });
+      const data = (await response.json()) as { interpretation?: StoryInterpretation };
+      if (response.ok && data.interpretation) setInterpretation(data.interpretation);
+    } catch {
+      // 몽그리 짐작은 있으면 좋은 것이고 없어도 완성에는 지장이 없다.
+    } finally {
+      setInterpretLoading(false);
+    }
+  }
+
   function requestArtworkCompletion() {
     if (!lesson) {
       setCompletionState("idle");
       setCompletionError("");
       setReflectionOpen(true);
+      void askInterpretation();
       return;
     }
     if (artwork && artwork.currentStep < lesson.steps.length - 1) {
@@ -2426,44 +2569,11 @@ export function DrawingStudio() {
     setGrimiOpen(false);
     setGrimiCollapsed(false);
     setCoaching(null);
-    setAiGuide(null);
     setGuidePhase("independent");
     setGrimiError("");
   }
 
-  async function finishGuide(outcome: "completed" | "free_exit") {
-    if (!aiGuide || !artwork || !canvasRef.current || grimiLoading || conflictDraftRef.current) return;
-    setGrimiLoading(true);
-    setGrimiError("");
-    try {
-      const response = await studentFetch("/api/ai/coaching", {
-        method: "POST",
-        body: JSON.stringify({
-          action: "finishGuide",
-          outcome,
-          artworkId: artwork.id,
-          eventId: aiGuide.eventId,
-          currentStep: aiGuideStep,
-          document: documentState,
-          imageDataUrl: imageData(canvasRef.current, 1024),
-        }),
-      });
-      const data = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(data.error ?? "가이드 과정을 남기지 못했어요.");
-      closeGrimiState();
-      void save(undefined, { currentStep: currentStepRef.current });
-    } catch (cause) {
-      setGrimiError(cause instanceof Error ? cause.message : "가이드 과정을 남기지 못했어요.");
-    } finally {
-      setGrimiLoading(false);
-    }
-  }
-
   function dismissGrimi() {
-    if (aiGuide) {
-      void finishGuide("free_exit");
-      return;
-    }
     if (coaching?.eventId && artwork)
       void studentFetch("/api/ai/coaching", {
         method: "POST",
@@ -2478,7 +2588,7 @@ export function DrawingStudio() {
 
   function guideControls() {
     if (!lessonGuideAvailable) return null;
-    if (lesson?.mode === "observe" && !aiGuide) {
+    if (lesson?.mode === "observe") {
       return (
         <div className="guide-actions observation-guide-actions" aria-label="관찰 그리기 점선 힌트">
           <button className="guide-toggle" type="button" aria-pressed={guidePhase === "practice"} disabled={Boolean(conflictDraft)} onClick={() => setGuidePhase((phase) => (phase === "practice" ? "independent" : "practice"))}>
@@ -2522,11 +2632,23 @@ export function DrawingStudio() {
         ? "점이나 선을 조금 더 그려 볼까?"
         : "점이나 선을 한 번 더 그려 볼까?";
   const selectedColor = studioTool === "text" && selectedText ? selectedText.color : pendingText?.color ?? color;
-  const visibleColors = colorsExpanded ? [...new Set([...PALETTE, ...MORE_PALETTE])] : PALETTE;
+  // 색 적용은 팔레트 원과 색 고르기 대화상자(onPick)에 같은 네 줄이 인라인으로 있다. 헬퍼로 빼면
+  // React Compiler가 이 컴포넌트 전체를 컴파일 대상으로 삼아 기존 performance.now() 호출을 오류로 잡는다.
+  const customColor = !PALETTE.includes(selectedColor);
+  /* 몽그리 표정(2026-09-12). 어떤 얼굴을 쓸지는 **UI 상태로만** 정한다 —
+   * AI가 쓴 문장에서 감정을 추측해 고르지 않는다(사용 제안서 2026-09-09).
+   * 우선순위: 오류 → 생각 중 → 접힌 제안 → 답을 고른 뒤 → 질문. */
+  const grimiFace = grimiError ? "reassuring"
+    : grimiLoading ? "thinking"
+    : grimiCollapsed && coaching ? "suggesting"
+    : coaching && answer ? "listening"
+    : coaching ? "curious"
+    : "listening";
+
   return (
-    <main className="studio">
+    <main className={`studio${dockOpen ? "" : " dock-collapsed"}`}>
       <header className="studio-header">
-        <a className="icon-button studio-back" href="/student" aria-label="그림 나가기">
+        <a className="icon-button studio-back" href="/student/archive" aria-label="내 그림으로 나가기">
           <ArrowLeftIcon />
         </a>
         <Logo compact />
@@ -2534,21 +2656,26 @@ export function DrawingStudio() {
           <b>{artwork.title}</b>
           <small className="studio-save-state">{saveState === "저장됨" && <CheckIcon size={14} />}{saveState}</small>
         </div>
-        {lesson && !aiGuide && (
+        {lesson && (
           <span className="step-count">
             {step + 1}/{lesson.steps.length}
           </span>
         )}
-        <button className="button ghost compact" onClick={() => setTimelapseOpen(true)}>
-          과정 보기
-        </button>
-        <button className="button grimi-button compact" disabled={grimiLoading || Boolean(conflictDraft)} onClick={askGrimi}>
-          <SparklesIcon size={18} />
-          <span className="grimi-button-label">몽그리 부르기</span>
-        </button>
-        <StudentMessageCenter messages={teacherMessages} floating compact />
-        <button className="button primary compact" disabled={Boolean(conflictDraft)} onClick={requestArtworkCompletion}>
-          완성
+        {/* 버튼 묶음(2026-09-14 사용자 결정, 시안 docs/design-assets/studio-header-actions/1-quiet-ghost.webp):
+            선생님·선생님 말씀은 조용한 선 아이콘+글자, 몽그리는 연노랑 도움 버튼, 완성만 진초록.
+            과정 보기는 2026-09-15 사용자 지시로 뺐다(가족 보기의 과정 재생은 그대로). 휴대폰 세로에서는 버튼이 둘째 줄로 내려가고 완성은 첫 줄에 남는다. */}
+        <div className="studio-actions">
+          <button type="button" className="studio-action is-helper" disabled={grimiLoading || Boolean(conflictDraft)} onClick={() => void askGrimi()}>
+            {grimiLoading ? <span className="studio-action-spinner" aria-hidden="true" /> : <img className="studio-action-mongri" src="/brand/mongri/listening.png" alt="" aria-hidden="true" width={28} height={28} />}
+            <span>몽그리 부르기</span>
+          </button>
+          <button type="button" className={`studio-action hand-raise-button${handRaised ? " is-raised" : ""}`} aria-pressed={handRaised} disabled={handBusy} onClick={() => void toggleHand()} aria-label={handRaised ? "선생님 부른 손 내리기" : "선생님 부르기"}>
+            <HandIcon size={22} /><span>{handRaised ? "손 내리기" : "선생님"}</span>
+          </button>
+          <StudentMessageCenter messages={teacherMessages} floating header />
+        </div>
+        <button type="button" className="studio-action is-primary studio-finish" disabled={Boolean(conflictDraft)} onClick={requestArtworkCompletion}>
+          <CheckIcon size={20} /><span>완성</span>
         </button>
       </header>
       {conflictDraft && (
@@ -2562,19 +2689,30 @@ export function DrawingStudio() {
           <button onClick={saveAsCopy}>새 사본으로 저장</button>
         </div>
       )}
-      {teacherViewing && (
+      {visibleMark && (
+        <div className="teacher-mark-card" role="alert">
+          <b><span aria-hidden="true">✏️</span> 선생님이 표시를 보냈어요</b>
+          {visibleMark.note && <p>{visibleMark.note}</p>}
+          <div className="teacher-mark-answers">
+            <button type="button" className="button primary" onClick={() => void answerTeacherMark("ok")}><span aria-hidden="true">👍</span> 알겠어요</button>
+            <button type="button" className="button secondary" onClick={() => void answerTeacherMark("unsure")}><span aria-hidden="true">🤔</span> 잘 모르겠어요</button>
+          </div>
+        </div>
+      )}
+      {teacherViewing && !visibleMark && (
         <div className="teacher-viewing" role="status">
           선생님이 지금 내 그림을 보고 있어요.
         </div>
       )}
-      <VoiceWhisperStatus />
       <div className={`studio-body ${grimiOpen || lesson ? "" : "without-step-panel"}${grimiOpen ? " grimi-open" : ""}${grimiOpen && grimiCollapsed ? " grimi-collapsed" : ""}${studioTool === "shape" || studioTool === "text" ? " tool-options-open" : ""}`}>
         {grimiOpen ? (
           <aside className={`grimi-panel${grimiCollapsed ? " collapsed" : ""}`} aria-live="polite">
             <div className="grimi-head">
               <div>
-                <span>✨</span>
+                <img className="grimi-face" src={`/brand/mongri/${grimiFace}.png`} alt="" aria-hidden="true" width={224} height={224} />
                 <b>몽그리</b>
+                {/* 아이가 부르지 않았는데 열린 경우, 누가 먼저 말을 걸었는지 알려 준다. */}
+                {autoGrimi && <small className="grimi-auto-tag">내가 먼저 말 걸었어</small>}
               </div>
               {coaching && !grimiLoading && (
                 <button className="grimi-collapse" onClick={() => setGrimiCollapsed((value) => !value)}>
@@ -2587,10 +2725,10 @@ export function DrawingStudio() {
             </div>
             {grimiCollapsed && coaching ? (
               <div className="grimi-peek">
+                <img className="grimi-face grimi-face-small" src="/brand/mongri/suggesting.png" alt="" aria-hidden="true" width={224} height={224} />
                 <small>이제 그려 볼 일</small>
                 <div className="spoken-prompt">
                   <b>{coaching.nextAction}</b>
-                  <SpeakButton text={coaching.nextAction} compact />
                 </div>
                 <button className="button primary full child-primary-action" disabled={grimiLoading || answerSaved || !answer} onClick={recordCoachingAnswer}>
                   <span aria-hidden="true">✅</span>
@@ -2613,7 +2751,6 @@ export function DrawingStudio() {
                     <p className="eyebrow">몽그리가 궁금해요</p>
                     <div className="spoken-prompt">
                       <h2>{coaching.question}</h2>
-                      <SpeakButton text={`${coaching.question} 고를 수 있어요. ${coaching.choices.map((choice) => choice.label).join(", ")}`} compact />
                     </div>
                     <div className="grimi-chips">
                       {coaching.choices.map((choice) => (
@@ -2649,7 +2786,6 @@ export function DrawingStudio() {
                         <small>이제 그려 볼 일</small>
                         <div className="spoken-prompt">
                           <b>{coaching.nextAction}</b>
-                          <SpeakButton text={coaching.nextAction} compact />
                         </div>
                         <button className="button primary full child-primary-action" disabled={grimiLoading || answerSaved} onClick={recordCoachingAnswer}>
                           <span aria-hidden="true">✅</span>
@@ -2657,54 +2793,6 @@ export function DrawingStudio() {
                         </button>
                       </div>
                     )}
-                  </div>
-                )}
-                {aiGuide && !grimiLoading && (
-                  <div className="ai-guide">
-                    <p className="eyebrow">
-                      {aiGuide.topic} · {aiGuideStep + 1}/{aiGuide.steps.length}
-                    </p>
-                    <div className="spoken-prompt">
-                      <h2>{aiGuide.steps[aiGuideStep].instruction}</h2>
-                      <SpeakButton text={`${aiGuide.steps[aiGuideStep].instruction}${aiGuide.steps[aiGuideStep].choices.length ? ` 고를 수 있어요. ${aiGuide.steps[aiGuideStep].choices.join(", ")}` : ""}`} compact />
-                    </div>
-                    {aiGuide.steps[aiGuideStep].openChoice && (
-                      <div className="grimi-chips">
-                        {aiGuide.steps[aiGuideStep].choices.map((choice) => (
-                          <button aria-pressed={childChoice === choice} onClick={() => chooseChildChoice(choice)} key={choice}>
-                            {choice}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {guideControls()}
-                    <div className="step-actions">
-                      <button disabled={Boolean(conflictDraft) || aiGuideStep === 0} onClick={() => chooseGuideStep(aiGuideStep - 1)}>
-                        ⬅️ 이전
-                      </button>
-                      <button disabled={Boolean(conflictDraft)} onClick={() => (aiGuideStep === aiGuide.steps.length - 1 ? void finishGuide("completed") : chooseGuideStep(aiGuideStep + 1))}>
-                        {aiGuideStep === aiGuide.steps.length - 1 ? "🎨 이제 내 마음대로" : "➡️ 다음"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {!aiGuide && !grimiLoading && (
-                  <div className="guide-request">
-                    <label>
-                      그리고 싶은 게 있어?
-                      <div className="quick-topic-row">
-                        {QUICK_DRAW_TOPICS.map((topic) => (
-                          <button type="button" aria-pressed={guideTopic === topic.label} onClick={() => setGuideTopic(topic.label)} key={topic.label}>
-                            <span>{topic.emoji}</span>
-                            {topic.label}
-                          </button>
-                        ))}
-                      </div>
-                      <input maxLength={60} value={guideTopic} onChange={(event) => setGuideTopic(event.target.value)} placeholder="예: 우주 자전거" />
-                    </label>
-                    <button className="button secondary full child-primary-action" disabled={guideTopic.trim().length < 2} onClick={requestAiGuide}>
-                      <span aria-hidden="true">🪄</span>단계 가이드 만들기
-                    </button>
                   </div>
                 )}
               </div>
@@ -2728,13 +2816,12 @@ export function DrawingStudio() {
                 <ChevronUpIcon size={20} />
               </button>
               <div className="reference-tile">
-                <LessonIllustration lesson={lesson} currentStep={step} guideVariant={artwork.guideVariant} />
+                <span className="reference-emoji" aria-hidden="true">{lesson.emoji}</span>
                 <small>{lesson.mode === "observe" ? `${lesson.topic} 관찰하기` : lesson.mode === "guided" ? `${lesson.topic} 색칠 완성 예시` : `${lesson.topic} 그려 보기`}</small>
               </div>
               <p className="eyebrow">지금 할 일</p>
               <div className="spoken-prompt lesson-spoken-prompt">
                 <h2>{lesson.steps[step].instruction}</h2>
-                <SpeakButton text={`${lesson.steps[step].instruction}${lesson.steps[step].choices?.length ? ` 고를 수 있어요. ${lesson.steps[step].choices.join(", ")}` : ""}`} compact />
               </div>
               {lesson.steps[step].choices?.length && (
                 <>
@@ -2762,10 +2849,6 @@ export function DrawingStudio() {
                 <div className="lesson-step-prompt" role="status" aria-live="polite">
                   <div className="spoken-prompt">
                     <b>{lessonStepPrompt === "unfinished-lesson" ? "아직 그릴 순서가 남았어. 다음을 눌러 천천히 이어 가자." : lessonStepPromptText}</b>
-                    <SpeakButton
-                      text={lessonStepPrompt === "unfinished-lesson" ? "아직 그릴 순서가 남았어. 다음을 눌러 천천히 이어 가자." : lessonStepPromptText}
-                      compact
-                    />
                   </div>
                   <div className="lesson-step-prompt-actions">
                     <button type="button" onClick={() => setLessonStepPrompt(null)}>
@@ -2814,7 +2897,6 @@ export function DrawingStudio() {
                   <div className="guide-choice-heading">
                     <span aria-hidden="true">🖍️</span>
                     <div><p className="eyebrow">그리기 시작</p><h2 id="guide-choice-title">어떻게 시작할까?</h2></div>
-                    <SpeakButton text="연필 시범과 점선 도움을 받을지, 내 생각대로 먼저 그릴지 골라요." compact />
                   </div>
                   <div className="guide-choice-buttons">
                     <button type="button" onClick={chooseGuideHelp}><span>✏️</span><b>도움받을래</b><small>연필 시범 뒤 점선을 따라 해요</small></button>
@@ -2823,7 +2905,7 @@ export function DrawingStudio() {
                 </section>
               </div>
             )}
-            {!lesson && !aiGuide && !documentState.ops.length && !shapeStartPoint && (
+            {!lesson && !documentState.ops.length && !shapeStartPoint && (
               <div className="canvas-start-hint" role="status">
                 ✏️ 하얀 종이에 그어 봐!
               </div>
@@ -2841,16 +2923,18 @@ export function DrawingStudio() {
             {canvasFull && (
               <div className="canvas-full-hint" role="alert">
                 <span aria-hidden="true">🌟</span> 종이가 가득 찼어! ‘완성’을 눌러 완성하자.
-                <SpeakButton text="종이가 가득 찼어요. 위에 있는 완성을 눌러 작품을 완성해요." compact />
               </div>
             )}
             <div
               className="canvas-stack"
               style={{
+                width: paper.width || undefined,
+                height: paper.height || undefined,
                 transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
               }}
             >
               <canvas ref={guideRef} className={guidePhase !== "independent" && lessonGuideAvailable ? "guide-canvas" : "guide-canvas hidden"} aria-hidden="true" />
+              <canvas ref={markRef} className={visibleMark ? "mark-canvas" : "mark-canvas hidden"} aria-hidden="true" />
               {mirror && <div className="mirror-axis" aria-hidden="true" />}
               {shapeStartPoint && (
                 <div
@@ -2899,281 +2983,217 @@ export function DrawingStudio() {
                 </button>
               )}
             </div>
-            {view.scale > 1.01 && (
-              <button type="button" className="zoom-reset" onClick={resetViewToFit}>
-                🔍 {Math.round(view.scale * 100)}% · 화면 맞춤
-              </button>
-            )}
+            {/* 확대·축소(2026-09-15 사용자 요청). 가운데 숫자를 누르면 화면 맞춤으로 돌아간다.
+                두 손가락 벌리기·트랙패드도 같은 배율을 쓴다. */}
+            <div className="zoom-controls" role="group" aria-label="확대와 축소">
+              <button type="button" aria-label="확대" title="확대" disabled={view.scale >= MAX_SCALE - 0.001} onClick={() => zoomBy(1.5)}>+</button>
+              <button type="button" className="zoom-fit" aria-label={`지금 ${Math.round(view.scale * 100)}%, 화면에 맞추기`} title="화면에 맞추기" disabled={view.scale <= 1.001} onClick={resetViewToFit}>{Math.round(view.scale * 100)}%</button>
+              <button type="button" aria-label="축소" title="축소" disabled={view.scale <= 1.001} onClick={() => zoomBy(1 / 1.5)}>−</button>
+            </div>
           </div>
-          {!grimiOpen && !toolPanelInView && (
-            <button type="button" className="mobile-tool-peek" onClick={() => toolPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-              🎨 색·지우개·되돌리기 <span aria-hidden="true">↓</span>
-            </button>
-          )}
         </section>
-        <aside className="tool-panel" ref={toolPanelRef} aria-label="그리기 도구 모음">
-          <div className="tool-rail">
-            <span className="panel-grip" aria-hidden="true"><GripHorizontalIcon size={18} /></span>
-            <div className="history-row" role="group" aria-label="그리기 기록">
-              <button type="button" onClick={undo} disabled={Boolean(conflictDraft) || (!documentState.ops.length && !hasClearToUndo)}>
-                <Undo2Icon size={20} /><b>되돌리기</b>
-              </button>
-              <button type="button" onClick={redoLast} disabled={Boolean(conflictDraft) || (!redo.length && !hasClearToRedo)}>
-                <Redo2Icon size={20} /><b>다시하기</b>
-              </button>
-            </div>
-            <p className="tool-section-label tools-label">도구</p>
-            <div className="tool-group brush-group" role="group" aria-label="브러시">
-              <button type="button" aria-label="연필" title="연필" aria-pressed={studioTool === "pencil"} onClick={() => chooseStudioTool("pencil")}>
-                <img className="tool-photo" src={TOOL_PHOTOS.pencil.src} srcSet={TOOL_PHOTOS.pencil.srcSet} width={56} height={22} alt="" aria-hidden="true" />
-                <span className="tool-icon" aria-hidden="true">
-                  ✏️
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  연필
-                </span>
-              </button>
-              <button type="button" aria-label="크레용" title="크레용" aria-pressed={studioTool === "crayon"} onClick={() => chooseStudioTool("crayon")}>
-                <img className="tool-photo" src={TOOL_PHOTOS.crayon.src} srcSet={TOOL_PHOTOS.crayon.srcSet} width={56} height={22} alt="" aria-hidden="true" />
-                <span className="tool-icon" aria-hidden="true">
-                  🖍️
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  크레용
-                </span>
-              </button>
-              <button type="button" aria-label="마커" title="마커" aria-pressed={studioTool === "marker"} onClick={() => chooseStudioTool("marker")}>
-                <img className="tool-photo" src={TOOL_PHOTOS.marker.src} srcSet={TOOL_PHOTOS.marker.srcSet} width={56} height={22} alt="" aria-hidden="true" />
-                <span className="tool-icon" aria-hidden="true">
-                  🖊️
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  마커
+        {/* 도구 막대(2026-09-14 사용자 결정 — 시안 docs/design-assets/studio-tool-dock/B-crayon-box.webp).
+            화면 아래에 떠 있는 크림색 막대에 세워진 도구, 고른 도구는 올라오고 진초록 바탕. 붓 끝·띠는 지금 색으로 칠한다.
+            고른 도구를 한 번 더 누르면 굵기 5단이 위에 뜬다. 채우기·도형·글씨·입력 방법·전체 지우기는 ⋯ 안에 있다. */}
+        <aside className={`tool-dock${dockOpen ? "" : " is-collapsed"}`} aria-label="그리기 도구 모음" style={{ "--dock-color": selectedColor } as React.CSSProperties}>
+          {/* 아코디언(2026-09-15 사용자: "누르면 위로 올라가고 내리면 아래로 내려가는 느낌"): 막대가 화면 아래로 미끄러져 내려가고 손잡이 탭만 남는다. */}
+          <button
+            type="button"
+            className="dock-toggle"
+            aria-expanded={dockOpen}
+            aria-label={dockOpen ? "그리기 도구 접기" : "그리기 도구 펼치기"}
+            onPointerDown={(event) => { dockSwipeRef.current = event.clientY; event.currentTarget.setPointerCapture(event.pointerId); }}
+            onPointerUp={(event) => { dockSwipeRef.current = dockSwipeRef.current === null ? null : event.clientY - dockSwipeRef.current; }}
+            onClick={() => {
+              // 손잡이를 아래로 끌면 접고 위로 끌면 편다. 끌지 않고 누르면 번갈아 바꾼다.
+              const moved = dockSwipeRef.current ?? 0;
+              dockSwipeRef.current = null;
+              setDockOpen((open) => (moved > 16 ? false : moved < -16 ? true : !open));
+              setWidthSliderOpen(false); setPaletteOpen(false); setToolSheetOpen(false);
+            }}
+          >
+            <ChevronUpIcon size={20} />{!dockOpen && <span>도구</span>}
+          </button>
+          <div className="dock-history" role="group" aria-label="그리기 기록">
+            <button type="button" aria-label="되돌리기" title="되돌리기" onClick={undo} disabled={Boolean(conflictDraft) || (!documentState.ops.length && !hasClearToUndo)}>
+              <Undo2Icon size={22} />
+            </button>
+            <button type="button" aria-label="다시하기" title="다시하기" onClick={redoLast} disabled={Boolean(conflictDraft) || (!redo.length && !hasClearToRedo)}>
+              <Redo2Icon size={22} />
+            </button>
+          </div>
+          <div className="dock-tools" role="group" aria-label="도구">
+            {DOCK_TOOLS.map((tool) => (
+              <button type="button" className={`dock-tool dock-tool-${tool.id}`} aria-label={tool.label} title={tool.label} aria-pressed={studioTool === tool.id} onClick={() => chooseStudioTool(tool.id)} key={tool.id}>
+                <span className="dock-tool-art" aria-hidden="true">
+                  <img src={`/drawing-tools/dock/${tool.id}.webp`} alt="" width={96} height={144} draggable={false} />
+                  {tool.tint && <i className="dock-tool-tint" style={{ WebkitMaskImage: `url(/drawing-tools/dock/${tool.id}-tint.webp)`, maskImage: `url(/drawing-tools/dock/${tool.id}-tint.webp)` }} />}
                 </span>
               </button>
-              <button type="button" aria-label="수채붓" title="수채붓" aria-pressed={studioTool === "watercolor"} onClick={() => chooseStudioTool("watercolor")}>
-                <img className="tool-photo" src={TOOL_PHOTOS.watercolor.src} srcSet={TOOL_PHOTOS.watercolor.srcSet} width={56} height={22} alt="" aria-hidden="true" />
-                <span className="tool-icon" aria-hidden="true">
-                  🖌️
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  수채붓
-                </span>
-              </button>
-              {studioTool !== "text" && widthSliderOpen && (
-                <div
-                className="tool-width-popover"
-                role="group"
-                aria-label="선 굵기"
-                /* 시안: 슬라이더는 고른 펜 바로 왼쪽에 열린다. 레일 버튼 간격(46px + 2px)은
-                   globals.css의 .tool-panel .brush-group 규칙과 짝이며 둘을 함께 바꿔야 한다. */
-                style={{ "--tool-row-top": `${["pencil", "crayon", "marker", "watercolor"].indexOf(studioTool) * 48 + 23}px` } as React.CSSProperties}
-              >
-                  <i className="tool-width-preview tool-width-preview-small" aria-hidden="true" style={{ background: studioTool === "eraser" ? undefined : selectedColor }} />
-                  <input
-                    type="range"
-                    className="tool-width-slider"
-                    min={0}
-                    max={STROKE_WIDTHS.length - 1}
-                    step={1}
-                    value={STROKE_WIDTHS.indexOf(width)}
-                    aria-label="선 굵기"
-                    aria-valuetext={STROKE_WIDTH_LABELS[width]}
-                    onChange={(event) => chooseWidth(STROKE_WIDTHS[Number(event.target.value)])}
-                  />
-                  <i className="tool-width-preview tool-width-preview-large" aria-hidden="true" style={{ background: studioTool === "eraser" ? undefined : selectedColor }} />
-                </div>
-              )}
-            </div>
-            {studioTool !== "text" && (
-              <div className="width-row" role="group" aria-label="선 굵기">
-                {STROKE_WIDTHS.map((value) => (
-                  <button type="button" aria-label={STROKE_WIDTH_LABELS[value]} title={STROKE_WIDTH_LABELS[value]} aria-pressed={width === value} onClick={() => chooseWidth(value)} key={value}>
-                    <i
-                      aria-hidden="true"
-                      style={{
-                        width: Math.max(6, Math.min(34, value * 0.72)),
-                        height: Math.max(6, Math.min(34, value * 0.72)),
-                        // 지우개는 색을 쓰지 않는 도구라 점을 기본 잉크색으로 남겨 "지우는 크기"임을 구분한다.
-                        background: studioTool === "eraser" ? undefined : selectedColor,
-                      }}
-                    />
-                    <small>{STROKE_WIDTH_LABELS[value]}</small>
-                  </button>
+            ))}
+            <button type="button" className="dock-tool dock-tool-mirror" aria-label="좌우 대칭" title="좌우 대칭" aria-pressed={mirror} onClick={() => setMirror((value) => !value)}>
+              <span className="dock-tool-art" aria-hidden="true"><img src="/drawing-tools/dock/mirror.webp" alt="" width={96} height={144} draggable={false} /></span>
+            </button>
+            {studioTool !== "text" && widthSliderOpen && (
+              <div className="dock-width" role="group" aria-label="선 굵기">
+                {/* 끌어서 1픽셀씩 고르고, 손끝으로 맞추기 어려운 마지막 한두 칸은 −·+로 옮긴다. */}
+                <button type="button" aria-label="1픽셀 얇게" disabled={width <= STROKE_WIDTH_MIN} onClick={() => chooseWidth(width - 1)}>−</button>
+                <input type="range" min={STROKE_WIDTH_MIN} max={STROKE_WIDTH_MAX} step={1} value={width} aria-label="선 굵기" aria-valuetext={`${width}픽셀`} onChange={(event) => chooseWidth(Number(event.target.value))} style={{ "--dock-width-fill": `${((width - STROKE_WIDTH_MIN) / (STROKE_WIDTH_MAX - STROKE_WIDTH_MIN)) * 100}%` } as React.CSSProperties} />
+                <button type="button" aria-label="1픽셀 굵게" disabled={width >= STROKE_WIDTH_MAX} onClick={() => chooseWidth(width + 1)}>+</button>
+                <output className="dock-width-value" aria-hidden="true">
+                  {/* 지우개는 색을 쓰지 않는 도구라 점을 기본 잉크색으로 남겨 "지우는 크기"임을 구분한다. */}
+                  <i style={{ width: Math.max(2, Math.round(width * 0.53)), height: Math.max(2, Math.round(width * 0.53)), background: studioTool === "eraser" ? undefined : selectedColor }} />
+                  <b>{width}</b>
+                </output>
+              </div>
+            )}
+          </div>
+          <div className="dock-colors" role="group" aria-label="색 고르기">
+            {PALETTE.slice(0, DOCK_QUICK_COLORS).map((value) => (
+              <button type="button" className="dock-color" aria-label={COLOR_NAMES[value]} title={COLOR_NAMES[value]} aria-pressed={selectedColor === value} onClick={() => pickColor(value)} key={value} style={{ background: value }} />
+            ))}
+            {/* 좁은 화면은 색 점 대신 지금 색 하나를 두고, 누르면 12색 창이 열린다. */}
+            <button type="button" className="dock-current-color" aria-label={`색 고르기, 지금 ${COLOR_NAMES[selectedColor] ?? "고른 색"}`} aria-haspopup="true" aria-expanded={paletteOpen} onClick={() => { setPaletteOpen((value) => !value); setToolSheetOpen(false); setWidthSliderOpen(false); }} style={{ background: selectedColor }} />
+            {/* 무지개: 12색 창. 팔레트 밖의 색을 쓰는 동안은 눌린 상태로 두고 고른 색을 안쪽 테두리로 보여 준다. */}
+            <button type="button" className="dock-more-colors" aria-label="다른 색 고르기" title="다른 색 고르기" aria-haspopup="true" aria-expanded={paletteOpen} aria-pressed={customColor} style={customColor ? { boxShadow: `inset 0 0 0 6px ${selectedColor}` } : undefined} onClick={() => { setPaletteOpen((value) => !value); setToolSheetOpen(false); setWidthSliderOpen(false); }} />
+            {paletteOpen && (
+              <div className="dock-palette" role="group" aria-label="모든 색">
+                {PALETTE.map((value) => (
+                  <button type="button" className="dock-color" aria-label={COLOR_NAMES[value]} title={COLOR_NAMES[value]} aria-pressed={selectedColor === value} onClick={() => { pickColor(value); setPaletteOpen(false); }} key={value} style={{ background: value }} />
                 ))}
+                <button type="button" className="dock-palette-wheel" aria-haspopup="dialog" aria-expanded={colorPickerOpen} onClick={() => { setPaletteOpen(false); setColorPickerOpen(true); }}>🎨 색 더보기</button>
               </div>
             )}
-            <div className="tool-group edit-group" role="group" aria-label="고치기">
-              <button type="button" aria-label="지우개" title="지우개" aria-pressed={studioTool === "eraser"} onClick={() => chooseStudioTool("eraser")}>
-                <span className="tool-icon eraser-icon" aria-hidden="true">
-                  <i />
-                  <i />
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  지우개
-                </span>
-              </button>
-              <button type="button" aria-label="좌우 대칭" title="좌우 대칭" aria-pressed={mirror} onClick={() => setMirror((value) => !value)}>
-                <span className="tool-icon" aria-hidden="true">
-                  🦋
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  대칭
-                </span>
-              </button>
-            </div>
-            <button
-              type="button"
-              className="tool-more-button"
-              aria-label={toolSheetOpen ? "다른 도구 닫기" : "다른 도구 더 보기"}
-              aria-expanded={toolSheetOpen}
-              onClick={() => { setToolSheetOpen((value) => !value); setWidthSliderOpen(false); }}
-            >
-              <MoreHorizontalIcon />
-            </button>
           </div>
-          <div className={`tool-sheet${toolSheetOpen ? " open" : ""}`}>
-            <div className="tool-group make-group" role="group" aria-label="채우기와 도형">
-              <button type="button" aria-label="채우기" title="채우기" aria-pressed={studioTool === "fill"} onClick={() => chooseStudioTool("fill")}>
-                <span className="tool-icon" aria-hidden="true">
-                  🪣
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  채우기
-                </span>
-              </button>
-              <button type="button" aria-label="도형" title="도형" aria-pressed={studioTool === "shape"} onClick={() => chooseStudioTool("shape")}>
-                <span className="tool-icon" aria-hidden="true">
-                  ⬠
-                </span>
-                <span className="tool-name" aria-hidden="true">
-                  도형
-                </span>
-              </button>
-              <button
-                type="button"
-                aria-label="글씨"
-                title="글씨"
-                aria-pressed={studioTool === "text"}
-                onClick={() => {
-                  chooseStudioTool("text");
-                  openTextComposer(selectedText);
-                }}
-              >
-                <span className="tool-icon text-tool-icon" aria-hidden="true">Aa</span>
-                <span className="tool-name" aria-hidden="true">글씨</span>
-              </button>
-            </div>
-            {studioTool === "shape" && (
-              <div className="shape-options">
-                <div className="shape-kind-row" role="group" aria-label="도형 고르기">
-                  {SHAPE_KINDS.slice(0, moreShapes ? SHAPE_KINDS.length : BASIC_SHAPE_COUNT).map((item) => (
-                    <button
-                      type="button"
-                      aria-label={item.label}
-                      title={item.label}
-                      aria-pressed={shapeKind === item.kind}
-                      onClick={() => {
-                        setShapeKind(item.kind);
-                        if (item.kind === "line" || item.kind === "curve") setShapeFilled(false);
-                        clearShapeStart();
-                      }}
-                      key={item.kind}
-                    >
-                      {item.icon}
-                    </button>
-                  ))}
-                  <button type="button" className="shape-more" aria-label={moreShapes ? "도형 접기" : "더 많은 도형"} title={moreShapes ? "도형 접기" : "더 많은 도형"} aria-expanded={moreShapes} onClick={() => setMoreShapes((value) => !value)}>
-                    {moreShapes ? "−" : "＋"}
+          <button
+            type="button"
+            className="dock-more"
+            aria-label={toolSheetOpen ? "다른 도구 닫기" : "다른 도구 더 보기"}
+            aria-expanded={toolSheetOpen}
+            onClick={() => { setToolSheetOpen((value) => !value); setWidthSliderOpen(false); setPaletteOpen(false); }}
+          >
+            <MoreHorizontalIcon />
+          </button>
+          {toolSheetOpen && (
+            <div className="dock-sheet">
+                <div className="tool-group make-group" role="group" aria-label="채우기와 도형">
+                  <button type="button" aria-label="채우기" title="채우기" aria-pressed={studioTool === "fill"} onClick={() => chooseStudioTool("fill")}>
+                    <span className="tool-icon" aria-hidden="true">
+                      🪣
+                    </span>
+                    <span className="tool-name" aria-hidden="true">
+                      채우기
+                    </span>
+                  </button>
+                  <button type="button" aria-label="도형" title="도형" aria-pressed={studioTool === "shape"} onClick={() => chooseStudioTool("shape")}>
+                    <span className="tool-icon" aria-hidden="true">
+                      ⬠
+                    </span>
+                    <span className="tool-name" aria-hidden="true">
+                      도형
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="글씨"
+                    title="글씨"
+                    aria-pressed={studioTool === "text"}
+                    onClick={() => {
+                      chooseStudioTool("text");
+                      openTextComposer(selectedText);
+                    }}
+                  >
+                    <span className="tool-icon text-tool-icon" aria-hidden="true">Aa</span>
+                    <span className="tool-name" aria-hidden="true">글씨</span>
                   </button>
                 </div>
-                <div className="shape-fill-row" role="group" aria-label="도형 안쪽">
-                  <button type="button" aria-pressed={!shapeFilled} onClick={() => setShapeFilled(false)}>
-                    테두리
-                  </button>
-                  <button type="button" aria-pressed={shapeFilled} disabled={shapeKind === "line" || shapeKind === "curve"} onClick={() => setShapeFilled(true)}>
-                    색 채움
-                  </button>
-                </div>
-              </div>
-            )}
-            {studioTool === "text" && (
-              <div className="text-options" aria-label="글씨 고치기">
-                {pendingText ? (
-                  <div className="text-pending-card" role="status">
-                    <b>“{pendingText.text}”</b>
-                    <span>도화지에 놓을 곳을 눌러요.</span>
-                    <button type="button" onClick={() => setPendingText(null)}>취소</button>
-                  </div>
-                ) : selectedText ? (
-                  <>
-                    <div className="text-edit-heading"><span>고른 글씨</span><b>{selectedText.text}</b></div>
-                    <div className="text-edit-actions">
-                      <button type="button" onClick={() => openTextComposer(selectedText)}>✏️ 내용</button>
-                      <button
-                        type="button"
-                        aria-label="글씨 작게"
-                        disabled={selectedText.fontSize === TEXT_SIZES[0]}
-                        onClick={() => {
-                          const index = TEXT_SIZES.indexOf(selectedText.fontSize);
-                          if (index > 0) updateTextObject(selectedText, { fontSize: TEXT_SIZES[index - 1] });
-                        }}
-                      >Aa−</button>
-                      <button
-                        type="button"
-                        aria-label="글씨 크게"
-                        disabled={selectedText.fontSize === TEXT_SIZES.at(-1)}
-                        onClick={() => {
-                          const index = TEXT_SIZES.indexOf(selectedText.fontSize);
-                          if (index >= 0 && index < TEXT_SIZES.length - 1) updateTextObject(selectedText, { fontSize: TEXT_SIZES[index + 1] });
-                        }}
-                      >Aa＋</button>
-                      <button type="button" className="text-delete" onClick={() => updateTextObject(selectedText, { deleted: true })}>🗑️ 지우기</button>
+                {studioTool === "shape" && (
+                  <div className="shape-options">
+                    <div className="shape-kind-row" role="group" aria-label="도형 고르기">
+                      {SHAPE_KINDS.slice(0, moreShapes ? SHAPE_KINDS.length : BASIC_SHAPE_COUNT).map((item) => (
+                        <button
+                          type="button"
+                          aria-label={item.label}
+                          title={item.label}
+                          aria-pressed={shapeKind === item.kind}
+                          onClick={() => {
+                            setShapeKind(item.kind);
+                            if (item.kind === "line" || item.kind === "curve") setShapeFilled(false);
+                            clearShapeStart();
+                          }}
+                          key={item.kind}
+                        >
+                          {item.icon}
+                        </button>
+                      ))}
+                      <button type="button" className="shape-more" aria-label={moreShapes ? "도형 접기" : "더 많은 도형"} title={moreShapes ? "도형 접기" : "더 많은 도형"} aria-expanded={moreShapes} onClick={() => setMoreShapes((value) => !value)}>
+                        {moreShapes ? "−" : "＋"}
+                      </button>
                     </div>
-                    <button type="button" className="text-new-button" disabled={textObjects.length >= MAX_TEXT_OBJECTS} onClick={() => openTextComposer()}>＋ 새 글씨</button>
-                  </>
-                ) : (
-                  <button type="button" className="text-new-button" disabled={textObjects.length >= MAX_TEXT_OBJECTS} onClick={() => openTextComposer()}>＋ 새 글씨 쓰기</button>
+                    <div className="shape-fill-row" role="group" aria-label="도형 안쪽">
+                      <button type="button" aria-pressed={!shapeFilled} onClick={() => setShapeFilled(false)}>
+                        테두리
+                      </button>
+                      <button type="button" aria-pressed={shapeFilled} disabled={shapeKind === "line" || shapeKind === "curve"} onClick={() => setShapeFilled(true)}>
+                        색 채움
+                      </button>
+                    </div>
+                  </div>
                 )}
-              </div>
-            )}
-            <div className="input-mode-control" role="group" aria-label="그리기 입력 방법">
-              <button type="button" aria-pressed={inputMode === "pen"} onClick={enablePenMode}><span>✍️</span><b>펜 모드</b><small>손바닥은 그려지지 않아요</small></button>
-              <button type="button" aria-pressed={inputMode === "finger"} onClick={disablePenMode}><span>☝️</span><b>손가락 모드</b><small>손가락으로 그려요</small></button>
-            </div>
-            <button
-              type="button"
-              className="clear-all-button"
-              disabled={Boolean(conflictDraft) || !documentState.ops.length}
-              onClick={() => setClearConfirmOpen(true)}
-            >
-              <span aria-hidden="true">🗑️</span><b>전체 지우기</b>
-            </button>
-          </div>
-          <div className="tool-colors">
-            <span className="panel-grip" aria-hidden="true"><GripHorizontalIcon size={18} /></span>
-            <p className="tool-section-label color-label">색</p>
-            <div className="selected-color" role="status" aria-live="polite"><i style={{ background: selectedColor }} aria-hidden="true" /><span>현재 색 · <b>{COLOR_NAMES[selectedColor] ?? "고른 색"}</b></span></div>
-            <div className="palette" role="group" aria-label="색 고르기">
-              {visibleColors.map((value) => (
+                {studioTool === "text" && (
+                  <div className="text-options" aria-label="글씨 고치기">
+                    {pendingText ? (
+                      <div className="text-pending-card" role="status">
+                        <b>“{pendingText.text}”</b>
+                        <span>도화지에 놓을 곳을 눌러요.</span>
+                        <button type="button" onClick={() => setPendingText(null)}>취소</button>
+                      </div>
+                    ) : selectedText ? (
+                      <>
+                        <div className="text-edit-heading"><span>고른 글씨</span><b>{selectedText.text}</b></div>
+                        <div className="text-edit-actions">
+                          <button type="button" onClick={() => openTextComposer(selectedText)}>✏️ 내용</button>
+                          <button
+                            type="button"
+                            aria-label="글씨 작게"
+                            disabled={selectedText.fontSize === TEXT_SIZES[0]}
+                            onClick={() => {
+                              const index = TEXT_SIZES.indexOf(selectedText.fontSize);
+                              if (index > 0) updateTextObject(selectedText, { fontSize: TEXT_SIZES[index - 1] });
+                            }}
+                          >Aa−</button>
+                          <button
+                            type="button"
+                            aria-label="글씨 크게"
+                            disabled={selectedText.fontSize === TEXT_SIZES.at(-1)}
+                            onClick={() => {
+                              const index = TEXT_SIZES.indexOf(selectedText.fontSize);
+                              if (index >= 0 && index < TEXT_SIZES.length - 1) updateTextObject(selectedText, { fontSize: TEXT_SIZES[index + 1] });
+                            }}
+                          >Aa＋</button>
+                          <button type="button" className="text-delete" onClick={() => updateTextObject(selectedText, { deleted: true })}>🗑️ 지우기</button>
+                        </div>
+                        <button type="button" className="text-new-button" disabled={textObjects.length >= MAX_TEXT_OBJECTS} onClick={() => openTextComposer()}>＋ 새 글씨</button>
+                      </>
+                    ) : (
+                      <button type="button" className="text-new-button" disabled={textObjects.length >= MAX_TEXT_OBJECTS} onClick={() => openTextComposer()}>＋ 새 글씨 쓰기</button>
+                    )}
+                  </div>
+                )}
+                <div className="input-mode-control" role="group" aria-label="그리기 입력 방법">
+                  <button type="button" aria-pressed={inputMode === "pen"} onClick={enablePenMode}><span>✍️</span><b>펜 모드</b><small>손바닥은 그려지지 않아요</small></button>
+                  <button type="button" aria-pressed={inputMode === "finger"} onClick={disablePenMode}><span>☝️</span><b>손가락 모드</b><small>손가락으로 그려요</small></button>
+                </div>
                 <button
                   type="button"
-                  aria-label={COLOR_NAMES[value]}
-                  title={COLOR_NAMES[value]}
-                  aria-pressed={selectedColor === value}
-                  onClick={() => {
-                    setColor(value);
-                    if (studioTool === "text" && selectedText) updateTextObject(selectedText, { color: value });
-                    if (studioTool === "text" && pendingText) setPendingText({ ...pendingText, color: value });
-                    if (studioTool === "eraser") chooseStudioTool(lastBrushRef.current);
-                  }}
-                  key={value}
-                  style={{ background: value }}
-                />
-              ))}
+                  className="clear-all-button"
+                  disabled={Boolean(conflictDraft) || !documentState.ops.length}
+                  onClick={() => setClearConfirmOpen(true)}
+                >
+                  <span aria-hidden="true">🗑️</span><b>전체 지우기</b>
+                </button>
             </div>
-            <button type="button" className="more-colors-button" aria-expanded={colorsExpanded} onClick={() => setColorsExpanded((value) => !value)}>{colorsExpanded ? "기본 색만 보기" : "🎨 색 더보기"}</button>
-          </div>
+          )}
         </aside>
       </div>
       {clearConfirmOpen && (
@@ -3189,7 +3209,10 @@ export function DrawingStudio() {
           </section>
         </div>
       )}
-      {timelapseOpen && <TimelapsePlayer document={documentState} onClose={() => setTimelapseOpen(false)} />}
+      {colorPickerOpen && <ColorPickerDialog color={selectedColor} names={COLOR_NAMES} onPick={(value) => {
+        pickColor(value);
+        setColorPickerOpen(false);
+      }} onClose={() => setColorPickerOpen(false)} />}
       {textComposerOpen && (
         <div className="modal-backdrop" ref={textDialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="text-composer-title">
           <section className="text-composer-modal">
@@ -3197,7 +3220,6 @@ export function DrawingStudio() {
             <div className="text-composer-title-row">
               <span aria-hidden="true">🔤</span>
               <div><p className="eyebrow">그림에 글씨 넣기</p><h2 id="text-composer-title">무슨 말을 쓸까?</h2></div>
-              <SpeakButton text="그림에 넣을 짧은 말을 써 봐요. 키보드의 마이크로 말해도 돼요." compact />
             </div>
             <div className="text-kind-grid" role="group" aria-label="글씨 모양">
               {TEXT_KIND_OPTIONS.map((option) => (
@@ -3258,9 +3280,34 @@ export function DrawingStudio() {
             <span className="modal-emoji">🌟</span>
             <div className="reflection-title-row">
               <h2 id="reflection-title">네 그림을 소개해 줘!</h2>
-              <SpeakButton text="정답은 없어요. 네가 그림을 보고, 제일 마음에 드는 곳과 그 이유를 직접 골라요." />
             </div>
             <p className="reflection-choice-note">정답이 아니에요. 네가 보고 직접 골라요.</p>
+            {(interpretLoading || interpretation) && (
+              <div className="reflection-question mongri-guess">
+                {/* 짐작을 기다릴 때는 생각 중, 짐작이 나오면 발견한 표정이다. */}
+                <p className="mongri-guess-head"><img className="grimi-face grimi-face-small" src={`/brand/mongri/${interpretation ? "delighted" : "thinking"}.png`} alt="" aria-hidden="true" width={224} height={224} /> 몽그리 생각</p>
+                {interpretLoading && !interpretation && <p className="mongri-guess-waiting">몽그리가 네 그림을 보고 있어…</p>}
+                {interpretation && (
+                  <>
+                    {/* AI가 만든 문장은 음성으로 내보내지 않는다 (product-decisions 20항).
+                        답 칩의 이모지가 글과 함께 읽기 부담을 덜어 준다. */}
+                    <p className="mongri-guess-text">{interpretation.guess}</p>
+                    <div className="reflection-choice-grid">
+                      {interpretation.choices.map((choice) => (
+                        <button type="button" aria-pressed={storyText === choice.answer} onClick={() => setStoryText(choice.answer)} key={choice.label}>
+                          <span>{choice.emoji}</span>
+                          {choice.label}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="mongri-guess-own" htmlFor="story-text">
+                      내 말로 알려 줄래?
+                      <input id="story-text" maxLength={120} value={storyText} onChange={(event) => setStoryText(event.target.value)} placeholder="예: 아니야, 자전거 바퀴야" />
+                    </label>
+                  </>
+                )}
+              </div>
+            )}
             <div className="reflection-question">
               <p>마음에 드는 곳은?</p>
               <div className="reflection-choice-grid">

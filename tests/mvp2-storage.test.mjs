@@ -72,7 +72,7 @@ test("coaching before atomically stores image, version, event and details withou
     const base = {
       DB, ARTWORKS, studentId: "student_a", artworkId: "art_a", expectedRevision: 0,
       responseKind: "question", document, image, question: "무엇을 더 그릴까?", hint: "작은 나무를 더 그려 봐.",
-      choices: [{ emoji: "🌳", label: "나무", answer: "나무를 더해요" }], guideSteps: [], growthEvent: "새 대상을 고르려고 했어요.", currentStep: 1,
+      choices: [{ emoji: "🌳", label: "나무", answer: "나무를 더해요" }], growthEvent: "새 대상을 고르려고 했어요.", currentStep: 1,
     };
     const saved = await recordCoachingBefore({ ...base, eventId: "coaching_before_one" });
     assert.equal(saved.ok, true);
@@ -107,7 +107,7 @@ test("coaching before atomically stores image, version, event and details withou
   } finally { await handle.dispose(); }
 });
 
-test("coaching after versions enforce ownership and duplicate CAS for answers and guide exits", async () => {
+test("coaching after versions enforce ownership and duplicate CAS, and leave retired guide rows alone", async () => {
   const { handle, DB, ARTWORKS } = await fixture();
   try {
     assert.equal(await findOwnedCoachingEvent(DB, "event_q", "art_a", "student_b"), null);
@@ -119,13 +119,16 @@ test("coaching after versions enforce ownership and duplicate CAS for answers an
     const questionDetail = await DB.prepare("SELECT status FROM coaching_event_details WHERE event_id = 'event_q'").first();
     assert.ok(question.afterVersionId); assert.equal(questionDetail.status, "answered");
 
-    const completed = await recordCoachingAfter({ ...input, eventId: "event_g1", kind: "guide_completed", answer: undefined, newElements: [] });
-    const exited = await recordCoachingAfter({ ...input, eventId: "event_g2", kind: "guide_free_exit", answer: undefined, newElements: [] });
-    assert.equal(completed.ok, true); assert.equal(exited.ok, true);
+    // 단계 가이드는 은퇴했다(2026-09-09). 이미 저장된 guide 행은 그대로 두고,
+    // 질문-답 경로가 그 행을 집어 상태를 바꾸지 않아야 한다.
+    for (const legacy of ["event_g1", "event_g2"]) {
+      const result = await recordCoachingAfter({ ...input, eventId: legacy, answer: "토끼를 더했어요", newElements: ["토끼"] });
+      assert.equal(result.ok, false); assert.equal(result.reason, "not_found");
+    }
     const guideStates = await DB.prepare("SELECT event_id AS eventId, status FROM coaching_event_details WHERE event_id IN ('event_g1','event_g2') ORDER BY event_id").all();
-    assert.deepEqual(guideStates.results, [{ eventId: "event_g1", status: "completed" }, { eventId: "event_g2", status: "dismissed" }]);
+    assert.deepEqual(guideStates.results, [{ eventId: "event_g1", status: "active" }, { eventId: "event_g2", status: "active" }]);
     const versions = await DB.prepare("SELECT COUNT(*) AS count FROM artwork_versions WHERE artwork_id = 'art_a' AND reason = 'coaching_after'").first();
-    assert.equal(versions.count, 3); assert.equal((await ARTWORKS.list()).objects.length, 3);
+    assert.equal(versions.count, 1); assert.equal((await ARTWORKS.list()).objects.length, 1);
   } finally { await handle.dispose(); }
 });
 

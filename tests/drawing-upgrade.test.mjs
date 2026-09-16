@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { estimateDocumentBytes, estimateStrokeBytes, SHAPE_KINDS, STROKE_TOOLS, STROKE_WIDTHS, validateDrawDocument } from "../lib/drawing-model.ts";
+import { estimateDocumentBytes, estimateStrokeBytes, SHAPE_KINDS, STROKE_TOOLS, STROKE_WIDTH_MAX, STROKE_WIDTH_MIN, validateDrawDocument } from "../lib/drawing-model.ts";
 import { isMirrorOf, mirrorOp, undoGroupSize } from "../lib/symmetry.ts";
-import { clampView, IDENTITY_VIEW, pinchView } from "../lib/canvas-view.ts";
+import { clampView, coverPaper, IDENTITY_VIEW, pinchView, zoomView } from "../lib/canvas-view.ts";
 
 const stroke = (suffix, overrides = {}) => ({
   opId: `op_${suffix}`.padEnd(12, "0"),
@@ -18,21 +18,25 @@ const stroke = (suffix, overrides = {}) => ({
 
 const documentWith = (ops) => ({ schemaVersion: 1, rendererVersion: 1, size: 1024, ops });
 
-test("server validation accepts every shipped tool and width, and only those", () => {
+test("server validation accepts every shipped tool and every whole-pixel width, and only those", () => {
   for (const tool of STROKE_TOOLS) {
-    for (const width of STROKE_WIDTHS) {
+    // 1~60 픽셀 정수. 예전 5단 값(3·8·16·30·48)도 범위 안이라 옛 작품이 열린다.
+    for (const width of [STROKE_WIDTH_MIN, 3, 8, 12, 16, 30, 48, STROKE_WIDTH_MAX]) {
       const op = stroke(`t${tool}${width}`, { tool, width, color: tool === "eraser" ? undefined : "#E53935" });
       assert.ok(validateDrawDocument(documentWith([op])), `${tool}/${width}는 통과해야 한다`);
     }
   }
   // 목록 밖 도구·굵기가 통과하면 구버전 클라이언트와의 계약이 깨진다.
   assert.equal(validateDrawDocument(documentWith([stroke("spray", { tool: "spray" })])), null);
-  assert.equal(validateDrawDocument(documentWith([stroke("w12", { width: 12 })])), null);
   assert.equal(validateDrawDocument(documentWith([stroke("w0", { width: 0 })])), null);
-  // 도형도 굵기 목록을 공유한다.
+  assert.equal(validateDrawDocument(documentWith([stroke("w61", { width: STROKE_WIDTH_MAX + 1 })])), null);
+  assert.equal(validateDrawDocument(documentWith([stroke("w12.5", { width: 12.5 })])), null);
+  assert.equal(validateDrawDocument(documentWith([stroke("wstr", { width: "12" })])), null);
+  // 도형도 같은 굵기 범위를 쓴다.
   const shape = (width) => ({ ...stroke(`sh${width}`, { width }), type: "shape", shape: "circle", tool: undefined, points: [{ x: 0.2, y: 0.2 }, { x: 0.6, y: 0.6 }] });
   assert.ok(validateDrawDocument(documentWith([shape(48)])));
-  assert.equal(validateDrawDocument(documentWith([shape(12)])), null);
+  assert.ok(validateDrawDocument(documentWith([shape(12)])));
+  assert.equal(validateDrawDocument(documentWith([shape(STROKE_WIDTH_MAX + 1)])), null);
 });
 
 test("new shape, smoothing and square eraser metadata survive validation without changing legacy strokes", () => {
@@ -116,4 +120,34 @@ test("pinch view stays clamped so the paper never leaves the frame", () => {
   assert.equal(clamped.scale, 4);
   assert.equal(clamped.x, 0);
   assert.equal(clamped.y, wrap * (1 - 4));
+});
+
+test("zoom buttons and trackpad keep the anchor point and let a tall paper pan to its bottom", () => {
+  // 세로로 긴 휴대폰 도화지(390×720): 세로 이동은 세로 길이로 가둬야 아래쪽까지 닿는다.
+  const tall = clampView({ scale: 2, x: 0, y: -99999 }, 390, 720);
+  assert.equal(tall.y, 720 * (1 - 2));
+  assert.equal(clampView({ scale: 2, x: -99999, y: 0 }, 390, 720).x, 390 * (1 - 2));
+  // 가운데를 붙잡고 1.5배: 가운데 점이 제자리에 남는다.
+  const zoomed = zoomView(IDENTITY_VIEW, 1.5, { x: 195, y: 360 }, 390, 720);
+  assert.equal(zoomed.scale, 1.5);
+  assert.ok(Math.abs((195 - zoomed.x) / zoomed.scale - 195) < 1e-9 && Math.abs((360 - zoomed.y) / zoomed.scale - 360) < 1e-9);
+  // 4배 위·1배 아래로는 가지 않는다.
+  assert.equal(zoomView(zoomed, 99, { x: 0, y: 0 }, 390, 720).scale, 4);
+  assert.deepEqual(zoomView(zoomed, 0.1, { x: 300, y: 600 }, 390, 720), IDENTITY_VIEW);
+});
+
+test("the paper always covers its frame, and an overflowing paper pans at 1x without showing background", () => {
+  // 세로 720 그림을 1180×754 틀에: 폭에 맞추고 세로로 넘친다(양옆 여백 없음).
+  const wide = coverPaper(1180, 754, 720);
+  assert.equal(wide.width, 1180);
+  assert.ok(wide.height > 754 && Math.abs(wide.height - 1180 * 720 / 1024) < 1e-9);
+  // 세로로 긴 틀은 높이에 맞춘다(늘릴 수 있는 최대를 넘는 아주 긴 틀).
+  const tall = coverPaper(300, 900, 1024);
+  assert.equal(tall.height, 900);
+  assert.ok(tall.width >= 300);
+  // 1배에서도 넘친 만큼만 옮겨지고, 틀 밖 바탕이 드러나지 않는다.
+  const box = [1180, 754, wide.width, wide.height];
+  assert.equal(clampView({ scale: 1, x: 50, y: -99999 }, ...box).y, 754 - wide.height);
+  assert.equal(clampView({ scale: 1, x: 50, y: 20 }, ...box).x, 0);
+  assert.equal(clampView({ scale: 1, x: 50, y: 20 }, ...box).y, 0);
 });

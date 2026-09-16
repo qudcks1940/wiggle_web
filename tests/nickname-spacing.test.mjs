@@ -5,7 +5,7 @@ import { startTestServer } from "./harness/server.mjs";
 import { nicknameKeySql, nicknameMatchKey, nicknameRateKeyPart } from "../lib/nickname.ts";
 import { FALLBACK_NICKNAME, NICKNAME_IDEAS, pickDifferentNickname } from "../lib/nickname-ideas.ts";
 
-const ANIMALS = ["🐰", "🐻", "🦊", "🐯", "🐼", "🐶", "🐱", "🐨", "🦁", "🐸"];
+const ANIMALS = ["🐰", "🐻", "🦊", "🐯", "🐼", "🐶", "🐱", "🐨", "🦁", "🐸", "🐧", "🐹", "🐷", "🐵", "🐮", "🐑", "🦒", "🐘", "🦉", "🦦"];
 
 // Next 서버 기동은 프로세스 하나 값이라 테스트마다 띄우면 비싸다. 파일 하나에 서버 하나만 띄우고,
 // 테스트가 끝날 때마다 행을 비워 격리한다. 학급 코드 4321은 UNIQUE라 초기화 없이는 두 번째 시드가 깨진다.
@@ -42,7 +42,7 @@ async function seedClassroom(DB, suffix, seats = 1) {
     DB.prepare(`INSERT INTO teachers(id, email, display_name) VALUES ('teacher_${suffix}', '${suffix}@example.com', 'Spacing')`),
     DB.prepare(`INSERT INTO classrooms(id, teacher_id, display_name, class_code, join_token) VALUES ('class_${suffix}', 'teacher_${suffix}', '공백 학급', '4321', 'join_${suffix}')`),
     // 입장은 선생님 명단의 번호로만 한다. 빈 자리를 미리 만들어 둔다.
-    ...Array.from({ length: seats }, (_, index) => DB.prepare(`INSERT INTO student_profiles(id, classroom_id, seat_number, real_name, claimed_at, nickname, animal, last_activity_at) VALUES ('student_${suffix}_${index + 1}', 'class_${suffix}', ${index + 1}, '학생${index + 1}', NULL, '${index + 1}번', '❔', '2026-09-07T00:00:00.000Z')`)),
+    ...Array.from({ length: seats }, (_, index) => DB.prepare(`INSERT INTO student_profiles(id, classroom_id, seat_number, real_name, entry_code, claimed_at, nickname, animal, last_activity_at) VALUES ('student_${suffix}_${index + 1}', 'class_${suffix}', ${index + 1}, '학생${index + 1}', '${String(index + 1).repeat(4)}', NULL, '${index + 1}번', '❔', '2026-09-07T00:00:00.000Z')`)),
   ]);
   return "class_" + suffix;
 }
@@ -110,79 +110,72 @@ test("the dice never repeats the current nickname and cycles through far more th
   assert.equal(pickDifferentNickname(["가", "나"], "가", 1), "나");
 });
 
-/* 입장과 재입장이 번호로 바뀌면서(2026-09-07) 별명 중복·공백 변형으로 프로필을 찾던
- * 계약은 사라졌다. 번호가 이미 한 사람을 가리키므로 별명이 겹쳐도 상관없다.
- * 위의 순수 함수 테스트는 그대로 둔다 — 아이가 고르는 표시 별명에는 여전히 쓰인다.
- * 여기서는 그 자리를 대신할 실제 계약, 즉 번호 재입장과 브루트포스 차단을 검증한다. */
+/* 입장과 재입장이 참여 코드로 바뀌면서(2026-09-09) 별명 중복·공백 변형으로 프로필을 찾던
+ * 계약은 사라졌다. 코드가 이미 한 사람을 가리키므로 별명이 겹쳐도 상관없다.
+ * 위의 순수 함수 테스트는 그대로 둔다 — 첫 입장의 동물에 붙는 기본 별명에 여전히 쓰인다.
+ * 여기서는 그 자리를 대신할 실제 계약, 즉 코드 재입장과 무차별 대입 차단을 검증한다. */
 
-test("번호 + 그림 비밀번호로만 재입장하고, 별명이 겹쳐도 서로 다른 학생이다", async (context) => {
+test("참여 코드로만 재입장하고, 별명이 겹쳐도 서로 다른 학생이다", async (context) => {
   const server = await sharedServer();
   context.after(() => resetRows(server.DB));
   const DB = server.DB;
-  await seedClassroom(DB, "seatentry", 2);
+  await seedClassroom(DB, "codeentry", 2);
 
-  const password = ["⭐", "🍎", "🚲"];
-  // 두 아이가 같은 별명을 골라도 번호가 다르면 다른 학생이다.
-  const first = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", seatNumber: 1, nickname: "토끼 화가", animal: "🐰", picturePassword: password }, "203.0.113.61"));
+  // 두 아이가 같은 동물(같은 기본 별명)을 골라도 코드가 다르면 다른 학생이다.
+  const first = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "1111", animal: "🐰" }, "203.0.113.61"));
   assert.equal(first.status, 201);
-  const second = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", seatNumber: 2, nickname: "토끼 화가", animal: "🐰", picturePassword: ["🌈", "🌈", "🌈"] }, "203.0.113.62"));
+  const second = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "2222", animal: "🐰" }, "203.0.113.62"));
   assert.equal(second.status, 201);
   const firstPayload = await first.json();
   const secondPayload = await second.json();
+  assert.equal(firstPayload.student.nickname, secondPayload.student.nickname);
   assert.notEqual(firstPayload.student.id, secondPayload.student.id);
 
-  // 재입장은 자기 번호와 자기 그림 비밀번호로만 된다.
-  const recovered = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", seatNumber: 1, picturePassword: password }, "203.0.113.63"));
+  // 재입장은 자기 코드로만 된다.
+  const recovered = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "1111" }, "203.0.113.63"));
   assert.equal(recovered.status, 200);
   assert.equal((await recovered.json()).student.id, firstPayload.student.id);
-
-  // 1번의 비밀번호로 2번 자리를 열 수 없다.
-  const crossed = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", seatNumber: 2, picturePassword: password }, "203.0.113.64"));
-  assert.equal(crossed.status, 401);
-
   assert.equal((await DB.prepare("SELECT COUNT(*) AS count FROM student_profiles").first()).count, 2);
 });
 
-test("이미 쓰는 번호는 다시 차지할 수 없고, 없는 번호는 명단을 알려 주지 않는다", async (context) => {
+test("같은 코드로 동시에 들어와도 자리는 하나이고, 늦은 쪽도 같은 학생으로 들어온다", async (context) => {
   const server = await sharedServer();
   context.after(() => resetRows(server.DB));
   const DB = server.DB;
-  await seedClassroom(DB, "seatclaim", 2);
+  await seedClassroom(DB, "codeclaim", 1);
 
-  const joined = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", seatNumber: 1, nickname: "토끼 화가", animal: "🐰", picturePassword: ["⭐", "🍎", "🚲"] }, "203.0.113.70"));
+  const joined = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "1111", animal: "🐰" }, "203.0.113.70"));
   assert.equal(joined.status, 201);
+  const mine = (await joined.json()).student;
 
-  // 남이 1번을 다시 차지하려 하면 막히고, 원래 아이의 비밀번호는 그대로다.
-  const stolen = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", seatNumber: 1, nickname: "가로채기", animal: "🐻", picturePassword: ["🍎", "🍎", "🍎"] }, "203.0.113.71"));
-  assert.equal(stolen.status, 409);
-  assert.equal((await stolen.json()).code, "SEAT_CLAIMED");
-  const stillMine = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", seatNumber: 1, picturePassword: ["⭐", "🍎", "🚲"] }, "203.0.113.72"));
-  assert.equal(stillMine.status, 200);
+  // 남이(혹은 내 두 번째 태블릿이) 같은 코드로 동물을 다시 골라도 동물·별명은 처음 것이 남는다.
+  const late = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "1111", animal: "🐻" }, "203.0.113.71"));
+  assert.equal(late.status, 200);
+  const latePayload = await late.json();
+  assert.equal(latePayload.student.id, mine.id);
+  assert.equal(latePayload.student.animal, "🐰");
+  assert.equal((await DB.prepare("SELECT COUNT(*) AS count FROM student_profiles WHERE claimed_at IS NOT NULL").first()).count, 1);
 
-  // 명단에 없는 번호는 401/404로만 답하고 누가 있는지 알려 주지 않는다.
-  const missingJoin = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", seatNumber: 9, nickname: "없는번호", animal: "🐰", picturePassword: ["⭐", "⭐", "⭐"] }, "203.0.113.73"));
-  assert.equal(missingJoin.status, 404);
-  const missingRecover = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", seatNumber: 9, picturePassword: ["⭐", "⭐", "⭐"] }, "203.0.113.74"));
-  assert.equal(missingRecover.status, 401);
-  assert.equal((await missingRecover.json()).error, "번호나 그림 비밀번호를 다시 확인해 주세요.");
+  // 명단에 없는 코드는 404로만 답하고 누가 있는지 알려 주지 않는다.
+  const missing = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "9999", animal: "🐰" }, "203.0.113.73"));
+  assert.equal(missing.status, 404);
+  assert.equal((await missing.json()).error, "참여 코드를 다시 확인해 주세요.");
 });
 
-test("같은 번호를 반복해서 틀리면 한 버킷에서 잠긴다", async (context) => {
+test("한 학급에 코드를 반복해서 틀리면 그 IP는 학급 버킷에서 잠긴다", async (context) => {
   const server = await sharedServer();
   context.after(() => resetRows(server.DB));
   const DB = server.DB;
   await seedClassroom(DB, "ratelimit", 1);
 
-  const password = ["⭐", "🍎", "🚲"];
-  const joined = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", seatNumber: 1, nickname: "토끼 화가", animal: "🐰", picturePassword: password }, "203.0.113.80"));
-  assert.equal(joined.status, 201);
-
-  // 대상별 한도는 8회/15분. IP를 바꿔도 번호 버킷은 같아야 한다.
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const failed = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", seatNumber: 1, picturePassword: ["🌙", "🌙", "🌙"] }, `203.0.113.${90 + attempt}`));
-    assert.equal(failed.status, 401, `attempt ${attempt}`);
+  // 학급 + IP 한도는 60회/10분. 같은 IP에서 60번 틀리면 맞는 코드도 막힌다.
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const failed = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: String(9000 + attempt) }, "203.0.113.90"));
+    assert.equal(failed.status, 404, `attempt ${attempt}`);
   }
-  // 9번째는 올바른 비밀번호여도 잠긴다.
-  const blocked = await server.fetch("/api/student", studentRequest({ action: "recover", entry: "4321", seatNumber: 1, picturePassword: password }, "203.0.113.99"));
+  const blocked = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "1111", animal: "🐰" }, "203.0.113.90"));
   assert.equal(blocked.status, 429);
+  // 다른 IP(다른 교실)는 여전히 들어온다.
+  const other = await server.fetch("/api/student", studentRequest({ action: "join", entry: "4321", entryCode: "1111", animal: "🐰" }, "203.0.113.91"));
+  assert.equal(other.status, 201);
 });

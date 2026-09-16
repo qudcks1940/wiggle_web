@@ -67,3 +67,14 @@ export const GripHorizontalIcon = (props: IconProps) => (
     <circle cx="8" cy="14" r="1.1" /><circle cx="12" cy="14" r="1.1" /><circle cx="16" cy="14" r="1.1" />
   </Icon>
 );
+
+// 머리 줄 버튼 묶음(2026-09-14, 시안 docs/design-assets/studio-header-actions/1-quiet-ghost.webp) — Lucide circle-play·hand·mail과 같은 모양.
+export const PlayCircleIcon = (props: IconProps) => (
+  <Icon {...props}><circle cx="12" cy="12" r="10" /><path d="m10 8 6 4-6 4Z" /></Icon>
+);
+export const HandIcon = (props: IconProps) => (
+  <Icon {...props}><path d="M18 11V6a2 2 0 0 0-4 0" /><path d="M14 10V4a2 2 0 0 0-4 0v2" /><path d="M10 10.5V6a2 2 0 0 0-4 0v8" /><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" /></Icon>
+);
+export const MailIcon = (props: IconProps) => (
+  <Icon {...props}><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></Icon>
+);

@@ -8,10 +8,13 @@ export const DOCUMENT_SIZE = 1024;
  * 세로를 정한다(아래 clampDocumentHeight). 한 번이라도 그리면 그 비율로 굳는다 — 그린 뒤에
  * 비율을 바꾸면 이미 그린 선이 늘어나기 때문이다.
  * 범위를 둔 이유: 아무 값이나 받으면 저장된 그림의 비율을 마음대로 바꿀 수 있고, 극단적인
- * 비율은 썸네일·그림책 배치를 깨뜨린다. 16의 배수로 맞춰 값이 무한히 늘어나지 않게 한다. */
-export const DOCUMENT_MIN_HEIGHT = 512;
-export const DOCUMENT_MAX_HEIGHT = 1024;
-export const DOCUMENT_HEIGHT_STEP = 16;
+ * 비율은 썸네일·그림책 배치를 깨뜨린다. 세로는 정수로 저장한다.
+ * 2026-09-15 사용자 결정("도화지는 항상 어떤기기 든지 화면을 꽉채우게")으로 가로로 눕힌 휴대폰(약 3:1)과
+ * 세로 휴대폰(약 1:2)까지 넓혔다. 예전 범위(512~1024)는 그대로 안에 있어 옛 작품이 열린다.
+ * 같은 결정으로 16 단위 반올림을 1로 바꿨다 — 16 단위면 가로 휴대폰에서 도화지 양옆에 6px씩 초록 여백이 남았다. */
+export const DOCUMENT_MIN_HEIGHT = 320;
+export const DOCUMENT_MAX_HEIGHT = 2240;
+export const DOCUMENT_HEIGHT_STEP = 1;
 export const DEFAULT_DOCUMENT_HEIGHT = 640;
 
 export function isDocumentHeight(value: unknown): value is number {
@@ -33,7 +36,9 @@ export const STICKER_ALLOWLIST = ["star", "heart", "leaf", "cloud", "sparkle"] a
 // 있으므로, pen에 필압 배율을 적용하면 저장된 썸네일·최종 PNG와 재생 렌더가 어긋난다.
 // 새 연필 획은 "pencil"로 저장해 필압 렌더를 새 획에만 적용한다.
 export const STROKE_TOOLS = ["pen", "pencil", "crayon", "marker", "watercolor", "eraser"] as const;
-export const STROKE_WIDTHS = [3, 8, 16, 30, 48] as const;
+// 굵기는 1024 도화지 기준 픽셀 정수다. 예전 5단 값(3·8·16·30·48)도 이 범위 안이라 옛 작품이 그대로 열린다.
+export const STROKE_WIDTH_MIN = 1;
+export const STROKE_WIDTH_MAX = 60;
 export const SHAPE_KINDS = ["line", "circle", "triangle", "rectangle", "rounded-rectangle", "star", "heart", "arrow", "curve", "cloud"] as const;
 export const TEXT_KINDS = ["label", "title", "speech"] as const;
 export const TEXT_SIZES = [48, 64, 84] as const;
@@ -91,7 +96,8 @@ export function estimateStrokeBytes(pointCount: number) {
 type Point = { x: number; y: number; pressure?: number };
 
 export type StrokeTool = (typeof STROKE_TOOLS)[number];
-export type StrokeWidth = (typeof STROKE_WIDTHS)[number];
+export type StrokeWidth = number;
+export const isStrokeWidth = (value: unknown): value is StrokeWidth => Number.isInteger(value) && (value as number) >= STROKE_WIDTH_MIN && (value as number) <= STROKE_WIDTH_MAX;
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
 export type TextKind = (typeof TEXT_KINDS)[number];
 export type TextSize = (typeof TEXT_SIZES)[number];
@@ -130,6 +136,16 @@ export type DrawDocument = {
 
 export function documentHeight(document: Pick<DrawDocument, "height">): number {
   return document.height ?? DOCUMENT_SIZE;
+}
+
+/** 이미 그린 도화지를 세로로 늘린다(2026-09-15 "도화지는 항상 화면을 꽉 채우게").
+ * 그림은 가운데에 두고 위아래로 같은 만큼 종이를 덧댄다. 가로 1024 기준인 굵기·글자·스티커 크기는
+ * 그대로라 화면에 그려지는 모양이 한 픽셀도 바뀌지 않는다(세로 좌표만 새 높이로 다시 나눈다).
+ * 가운데 정렬이라 도화지 가운데에 놓이는 수업 점선과도 어긋나지 않는다. 줄이는 쪽은 그림을 잘라야 해 하지 않는다. */
+export function growDrawOps(ops: DrawOp[], fromHeight: number, toHeight: number): DrawOp[] {
+  if (!(toHeight > fromHeight)) return ops;
+  const offset = (toHeight - fromHeight) / 2;
+  return ops.map((op) => (op.points ? { ...op, points: op.points.map((point) => ({ ...point, y: roundUnit((point.y * fromHeight + offset) / toHeight) })) } : op));
 }
 
 function finiteUnit(value: unknown) {
@@ -206,7 +222,7 @@ export function validateDrawDocument(value: unknown): DrawDocument | null {
     // 제어문자가 섞인 날짜도 Date.parse는 통과시킨다. JSON에서 이스케이프되며 길이가 폭증하므로 길이를 먼저 막는다.
     if (!["stroke", "fill", "shape", "sticker", "text"].includes(op.type) || op.at.length > 40 || !Number.isFinite(Date.parse(op.at))) return null;
     if (op.type === "stroke") {
-      if (!op.tool || !STROKE_TOOLS.includes(op.tool) || !STROKE_WIDTHS.includes((op.width ?? 0) as StrokeWidth) || !Array.isArray(op.points) || op.points.length < 1 || op.points.length > MAX_STROKE_POINTS) return null;
+      if (!op.tool || !STROKE_TOOLS.includes(op.tool) || !isStrokeWidth(op.width) || !Array.isArray(op.points) || op.points.length < 1 || op.points.length > MAX_STROKE_POINTS) return null;
       if (op.tool !== "eraser" && !isHexColor(op.color)) return null;
       if (op.smoothed !== undefined && typeof op.smoothed !== "boolean") return null;
       if (op.squareEraser !== undefined && typeof op.squareEraser !== "boolean") return null;
@@ -216,7 +232,7 @@ export function validateDrawDocument(value: unknown): DrawDocument | null {
       if (!isHexColor(op.color) || !Array.isArray(op.points) || op.points.length !== 1 || op.points.some(invalidPoint)) return null;
     }
     if (op.type === "shape") {
-      if (!op.shape || !SHAPE_KINDS.includes(op.shape) || !isHexColor(op.color) || !STROKE_WIDTHS.includes((op.width ?? 0) as StrokeWidth) || !Array.isArray(op.points) || op.points.length !== 2 || op.points.some(invalidPoint)) return null;
+      if (!op.shape || !SHAPE_KINDS.includes(op.shape) || !isHexColor(op.color) || !isStrokeWidth(op.width) || !Array.isArray(op.points) || op.points.length !== 2 || op.points.some(invalidPoint)) return null;
       if (op.filled !== undefined && typeof op.filled !== "boolean") return null;
     }
     if (op.type === "sticker" && (!STICKER_ALLOWLIST.includes(op.sticker as (typeof STICKER_ALLOWLIST)[number]) || !Array.isArray(op.points) || op.points.length !== 1 || op.points.some(invalidPoint))) return null;

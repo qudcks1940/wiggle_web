@@ -1,0 +1,70 @@
+{
+  "selectedOption": 2,
+  "createdAt": "2026-09-09",
+  "tool": "built-in image_gen.imagegen",
+  "files": [
+    {
+      "file": "assets/mongri-keypad-ivory-640.webp",
+      "width": 640,
+      "height": 480,
+      "format": "webp",
+      "hasAlpha": false,
+      "bytes": 29220,
+      "sha256": "93c5c2ae19253d15980d32fa4d675ee080fbdabd884dc420d45a4acd6d1a9b32"
+    },
+    {
+      "file": "assets/mongri-keypad-ivory.png",
+      "width": 1448,
+      "height": 1086,
+      "format": "png",
+      "hasAlpha": false,
+      "bytes": 1637888,
+      "sha256": "72f0238031d991803b57d0b148da05a3d7ac3099d94501fb633c9e09eef9d8b3"
+    },
+    {
+      "file": "assets/mongri-keypad-ivory.webp",
+      "width": 1448,
+      "height": 1086,
+      "format": "webp",
+      "hasAlpha": false,
+      "bytes": 125900,
+      "sha256": "15d0f5a10facade2cb5f94cfe4a572eaaaffb80a3018486ba7a7f6527b85ce53"
+    },
+    {
+      "file": "assets/number-keypad-scene-1280.webp",
+      "width": 1280,
+      "height": 705,
+      "format": "webp",
+      "hasAlpha": false,
+      "bytes": 63754,
+      "sha256": "a26b346cee51fbd9bb1056c1eded5f909145489800e3104e1053f203e51bba73"
+    },
+    {
+      "file": "assets/number-keypad-scene.png",
+      "width": 1690,
+      "height": 931,
+      "format": "png",
+      "hasAlpha": false,
+      "bytes": 1913227,
+      "sha256": "727a1809d05da69641d3da17206a0b2f0595cf36b42cfc5c731d9693b83a8f03"
+    },
+    {
+      "file": "assets/number-keypad-scene.webp",
+      "width": 1690,
+      "height": 931,
+      "format": "webp",
+      "hasAlpha": false,
+      "bytes": 110904,
+      "sha256": "d340eb9101594094b07ca97478090b13e7786c7958cf2ecc93d33ff387300af9"
+    },
+    {
+      "file": "reference/selected-option-2.png",
+      "width": 1690,
+      "height": 931,
+      "format": "png",
+      "hasAlpha": false,
+      "bytes": 2030805,
+      "sha256": "c05748c12593e9ec7f59d9ff6d0e8c660b7f343e8c9657142572504ee076a7bd"
+    }
+  ]
+}

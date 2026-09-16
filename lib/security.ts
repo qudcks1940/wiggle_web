@@ -7,7 +7,6 @@ import { consumeRateLimit, releaseRateLimit } from "@/lib/rate-limit";
 import { isLocalDevelopmentRequest } from "@/lib/runtime/environment";
 
 export { id, randomToken, sha256 } from "@/lib/token-crypto";
-export { normalizePicturePassword, picturePasswordLength } from "@/lib/picture-password";
 
 export const PBKDF2_ITERATIONS = 100_000;
 const PBKDF2_KEY_BYTES = 32;

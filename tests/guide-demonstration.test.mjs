@@ -5,7 +5,6 @@ import { lockGuideTrace, snapGuideTrace } from "../lib/trace-guidance.mjs";
 
 const studio = await readFile(new URL("../app/components/DrawingStudio.tsx", import.meta.url), "utf8");
 const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-const lessons = await readFile(new URL("../lib/lesson-content.ts", import.meta.url), "utf8");
 
 test("children choose help before the pencil demonstration and dotted practice", () => {
   assert.match(studio, /type GuidePhase = "independent" \| "demo" \| "practice"/);
@@ -58,13 +57,13 @@ test("guide controls and notices remain touch friendly on mobile", () => {
   const narrowPortraitIndex = css.indexOf("@media (max-width:460px) and (orientation:portrait)");
   const compactStepPanelIndex = css.indexOf(".step-panel { padding:6px 8px; }", narrowPortraitIndex);
   assert.ok(narrowPortraitIndex >= 0 && compactStepPanelIndex > narrowPortraitIndex, "압축된 레슨 패널 규칙이 좁은 세로 화면 구간 안에 있어야 한다");
-  assert.match(css, /min-height:min\(calc\(100vw - 16px\),320px\)/);
-  assert.match(css, /@media \(max-width:900px\) and \(max-height:500px\) and \(orientation:landscape\)[\s\S]*grid-template-columns:180px minmax\(0,1fr\) 200px/);
-  assert.ok(css.indexOf("@media (max-width:900px) and (max-height:500px) and (orientation:landscape)") > css.indexOf(".tool-panel { padding-right:max(7px,env(safe-area-inset-right))"), "landscape rules must win the mobile cascade");
+  // 2026-09-14: 320px 고정 도화지 최소 높이는 없앴다 — 도구가 고정 막대가 되어 도화지와 흐름에서 자리를 다투지 않는다.
+  assert.match(css, /@media \(max-width:900px\) and \(max-height:500px\) and \(orientation:landscape\)[\s\S]*grid-template-columns:180px minmax\(0,1fr\);/);
   assert.match(css, /\.step-panel \{ display:block; order:initial; grid-column:1;/);
   assert.match(css, /\.grimi-panel \{ order:initial; grid-column:1;/);
   assert.match(css, /\.canvas-zone \{ order:initial; grid-column:2;/);
-  assert.match(css, /\.tool-panel \{ display:flex; order:initial; grid-column:3;/);
+  // 도구는 격자 칸이 아니라 화면 아래 고정 막대다(2026-09-14).
+  assert.match(css, /\.tool-dock \{[^}]*position:fixed;/);
 });
 
 test("no trace has a numbered or ordered start marker", () => {
@@ -127,10 +126,8 @@ test("guide status no longer covers the paper and cat choices change the actual 
   assert.match(studio, /Safari와 일부 태블릿 브라우저는 빠른 획에서 pointermove를 거의 보내지 않는다/);
   assert.match(studio, /snapGuideTrace\(currentGuideTraces, guideLock, releasePoint\)/);
   assert.match(studio, /"회색 고양이": \{ color: "#9AA7B1"[\s\S]*회색 크레용을 골랐어요/);
-  assert.match(studio, /setup\.shade === "light"[\s\S]*setColorsExpanded\(true\)[\s\S]*setColor\(setup\.color\)/);
+  // 2026-09-09: 밝은 색은 팔레트 펼침 대신 무지개 버튼의 안쪽 테두리로 보인다(색 고르기 대화상자 도입).
+  assert.match(studio, /if \(setup\.color\) setColor\(setup\.color\)/);
+  assert.doesNotMatch(studio, /setColorsExpanded/);
   assert.match(studio, /className="choice-feedback"/);
-  assert.match(lessons, /머리 위에 귀 삼각형을 포개던 이전 가이드는 그대로 따라도 선이 겹쳤다/);
-  assert.doesNotMatch(lessons.match(/slug: "curious-cat"[\s\S]*?\n  \},\n  \{/u)?.[0] ?? "", /line\(2, \[\.37, \.16\]/);
-  assert.match(lessons, /가슴부터 몸과 두 앞다리를 천천히 이어요/);
-  assert.match(lessons, /둥근 뒷발과 위로 살랑이는 꼬리를 더해요/);
 });

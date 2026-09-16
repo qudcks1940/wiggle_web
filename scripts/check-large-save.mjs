@@ -43,17 +43,30 @@ try {
   log(step);
 
   step = "학급 준비";
+  const teacherPost = (body) => fetch(`${BASE}/api/teacher`, { method: "POST", headers: { "content-type": "application/json", origin: BASE, cookie }, body: JSON.stringify(body) });
   let rooms = await readJson(await fetch(`${BASE}/api/teacher`, { headers: { cookie } }));
   if (!rooms.classrooms?.length) {
-    await expectStatus(await fetch(`${BASE}/api/teacher`, { method: "POST", headers: { "content-type": "application/json", origin: BASE, cookie }, body: JSON.stringify({ action: "createClassroom", displayName: "대용량 저장 점검반" }) }), 201, "학급 생성");
+    // 입장은 명단의 참여 코드로만 되므로 학급은 명단과 함께 만든다.
+    await expectStatus(await teacherPost({ action: "createClassroom", displayName: "대용량 저장 점검반", roster: [{ seatNumber: 1, realName: "대용량 학생" }] }), 201, "학급 생성");
     rooms = await readJson(await fetch(`${BASE}/api/teacher`, { headers: { cookie } }));
   }
-  const classCode = rooms.classrooms[0].classCode;
+  const room = rooms.classrooms[0];
+  const classCode = room.classCode;
   assert.match(String(classCode), /^\d{4}$/);
-  log(`${step} (코드 ${classCode})`);
+  await expectStatus(await teacherPost({ action: "toggleAdmission", classroomId: room.id, open: true }), 200, "입장 열기");
+  let detail = await readJson(await fetch(`${BASE}/api/teacher?classroomId=${room.id}`, { headers: { cookie } }));
+  if (!detail.students?.length) {
+    await expectStatus(await teacherPost({ action: "addStudents", classroomId: room.id, roster: [{ seatNumber: 1, realName: "대용량 학생" }] }), 201, "명단 추가");
+    detail = await readJson(await fetch(`${BASE}/api/teacher?classroomId=${room.id}`, { headers: { cookie } }));
+  }
+  const entryCode = detail.students[0].entryCode;
+  assert.match(String(entryCode), /^\d{4}$/, "참여 코드");
+  log(`${step} (코드 ${classCode}, 참여 코드 ${entryCode})`);
 
   step = "학생 입장";
-  const join = await expectStatus(await fetch(`${BASE}/api/student`, { method: "POST", headers: { "content-type": "application/json", origin: BASE }, body: JSON.stringify({ action: "join", entry: String(classCode), nickname: `대용량${Date.now() % 100000}`, animal: "🐰", picturePassword: ["별", "달", "꽃"], allowDuplicate: true }) }), 201, step);
+  const joinResponse = await fetch(`${BASE}/api/student`, { method: "POST", headers: { "content-type": "application/json", origin: BASE }, body: JSON.stringify({ action: "join", entry: String(classCode), entryCode, animal: "🐰" }) });
+  if (![200, 201].includes(joinResponse.status)) await expectStatus(joinResponse, 201, step);
+  const join = await readJson(joinResponse);
   const token = join.deviceToken;
   assert.ok(token, "deviceToken");
   log(step);

@@ -3,79 +3,48 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [speak, speech, join, home, studio, css, messageCenter] = await Promise.all([
-  read("../app/components/SpeakButton.tsx"),
-  read("../lib/speech.ts"),
+const [join, entry, archive, studio, css, messageCenter, entryCss] = await Promise.all([
   read("../app/components/JoinClient.tsx"),
-  read("../app/components/StudentHome.tsx"),
+  read("../app/components/StudentEntry.tsx"),
+  read("../app/components/Archive.tsx"),
   read("../app/components/DrawingStudio.tsx"),
   read("../app/globals.css"),
   read("../app/components/StudentMessageCenter.tsx"),
+  read("../app/components/EntryCheck.module.css"),
 ]);
-const animalPortraits = await readFile(new URL("../public/brand/animal-portraits-v2.png", import.meta.url));
 
-test("important child prompts can be heard on demand without automatic classroom audio", () => {
-  assert.match(speech, /new SpeechSynthesisUtterance/);
-  assert.match(speech, /utterance\.lang = "ko-KR"/);
-  assert.match(speech, /utterance\.rate = 0\.96/);
-  assert.match(speech, /selectKoreanVoice\(window\.speechSynthesis\.getVoices\(\)\)/);
-  assert.match(speak, /onClick=\{handleClick\}/);
-  // 음성 미지원·실패 시에도 버튼을 비활성화하지 않고 접근 가능한 대체 행동을 남긴다.
-  assert.doesNotMatch(speak, /disabled=/);
-  assert.match(speak, /같이 읽기/);
-  assert.match(speak, /선생님과 같이 읽어요/);
-  assert.match(home, /SpeakButton text="오늘은 무엇을 그릴까\? 선생님이 고른 활동부터 시작해 봐요\."/);
-  assert.match(messageCenter, /선생님이 말했어요/);
+test("child prompts stay readable as text — the listen button was removed on 2026-09-09", () => {
+  for (const source of [join, entry, archive, studio, messageCenter]) assert.doesNotMatch(source, /SpeakButton/);
+  assert.doesNotMatch(css, /speak-button/);
   // 2026-08-18 사용자 결정: 열기 버튼 아이콘은 💌 — 👩‍🏫 ZWJ 시퀀스는 Windows에서 깨져 보이고
   // "무엇을 여는 버튼인지"가 읽히지 않았다. 배너·이력 안의 👩‍🏫(말하는 주체 표시)는 유지한다.
   assert.match(messageCenter, /className="teacher-message-icon" aria-hidden="true">💌<\/span>/);
   assert.match(messageCenter, /<b>👩‍🏫 선생님<\/b>/);
   assert.doesNotMatch(messageCenter, /📬/);
-  assert.match(studio, /SpeakButton text=\{`\$\{lesson\.steps\[step\]\.instruction\}/);
-  assert.match(studio, /SpeakButton text=\{`\$\{coaching\.question\}/);
-  assert.match(studio, /SpeakButton text=\{coaching\.nextAction\}/);
 });
 
-test("entry can be completed with pictures and a generated nickname instead of reading and typing every field", () => {
-  assert.match(join, /\{ value: "꽃", picture: "🌸", name: "꽃" \}/);
-  assert.match(join, /\{ value: "집", picture: "🏠", name: "집" \}/);
-  assert.match(join, /className="password-slots"/);
-  assert.match(join, /pictures\[index\] \? pictureFor\(pictures\[index\]\) : "\?"/);
-  assert.match(join, /function suggestNickname\(\)/);
-  assert.match(join, /🎲 다른 별명/);
-  assert.match(join, /className="button primary full child-primary-action"/);
-  assert.match(join, /<span aria-hidden="true">▶️<\/span>/);
-  assert.match(join, /선생님이 알려 준 내 번호를 눌러요/);
-  assert.match(join, /다 눌렀으면 들어가기를 눌러요/);
-  assert.match(join, /내 동물을 고르고, 그림 별명을 정한 다음, 그림 비밀번호 세 개를 순서대로 골라요/);
-  assert.doesNotMatch(join, /이 기기에 저장된 내 동물 고르기/);
-  assert.match(join, /className="animal-choice-portrait" data-animal-index=\{index\}/);
-  assert.match(join, /className="join-preview-animal" data-animal-index=\{ANIMALS\.indexOf\(animal\)\}/);
-  assert.match(join, /className="join-preview-password-title" aria-hidden="true">그림 비밀번호<\/span>/);
-  assert.match(join, /<span className=\{pictures\[index\] \? "filled" : ""\} key=\{index\}><i>/);
-  assert.match(css, /background-image:url\('\/brand\/animal-portraits-v2\.png'\)/);
-  assert.match(css, /\.entry-join-shell>\.join-card \.join-preview-card>b \{[\s\S]*?display:grid;[\s\S]*?place-items:center;/);
-  assert.match(css, /\.entry-join-shell>\.join-card \.join-preview-slots span \{[\s\S]*?border:0;[\s\S]*?background:transparent;/);
-  assert.match(css, /\.entry-join-shell>\.join-card \.join-preview-slots span>i \{[\s\S]*?place-items:center;[\s\S]*?transform:none;/);
-  assert.match(css, /\.entry-join-shell \.join-controls \.picture-password-picker \{[\s\S]*?position:static;[\s\S]*?display:grid;/);
-  assert.match(css, /\.entry-join-shell \.join-controls \.join-step-2::before,[\s\S]*?\.join-step-3::before \{[\s\S]*?background:#cbdde7;/);
-  assert.match(css, /\.entry-join-shell \.join-controls \.picture-password-picker \.password-actions \{[\s\S]*?position:static;[\s\S]*?grid-column:2;[\s\S]*?grid-row:2;/);
-  const portraitSheetWidth = animalPortraits.readUInt32BE(16);
-  const portraitSheetHeight = animalPortraits.readUInt32BE(20);
-  assert.equal(portraitSheetWidth, 2560);
-  assert.equal(portraitSheetHeight, 1024);
-  assert.equal(portraitSheetWidth / 5, portraitSheetHeight / 2, "each animal sprite cell must stay square");
+test("entry can be completed with a number pad and one animal picture instead of reading and typing every field", () => {
+  assert.match(join, /<h1>내 참여 코드를 눌러요<\/h1>/);
+  assert.match(join, /<p>선생님이 준 네 자리 숫자예요\.<\/p>/);
+  assert.match(join, /나랑 닮은 친구를 골라요<\/h1>/);
+  assert.match(join, /마음에 드는 친구 하나를 골라 줘\.<\/p>/);
+  assert.match(join, /className=\{`\$\{check\.enter\} child-primary-action`\}/);
+  // 글을 못 읽어도 동물 그림 한 장으로 고른다 — 동물마다 따로 된 그림 파일(고해상도 그림이 오면 덮어씀).
+  assert.match(join, /<img className=\{check\.pickImage\} src=\{character\.image\}/);
+  assert.doesNotMatch(join, /이 기기에 저장된 내 동물 고르기|picturePassword|nickname-row/);
+  // 동물 그림은 정사각형 투명 PNG를 webp로 바꾼 파일이다. 옛 스프라이트 한 장은 더 이상 화면에서 쓰지 않는다.
+  assert.doesNotMatch(css, /animal-portraits-v2/);
 });
 
 test("drawing, navigation and reflection retain familiar visual actions when text is not understood", () => {
-  assert.match(home, /<span aria-hidden="true">✏️<\/span>[\s\S]*<h2>이어 그리기<\/h2>/);
-  assert.match(home, /<span aria-hidden="true">🖼️<\/span>[\s\S]*<h2>내 그림<\/h2>/);
-  assert.match(home, /<span aria-hidden="true">🎨<\/span>[\s\S]*<h2>활동 고르기<\/h2>/);
-  assert.match(home, /<span aria-hidden="true">▶️<\/span>\{teacherDone \? "한 번 더 그리기" : teacherArtwork \? "이어 그리기" : "그림 시작하기"\}/);
+  // 커리큘럼 은퇴(2026-09-12): 홈이 사라지고 아이는 바로 도화지로 간다. 도화지 밖의
+  // 자리는 내 그림 하나뿐이라, 거기서 새 그림·그림책·수업 마치기를 그림 표지로 고른다.
+  assert.match(entry, /도화지를 펴는 중/);
+  assert.match(archive, /<span aria-hidden="true">🎨<\/span>새 그림/);
+  assert.match(archive, /<span aria-hidden="true">📘<\/span>그림책/);
+  assert.match(archive, /<span aria-hidden="true">🚪<\/span>\{leaving \? "나가는 중…" : "수업 마치기"\}/);
   assert.match(studio, /⬅️ 이전/);
-  assert.match(studio, /"➡️ 다음"/);
-  assert.match(studio, /QUICK_DRAW_TOPICS/);
-  assert.match(studio, /🚀/);
+  assert.match(studio, /step === lesson\.steps\.length - 1 \? "⭐" : "➡️"/);
   assert.match(studio, /favoritePartChoices/);
   assert.match(studio, /FAVORITE_REASON_CHOICES/);
   assert.match(studio, /className="reflection-choice-grid"/);
@@ -84,18 +53,14 @@ test("drawing, navigation and reflection retain familiar visual actions when tex
   assert.match(studio, /"작품 완성"/);
 });
 
-test("speaker, picture slots and choice controls remain large and visible on small screens", () => {
-  assert.match(css, /\.speak-button \{[^}]*min-height:52px/);
-  assert.match(css, /\.speak-button\.compact \{[^}]*min-width:48px; width:48px; min-height:48px/);
+test("picture slots and choice controls remain large and visible on small screens", () => {
   assert.match(css, /\.student-message-button \.teacher-message-icon \{[^}]*font-size:26px/);
-  assert.match(css, /\.password-slots span \{[^}]*width:52px; height:52px/);
+  // 그림 비밀번호 슬롯(.password-slots)은 참여 코드 입장(2026-09-09)과 함께 사라졌다. 코드 수첩의 키는 EntryCheck.module.css가 44px 이상으로 잡는다.
+  assert.match(entryCss, /\.key \{ min-height: 56px; font-size: 24px; \}/);
   assert.match(css, /\.reflection-choice-grid button \{[^}]*min-height:84px/);
   // `.welcome-title-row` 규칙은 어떤 화면도 렌더링하지 않는 죽은 CSS라 함께 제거했다.
-  assert.match(css, /@media \(max-width:460px\) and \(orientation:portrait\)[\s\S]*\.lesson-spoken-prompt \{ grid-column:1; grid-row:1; grid-template-columns:minmax\(0,1fr\) 48px/);
+  assert.match(css, /@media \(max-width:460px\) and \(orientation:portrait\)[\s\S]*\.lesson-spoken-prompt \{ grid-column:1; grid-row:1; grid-template-columns:minmax\(0,1fr\)/);
   assert.match(css, /\.reflection-choice-grid \{ display:grid; grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-  assert.match(home, /className="student-home-intro"[\s\S]*<SpeakButton text="오늘은 무엇을 그릴까\? 선생님이 고른 활동부터 시작해 봐요\."/);
-  assert.match(home, /className="teacher-activity-book"[\s\S]*className="book-binding"[\s\S]*className="teacher-pencil-progress"/);
-  assert.match(css, /\.teacher-activity-book \{[^}]*grid-template-columns:minmax\(0,1fr\) 46px minmax\(0,1fr\);/);
-  assert.match(css, /\.student-tool-shelf \{[^}]*border:4px solid #d4a25d/);
-  assert.match(css, /@media \(max-width:720px\)[\s\S]*\.teacher-activity-book \{[^}]*grid-template-columns:1fr/);
+  // 내 그림 헤더의 행동은 좁은 화면에서도 44px을 지킨다.
+  assert.match(css, /\.archive-actions \.button,\.archive-actions \.small-button \{ min-height:44px; \}/);
 });

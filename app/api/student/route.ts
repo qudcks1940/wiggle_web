@@ -1,9 +1,9 @@
 import { bindings, ensureSchema } from "@/db/runtime";
-import { cleanText, clearRateLimit, clientIp, deriveSecret, id, isLocalDemoRequest, jsonError, noStoreJson, normalizePicturePassword, picturePasswordLength, randomToken, rateLimit, sameOrigin, sha256, studentFromRequest, verifySecret } from "@/lib/security";
+import { cleanText, clientIp, isLocalDemoRequest, jsonError, noStoreJson, randomToken, rateLimit, sameOrigin, sha256, studentFromRequest } from "@/lib/security";
+import { FALLBACK_NICKNAME, NICKNAME_IDEAS } from "@/lib/nickname-ideas";
 import { activityLabel, normalizeActivityKey } from "@/lib/lesson-content";
 import { ensureLocalStorybookStudent } from "@/lib/dev-only/demo-seed";
-
-type RecoveredStudent = { id: string; nickname: string; animal: string; classroomName: string; pictureHash: string; pictureSalt: string };
+import { HAND_RAISE_TTL_MS, isMarkAnswer } from "@/lib/teacher-marks";
 
 async function prepareDeviceSession() {
   const token = randomToken(32); const now = new Date();
@@ -29,15 +29,11 @@ async function classroomForEntry(codeOrToken: string) {
 // 견딜 만큼 넉넉히 두고, 무차별 대입은 대상(학생·프로필) 단위 한도로 막는다.
 const IP_ENTRY_LIMIT = 180;
 const IP_ENTRY_WINDOW_SECONDS = 10 * 60;
-const TARGET_ATTEMPT_LIMIT = 8;
-const TARGET_ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const CLASSROOM_JOIN_LIMIT = 60;
 
 const requestIp = clientIp;
 function entryRateKey(request: Request) { return `student-entry:${requestIp(request)}`; }
 function ipAllowed(request: Request) { return rateLimit(entryRateKey(request), IP_ENTRY_LIMIT, IP_ENTRY_WINDOW_SECONDS); }
-function targetKey(target: string) { return `student-target:${target}`; }
-function targetAllowed(target: string) { return rateLimit(targetKey(target), TARGET_ATTEMPT_LIMIT, TARGET_ATTEMPT_WINDOW_SECONDS); }
 function presentedToken(request: Request) { return request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? ""; }
 
 export async function GET(request: Request) {
@@ -50,23 +46,25 @@ export async function GET(request: Request) {
   // 학생 홈은 12초마다 이 응답을 다시 부른다. 서로 의존하지 않는 조회를 순서대로 await 하면
   // D1 왕복이 그대로 쌓이므로 한 번에 보내고, 현재 활동 작품만 학급 활동을 읽은 뒤 이어서 조회한다.
   const now = new Date().toISOString();
-  const [artworkRows, classroom, latestUnfinishedArtwork, artworkTotalRow, messages, teacherView] = await Promise.all([
+  const [artworkRows, classroom, latestUnfinishedArtwork, artworkTotalRow, messages, teacherView, markRow, handRow] = await Promise.all([
     db.prepare(`SELECT id, title, topic, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, revision, CASE WHEN thumbnail_key IS NOT NULL OR final_image_key IS NOT NULL THEN 1 ELSE 0 END AS hasImage, updated_at AS updatedAt, completed_at AS completedAt FROM artworks WHERE student_id = ? ORDER BY updated_at DESC, id DESC LIMIT ? OFFSET ?`).bind(student.id, artworkPageSize + 1, artworkOffset).all(),
     db.prepare(`SELECT current_activity AS currentActivity FROM classrooms WHERE id = ?`).bind(student.classroomId).first<{ currentActivity: string }>(),
     db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND status <> 'complete' ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id).first(),
     db.prepare(`SELECT COUNT(*) AS count FROM artworks WHERE student_id = ?`).bind(student.id).first<{ count: number }>(),
     db.prepare(`SELECT id, body, createdAt, audience, seenAt FROM (SELECT m.id, m.body, m.created_at AS createdAt, CASE WHEN m.student_id IS NULL THEN 'all' ELSE 'student' END AS audience, r.seen_at AS seenAt FROM teacher_messages m LEFT JOIN message_receipts r ON r.message_id = m.id AND r.student_id = ? WHERE m.classroom_id = ? AND (m.student_id IS NULL OR m.student_id = ?) ORDER BY m.created_at DESC, m.id DESC LIMIT 50) recent ORDER BY createdAt ASC, id ASC`).bind(student.id, student.classroomId, student.id).all<{ id: string; body: string; createdAt: string; audience: string; seenAt: string | null }>(),
     db.prepare(`SELECT 1 FROM teacher_views WHERE student_id = ? AND classroom_id = ? AND expires_at > ? LIMIT 1`).bind(student.id, student.classroomId, now).first(),
+    // 선생님 표시는 답하지 않은 가장 최근 것 하나만 아이 화면에 뜬다. 선생님 실명·학급 명단은 싣지 않는다.
+    db.prepare(`SELECT id, artwork_id AS artworkId, strokes_json AS strokesJson, note, created_at AS createdAt FROM teacher_marks WHERE student_id = ? AND classroom_id = ? AND answered_at IS NULL ORDER BY created_at DESC, id DESC LIMIT 1`).bind(student.id, student.classroomId).first<{ id: string; artworkId: string; strokesJson: string; note: string; createdAt: string }>(),
+    db.prepare(`SELECT 1 FROM hand_raises WHERE student_id = ? AND raised_at > ? LIMIT 1`).bind(student.id, new Date(Date.now() - HAND_RAISE_TTL_MS).toISOString()).first(),
   ]);
   const artworks = artworkRows.results.slice(0, artworkPageSize);
   const currentActivityKey = normalizeActivityKey(classroom?.currentActivity);
-  const currentLessonSlug = currentActivityKey.startsWith("lesson:") ? currentActivityKey.slice(7) : null;
-  const currentActivityArtwork = currentLessonSlug
-    ? await db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND lesson_slug = ? ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id, currentLessonSlug).first()
-    : await db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND learning_mode = 'free' ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id).first();
+  // 레슨 카탈로그·커리큘럼 은퇴 — 활동은 free 하나뿐이라 최근 그림만 조회한다.
+  const currentActivityArtwork = await db.prepare(`SELECT id, title, learning_mode AS learningMode, lesson_slug AS lessonSlug, status, current_step AS currentStep, updated_at AS updatedAt FROM artworks WHERE student_id = ? AND learning_mode = 'free' ORDER BY updated_at DESC, id DESC LIMIT 1`).bind(student.id).first();
   const artworkTotal = Number(artworkTotalRow?.count ?? 0);
   const teacherViewing = Boolean(teacherView);
-  return noStoreJson({ student, artworks, artworkTotal, currentActivityArtwork, latestUnfinishedArtwork, artworkHasMore: artworkRows.results.length > artworkPageSize, artworkNextOffset: artworkOffset + artworks.length, messages: messages.results, teacherViewing, currentActivityKey, currentActivityLabel: activityLabel(currentActivityKey) });
+  const teacherMark = markRow ? { id: markRow.id, artworkId: markRow.artworkId, strokes: JSON.parse(markRow.strokesJson), note: markRow.note, createdAt: markRow.createdAt } : null;
+  return noStoreJson({ student, artworks, artworkTotal, currentActivityArtwork, latestUnfinishedArtwork, artworkHasMore: artworkRows.results.length > artworkPageSize, artworkNextOffset: artworkOffset + artworks.length, messages: messages.results, teacherViewing, teacherMark, handRaised: Boolean(handRow), currentActivityKey, currentActivityLabel: activityLabel(currentActivityKey) });
 }
 
 async function studentPost(request: Request) {
@@ -102,6 +100,26 @@ async function studentPost(request: Request) {
     if (!accessible) return jsonError("확인할 선생님 말씀을 찾지 못했어요.", 404);
     await db.prepare(`INSERT OR IGNORE INTO message_receipts(message_id, student_id, seen_at) VALUES (?, ?, CURRENT_TIMESTAMP)`).bind(messageId, student.id).run();
     return noStoreJson({ ok: true });
+  }
+
+  if (action === "answerMark") {
+    // 아이는 선생님 표시에 큰 버튼 두 개로만 답한다. 글자 입력은 받지 않는다.
+    const student = await studentFromRequest(request);
+    if (!student) return jsonError("활성 학생 세션이 없어요.", 401);
+    const markId = cleanText(payload.markId, 80);
+    if (!markId || !isMarkAnswer(payload.answer)) return jsonError("답을 다시 골라 주세요.", 400);
+    const updated = await bindings().DB.prepare(`UPDATE teacher_marks SET answer = ?, answered_at = ? WHERE id = ? AND student_id = ? AND classroom_id = ? AND answered_at IS NULL`).bind(payload.answer, new Date().toISOString(), markId, student.id, student.classroomId).run();
+    return noStoreJson({ ok: true, answered: Boolean(updated.meta.changes) });
+  }
+
+  if (action === "raiseHand") {
+    const student = await studentFromRequest(request);
+    if (!student) return jsonError("활성 학생 세션이 없어요.", 401);
+    if (!(await rateLimit(`hand-raise:${student.id}`, 30, 10 * 60))) return jsonError("잠깐 기다렸다가 다시 눌러 줘.", 429);
+    const db = bindings().DB;
+    if (payload.raised === true) await db.prepare(`INSERT INTO hand_raises(student_id, classroom_id, raised_at) VALUES (?, ?, ?) ON CONFLICT(student_id) DO UPDATE SET classroom_id = excluded.classroom_id, raised_at = excluded.raised_at`).bind(student.id, student.classroomId, new Date().toISOString()).run();
+    else await db.prepare(`DELETE FROM hand_raises WHERE student_id = ?`).bind(student.id).run();
+    return noStoreJson({ ok: true, handRaised: payload.raised === true });
   }
 
   if (action === "ackTeacherMessages") {
@@ -143,113 +161,53 @@ async function studentPost(request: Request) {
     return noStoreJson({ classroomName: classroom.displayName, hasProfiles: Boolean(existing), hasRoster: Boolean(roster) });
   }
 
-  if (action === "seatStatus") {
-    if (!(await ipAllowed(request))) return jsonError("입장 확인이 많아요. 잠시 후 다시 해 주세요.", 429);
-    const entry = cleanText(payload.entry, 80);
-    const classroom = await classroomForEntry(entry);
-    if (!classroom) return jsonError("수업 코드를 다시 확인해 주세요.", 404);
-    if (!classroom.admissionOpen) return jsonError("선생님이 입장을 열 때까지 기다려 주세요.", 403);
-    const seatNumber = Number(payload.seatNumber);
-    if (!Number.isInteger(seatNumber) || seatNumber < 1 || seatNumber > 99) return jsonError("번호를 다시 확인해 주세요.");
-    const seat = await bindings().DB.prepare(`SELECT claimed_at AS claimedAt FROM student_profiles WHERE classroom_id = ? AND seat_number = ? AND archived_at IS NULL`).bind(classroom.id, seatNumber).first<{ claimedAt: string | null }>();
-    if (!seat) return jsonError("그 번호는 우리 반에 없어요. 선생님께 물어봐 주세요.", 404);
-    // 실명은 돌려주지 않는다. 아이에게 필요한 것은 "처음인지"뿐이다.
-    return noStoreJson({ classroomName: classroom.displayName, seatNumber, firstTime: !seat.claimedAt });
-  }
-
   if (action === "join") {
     if (!(await ipAllowed(request))) return jsonError("입장 시도가 많아요. 잠시 후 다시 해 주세요.", 429);
     const entry = cleanText(payload.entry, 80); const classroom = await classroomForEntry(entry);
     if (!classroom) return jsonError("수업 코드를 다시 확인해 주세요.", 404);
     if (!classroom.admissionOpen) return jsonError("선생님이 입장을 열 때까지 기다려 주세요.", 403);
-    const nickname = cleanText(payload.nickname, 16); const animal = cleanText(payload.animal, 12); const pictureLength = picturePasswordLength(payload.picturePassword); const picture = normalizePicturePassword(payload.picturePassword);
 
-    // 입장은 선생님이 만든 명단의 번호로만 한다(2026-09-07 사용자 결정). 아이가 스스로
-    // 프로필을 만들던 예전 경로는 없앴다 — 같은 학급에 같은 별명이 겹치면 교사가 누가
-    // 누구인지 알 수 없었고, 그걸 풀려고 만든 것이 이 명단이다.
+    // 입장은 선생님 명단의 참여 코드 하나로 한다(2026-09-09 사용자 결정). 번호 + 그림 비밀번호는
+    // 아이가 매번 기억해야 해서 없앴다. 코드는 종이에 적혀 있고, 코드가 곧 그 아이의 자리라
+    // 다음 회차에 같은 코드를 넣으면 같은 학생 ID로 돌아온다. 명단 자체는 절대 돌려주지 않는다.
     const rosterRow = await bindings().DB.prepare(`SELECT 1 FROM student_profiles WHERE classroom_id = ? AND archived_at IS NULL AND seat_number IS NOT NULL LIMIT 1`).bind(classroom.id).first();
     if (!rosterRow) return noStoreJson({ error: "선생님이 아직 우리 반 명단을 넣지 않았어요. 선생님께 말해 주세요.", code: "NO_ROSTER" }, { status: 409 });
-
-    const seatNumber = Number(payload.seatNumber);
-    if (!Number.isInteger(seatNumber) || seatNumber < 1 || seatNumber > 99) return jsonError("번호를 다시 확인해 주세요.");
-    if (nickname.length < 2 || !animal || pictureLength !== 3) return jsonError("별명, 동물, 그림 비밀번호 세 개를 모두 골라 주세요.");
+    const entryCode = cleanText(payload.entryCode, 4);
+    if (!/^\d{4}$/.test(entryCode)) return jsonError("참여 코드 네 자리를 눌러 주세요.");
     // 학급 상한은 IP와 함께 묶는다. 학급 단독 버킷은 한 클라이언트가 학급 전체를 잠그는 통로가 된다.
+    // 네 자리 만 개 중 한 반 코드는 수십 개다. 학급+IP 버킷(60회/10분)이 찍어 맞추기를 막는다.
     if (!(await rateLimit(`student-join-class:${classroom.id}:${requestIp(request)}`, CLASSROOM_JOIN_LIMIT, IP_ENTRY_WINDOW_SECONDS))) return jsonError("이 수업의 입장 시도가 많아요. 선생님께 알려 주세요.", 429);
-    const seat = await bindings().DB.prepare(`SELECT id, claimed_at AS claimedAt FROM student_profiles WHERE classroom_id = ? AND seat_number = ? AND archived_at IS NULL`).bind(classroom.id, seatNumber).first<{ id: string; claimedAt: string | null }>();
-    if (!seat) return jsonError("그 번호는 우리 반에 없어요. 선생님께 물어봐 주세요.", 404);
-    // 이미 쓰는 자리는 여기서 덮어쓰지 않는다. 덮어쓰면 그 아이의 그림 비밀번호가 바뀌어
-    // 본인이 못 들어오고, 아무나 번호만으로 남의 작품을 열 수 있다.
-    if (seat.claimedAt) return noStoreJson({ error: "이 번호는 이미 쓰고 있어요. 그림 비밀번호로 들어와 주세요.", code: "SEAT_CLAIMED" }, { status: 409 });
-    const seatSalt = randomToken(16); const seatQrToken = randomToken(28); const seatNow = new Date().toISOString();
-    const [seatPictureHash, seatQrHash, seatDevice] = await Promise.all([deriveSecret(picture, seatSalt), sha256(seatQrToken), prepareDeviceSession()]);
-    // 자리 차지·비밀번호·세션을 한 배치로 묶는다. 나눠 쓰면 중간에 실패했을 때
-    // 자리는 차지됐는데 비밀번호나 세션이 없어 아이가 영영 못 들어온다(교사가 손대야 한다).
-    // claimed_at IS NULL 조건이 동시 입장도 막는다 — 먼저 성공한 쪽만 자리를 갖는다.
-    // 뒤 두 문장은 방금 쓴 claimed_at 값으로 자기 차지에 묶여, 남이 먼저 차지했으면 아무것도 넣지 않는다.
-    const seatResults = await bindings().DB.batch([
-      bindings().DB.prepare(`UPDATE student_profiles SET nickname = ?, animal = ?, claimed_at = ?, last_activity_at = ? WHERE id = ? AND claimed_at IS NULL AND archived_at IS NULL AND EXISTS (SELECT 1 FROM classrooms WHERE id = ? AND active = 1 AND admission_open = 1)`).bind(nickname, animal, seatNow, seatNow, seat.id, classroom.id),
-      bindings().DB.prepare(`INSERT INTO recovery_credentials(student_id, picture_hash, picture_salt, personal_qr_hash) SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM student_profiles WHERE id = ? AND classroom_id = ? AND claimed_at = ? AND archived_at IS NULL) ON CONFLICT(student_id) DO UPDATE SET picture_hash = excluded.picture_hash, picture_salt = excluded.picture_salt, personal_qr_hash = excluded.personal_qr_hash, reset_at = NULL`).bind(seat.id, seatPictureHash, seatSalt, seatQrHash, seat.id, classroom.id, seatNow),
-      bindings().DB.prepare(`INSERT INTO device_sessions(token_hash, student_id, expires_at, last_used_at) SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM student_profiles WHERE id = ? AND classroom_id = ? AND claimed_at = ? AND archived_at IS NULL)`).bind(seatDevice.tokenHash, seat.id, seatDevice.expiresAt, seatDevice.lastUsedAt, seat.id, classroom.id, seatNow),
-    ]);
-    if (!seatResults[0]?.meta.changes) {
-      const nowClaimed = await bindings().DB.prepare(`SELECT claimed_at AS claimedAt FROM student_profiles WHERE id = ? AND archived_at IS NULL`).bind(seat.id).first<{ claimedAt: string | null }>();
-      if (nowClaimed?.claimedAt) return noStoreJson({ error: "이 번호는 이미 쓰고 있어요. 그림 비밀번호로 들어와 주세요.", code: "SEAT_CLAIMED" }, { status: 409 });
-      return jsonError("입장이 닫혔어요. 선생님께 확인해 주세요.", 403);
+    const seat = await bindings().DB.prepare(`SELECT id, nickname, animal, claimed_at AS claimedAt FROM student_profiles WHERE classroom_id = ? AND entry_code = ? AND archived_at IS NULL`).bind(classroom.id, entryCode).first<{ id: string; nickname: string; animal: string; claimedAt: string | null }>();
+    if (!seat) return noStoreJson({ error: "참여 코드를 다시 확인해 주세요.", code: "ENTRY_CODE" }, { status: 404 });
+
+    if (!seat.claimedAt) {
+      // 첫 입장은 동물 하나만 고른다. 별명은 그 동물의 기본 별명이다 — 아이가 글자를 치지 않는다.
+      const animal = cleanText(payload.animal, 12);
+      const ideas = NICKNAME_IDEAS[animal];
+      if (!ideas) return noStoreJson({ classroomName: classroom.displayName, firstTime: true });
+      const nickname = ideas[0] ?? FALLBACK_NICKNAME;
+      const claimedAt = new Date().toISOString();
+      const device = await prepareDeviceSession();
+      // 자리 차지와 세션을 한 배치로 묶는다. 나눠 쓰면 중간에 실패했을 때 자리는 차지됐는데 세션이 없다.
+      // 세션 INSERT는 방금 쓴 claimed_at에 묶여, 같은 코드로 동시에 들어온 다른 기기가 먼저
+      // 차지했으면 아무것도 넣지 않는다 — 그 기기는 아래 재입장 경로로 세션을 받는다.
+      const seatResults = await bindings().DB.batch([
+        bindings().DB.prepare(`UPDATE student_profiles SET nickname = ?, animal = ?, claimed_at = ?, last_activity_at = ? WHERE id = ? AND claimed_at IS NULL AND archived_at IS NULL AND EXISTS (SELECT 1 FROM classrooms WHERE id = ? AND active = 1 AND admission_open = 1)`).bind(nickname, animal, claimedAt, claimedAt, seat.id, classroom.id),
+        bindings().DB.prepare(`INSERT INTO device_sessions(token_hash, student_id, expires_at, last_used_at) SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM student_profiles WHERE id = ? AND classroom_id = ? AND claimed_at = ? AND archived_at IS NULL)`).bind(device.tokenHash, seat.id, device.expiresAt, device.lastUsedAt, seat.id, classroom.id, claimedAt),
+      ]);
+      // 아이 화면에는 별명만 보낸다. 실명은 담임 교사 화면에만 있다.
+      if (seatResults[0]?.meta.changes) return noStoreJson({ student: { id: seat.id, nickname, animal, classroomName: classroom.displayName }, deviceToken: device.token, expiresAt: device.expiresAt }, { status: 201 });
+      // 0행이면 이유를 가른다: 같은 코드의 다른 기기가 먼저 차지했으면 그대로 재입장, 학급이 닫혔으면 403.
+      const nowClaimed = await bindings().DB.prepare(`SELECT nickname, animal, claimed_at AS claimedAt FROM student_profiles WHERE id = ? AND archived_at IS NULL`).bind(seat.id).first<{ nickname: string; animal: string; claimedAt: string | null }>();
+      if (!nowClaimed?.claimedAt) return jsonError("입장이 닫혔어요. 선생님께 확인해 주세요.", 403);
+      seat.nickname = nowClaimed.nickname; seat.animal = nowClaimed.animal;
     }
-    // 아이 화면에는 아이가 고른 별명만 보낸다. 실명은 담임 교사 화면에만 있다.
-    return noStoreJson({ student: { id: seat.id, nickname, animal, classroomName: classroom.displayName }, deviceToken: seatDevice.token, expiresAt: seatDevice.expiresAt }, { status: 201 });
-  }
-
-  if (action === "switchProfile") {
-    if (!(await ipAllowed(request))) return jsonError("확인 시도가 많아요. 잠시 기다려 주세요.", 429);
-    const studentId = cleanText(payload.studentId, 40); const pictureLength = picturePasswordLength(payload.picturePassword); const picture = normalizePicturePassword(payload.picturePassword);
-    if (pictureLength !== 3) return jsonError("그림 비밀번호 세 개를 골라 주세요.");
-    // 대상 학생 계정 단위 한도가 없으면 그림 비밀번호 512가지를 IP만 바꿔 가며 전수 시도할 수 있다.
-    if (!(await targetAllowed(`unlock:${studentId}`))) return jsonError("여러 번 틀렸어요. 선생님께 도움을 요청해 주세요.", 429);
-    const candidate = await bindings().DB.prepare(`SELECT s.id, s.nickname, s.animal, c.display_name AS classroomName, r.picture_hash AS pictureHash, r.picture_salt AS pictureSalt FROM student_profiles s JOIN classrooms c ON c.id = s.classroom_id JOIN recovery_credentials r ON r.student_id = s.id WHERE s.id = ? AND s.archived_at IS NULL AND c.active = 1`).bind(studentId).first<RecoveredStudent>();
-    const valid = candidate ? await verifySecret(picture, candidate.pictureSalt, candidate.pictureHash) : Boolean(await deriveSecret(picture, "missing-profile-salt")) && false;
-    if (!candidate || !valid) return jsonError("그림 비밀번호를 다시 확인해 주세요.", 401);
-    await clearRateLimit(targetKey(`unlock:${studentId}`));
-    const device = await issueDeviceSession(candidate.id);
+    // 재입장: 코드가 곧 자리라 별명·비밀번호를 다시 묻지 않는다.
+    const device = await issueDeviceSession(seat.id);
     if (!device) return jsonError("이 학급은 더 이상 이용할 수 없어요. 선생님께 확인해 주세요.", 403);
-    return noStoreJson({ student: { id: candidate.id, nickname: candidate.nickname, animal: candidate.animal, classroomName: candidate.classroomName }, deviceToken: device.token, expiresAt: device.expiresAt });
+    return noStoreJson({ student: { id: seat.id, nickname: seat.nickname, animal: seat.animal, classroomName: classroom.displayName }, deviceToken: device.token, expiresAt: device.expiresAt });
   }
 
-  if (action === "recover") {
-    if (!(await ipAllowed(request))) return jsonError("복구 시도가 많아요. 선생님께 도움을 요청해 주세요.", 429);
-    const personalQrToken = cleanText(payload.personalQrToken, 120); let student: RecoveredStudent | null = null;
-    const qrTarget = personalQrToken ? `qr:${await sha256(personalQrToken)}` : "";
-    if (personalQrToken) {
-      if (!(await targetAllowed(qrTarget))) return jsonError("복구 시도가 많아요. 선생님께 도움을 요청해 주세요.", 429);
-      student = await bindings().DB.prepare(`SELECT s.id, s.nickname, s.animal, c.display_name AS classroomName, r.picture_hash AS pictureHash, r.picture_salt AS pictureSalt FROM recovery_credentials r JOIN student_profiles s ON s.id = r.student_id JOIN classrooms c ON c.id = s.classroom_id WHERE r.personal_qr_hash = ? AND s.archived_at IS NULL AND c.active = 1`).bind(qrTarget.slice(3)).first<RecoveredStudent>();
-    } else {
-      const entry = cleanText(payload.entry ?? payload.classCode, 80); const pictureLength = picturePasswordLength(payload.picturePassword); const picture = normalizePicturePassword(payload.picturePassword);
-      if (pictureLength !== 3) return jsonError("그림 비밀번호 세 개를 골라 주세요.");
-      const classroom = await classroomForEntry(entry);
-      if (!classroom) return jsonError("수업 코드를 다시 확인해 주세요.", 404);
-
-      // 재입장은 번호 + 그림 비밀번호다(2026-09-07 사용자 결정). 별명·동물로 찾던 예전
-      // 경로는 없앴다 — 번호가 이미 한 사람을 가리켜 후보가 하나이고, 아이가 별명을 잊어도
-      // 자기 그림으로 돌아올 수 있다.
-      const seatNumber = Number(payload.seatNumber);
-      if (!Number.isInteger(seatNumber) || seatNumber < 1 || seatNumber > 99) return jsonError("번호를 다시 확인해 주세요.");
-      const seatTarget = `recover:${classroom.id}:seat:${seatNumber}`;
-      if (!(await targetAllowed(seatTarget))) return jsonError("여러 번 틀렸어요. 선생님께 도움을 요청해 주세요.", 429);
-      const seatStudent = await bindings().DB.prepare(`SELECT s.id, s.nickname, s.animal, c.display_name AS classroomName, r.picture_hash AS pictureHash, r.picture_salt AS pictureSalt FROM student_profiles s JOIN classrooms c ON c.id = s.classroom_id JOIN recovery_credentials r ON r.student_id = s.id WHERE s.classroom_id = ? AND s.seat_number = ? AND s.archived_at IS NULL AND c.active = 1`).bind(classroom.id, seatNumber).first<RecoveredStudent>();
-      // 없는 번호에서도 같은 비용을 치러, 응답 시간으로 명단을 캐낼 수 없게 한다.
-      if (!seatStudent) { await deriveSecret(picture, "missing-recovery-salt"); return jsonError("번호나 그림 비밀번호를 다시 확인해 주세요.", 401); }
-      if (!(await verifySecret(picture, seatStudent.pictureSalt, seatStudent.pictureHash))) return jsonError("번호나 그림 비밀번호를 다시 확인해 주세요.", 401);
-      await clearRateLimit(targetKey(seatTarget));
-      student = seatStudent;
-    }
-    if (!student) return jsonError("복구할 학생을 찾지 못했어요.", 404);
-    // 성공한 QR 복구도 카운터를 비운다(정상 QR을 15분에 8번 쓰면 막히지 않게).
-    // 세션 발급보다 먼저 해야, 이 삭제가 실패해도 클라이언트가 받지 못한 세션이 남지 않는다.
-    if (qrTarget) await clearRateLimit(targetKey(qrTarget));
-    const device = await issueDeviceSession(student.id);
-    if (!device) return jsonError("이 학급은 더 이상 이용할 수 없어요. 선생님께 확인해 주세요.", 403);
-    return noStoreJson({ student: { id: student.id, nickname: student.nickname, animal: student.animal, classroomName: student.classroomName }, deviceToken: device.token, expiresAt: device.expiresAt });
-  }
   return jsonError("지원하지 않는 요청이에요.");
 }
 

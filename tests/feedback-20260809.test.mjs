@@ -117,19 +117,13 @@ test("teacher artwork history is ownership-scoped, newest-first, and paginated",
     body: JSON.stringify({ action: "createClassroom", displayName: "작품 기록반", roster: [{ seatNumber: 1, realName: "김민준" }] }),
   });
   assert.equal(created.status, 201);
-  const classroom = (await created.json()).classroom;
+  const createdPayload = await created.json();
+  const classroom = createdPayload.classroom;
 
   const joined = await server.fetch("/api/student", {
     method: "POST",
     headers: studentHeaders,
-    body: JSON.stringify({
-      action: "join",
-      entry: classroom.classCode,
-      seatNumber: 1,
-      nickname: "기록 화가",
-      animal: "🐻",
-      picturePassword: ["⭐", "⭐", "⭐"],
-    }),
+    body: JSON.stringify({ action: "join", entry: classroom.classCode, entryCode: createdPayload.entryCodes[0].entryCode, animal: "🐻" }),
   });
   assert.equal(joined.status, 201);
   const joinedData = await joined.json();
@@ -185,7 +179,7 @@ test("teacher artwork history is ownership-scoped, newest-first, and paginated",
 });
 
 test("the UI source keeps completion, archive, palette, help-choice and touch protections visible", async () => {
-  const [studio, archive, detail, globalCss, tracker, artworkRoute, artworkImageRoute, teacher, teacherRoute, studentRoute, studentHome, uploads] = await Promise.all([
+  const [studio, archive, detail, globalCss, tracker, artworkRoute, artworkImageRoute, teacher, teacherRoute, studentRoute, studentEntry, uploads] = await Promise.all([
     readFile(new URL("../app/components/DrawingStudio.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/components/Archive.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/components/ArtworkDetail.tsx", import.meta.url), "utf8"),
@@ -196,7 +190,7 @@ test("the UI source keeps completion, archive, palette, help-choice and touch pr
     readFile(new URL("../app/components/TeacherApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/teacher/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/student/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/components/StudentHome.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/StudentEntry.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/settled-uploads.ts", import.meta.url), "utf8"),
   ]);
   assert.match(studio, /도움받을래/);
@@ -230,15 +224,17 @@ test("the UI source keeps completion, archive, palette, help-choice and touch pr
   assert.match(studentRoute, /artworkTotal/);
   assert.match(studentRoute, /currentActivityArtwork/);
   assert.match(studentRoute, /latestUnfinishedArtwork/);
-  assert.match(studentHome, /const unfinished = data\?\.latestUnfinishedArtwork/);
-  assert.match(studentHome, /data\.artworkTotal/);
+  // 홈이 사라져(2026-09-12) 들어온 아이는 그리다 만 그림이 있으면 그것을, 없으면 새 도화지를 연다.
+  assert.match(studentEntry, /const unfinished = data\.latestUnfinishedArtwork;/);
+  assert.match(studentEntry, /location\.replace\(unfinished \? `\/student\/draw\/\$\{unfinished\.id\}` : "\/student\/draw\/new\?mode=free"\)/);
+  assert.match(archive, /setHasMore\(Boolean\(value\.artworkHasMore\)\)/);
   assert.doesNotMatch(studio, /lastTwoFingerTapRef|두 손가락 짧은 탭 두 번/);
   assert.match(studio, /lastSingleFingerTapRef[\s\S]*resetViewToFit/);
   assert.match(globalCss, /max-height:480px[\s\S]*orientation:landscape[\s\S]*guide-choice-card/);
-  // 2026-08-17: dock+tray 실험은 되돌렸다 — 도구 패널은 다시 12열 grid로 캔버스 아래
-  // 상시 자리를 차지하고, 세로가 짧은 좁은 폰에서만 "패널로 스크롤" 힌트가 뜬다.
-  assert.match(globalCss, /\.tool-panel \.selected-color \{ grid-column:1\/4; margin:0; min-width:0; \}/);
-  assert.match(globalCss, /\.mobile-tool-peek \{ display:none; \}/);
+  // 2026-08-17의 "도구 패널은 캔버스 아래 격자" 계약은 2026-09-14 사용자 결정(도구 막대 B안)으로 바뀌었다.
+  // 2026-09-14 도구 막대: 좁은 화면은 색 점 대신 지금 색 버튼 하나(누르면 12색 창)를 보인다.
+  assert.match(globalCss, /\.dock-current-color \{ display:block; \}/);
+  assert.doesNotMatch(globalCss, /mobile-tool-peek/);
   assert.match(globalCss, /\.teacher-history-drawer\s*\{[^}]*position:static/);
   assert.match(teacher, /<TeacherHistoryDrawer[\s\S]*<\/section><\/div>}<\/main>/);
 });

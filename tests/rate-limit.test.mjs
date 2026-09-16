@@ -63,17 +63,12 @@ test("student entry limits separate shared classroom IP traffic from per-target 
   // 학교 NAT 뒤 한 학급 전체가 IP 하나로 보이므로 IP 한도는 학급 규모를 견뎌야 한다.
   assert.match(route, /const IP_ENTRY_LIMIT = (\d+)/);
   assert.ok(Number(route.match(/const IP_ENTRY_LIMIT = (\d+)/)[1]) >= 120);
-  assert.match(route, /const TARGET_ATTEMPT_LIMIT = (\d+)/);
-  assert.ok(Number(route.match(/const TARGET_ATTEMPT_LIMIT = (\d+)/)[1]) <= 10);
-  assert.match(route, /targetAllowed\(`unlock:\$\{studentId\}`\)/);
-  assert.match(route, /targetAllowed\(seatTarget\)/);
-  assert.match(route, /targetAllowed\(qrTarget\)/);
-  // 성공한 인증은 세 경로 모두 카운터를 비워야 정상 사용자가 잠기지 않는다.
-  assert.match(route, /clearRateLimit\(targetKey\(`unlock:\$\{studentId\}`\)\)/);
-  assert.match(route, /clearRateLimit\(targetKey\(seatTarget\)\)/);
-  assert.match(route, /clearRateLimit\(targetKey\(qrTarget\)\)/);
+  // 참여 코드 입장(2026-09-09)에는 대상(번호·프로필) 버킷이 없다 — 맞추기 전까지 대상을 모르므로
+  // 학급 + IP 버킷이 무차별 대입을 막는다(네 자리 만 개, 한도 60회/10분).
+  assert.doesNotMatch(route, /TARGET_ATTEMPT_LIMIT|targetAllowed|picturePassword/);
+  assert.match(route, /const CLASSROOM_JOIN_LIMIT = 60;/);
   // 학급 상한은 IP와 함께 묶는다. 학급 단독 버킷이면 한 클라이언트가 학급 전체를 잠글 수 있다.
   assert.match(route, /rateLimit\(`student-join-class:\$\{classroom\.id\}:\$\{requestIp\(request\)\}`/);
   // 형태 검증이 학급 상한보다 먼저 와야 잘못된 본문이 상한을 소비하지 못한다.
-  assert.ok(route.indexOf("별명, 동물, 그림 비밀번호 세 개를 모두 골라 주세요") < route.indexOf("student-join-class:"));
+  assert.ok(route.indexOf("참여 코드 네 자리를 눌러 주세요") < route.indexOf("student-join-class:"));
 });

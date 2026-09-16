@@ -1,7 +1,7 @@
 import type { DrawDocument } from "@/lib/drawing-model";
 import type { parseImageDataUrl } from "@/lib/image-data";
 
-export type CoachingAfterKind = "question_answer" | "guide_completed" | "guide_free_exit";
+export type CoachingAfterKind = "question_answer";
 export type CoachingAfterResult =
   | { ok: true; eventId: string; afterVersionId: string }
   | { ok: false; reason: "not_found" | "already_recorded" | "save_failed" };
@@ -45,13 +45,12 @@ export async function recordCoachingBefore(input: {
   artworkId: string;
   eventId: string;
   expectedRevision: number;
-  responseKind: "question" | "guide";
+  responseKind: "question";
   document: DrawDocument;
   image: VersionImage;
   question: string;
   hint: string;
   choices: unknown[];
-  guideSteps: unknown[];
   growthEvent: string | null;
   currentStep: number;
 }): Promise<CoachingBeforeResult> {
@@ -89,9 +88,10 @@ export async function recordCoachingBefore(input: {
         WHERE a.id = ? AND a.student_id = ? AND a.version_count = ?
           AND EXISTS (SELECT 1 FROM coaching_events e WHERE e.id = ? AND e.artwork_id = a.id AND e.before_version_id = ?)`)
         .bind(versionId, artwork.versionCount + 1, JSON.stringify(input.document), imageKey, input.artworkId, input.studentId, artwork.versionCount + 1, input.eventId, versionId),
+      // guide_steps_json 열은 옛 단계 가이드 기록이 들어 있어 남겨 둔다. 새 행은 항상 빈 배열이다.
       input.DB.prepare(`INSERT INTO coaching_event_details(event_id, response_kind, choices_json, guide_steps_json, growth_event, current_step, status)
         SELECT ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM coaching_events e WHERE e.id = ? AND e.before_version_id = ?)`)
-        .bind(input.eventId, input.responseKind, JSON.stringify(input.choices), JSON.stringify(input.guideSteps), input.growthEvent, input.currentStep, input.responseKind === "question" ? "open" : "active", input.eventId, versionId),
+        .bind(input.eventId, input.responseKind, JSON.stringify(input.choices), "[]", input.growthEvent, input.currentStep, input.responseKind === "question" ? "open" : "active", input.eventId, versionId),
     ]);
     if (results.every((result) => result.meta.changes === 1)) return { ok: true, eventId: input.eventId, beforeVersionId: versionId };
   } catch {
@@ -123,10 +123,12 @@ export async function recordCoachingAfter(input: {
   answer?: string;
   newElements?: string[];
 }): Promise<CoachingAfterResult> {
-  const expectedKind = input.kind === "question_answer" ? "question" : "guide";
-  const expectedStatus = input.kind === "question_answer" ? "open" : "active";
-  const finalStatus = input.kind === "question_answer" ? "answered" : input.kind === "guide_completed" ? "completed" : "dismissed";
-  const studentAnswer = input.kind === "question_answer" ? (input.answer ?? "") : input.kind === "guide_completed" ? "guide_completed" : "guide_free_exit";
+  // 단계 가이드는 은퇴했다(2026-09-09). 남은 종류는 질문-답 하나뿐이지만, 옛 guide 행을
+  // 잘못 집지 않도록 response_kind와 status 조건은 그대로 좁혀서 건다.
+  const expectedKind = "question";
+  const expectedStatus = "open";
+  const finalStatus = "answered";
+  const studentAnswer = input.answer ?? "";
   const event = await findOwnedCoachingEvent(input.DB, input.eventId, input.artworkId, input.studentId);
   if (!event || event.responseKind !== expectedKind) return { ok: false, reason: "not_found" };
   if (event.afterVersionId || event.status !== expectedStatus) return { ok: false, reason: "already_recorded" };

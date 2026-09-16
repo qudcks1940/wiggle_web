@@ -29,11 +29,11 @@ test("enforces ownership, hashing, expiry, rate limits and idempotent revisions"
   assert.match(artwork, /student_id = \?/); assert.match(artwork, /REVISION_CONFLICT/); assert.match(artwork, /artwork_mutations/); assert.match(artwork, /ARTWORKS\.put/); assert.match(artwork, /last_mutation_id/);
   assert.match(artworkImage, /studentFromRequest/); assert.match(artworkImage, /WHERE id = \? AND student_id = \?/); assert.match(artworkImage, /ARTWORKS\.get/); assert.match(artworkImage, /private, no-store/);
   assert.match(student, /AS hasImage/); assert.match(archive, /studentFetch\(`\/api\/artworks\/\$\{encodeURIComponent\(artwork\.id\)\}\/image`/); assert.match(archive, /URL\.revokeObjectURL/);
-  assert.match(teacher, /teacher_id = \?/); assert.match(teacher, /student_profiles WHERE id = \? AND classroom_id = \?/); assert.match(student, /picture_hash/); assert.match(student, /personal_qr_hash/);
+  assert.match(teacher, /teacher_id = \?/); assert.match(teacher, /student_profiles WHERE id = \? AND classroom_id = \?/); assert.match(student, /entry_code = \?/); assert.match(student, /token_hash/);
 });
 
 test("keeps canvas contracts and guide data separate", async () => {
-  const [model, studioRaw, lessons, css, catalog] = await Promise.all([read("../lib/drawing-model.ts"), read("../app/components/DrawingStudio.tsx"), read("../lib/lesson-content.ts"), read("../app/globals.css"), import("../lib/lesson-content.ts")]);
+  const [model, studioRaw, css, catalog] = await Promise.all([read("../lib/drawing-model.ts"), read("../app/components/DrawingStudio.tsx"), read("../app/globals.css"), import("../lib/lesson-content.ts")]);
   const studio = compactSource(studioRaw);
   assert.match(model, /DOCUMENT_SIZE = 1024/); assert.match(model, /schemaVersion/); assert.match(model, /rendererVersion/); assert.match(model, /clientOpId/); assert.match(model, /STICKER_ALLOWLIST/);
   // 썸네일·완성 PNG는 문서 기반(documentImage), 몽그리 전송 이미지는 화면 기반(imageData 1024).
@@ -42,18 +42,15 @@ test("keeps canvas contracts and guide data separate", async () => {
   assert.match(studio, /item\.step === lessonStep \+ 1/); assert.doesNotMatch(studio, /item\.step <= lessonStep \+ 1/);
   assert.match(studio, /<canvas\s+ref=\{guideRef\}[\s\S]*<canvas\s+ref=\{canvasRef\}/);
   assert.match(css, /\.draw-canvas \{ z-index:2; touch-action:none; \}\.guide-canvas \{ z-index:3; pointer-events:none; \}/);
-  assert.ok(catalog.LESSONS.length >= 5); assert.ok(catalog.LESSONS.every((lesson) => lesson.steps.length >= 6 && lesson.steps.length <= 15));
-  for (const mode of ["practice", "guided", "observe"]) {
-    const modeLessons = catalog.LESSONS.filter((lesson) => lesson.mode === mode);
-    assert.equal(modeLessons.length, 10, mode);
-    assert.ok(modeLessons.every((lesson) => lesson.guide.some((mark) => mark.step === 1)), `${mode} first-step guides`);
-    assert.ok(modeLessons.every((lesson) => !lesson.guide.some((mark) => mark.step === lesson.steps.length)), `${mode} final free steps have no guide`);
-  }
+  // 레슨 카탈로그는 은퇴했다(Story 2.3) — 다시 채워지면 이 단언이 그 사실을 크게 알린다.
+  assert.equal(catalog.LESSONS.length, 0, "레슨 카탈로그는 비어 있어야 한다 — 커리큘럼 정본은 lib/arc-content.ts다");
+  assert.equal(catalog.normalizeActivityKey("자유롭게 그리기"), "free");
+  assert.equal(catalog.normalizeActivityKey("lesson:straight-lines"), "free", "은퇴한 lesson: 키는 free로 읽되 오류를 내지 않는다");
+  assert.equal(catalog.normalizeActivityKey(undefined), "free");
   assert.match(studio, /function guideControls\(\) \{[\s\S]*if \(!lessonGuideAvailable\) return null;[\s\S]*className="guide-demo-button"/);
   assert.match(studio, /function advanceOrCompleteLessonStep\(skip = false\)[\s\S]*!skip && !currentLessonStepStatus\.ready[\s\S]*setReflectionOpen\(true\)/);
   // 고학년 전환에서 마지막 단계 라벨을 "그림 다 그렸어요"→"완성하기"로 중립화했다.
   assert.match(studio, /step === lesson\.steps\.length - 1 \? "완성하기" : "다음"/);
-  assert.ok(catalog.LESSONS.every((lesson) => lesson.steps.filter((step) => step.choices?.length >= 2).length >= 2)); assert.match(lessons, /내 마음대로/);
 });
 
 test("offline queue uses IndexedDB and keeps starter files out", async () => {

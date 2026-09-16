@@ -1,0 +1,609 @@
+/* 수업 확인(대기·실패)·참여 코드 입력 화면.
+   대문(.gallery-landing)과 같은 방식이다 — 종이 질감 배경 + 독립 오리 그림 + 일반 반응형 흐름.
+   2026-09-13 사용자 결정: 교실 장면을 배경 그림으로 깔지 않는다. 장면을 깔면 화면 비율에 따라
+   빈 띠가 남거나(고정 비율) 오리가 잘려(cover), 어느 쪽도 대문처럼 자연스럽게 늘어나지 않는다. */
+.shell {
+  --ink: #123f23;
+  --accent: #426d34;
+  --outline: #245834;
+  --paper: #fff5d9;
+  --wall: #fceece;
+  --note: #fff9e9;
+  --action: #ffcf37;
+  --action-border: #c48d12;
+  min-height: 100dvh;
+  display: block;
+  /* 여백은 .stage가 갖는다. .shell과 .stage의 상자가 같아야 바닥 띠·장식·몽그리가
+     모두 화면 아래를 같은 기준으로 잡는다. */
+  padding: 0;
+  /* 대문(.gallery-landing)과 같은 원리 — 배경에는 '늘어나도 되는 것'만 둔다.
+     벽은 평평한 색 하나(조각을 타일로 반복하면 이음매가 보인다), 바닥은 가로로만
+     늘어나는 띠, 문·화분·이젤처럼 모양이 있는 것은 아래의 독립 장식 요소다. */
+  background: var(--wall);
+  /* 장식과 바닥 띠는 원본 장면(941px)의 비율을 그대로 쓴다. 한 변수로 같이 커지고
+     같이 작아져야 걸레받이 선이 좌우에서 어긋나지 않는다. */
+  /* 문구 카드는 항상 화면 가운데다(2026-09-13 사용자 결정 — 태블릿 기준). 그래서 장면을
+     카드 옆 남는 폭에 맞춰 줄인다. 몽그리 오른쪽 끝(원본 x=754)이 가운데 카드(460px)의
+     왼쪽 끝보다 28px 앞에 오도록 한 세 번째 항이 태블릿에서 배율을 정한다. */
+  --sceneH: min(72vh, 700px, calc((50vw - 230px - 28px) * 881 / 754));
+  color: var(--ink);
+  position: relative;
+  overflow: hidden;
+}
+/* 바닥 띠 — 가로로만 늘어난다. 타일 무늬라 늘어나도 어색하지 않다. */
+.shell::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--sceneH) * 179 / 881);
+  background: url("/entry-green/scene/floor.webp") center bottom / 100% 100% no-repeat;
+  pointer-events: none;
+}
+
+/* 문·화분·이젤 장식. 내용 뒤에 깔리고, 좁은 화면에서는 아예 내려놓는다
+   (대문의 .gallery-leaves와 같은 규칙). */
+.scenery {
+  position: absolute;
+  bottom: 0;
+  width: auto;
+  pointer-events: none;
+  user-select: none;
+}
+.sceneryLeft { left: 0; height: var(--sceneH); }
+.sceneryRight { right: 0; height: calc(var(--sceneH) * 571 / 881); }
+@media (max-width: 999px), (max-height: 599px) {
+  .scenery { display: none; }
+}
+
+.stage {
+  z-index: 1;
+  padding: 12px max(16px, env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  /* 무대 좌표 배치를 걷어낸 뒤의 실제 레이아웃. 내용은 화면 가운데 세로로 쌓는다.
+     그림에 그려진 문·나무 간판에 글자를 맞추던 절대 좌표는 배경이 잘리는 순간
+     어긋나므로 쓰지 않는다(2026-09-13). */
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.head {
+  position: absolute;
+  top: 12px;
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+}
+.logo { position: absolute; left: 2.4%; top: 3.2%; }
+.logo :global(.brand) { min-height: 44px; color: var(--ink); font-size: clamp(20px, 2.2cqw, 34px); }
+.logo :global(.brand-mark) { width: clamp(36px, 3.4cqw, 52px); height: clamp(36px, 3.4cqw, 52px); }
+.sign {
+  position: absolute;
+  left: 21.3%;
+  top: 20.5%;
+  width: 12%;
+  height: 7%;
+  display: grid;
+  place-items: center;
+  font-size: clamp(14px, 2cqw, 30px);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #5a3d1e;
+  pointer-events: none;
+}
+.panel {
+  position: absolute;
+  left: 50%;
+  top: 13%;
+  width: 46%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 1.6cqw, 22px);
+  text-align: center;
+}
+.panel h1 {
+  margin: 0;
+  font-size: clamp(24px, 4.4cqw, 62px);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+  color: var(--ink);
+  text-shadow: 0 2px 0 #fff8;
+}
+.lead { margin: 0; font-size: clamp(16px, 1.6cqw, 24px); font-weight: 700; color: var(--accent); }
+.note {
+  position: relative;
+  width: 62%;
+  margin: clamp(4px, 1cqw, 14px) 0 0;
+  padding: clamp(12px, 1.4cqw, 20px) 16px;
+  border-radius: 6px;
+  background: var(--note);
+  box-shadow: 0 3px 0 #e9dcb8, 0 8px 18px rgba(74, 58, 20, .14);
+  transform: rotate(-.6deg);
+  font-size: clamp(16px, 1.7cqw, 25px);
+  font-weight: 800;
+  color: var(--ink);
+}
+.note::before {
+  /* 압정 */
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -9px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #8fbe6a, #3f6f36);
+  transform: translateX(-50%);
+  box-shadow: 0 2px 2px rgba(0, 0, 0, .25);
+}
+.note :global(.child-error) { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
+.note :global(.child-error) p { margin: 0; font-size: inherit; color: inherit; }
+.note :global(.child-error-icon) { font-size: 1.2em; }
+.actions { width: 62%; display: flex; flex-direction: column; align-items: stretch; gap: clamp(8px, 1cqw, 14px); }
+.primary, .help, .retry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 16px;
+  border-radius: 16px;
+  font: inherit;
+  font-weight: 900;
+  text-decoration: none;
+  cursor: pointer;
+  line-height: 1.3;
+}
+.primary {
+  min-height: clamp(48px, 5.6cqw, 76px);
+  font-size: clamp(17px, 1.9cqw, 27px);
+  color: #3d2b00;
+  background: linear-gradient(#ffd84a, var(--action));
+  border: 2px solid var(--action-border);
+  box-shadow: 0 5px 0 var(--action-border);
+}
+.primary:hover { transform: translateY(-2px); }
+.help {
+  min-height: clamp(48px, 5cqw, 68px);
+  font-size: clamp(16px, 1.7cqw, 24px);
+  color: var(--ink);
+  background: #fffdf4;
+  border: 2px solid var(--outline);
+}
+.help:hover { background: #f4f7e4; }
+.retry {
+  min-height: 44px;
+  font-size: clamp(15px, 1.4cqw, 20px);
+  font-weight: 800;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.primary:disabled, .help:disabled, .retry:disabled { opacity: .55; cursor: default; transform: none; }
+.primary:focus-visible, .help:focus-visible, .retry:focus-visible { outline: 4px solid var(--accent); outline-offset: 3px; }
+.actions :global(.teacher-call-note) {
+  margin: 0;
+  padding: 12px 14px;
+  border: 2px solid #e1c14d;
+  border-radius: 14px;
+  background: #fffbe6;
+  font-size: clamp(15px, 1.4cqw, 20px);
+  text-align: left;
+}
+/* 좁은 화면: 대문의 .gallery-duck처럼 흐름 안의 그림. */
+.duck { display: block; width: min(62vw, 260px); height: auto; object-fit: contain; margin: 0; }
+
+/* 넓은 화면: 원래 교실 장면에서 몽그리가 서 있던 자리(문 앞)로 돌려놓는다.
+   원본 1672×941에서 실측한 몽그리 상자는 x 258~754, y 369~887이고,
+   자산은 640×640 캔버스에 불투명 영역이 x 48~603, y 8~622이다.
+   투명 여백을 걷어낸 값으로 --sceneH 배율에 맞춰 환산했다. */
+@media (min-width: 1000px) and (min-height: 600px) {
+  .duck, .seatShell .duck {
+    position: absolute;
+    left: calc(var(--sceneH) * 231 / 881);
+    bottom: calc(var(--sceneH) * 39 / 881);
+    width: auto;
+    height: calc(var(--sceneH) * 540 / 881);
+    margin: 0;
+    pointer-events: none;
+  }
+}
+
+/* 좁은 화면(휴대전화)·낮은 가로 화면: 교실 장면을 잘라 쓰지 않고 문서 흐름으로 */
+/* 무대 좌표 배치를 걷어낸 실제 레이아웃. 모든 화면 크기에 적용한다 (2026-09-13). */
+.logo { position: static; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.logo :global(.brand) { font-size: 22px; gap: 7px; }
+.logo :global(.brand-mark) { width: 36px; height: 36px; }
+.sign { display: none; }
+.panel { position: static; width: min(100%, 460px); margin: 0; padding: 20px 18px 22px; border-radius: 22px; background: #fffdf4; border: 1px solid #e5dcbf; box-shadow: 0 8px 0 #eee4c8; gap: 12px; }
+.panel h1 { font-size: 28px; }
+.lead { font-size: 16px; }
+.note { width: 100%; font-size: 16px; }
+.actions { width: 100%; }
+.primary { font-size: 18px; min-height: 56px; }
+.help { font-size: 16px; }
+
+@media (max-height: 520px) and (min-width: 761px) {
+  .stage { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 20px; align-items: center; }
+  .head { grid-column: 1 / -1; }
+  .duck { width: clamp(120px, 30vh, 200px); margin: 0; }
+  .panel { margin: 0; }
+}
+
+/* ── 참여 코드 입력(키패드) 화면. 수업 확인 화면과 같은 종이 바탕을 쓰고,
+   수첩은 배경 그림이 아니라 CSS 카드(.pad)로 그린다 (2026-09-13). */
+.seatTitle { position: absolute; left: 4.5%; top: 13%; width: 38%; text-align: left; color: var(--ink); }
+.seatTitle h1 { margin: 0; font-size: clamp(26px, 4.6cqw, 64px); font-weight: 900; letter-spacing: -0.05em; line-height: 1.15; text-shadow: 0 2px 0 #fff8; }
+.seatTitle p { margin: clamp(6px, 1cqw, 14px) 0 0; font-size: clamp(15px, 1.6cqw, 25px); font-weight: 800; color: var(--accent); }
+.padBadge {
+  /* 넓은 화면: 배경에 그려진 나무 간판 위에 글자만 얹는다 */
+  position: absolute;
+  left: 60.3%;
+  top: 10.6%;
+  width: 10.6%;
+  height: 5.8%;
+  display: grid;
+  place-items: center;
+  color: #4c3315;
+  font-size: clamp(11px, 1.25cqw, 21px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.pad {
+  /* 넓은 화면: 종이 영역에 맞춘 투명 오버레이 — 종이·스프링은 배경 그림이 담당한다 */
+  position: absolute;
+  left: 47.6%;
+  top: 24%;
+  bottom: 8.5%;
+  width: 33.4%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: clamp(5px, 0.8cqw, 11px);
+}
+/* 종이 높이가 고정이라 키 행이 남는 높이를 나눠 갖는다. 고정 높이 키는 1280×800에서 종이 아래로
+ * 넘쳐 「수업 코드 다시 입력하기」가 들어가기 위에 겹쳤다(번호 수첩 때부터 있던 결함, 2026-09-09 실측). */
+.pad form { display: flex; flex: 1; flex-direction: column; gap: clamp(5px, 0.8cqw, 11px); min-height: 0; }
+.padLabel { align-self: center; margin: 0; color: var(--ink); font-size: clamp(14px, 1.5cqw, 22px); font-weight: 900; }
+.display { position: relative; }
+.pad .display :global(.entry-code-input) {
+  min-height: clamp(48px, 5cqw, 72px);
+  padding: 2px clamp(8px, 1cqw, 14px);
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  border: 3px solid #b9cba4;
+  border-radius: clamp(12px, 1.4cqw, 20px);
+  background: #e8f1dc;
+  color: var(--ink);
+  font-size: clamp(32px, 3.8cqw, 56px);
+}
+.display b { position: absolute; right: clamp(12px, 1.6cqw, 24px); top: 50%; transform: translateY(-50%); font-size: clamp(16px, 1.8cqw, 27px); font-weight: 900; color: var(--ink); pointer-events: none; }
+.keys { display: grid; flex: 1; min-height: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(44px, 1fr); gap: clamp(5px, 0.8cqw, 11px); }
+.key {
+  min-height: 44px;
+  border: 1px solid #ddd5b4;
+  border-radius: clamp(10px, 1.3cqw, 18px);
+  background: #fffdf4;
+  box-shadow: 0 4px 0 #e2d8b4;
+  color: var(--ink);
+  font: inherit;
+  font-size: clamp(19px, 2.2cqw, 33px);
+  font-weight: 900;
+  cursor: pointer;
+}
+.key:active { transform: translateY(2px); box-shadow: 0 2px 0 #e2d8b4; }
+.key:focus-visible { outline: 4px solid var(--accent); outline-offset: 2px; }
+.keyErase { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: clamp(12px, 1.3cqw, 19px); }
+.keyErase span { font-size: clamp(17px, 1.9cqw, 28px); line-height: 1; }
+.keyBlank { border-radius: clamp(10px, 1.3cqw, 18px); background: #f5efdb; }
+.enter { composes: primary; width: 100%; min-height: clamp(48px, 4.5cqw, 64px); flex: none; }
+/* 쪽지 QR 찍기. 들어가기(노란)보다 한 단계 약하게, 그래도 아이가 찾을 수 있게 크고 그림이 있다. */
+.scan { composes: help; width: 100%; min-height: 56px; margin-top: 10px; font-size: 18px; flex: none; }
+.again { align-self: center; min-height: 44px; display: inline-flex; align-items: center; padding: 4px 10px; color: var(--accent); font-size: clamp(14px, 1.4cqw, 20px); font-weight: 800; text-decoration: underline; text-underline-offset: 4px; }
+.again:focus-visible { outline: 4px solid var(--accent); outline-offset: 3px; }
+.pad button:global(.again) { border: 0; background: transparent; font: inherit; cursor: pointer; }
+.pad :global(.entry-error-block) { margin: 0; }
+.pad :global(.child-error) { margin: 0; padding: 8px 10px; font-size: clamp(13px, 1.4cqw, 18px); }
+
+/* 키패드 화면도 같은 이유로 무대 배치를 걷어낸다 (2026-09-13). */
+/* width:auto면 동물 고르기 화면에서 무대가 내용 폭(221px)으로 줄어 가운데 뭉쳤다(2026-09-09 실측). 100%로 못 박는다. */
+.seatTitle { position: static; width: min(100%, 460px); margin: 0; text-align: center; }
+.seatTitle h1 { font-size: 28px; }
+.seatTitle p { font-size: 16px; }
+.padBadge {
+  /* 좁은 화면: 그려진 간판이 없으므로 나무 칩으로 */
+  position: static;
+  width: auto;
+  height: auto;
+  justify-self: center;
+  margin: 0;
+  padding: 6px 18px;
+  border-radius: 10px;
+  background: linear-gradient(#e6c493, #d3ac74);
+  border: 2px solid #b28a55;
+  box-shadow: 0 3px 0 #a37c48;
+  font-size: 16px;
+  pointer-events: auto;
+  overflow: visible;
+  display: inline-grid;
+}
+.pad {
+  position: static;
+  width: min(100%, 430px);
+  margin: 0;
+  /* 2026-09-13: 수첩 스프링 고리(CSS 동그라미 줄)를 걷어냈다 — 넓은 화면에서 어색하다는 사용자 지적.
+     고리 자리로 비워 둔 위쪽 여백도 다른 면과 맞춘다. */
+  padding: 18px 16px 14px;
+  background: var(--note);
+  border: 1px solid #e3d9b6;
+  border-radius: 18px;
+  box-shadow: 0 8px 0 #e5d9b3, 0 16px 26px rgba(74, 58, 20, .16);
+}
+/* 옛 넓은 화면 무대의 left/top/bottom 오프셋이 살아남아 카드를 밀지 않도록 inset을 되돌린다. */
+.pad { position: relative; inset: auto; }
+.pad form,.keys { flex: none; }
+.pad .display :global(.entry-code-input) { min-height: 68px; font-size: 40px; }
+.key { min-height: 56px; font-size: 24px; }
+/* 지우기 키: 아이콘(⌫)과 글자 묶음이 56px 키를 거의 다 채워 아이콘이 위 테두리에 붙어 보였다
+   (1440×900에서 위 여백 3px, 2026-09-13 사용자 지적). 아이콘을 숫자보다 작게, 줄 간격을 좁혀
+   묶음을 키 가운데에 여유 있게 둔다. */
+.keyErase { font-size: 14px; gap: 2px; line-height: 1.15; }
+.keyErase span { font-size: 20px; line-height: 1; }
+/* 키패드 화면에서는 오리를 줄여 키가 화면 안에 남게 한다 */
+/* 키패드 화면의 작은 몽그리는 좁은 화면 전용이다. 넓은 화면에서는 위의 장면 배치가
+   쓰여야 하므로 조건 없이 두면 선택자 우선순위로 그 배치를 덮어쓴다. */
+@media (max-width: 999px), (max-height: 599px) {
+  .seatShell .duck { width: clamp(96px, 24vw, 140px); margin: 4px auto 0; }
+}
+
+.seatShell { min-width: 0; }
+
+
+/* ── 수업 확인 대기 화면(2026-09-09 사용자 시안, 1693×929): 크림 단색 배경 가운데에
+   선 너머로 고개 내민 몽그리(wait-mongri.png, 원본 27% 폭) + 제목 + 부제. 로고·버튼 없음. */
+.waitShell {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding: 24px max(16px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: #f8f8f3;
+  color: #46583f;
+  text-align: center;
+}
+.waitMongri { width: clamp(220px, 28vw, 476px); max-height: 50vh; height: auto; object-fit: contain; object-position: bottom; }
+.waitShell h1 { margin: clamp(14px, 3vh, 34px) 0 0; font-size: clamp(26px, 3.2vw, 52px); font-weight: 900; letter-spacing: -0.04em; line-height: 1.2; }
+.waitShell p { margin: clamp(8px, 1.4vh, 14px) 0 0; font-size: clamp(16px, 1.7vw, 28px); font-weight: 700; color: #6f8a63; }
+
+/* ── 아직 준비 중(명단 없는 반) — 2026-09-13 사용자 시안(1689×931) 기준.
+   시안 실측: 배경 #fefaea, 제목 잉크 높이 52px, 부제 23px·두 줄, 버튼 면 571×84(#fbce4d)에 턱(#dcab33),
+   몽그리 약 330px. 태블릿 기준으로 비례해 줄이고 휴대폰에서는 최소값을 둔다. */
+.readyShell {
+  --ready-ink: #23452a;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 max(16px, env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: #fefaea;
+  color: var(--ready-ink);
+}
+.readyTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: clamp(14px, 2.2vw, 36px) clamp(0px, 3.2vw, 56px) 0;
+}
+.readyLogo :global(.brand) { min-height: 44px; color: var(--ready-ink); font-size: clamp(22px, 2vw, 34px); }
+.readyLogo :global(.brand-mark) { width: clamp(40px, 3.8vw, 64px); height: clamp(40px, 3.8vw, 64px); }
+.readyClass { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(16px, 1.6vw, 28px); font-weight: 900; letter-spacing: -0.03em; color: var(--ready-ink); }
+.readyBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  /* 세로 가운데 정렬이 시안보다 약 7px 아래로 앉아, 아래 여백을 더 줘 한 덩어리로 올린다. */
+  padding: clamp(12px, 2vh, 24px) 0 clamp(20px, 3.5vh, 38px);
+}
+/* 몽그리는 시안에서 잘라 온 불투명 그림(384×368, 발밑 그림자 포함)이다. 그림 배경이 페이지 배경
+   #fefaea와 같아 경계가 보이지 않는다 — .readyShell 배경을 바꾸면 이 그림도 다시 잘라야 한다.
+   시안에서 몽그리 자체는 약 330px이고 잘라낸 상자는 여백 포함 384px이다. */
+.readyMongri { display: block; width: clamp(220px, 22.7vw, 384px); height: auto; }
+.readyTitle { margin: 0; font-size: clamp(30px, 3.4vw, 58px); font-weight: 900; letter-spacing: -0.015em; line-height: 1.2; color: var(--ready-ink); }
+.readyLead { margin: clamp(2px, 0.36vw, 6px) 0 0; font-size: clamp(17px, 1.5vw, 25px); font-weight: 500; line-height: 1.55; color: #485040; }
+.readyError { margin: 14px 0 0; padding: 10px 14px; border-radius: 12px; background: #fdecea; color: #8a2c1f; font-size: 15px; font-weight: 800; }
+.readyRetry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 1.2vw, 20px);
+  width: min(100%, clamp(290px, 34vw, 580px));
+  min-height: clamp(60px, 5vw, 86px);
+  margin-top: clamp(16px, 1.9vw, 30px);
+  padding: 10px 20px;
+  border: 0;
+  border-radius: clamp(18px, 1.8vw, 30px);
+  background: #fbce4d;
+  box-shadow: 0 clamp(4px, 0.4vw, 7px) 0 #dcab33;
+  color: #204020;
+  font: inherit;
+  font-size: clamp(20px, 1.8vw, 30px);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+.readyRetry span { font-size: 1.15em; line-height: 1; }
+.readyRetry:hover { background: #fcd562; }
+.readyRetry:active { transform: translateY(3px); box-shadow: 0 2px 0 #dcab33; }
+.readyRetry:disabled { opacity: .6; cursor: default; transform: none; }
+.readyRetry:focus-visible { outline: 4px solid #426d34; outline-offset: 4px; }
+.readyAgain {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: clamp(14px, 1.6vw, 26px);
+  padding: 4px 12px;
+  color: #306830;
+  font-size: clamp(16px, 1.45vw, 24px);
+  font-weight: 900;
+  letter-spacing: 0;
+  text-decoration: none;
+}
+.readyAgain:hover { text-decoration: underline; text-underline-offset: 4px; }
+.readyAgain:focus-visible { outline: 4px solid #426d34; outline-offset: 3px; border-radius: 8px; }
+
+/* ── 첫 입장 친구 고르기 — 2026-09-13 사용자 시안(1689×931, docs/design-assets/animal-picker/).
+   시안 실측: 배경 #fdf8e6, 카드 면 #fefdf5·약 228×270·간격 19px, 선택 카드 면 #f4f8e7에 초록 테두리,
+   이름 띠 #dbf1ba, 버튼 면 #fedb62·턱 #d6ad51·약 473×70. 격자 폭 약 1218px(5열).
+   동물 그림은 /entry-green/animals/<slug>.webp — 고해상도 그림이 오면 파일만 덮어쓴다. */
+.pickShell {
+  --pick-ink: #184028;
+  --pick-green: #3f7b4a;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 max(12px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: #fdf8e6;
+  color: var(--pick-ink);
+  position: relative;
+}
+/* 시안처럼 로고·반 이름 줄에 제목이 겹쳐 올라간다. 아래로 쌓으면 약 70px 길어져 태블릿에서 스크롤이 생겼다. */
+.pickTop { position: absolute; inset: 0 0 auto 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: clamp(12px, 1.8vw, 28px) max(12px, clamp(12px, 2.2vw, 40px)) 0; pointer-events: none; }
+.pickTop > * { pointer-events: auto; }
+.pickLogo :global(.brand) { min-height: 44px; color: var(--pick-ink); font-size: clamp(22px, 2vw, 34px); }
+.pickLogo :global(.brand-mark) { width: clamp(40px, 3.8vw, 62px); height: clamp(40px, 3.8vw, 62px); }
+/* 반 이름: 시안의 나무 간판. 그림 대신 나무색 칩으로 둔다(간판 그림이 오면 배경만 바꾼다). */
+.pickClass {
+  min-width: 0;
+  max-width: 45vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: clamp(6px, 0.7vw, 12px) clamp(14px, 1.6vw, 28px);
+  border: 2px solid #d8bd8a;
+  border-radius: 12px;
+  background: linear-gradient(#f6e6c6, #ecd6ab);
+  box-shadow: 0 3px 0 #cfb07a;
+  color: #4c3315;
+  font-size: clamp(16px, 1.6vw, 28px);
+  font-weight: 900;
+}
+.pickBody { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(10px, 1.2vw, 20px); padding: clamp(6px, 1vh, 16px) 0; }
+.pickHead { text-align: center; }
+.pickTitle { margin: 0; font-size: clamp(28px, 3.3vw, 56px); font-weight: 900; letter-spacing: -0.02em; line-height: 1.2; color: var(--pick-ink); }
+/* 시안의 제목 양옆 노란 반짝 선(코덱스 그림, 왼쪽용 한 장을 오른쪽에서 뒤집어 쓴다) */
+.pickTitle::before, .pickTitle::after { content: ""; display: inline-block; width: 0.42em; height: 0.7em; margin: 0 0.4em; vertical-align: 0.05em; background: url("/entry-green/picker/title-sparkle.webp") center / contain no-repeat; }
+.pickTitle::after { transform: scaleX(-1); }
+.pickLead { margin: clamp(4px, 0.5vw, 8px) 0 0; font-size: clamp(16px, 1.4vw, 24px); font-weight: 800; color: #307040; }
+.pickFieldset { margin: 0; padding: 0; border: 0; min-width: 0; width: min(100%, 1348px); }
+/* 쪽 넘기기(2026-09-14, 20종): 양옆 화살표 + 아래 점. 화살표 칸만큼 격자가 좁아지지만 카드 높이는 그림 높이(vh)가 정해 거의 같다. */
+.pickPager { --arrow: clamp(44px, 4vw, 60px); display: grid; grid-template-columns: var(--arrow) minmax(0, 1fr) var(--arrow); grid-template-areas: "prev pages next" ". dots ."; align-items: center; column-gap: clamp(4px, 0.4vw, 8px); }
+.pickPages { grid-area: pages; display: flex; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; }
+.pickPages::-webkit-scrollbar { display: none; }
+@media (prefers-reduced-motion: reduce) { .pickPages { scroll-behavior: auto; } }
+.pickArrow { width: var(--arrow); height: var(--arrow); display: grid; place-items: center; padding: 0 0 0.12em; border: 2px solid #d9e7c4; border-radius: 50%; background: #fefdf5; box-shadow: 0 3px 0 #cfdcb8; color: var(--pick-green); font: inherit; font-size: calc(var(--arrow) * 0.7); font-weight: 900; line-height: 1; cursor: pointer; }
+.pickPrev { grid-area: prev; }
+.pickNext { grid-area: next; }
+.pickArrow:active { transform: translateY(2px); box-shadow: 0 1px 0 #cfdcb8; }
+.pickArrow:disabled { opacity: .3; cursor: default; transform: none; }
+.pickArrow:focus-visible { outline: 4px solid var(--pick-green); outline-offset: 3px; }
+.pickDots { grid-area: dots; display: flex; justify-content: center; gap: 10px; padding-top: clamp(2px, 0.3vw, 6px); }
+.pickDot, .pickDotOn { width: 10px; height: 10px; border-radius: 999px; background: #d9e7c4; transition: width .2s; }
+.pickDotOn { width: 28px; background: var(--pick-green); }
+.pickHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* 한 쪽. 테두리 그림자·초점 테가 스크롤 상자에 잘리지 않게 안쪽 여백을 둔다. */
+.pickGrid { flex: 0 0 100%; box-sizing: border-box; scroll-snap-align: start; padding: 6px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(8px, 1.15vw, 19px); }
+.pickCard {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(8px, 0.8vw, 14px) 6px clamp(8px, 0.9vw, 14px);
+  border: 2px solid #efe8d2;
+  border-radius: clamp(14px, 1.3vw, 22px);
+  background: #fefdf5;
+  box-shadow: 0 4px 14px rgba(120, 96, 40, .08);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.pickCard[aria-pressed="true"] { border: 3px solid var(--pick-green); background: #f4f8e7; }
+.pickCard:focus-visible { outline: 4px solid var(--pick-green); outline-offset: 3px; }
+.pickCheck { position: absolute; top: clamp(6px, 0.7vw, 12px); right: clamp(6px, 0.7vw, 12px); display: grid; place-items: center; width: clamp(26px, 2.6vw, 44px); height: clamp(26px, 2.6vw, 44px); border-radius: 50%; background: var(--pick-green); color: #fff; font-size: clamp(15px, 1.5vw, 26px); font-weight: 900; line-height: 1; }
+/* 짧은 태블릿에서도 두 줄이 한 화면에 들어오도록 그림 크기를 화면 높이로도 막는다. */
+.pickImage { display: block; width: min(88%, 21vh); aspect-ratio: 1; height: auto; object-fit: contain; }
+/* 이름: 시안의 초록 붓 띠 위 굵은 글자 */
+.pickName { margin-top: clamp(-18px, -1vw, -6px); padding: 2px clamp(18px, 2vw, 34px); background: url("/entry-green/picker/name-label.webp") center / 100% 100% no-repeat; font-size: clamp(16px, 1.75vw, 30px); font-weight: 900; line-height: 1.3; color: #184830; }
+.pickSpecies { margin-top: clamp(2px, 0.4vw, 6px); font-size: clamp(12px, 1.15vw, 19px); font-weight: 700; color: #586060; }
+.pickStart {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: min(100%, clamp(280px, 28vw, 476px));
+  min-height: clamp(56px, 4.3vw, 72px);
+  margin-top: clamp(4px, 0.6vw, 10px);
+  padding: 8px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: #fedb62;
+  box-shadow: 0 clamp(4px, 0.4vw, 6px) 0 #d6ad51;
+  color: #104028;
+  font: inherit;
+  font-size: clamp(19px, 1.75vw, 30px);
+  font-weight: 900;
+  cursor: pointer;
+}
+.pickStart span { font-size: 1.2em; line-height: 1; }
+.pickStart:active { transform: translateY(3px); box-shadow: 0 2px 0 #d6ad51; }
+.pickStart:disabled { opacity: .55; cursor: default; transform: none; }
+.pickStart:focus-visible { outline: 4px solid var(--pick-green); outline-offset: 4px; }
+.pickAgain { min-height: 44px; padding: 4px 12px; border: 0; background: none; color: #388048; font: inherit; font-size: clamp(15px, 1.35vw, 23px); font-weight: 900; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.pickAgain:focus-visible { outline: 4px solid var(--pick-green); outline-offset: 3px; border-radius: 8px; }
+/* 장식: 격자와 화살표(최대 1348px) 옆 여백에만 둔다. 여백이 좁은 태블릿에서는 카드를 가리므로 숨긴다.
+   크기는 옆 여백 폭(--gut, 최대 250px)을 따른다. 시안 1689×931에서 여백 약 235px. */
+.pickDeco { display: none; }
+@media (min-width: 1600px) and (min-height: 760px) {
+  .pickDeco { --gut: min(calc((100vw - 1348px) / 2), 250px); display: block; position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .pickDeco img { position: absolute; display: block; height: auto; }
+  .decoWriting { left: calc(var(--gut) * 0.12); top: 27%; width: calc(var(--gut) * 0.78); transform: rotate(-8deg); opacity: .9; }
+  .decoMongri { left: calc(var(--gut) * -0.3); bottom: -3%; width: calc(var(--gut) * 1.5); }
+  .decoSun { right: calc(var(--gut) * 0.1); top: 22%; width: calc(var(--gut) * 0.7); opacity: .85; }
+  .decoRainbow { right: calc(var(--gut) * -0.1); top: 44%; width: calc(var(--gut) * 1); opacity: .7; }
+  .decoFlowers { right: calc(var(--gut) * 0.02); bottom: -2%; width: calc(var(--gut) * 0.8); opacity: .9; }
+}
+/* 세로 화면·휴대폰: 5열이면 카드가 너무 작다. 태블릿 세로는 5열을 두 줄로, 휴대폰은 2열. */
+@media (max-width: 700px) {
+  /* 휴대폰은 제목이 로고와 겹치므로 머리 줄을 다시 흐름에 넣고, 스크롤해도 시작 버튼이 늘 보이게 붙인다. */
+  .pickTop { position: static; padding-left: 0; padding-right: 0; }
+  .pickStart { position: sticky; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 2; }
+  .pickImage { width: 80%; }
+  .pickGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* 휴대폰은 화살표를 점 양옆에 두고 격자 위로 올린다 — 옆에 두면 두 칸 카드가 너무 좁고, 아래에 두면 카드 10장을 내려야 보인다. */
+  .pickPager { grid-template-areas: "prev dots next" "pages pages pages"; row-gap: 4px; }
+  .pickDots { padding-top: 0; }
+  .pickName { font-size: 20px; }
+  .pickSpecies { font-size: 14px; }
+}
+/* 가로로 눕힌 휴대폰(844×390)은 폭이 넓어 위 규칙에 안 걸리지만 높이가 낮아 시작 버튼이 화면 밖으로 밀렸다
+   (2026-09-13 browser-check 실측). 낮은 화면에서도 시작 버튼을 아래에 붙인다. */
+@media (max-height: 560px) {
+  .pickStart { position: sticky; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 2; }
+  .pickTitle { font-size: 24px; }
+  .pickLead { font-size: 14px; }
+}

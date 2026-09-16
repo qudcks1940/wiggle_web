@@ -30,6 +30,9 @@ export const classrooms = sqliteTable("classrooms", {
   admissionOpen: integer("admission_open", { mode: "boolean" }).notNull().default(true),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
   currentActivity: text("current_activity").notNull().default("자유롭게 그리기"),
+  // 학급 포인터 — 지금 어떤 아크의 어느 회차인가 (AD-9). 아이의 진행 상태는 넣지 않는다.
+  currentArcId: text("current_arc_id"),
+  currentEpisodeId: text("current_episode_id"),
   startsAt: text("starts_at"),
   endsAt: text("ends_at"),
   createdAt: createdAt(),
@@ -48,6 +51,7 @@ export const studentProfiles = sqliteTable("student_profiles", {
   id: text("id").primaryKey(),
   classroomId: text("classroom_id").notNull().references(() => classrooms.id),
   seatNumber: integer("seat_number"),
+  entryCode: text("entry_code"),
   realName: text("real_name"),
   claimedAt: text("claimed_at"),
   nickname: text("nickname").notNull(),
@@ -88,6 +92,12 @@ export const artworks = sqliteTable("artworks", {
   topic: text("topic").notNull(),
   learningMode: text("learning_mode", { enum: ["practice", "guided", "observe", "free"] }).notNull(),
   lessonSlug: text("lesson_slug"),
+  // 회차 귀속 — 생성 시점에 고정, 어떤 쓰기도 학급 포인터로 재결정하지 않는다 (AD-10)
+  /* 은퇴한 커리큘럼(이야기 아크)의 귀속 컬럼. 2026-09-12부터 새로 쓰지 않지만,
+   * 그때 그린 그림의 기록이라 지우지 않는다. */
+  arcId: text("arc_id"),
+  episodeId: text("episode_id"),
+  arcVersion: integer("arc_version"),
   guideVariant: integer("guide_variant").notNull().default(0),
   intent: text("intent").notNull().default(""),
   opsJson: text("ops_json").notNull().default("[]"),
@@ -192,6 +202,8 @@ export const coachingEvents = sqliteTable("coaching_events", {
 
 export const coachingEventDetails = sqliteTable("coaching_event_details", {
   eventId: text("event_id").primaryKey().references(() => coachingEvents.id, { onDelete: "cascade" }),
+  // "guide"는 은퇴한 단계 가이드(2026-09-09)의 옛 행이다. 새로 쓰지는 않지만
+  // 이미 저장된 기록을 읽어야 하므로 enum에서 빼지 않는다.
   responseKind: text("response_kind", { enum: ["question", "guide"] }).notNull(),
   choicesJson: text("choices_json").notNull().default("[]"),
   guideStepsJson: text("guide_steps_json").notNull().default("[]"),
@@ -242,6 +254,27 @@ export const messageReceipts = sqliteTable("message_receipts", {
   primaryKey({ columns: [table.messageId, table.studentId] }),
   index("message_receipts_student_idx").on(table.studentId, table.seenAt),
 ]);
+
+// 선생님 표시(2026-09-14): 아이 원본과 따로 된 층. 작품 ops에 넣지 않는다(lib/teacher-marks.ts).
+export const teacherMarks = sqliteTable("teacher_marks", {
+  id: text("id").primaryKey(),
+  classroomId: text("classroom_id").notNull().references(() => classrooms.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  teacherId: text("teacher_id").notNull().references(() => teachers.id, { onDelete: "cascade" }),
+  artworkId: text("artwork_id").notNull().references(() => artworks.id, { onDelete: "cascade" }),
+  strokesJson: text("strokes_json").notNull(),
+  note: text("note").notNull().default(""),
+  answer: text("answer"),
+  answeredAt: text("answered_at"),
+  createdAt: createdAt(),
+}, (table) => [index("teacher_marks_student_idx").on(table.studentId, table.answeredAt, table.createdAt)]);
+
+// 아이 손들기(2026-09-14). 한 아이당 한 행, 내리면 지운다.
+export const handRaises = sqliteTable("hand_raises", {
+  studentId: text("student_id").primaryKey().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  classroomId: text("classroom_id").notNull().references(() => classrooms.id, { onDelete: "cascade" }),
+  raisedAt: text("raised_at").notNull(),
+}, (table) => [index("hand_raises_classroom_idx").on(table.classroomId, table.raisedAt)]);
 
 export const teacherViews = sqliteTable("teacher_views", {
   teacherId: text("teacher_id").notNull().references(() => teachers.id, { onDelete: "cascade" }),

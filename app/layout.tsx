@@ -21,8 +21,14 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: title, template: "%s | Wiggle" },
     description,
     icons: {
-      icon: "/brand/app_icon.png",
-      shortcut: "/brand/app_icon.png",
+      // 브라우저 탭 아이콘은 크레용 그림이다(2026-09-12 사용자 지정). 32px에서도 읽히도록
+      // 작은 크기는 크레용을 더 크게 잘라 따로 뽑았다. app_icon.png는 제품 앱 아이콘이라 그대로 둔다.
+      icon: [
+        { url: "/brand/crayon-icon-32.png", sizes: "32x32", type: "image/png" },
+        { url: "/brand/crayon-icon-512.png", sizes: "512x512", type: "image/png" },
+      ],
+      shortcut: "/brand/crayon-icon-32.png",
+      apple: { url: "/brand/crayon-icon-180.png", sizes: "180x180", type: "image/png" },
     },
     openGraph: {
       title,

@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { studentFetch } from "@/lib/client-session";
-import { lessonBySlug } from "@/lib/lesson-content";
+import { deactivateProfile, studentFetch } from "@/lib/client-session";
 import { Logo } from "./Logo";
 
 type ArchiveArtwork = { id: string; title: string; learningMode: string; lessonSlug: string | null; status: string; hasImage: number | boolean; updatedAt: string; completedAt: string | null };
@@ -37,8 +36,7 @@ function ArtworkPreview({ artwork }: { artwork: ArchiveArtwork }) {
 }
 
 function modeLabel(artwork: ArchiveArtwork) {
-  const lesson = artwork.lessonSlug ? lessonBySlug(artwork.lessonSlug) : undefined;
-  if (lesson) return lesson.title;
+  // 레슨 카탈로그는 은퇴했다(Story 2.3) — 남은 레거시 작품은 자기 제목으로 표시한다.
   if (artwork.learningMode === "practice") return "선·도형 기초";
   if (artwork.learningMode === "guided") return "따라 그리기";
   if (artwork.learningMode === "observe") return "관찰 그리기";
@@ -80,6 +78,19 @@ export function Archive() {
     }
   }, []);
 
+  const [leaving, setLeaving] = useState(false);
   useEffect(() => { void loadArchive(); }, [loadArchive]);
-  return <main className="app-shell archive-page"><header className="app-header"><Logo /><a className="small-button" href="/student">← 처음 화면</a></header><section className="archive-hero"><div><p className="eyebrow">내가 그린 생각을 다시 봐요</p><h1>{data ? `${data.student.animal} ${data.student.nickname}의` : "나의"}<br />내 그림</h1></div><span className="growth-flower">🖼️</span></section>{error && <p className="error-box" role="alert">{error}</p>}{data && (data.artworks.length ? <><div className="archive-grid">{data.artworks.map((artwork) => <a className="archive-card" href={artwork.status === "complete" ? `/student/archive/${artwork.id}` : `/student/draw/${artwork.id}`} key={artwork.id}><div className="archive-paper"><ArtworkPreview artwork={artwork} /></div><div><small>{modeLabel(artwork)}</small><h2>{artwork.title}</h2><p>{artwork.status === "complete" ? "👀 완성한 그림 다시 보기" : "✏️ 이어 그리기"}</p><time dateTime={artwork.completedAt ?? artwork.updatedAt}>{new Date(artwork.completedAt ?? artwork.updatedAt).toLocaleDateString("ko-KR")}</time></div></a>)}</div>{hasMore && <button type="button" className="button secondary archive-more-button" disabled={loadingMore} onClick={() => void loadArchive(nextOffset, true)}>{loadingMore ? "이전 그림 불러오는 중…" : "이전 그림 더 보기"}</button>}</> : <div className="empty-state">아직 그림이 없어요. 활동을 골라 첫 그림을 시작해 봐요.<br /><a className="button secondary" href="/student/activities">🎨 활동 고르기</a></div>)}</main>;
+  async function leaveClass() {
+    if (leaving) return;
+    setLeaving(true);
+    await deactivateProfile().catch(() => undefined);
+    location.replace("/join");
+  }
+  /* 학생 홈이 없어져(2026-09-12) 이 화면이 도화지 밖의 유일한 자리다 —
+   * 새 그림·그림책·수업 마치기를 여기서 연다. */
+  return <main className="app-shell archive-page"><header className="app-header"><Logo /><nav className="archive-actions" aria-label="내 그림 메뉴">
+      <a className="button primary child-primary-action" href="/student/draw/new?mode=free"><span aria-hidden="true">🎨</span>새 그림</a>
+      <a className="small-button" href="/student/books"><span aria-hidden="true">📘</span>그림책</a>
+      <button type="button" className="small-button" onClick={() => void leaveClass()} disabled={leaving}><span aria-hidden="true">🚪</span>{leaving ? "나가는 중…" : "수업 마치기"}</button>
+    </nav></header><section className="archive-hero"><div><p className="eyebrow">내가 그린 생각을 다시 봐요</p><h1>{data ? `${data.student.animal} ${data.student.nickname}의` : "나의"}<br />내 그림</h1></div><span className="growth-flower">🖼️</span></section>{error && <p className="error-box" role="alert">{error}</p>}{data && (data.artworks.length ? <><div className="archive-grid">{data.artworks.map((artwork) => <a className="archive-card" href={artwork.status === "complete" ? `/student/archive/${artwork.id}` : `/student/draw/${artwork.id}`} key={artwork.id}><div className="archive-paper"><ArtworkPreview artwork={artwork} /></div><div><small>{modeLabel(artwork)}</small><h2>{artwork.title}</h2><p>{artwork.status === "complete" ? "👀 완성한 그림 다시 보기" : "✏️ 이어 그리기"}</p><time dateTime={artwork.completedAt ?? artwork.updatedAt}>{new Date(artwork.completedAt ?? artwork.updatedAt).toLocaleDateString("ko-KR")}</time></div></a>)}</div>{hasMore && <button type="button" className="button secondary archive-more-button" disabled={loadingMore} onClick={() => void loadArchive(nextOffset, true)}>{loadingMore ? "이전 그림 불러오는 중…" : "이전 그림 더 보기"}</button>}</> : <div className="empty-state">아직 그림이 없어요. 활동을 골라 첫 그림을 시작해 봐요.<br /><a className="button secondary" href="/student/activities">🎨 활동 고르기</a></div>)}</main>;
 }

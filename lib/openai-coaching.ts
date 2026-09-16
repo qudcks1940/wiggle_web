@@ -7,29 +7,41 @@ export type StudentCoaching = {
   uncertain: boolean;
   growthEvent: string;
 };
-export type GuideShape = "none" | "line" | "circle" | "triangle" | "rectangle";
-export type GuideStep = { instruction: string; openChoice: boolean; choices: string[]; guideShape: GuideShape };
-export type DrawingGuide = { topic: string; steps: GuideStep[] };
 export type TeacherCoachingDraft = { body: string; observation: string; nextAction: string };
-export type OpenAIKind = "student_coaching" | "drawing_guide" | "teacher_draft";
+/** 틀리는 해석자(product-decisions 학습 과정 4항). 몽그리가 먼저 짐작을 내놓고 아이가 고친다. */
+export type StoryInterpretation = { guess: string; choices: CoachingChoice[] };
+export type OpenAIKind = "student_coaching" | "teacher_draft" | "story_interpretation";
 
-export const STUDENT_COACHING_INSTRUCTIONS = `너는 초등학교 1~2학년 아이를 돕는 그림 코치 '몽그리'다.
-아이가 버튼으로 도움을 요청한 이번 한 번에만 답한다. 자동으로 끼어들지 않는다.
+export const STUDENT_COACHING_INSTRUCTIONS = `너는 초등학교 3~6학년 아이를 돕는 그림 코치 '몽그리'다.
+이번 한 번에만 답한다. 아이가 불렀는지 네가 먼저 말을 걸었는지는 맥락의 opened_by가 알려 준다.
+네가 먼저 말을 건 경우에는 아이가 도움을 청한 적이 없다는 것을 알고 더 가볍게 묻는다.
+아이가 그리는 것을 막지 않는다. 계속 그리라고 재촉하거나 답을 요구하지 않는다.
 그림을 대신 완성하거나 원본 선을 수정한다고 말하지 않는다. 점수, 순위, 칭찬 판정, 평가, 재능 진단, 실패 표현을 쓰지 않는다.
 멋진 그림, 훌륭한 창의력, 잘 그렸어요, 예쁜 그림, 천재, 재능, 소질 같은 판정과 정답, 반드시 따라, exact answer, follow 같은 강요 표현을 어느 필드에도 쓰지 않는다.
 보이는 대상을 확신할 수 없으면 추측하거나 단정하지 말고 uncertain=true로 두고 질문한다.
+uncertain=true이면 next_action도 그 대상을 단정하지 않는 말로 쓴다.
 질문은 정확히 하나만, 짧고 쉬운 한국어로 쓴다. 답 선택은 정답 없는 칩 2~4개다.
+아이가 이미 그린 것과 아이가 고른 답이 먼저다. 너는 그것을 잇는 확장 협업자다.
+아이가 그린 것에서 출발한 행동 하나만 제안하고, 새 주제로 옮기지 않는다.
+새 소재나 새 주제를 네가 가져오지 않는다. 무엇을 그릴지는 선생님이 교실에서 정한다.
+아이 그림에 없는 것을 있다고 말하지 않는다.
 next_action에는 아이가 바로 선, 모양, 색, 위치 또는 새 요소를 그려 볼 수 있는 행동 하나를 넣는다.
 growth_event는 진단이 아니라 관찰 가능한 과정 한 문장으로 쓴다.`;
 
-export const DRAWING_GUIDE_INSTRUCTIONS = `너는 초등학교 1~2학년 아이의 요청 주제를 단계로 나누는 그림 코치다.
-6~15단계를 만든다. 각 instruction은 짧고 쉬운 한국어 한 문장이다.
-최소 두 단계는 정답 없는 선택 단계이며 choices를 2~4개 제공한다.
-마지막 단계는 반드시 아이가 자기 생각을 자유롭게 더하는 단계다.
-점수, 칭찬 판정, 평가, 실패, 재능 진단, 정답 강요를 instruction과 choices 어디에도 쓰지 않는다. 아이 그림을 대신 완성하거나 원본 선을 바꾸지 않는다.
-guide_shape은 아이가 점선을 요청했을 때 별도 레이어에 보일 최소 도형만 고른다. 필요 없으면 none이다.`;
+export const STORY_INTERPRETATION_INSTRUCTIONS = `너는 아이가 그림을 다 그린 뒤 이야기를 끌어내는 그림 친구 '몽그리'다.
+아이가 무엇을 그렸는지 단정하지 않는다. 네 눈에 그렇게 보였다는 짐작 하나만 내놓는다.
+일부러 덜 구체적으로 짐작한다. 정확한 사물 이름 대신 갈래로 말하거나("동물처럼 보이는데?")
+두 번째로 그럴듯한 읽기를 고른다. 아이가 "아니야, 이건 ~야"라고 자기 말로 고칠 자리를 남기는 것이 목적이다.
+틀린 짐작을 놀림처럼 쓰지 않는다. 아이를 시험하거나 캐묻지 않는다.
+guess는 "내 눈에는 ~처럼 보이는데?"처럼 네 짐작임이 드러나는 짧은 한 문장이고 물음표는 하나만 쓴다.
+choices는 아이가 골라서 고칠 수 있는 답 2~4개다. 하나만 네 짐작과 같다는 답이고 나머지는 모두 다르다는 답이다.
+전부 같다는 답으로 채우지 않는다.
+각 choice의 answer는 아이가 자기 그림을 스스로 설명하는 한 문장으로 쓴다.
+정답, 오답, 맞았다, 틀렸다 같은 판정하는 말을 어느 필드에도 쓰지 않는다.
+점수, 순위, 칭찬 판정, 평가, 재능 진단, 실패 표현도 쓰지 않는다.
+그림을 대신 완성하거나 원본 선을 고친다고 말하지 않는다.`;
 
-export const TEACHER_DRAFT_INSTRUCTIONS = `너는 초등 저학년 미술 수업의 교사용 코칭 초안 작성자다.
+export const TEACHER_DRAFT_INSTRUCTIONS = `너는 초등 3~6학년 미술 수업의 교사용 코칭 초안 작성자다.
 초안은 학생에게 자동 전송되지 않고 교사가 반드시 검토, 수정, 승인한다.
 점수, 순위, 칭찬 판정, 평가, 재능 진단, 틀렸다는 표현, 정답 강요, 대신 완성하거나 원본을 수정한다는 약속을 어느 필드에도 쓰지 않는다.
 그림에서 관찰 가능한 내용과 학생이 실제로 다음에 그려 볼 행동 하나를 짧고 쉬운 한국어로 제안한다.
@@ -51,19 +63,9 @@ export const OPENAI_SCHEMAS = {
       uncertain: { type: "boolean" }, growth_event: { type: "string" },
     },
   },
-  drawing_guide: {
-    type: "object", additionalProperties: false, required: ["topic", "steps"],
-    properties: {
-      topic: { type: "string" },
-      steps: { type: "array", minItems: 6, maxItems: 15, items: {
-        type: "object", additionalProperties: false, required: ["instruction", "open_choice", "choices", "guide_shape"],
-        properties: {
-          instruction: { type: "string" }, open_choice: { type: "boolean" },
-          choices: { type: "array", minItems: 0, maxItems: 4, items: { type: "string" } },
-          guide_shape: { type: "string", enum: ["none", "line", "circle", "triangle", "rectangle"] },
-        },
-      } },
-    },
+  story_interpretation: {
+    type: "object", additionalProperties: false, required: ["guess", "choices"],
+    properties: { guess: { type: "string" }, choices: { type: "array", minItems: 2, maxItems: 4, items: choiceSchema } },
   },
   teacher_draft: {
     type: "object", additionalProperties: false, required: ["body", "observation", "next_action"],
@@ -73,7 +75,7 @@ export const OPENAI_SCHEMAS = {
 
 const instructionsByKind = {
   student_coaching: STUDENT_COACHING_INSTRUCTIONS,
-  drawing_guide: DRAWING_GUIDE_INSTRUCTIONS,
+  story_interpretation: STORY_INTERPRETATION_INSTRUCTIONS,
   teacher_draft: TEACHER_DRAFT_INSTRUCTIONS,
 };
 
@@ -214,11 +216,22 @@ export function isChildSafeCoachingText(value: string) {
   return true;
 }
 
-function isKoreanFreeCreationStep(value: string) {
-  const hasCreationAction = /(?:더해|추가|넣어|그려|꾸며|만들어)/.test(value);
-  const explicitlyFree = /(?:자유롭게|마음대로)/.test(value);
-  const childDirected = /(?:내|자기|너의|생각|상상|원하는|원하고\s*싶은|하고\s*싶은)/.test(value);
-  return hasCreationAction && (explicitlyFree || childDirected);
+// 답 칩 검사는 학생 코칭과 틀리는 해석자가 그대로 공유한다. 규칙이 갈라지면
+// 한쪽에만 안전 검사가 남는 구멍이 생긴다.
+function parseCoachingChoices(value: unknown): CoachingChoice[] | null {
+  if (!Array.isArray(value) || value.length < 2 || value.length > 4) return null;
+  const choices: CoachingChoice[] = [];
+  for (const raw of value) {
+    const choice = record(raw); if (!choice) return null;
+    const emoji = shortText(choice.emoji, 12); const label = shortText(choice.label, 20); const answer = shortText(choice.answer, 50);
+    // 화면에서는 emoji와 label이 한 버튼에 붙어 나온다. 따로만 검사하면
+    // emoji "잘" + label "했어요"처럼 쪼개 넣은 칭찬이 통과한다.
+    if (!emoji || !label || !answer || !isEmojiToken(emoji)) return null;
+    if (![emoji, label, answer, `${emoji}${label}`, `${emoji} ${label}`].every(isChildSafeCoachingText)) return null;
+    choices.push({ emoji, label, answer });
+  }
+  if (new Set(choices.map((choice) => choice.label)).size !== choices.length) return null;
+  return choices;
 }
 
 export function validateStudentCoaching(value: unknown): StudentCoaching | null {
@@ -230,44 +243,23 @@ export function validateStudentCoaching(value: unknown): StudentCoaching | null 
   // 물음표 개수도 NFKC 뒤에 세야 전각 물음표를 쓴 정상 질문이 거부되지 않는다.
   if ((question.normalize("NFKC").match(/\?/g) ?? []).length !== 1 || !drawingActionPattern.test(nextAction)) return null;
   if (![question, nextAction, growthEvent].every(isChildSafeCoachingText)) return null;
-  if (!Array.isArray(item.choices) || item.choices.length < 2 || item.choices.length > 4) return null;
-  const choices: CoachingChoice[] = [];
-  for (const raw of item.choices) {
-    const choice = record(raw); if (!choice) return null;
-    const emoji = shortText(choice.emoji, 12); const label = shortText(choice.label, 20); const answer = shortText(choice.answer, 50);
-    // 화면에서는 emoji와 label이 한 버튼에 붙어 나온다. 따로만 검사하면
-    // emoji "잘" + label "했어요"처럼 쪼개 넣은 칭찬이 통과한다.
-    if (!emoji || !label || !answer || !isEmojiToken(emoji)) return null;
-    if (![emoji, label, answer, `${emoji}${label}`, `${emoji} ${label}`].every(isChildSafeCoachingText)) return null;
-    choices.push({ emoji, label, answer });
-  }
-  if (new Set(choices.map((choice) => choice.label)).size !== choices.length) return null;
+  const choices = parseCoachingChoices(item.choices); if (!choices) return null;
   if (!Array.isArray(item.observed_elements) || item.observed_elements.length > 4) return null;
   const observedElements = item.observed_elements.map((entry) => shortText(entry, 30));
   if (observedElements.some((entry) => !entry) || !observedElements.every((entry) => isChildSafeCoachingText(entry as string))) return null;
   return { question, choices, nextAction, observedElements: observedElements as string[], uncertain: item.uncertain, growthEvent };
 }
 
-export function validateDrawingGuide(value: unknown): DrawingGuide | null {
-  const item = record(value); const topic = item && shortText(item.topic, 50);
-  if (!item || !topic || !isChildSafeCoachingText(topic) || !Array.isArray(item.steps) || item.steps.length < 6 || item.steps.length > 15) return null;
-  const steps: GuideStep[] = [];
-  for (const raw of item.steps) {
-    const step = record(raw); if (!step) return null;
-    const instruction = shortText(step.instruction, 70); const guideShape = step.guide_shape;
-    if (!instruction || /[\r\n]/.test(instruction) || (instruction.match(/[.!?]/g) ?? []).length > 1 || typeof step.open_choice !== "boolean") return null;
-    if (!isChildSafeCoachingText(instruction) || !["none", "line", "circle", "triangle", "rectangle"].includes(String(guideShape))) return null;
-    if (!Array.isArray(step.choices) || step.choices.length > 4) return null;
-    const choices = step.choices.map((entry) => shortText(entry, 24)); if (choices.some((entry) => !entry) || !choices.every((entry) => isChildSafeCoachingText(entry as string))) return null;
-    if (step.open_choice && choices.length < 2) return null;
-    if (!step.open_choice && choices.length !== 0) return null;
-    steps.push({ instruction, openChoice: step.open_choice, choices: choices as string[], guideShape: guideShape as GuideShape });
-  }
-  if (steps.filter((step) => step.openChoice).length < 2) return null;
-  const last = steps.at(-1)!;
-  const nonDirectiveFinal = /(?:자유롭게|마음대로|생각|상상|원하는|하고\s*싶은)/.test(last.instruction);
-  if (!isKoreanFreeCreationStep(last.instruction) || last.guideShape !== "none" || (!last.openChoice && !nonDirectiveFinal)) return null;
-  return { topic, steps };
+/**
+ * 틀리는 해석자 응답 검증. guess는 몽그리의 짐작이므로 단정형이 아니라
+ * 물음표 하나로 끝나는 한 문장이어야 한다 — 단정하면 아이가 고칠 여지가 사라진다.
+ */
+export function validateStoryInterpretation(value: unknown): StoryInterpretation | null {
+  const item = record(value); if (!item) return null;
+  const guess = shortText(item.guess, 90); if (!guess) return null;
+  if ((guess.normalize("NFKC").match(/\?/g) ?? []).length !== 1 || !isChildSafeCoachingText(guess)) return null;
+  const choices = parseCoachingChoices(item.choices); if (!choices) return null;
+  return { guess, choices };
 }
 
 export function validateTeacherDraft(value: unknown): TeacherCoachingDraft | null {
@@ -322,7 +314,7 @@ export async function requestStructuredOpenAI(options: {
     ] }],
     text: { verbosity: "low", format: { type: "json_schema", name: `wiggle_${options.kind}`, strict: true, schema: OPENAI_SCHEMAS[options.kind] } },
     reasoning: { effort: "low" },
-    max_output_tokens: options.kind === "drawing_guide" ? 2200 : 1000,
+    max_output_tokens: 1000,
     store: false,
     safety_identifier: options.safetyIdentifier,
   };
@@ -342,7 +334,8 @@ export async function requestStructuredOpenAI(options: {
     const text = outputText(responseBody); if (!text) throw new AIServiceError("AI_RESPONSE_INVALID", "몽그리의 답을 확인하지 못했어요.", 502);
     let parsed: unknown; try { parsed = JSON.parse(text); } catch { throw new AIServiceError("AI_RESPONSE_INVALID", "몽그리의 답을 확인하지 못했어요.", 502); }
     const value = options.kind === "student_coaching" ? validateStudentCoaching(parsed)
-      : options.kind === "drawing_guide" ? validateDrawingGuide(parsed) : validateTeacherDraft(parsed);
+      : options.kind === "story_interpretation" ? validateStoryInterpretation(parsed)
+      : validateTeacherDraft(parsed);
     if (!value) throw new AIServiceError("AI_RESPONSE_INVALID", "몽그리의 답을 확인하지 못했어요.", 502);
     return { value, model, schemaValid: true as const };
   } catch (error) {

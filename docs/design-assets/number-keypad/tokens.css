@@ -1,0 +1,16 @@
+/* 선택 시안에서 읽은 제안값. 전역 테마가 아니라 이 화면에만 적용. */
+.number-keypad-screen {
+  --keypad-ink: #123d27;
+  --keypad-muted: #4c6946;
+  --keypad-wall: #dfe7bd;
+  --keypad-paper: #fff8e7;
+  --keypad-key: #f8f5df;
+  --keypad-key-border: #c4c9a6;
+  --keypad-key-shadow: #d6d5b8;
+  --keypad-field: #e9edce;
+  --keypad-field-border: #91b27b;
+  --keypad-primary: #ffda45;
+  --keypad-primary-border: #c39320;
+  --keypad-primary-shadow: #b68925;
+  --keypad-focus: #2f6b3d;
+}

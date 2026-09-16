@@ -67,12 +67,13 @@ test("교사 완성 그림책 화면은 소유권·완성 상태·개별 및 일
   assert.match(library, /피드백 만들기/);
   assert.match(preview, /window\.print\(\)/);
   assert.match(preview, /PDF로 저장 · 인쇄/);
-  assert.match(teacherApp, /완성 그림책/);
+  assert.match(teacherApp, /TeacherWorkspace/);
+  assert.match(await read("../app/components/TeacherWorkArchive.tsx"), /완성 그림책/);
 });
 
 test("학생 화면에 실제 그림책 진입·편집·가져오기·미리보기가 연결된다", async () => {
   const [home, detail, editor, cutout, library, demo, studentApi, css] = await Promise.all([
-    read("../app/components/StudentHome.tsx"),
+    read("../app/components/Archive.tsx"),
     read("../app/components/ArtworkDetail.tsx"),
     read("../app/components/StorybookEditor.tsx"),
     read("../app/components/ImageCutoutModal.tsx"),
@@ -81,7 +82,7 @@ test("학생 화면에 실제 그림책 진입·편집·가져오기·미리보�
     read("../app/api/student/route.ts"),
     read("../app/globals.css"),
   ]);
-  assert.match(home, /href="\/student\/books"/);
+  assert.match(home, /href="\/student\/books"/); // 학생 홈 은퇴 뒤에는 내 그림 화면이 그림책 입구다
   assert.match(detail, /이 그림으로 그림책 만들기/);
   assert.match(detail, /artworkId: artwork\.id/);
   assert.match(detail, /먼저 책 모양을 골라요/);

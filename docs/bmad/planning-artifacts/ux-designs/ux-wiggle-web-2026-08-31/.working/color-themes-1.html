@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280">
+<title>위글 웹 · 색 테마 5안</title>
+<style>
+/* =========================================================================
+   위글 웹 (Wiggle Web) — 색 테마 탐색 1차 / 5안
+   레퍼런스에서 뽑아낸 실제 팔레트
+   - ref-01 Learnify : 크림 #F7F5F2 / 라벤더 #B69CE8 / 코랄 #E85D3D / 옐로 #F5CE4A / 잉크 #1A1A1A
+   - ref-02 EduLearn : 아이보리 #FBF8F0 / 딥틸 #2F6E62 / 앰버 #F0A22E / 잉크 #262626
+   공통 원칙(두 레퍼런스에서 공통으로 가져온 것)
+   - 순백 대신 크림/아이보리 바탕
+   - 차분한 앵커 1색 + 따뜻한 강조 1색
+   - 납작한 면, 그림자 최소, 여백 넉넉, 굵고 둥근 산세리프
+   제품 제약
+   - 점수·등급 없음 → 빨강/초록 "잘함/못함" 의미색 금지
+   - "아직 안 그린 쪽"은 경고색이 아니라 중립·차분한 대기 상태
+   - 아이 그림은 항상 흰 도화지 → UI가 흰 면과 경쟁하면 안 됨
+   - 선택 상태는 색만으로 표시하지 않음(테두리 굵기 + 체크 표시 병행)
+   ========================================================================= */
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: #FFFFFF;
+  color: #1B1B1B;
+  font-family: "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR",
+               "Malgun Gothic", -apple-system, BlinkMacSystemFont,
+               "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.page { width: 1280px; margin: 0 auto; padding: 40px 32px 80px; }
+
+/* ---------- 문서 헤더 ---------- */
+.doc-head { border-bottom: 2px solid #1B1B1B; padding-bottom: 20px; margin-bottom: 8px; }
+.doc-head h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -0.02em; }
+.doc-head p { margin: 0; max-width: 860px; color: #4A4A4A; font-size: 14px; }
+.doc-head .refs { margin-top: 14px; font-size: 12.5px; color: #6A6A6A; }
+.doc-head .refs b { color: #1B1B1B; }
+
+/* ---------- 변형 섹션 ---------- */
+.variant { padding: 34px 0 10px; border-bottom: 1px dashed #C9C9C9; page-break-inside: avoid; }
+.variant:last-of-type { border-bottom: 0; }
+.v-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 4px; }
+.v-num {
+  flex: none; width: 44px; height: 44px; border-radius: 12px;
+  background: #1B1B1B; color: #fff; font-size: 17px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  align-self: center;
+}
+.v-name { font-size: 23px; font-weight: 800; margin: 0; letter-spacing: -0.02em; }
+.v-register { margin: 2px 0 0; font-size: 13.5px; color: #5A5A5A; }
+.v-source { margin-left: auto; font-size: 12px; color: #7A7A7A; align-self: center; }
+
+/* ---------- 토큰 칩 ---------- */
+.tokens {
+  display: grid; grid-template-columns: repeat(10, 1fr);
+  gap: 8px; margin: 18px 0 22px;
+}
+.chip { border: 1px solid #DCDCDC; border-radius: 8px; overflow: hidden; background: #fff; }
+.chip .sw { height: 44px; border-bottom: 1px solid rgba(0,0,0,.10); }
+.chip .lb { padding: 6px 7px 7px; }
+.chip .lb .role { display: block; font-size: 10.5px; font-weight: 700; line-height: 1.3; color: #2B2B2B; }
+.chip .lb .hex { display: block; font-size: 10px; color: #767676; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -0.01em; }
+
+/* ---------- 스니펫 그리드 ---------- */
+.snips { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.snip-label {
+  font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em;
+  color: #6A6A6A; margin: 0 0 8px;
+}
+.frame { border: 1px solid #D8D8D8; border-radius: 14px; overflow: hidden; }
+
+/* =========================================================================
+   공용 컴포넌트 — 색은 전부 변수. 테마 클래스가 변수만 갈아끼운다.
+   ========================================================================= */
+
+/* --- (a) 아이 화면 --- */
+.child {
+  background: var(--bg); padding: 22px 22px 24px;
+  color: var(--ink);
+}
+.child .crumb {
+  font-size: 12.5px; font-weight: 700; color: var(--muted);
+  display: flex; align-items: center; gap: 6px; margin-bottom: 12px;
+}
+.child .crumb .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.card {
+  background: var(--surface); border: 2px solid var(--border);
+  border-radius: 24px; padding: 20px 20px 22px; position: relative;
+}
+.card .today {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent); color: var(--accent-ink);
+  font-size: 12px; font-weight: 800; padding: 5px 12px; border-radius: 999px;
+  margin-bottom: 12px;
+}
+.card h3 { margin: 0 0 8px; font-size: 26px; font-weight: 800; letter-spacing: -0.03em; color: var(--ink); }
+.card .scene { margin: 0 0 18px; font-size: 15px; line-height: 1.65; color: var(--ink); opacity: .88; }
+.btn-start {
+  display: block; width: 100%; border: 0; border-radius: 18px;
+  background: var(--primary); color: var(--primary-ink);
+  font-size: 20px; font-weight: 800; padding: 18px 16px; text-align: center;
+  font-family: inherit; letter-spacing: -0.02em;
+}
+.doodle {
+  position: absolute; right: 16px; top: 14px;
+  font-size: 20px; color: var(--accent); line-height: 1;
+}
+
+/* 그림책 쪽 스트립 */
+.strip { margin-top: 18px; }
+.strip-title {
+  font-size: 12.5px; font-weight: 800; color: var(--muted);
+  margin: 0 0 8px; display: flex; align-items: center; gap: 8px;
+}
+.pages { display: flex; gap: 12px; }
+.pg { width: 96px; }
+.pg .paper {
+  height: 76px; border-radius: 12px; background: #FFFFFF;
+  border: 2px solid var(--border); position: relative; overflow: hidden;
+}
+.pg .paper .art { position: absolute; inset: 0; }
+.pg .cap { font-size: 11px; margin-top: 6px; color: var(--muted); font-weight: 700; text-align: center; }
+.pg.done .paper { border-color: var(--ink); }
+.pg.done .cap { color: var(--ink); }
+.pg.done .cap::before { content: "✓ "; }
+.pg.empty .paper {
+  background: var(--empty); border: 2px dashed var(--empty-line);
+  display: flex; align-items: center; justify-content: center;
+}
+.pg.empty .paper span { font-size: 22px; color: var(--empty-ink); line-height: 1; }
+.pg.empty .cap { color: var(--empty-ink); }
+
+/* 아이 그림 흉내 (도형만, 이미지 없음) */
+.art i { position: absolute; display: block; }
+.a1 .s1 { left: 10px; bottom: 12px; width: 26px; height: 26px; border: 3px solid #2B2B2B; border-radius: 50%; }
+.a1 .s2 { left: 40px; bottom: 12px; width: 26px; height: 26px; border: 3px solid #2B2B2B; border-radius: 50%; }
+.a1 .s3 { left: 22px; bottom: 30px; width: 34px; height: 3px; background: #2B2B2B; transform: rotate(-14deg); }
+.a1 .s4 { left: 52px; bottom: 36px; width: 12px; height: 12px; background: #F2B33D; border-radius: 50%; }
+.a2 .s1 { left: 14px; bottom: 10px; width: 0; height: 0; border-left: 20px solid transparent; border-right: 20px solid transparent; border-bottom: 34px solid #7BA05B; }
+.a2 .s2 { right: 14px; top: 12px; width: 20px; height: 20px; border-radius: 50%; background: #F2B33D; }
+.a2 .s3 { left: 10px; bottom: 10px; right: 10px; height: 3px; background: #2B2B2B; }
+
+/* --- (b) 교사 화면 : 같은 팔레트, 어른 레지스터 --- */
+.teacher {
+  background: var(--t-bg); color: var(--t-ink);
+  padding: 20px 20px 22px; font-size: 13px;
+}
+.teacher .t-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 12px; margin-bottom: 14px;
+  border-bottom: 1px solid var(--t-border);
+}
+.teacher .t-bar .t-brand { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+.teacher .t-bar .t-meta {
+  font-size: 11px; letter-spacing: .08em; font-weight: 700;
+  color: var(--t-muted); text-transform: uppercase;
+}
+.t-colhead {
+  display: grid; grid-template-columns: 1.25fr 1.15fr .6fr auto;
+  gap: 14px; align-items: center;
+  font-size: 10.5px; letter-spacing: .09em; font-weight: 700;
+  color: var(--t-muted); padding: 0 14px 7px;
+}
+.t-row {
+  display: grid; grid-template-columns: 1.25fr 1.15fr .6fr auto;
+  gap: 14px; align-items: center;
+  background: var(--t-surface); border: 1px solid var(--t-border);
+  border-radius: 8px; padding: 14px;
+}
+.t-row + .t-row { margin-top: 8px; }
+.t-class { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.t-class small { display: block; font-size: 11px; font-weight: 500; color: var(--t-muted); letter-spacing: 0; }
+.t-arc { font-size: 13px; }
+.t-arc small { display: block; font-size: 11px; color: var(--t-muted); }
+.t-ep {
+  font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.t-ep small { display: block; font-size: 11px; font-weight: 500; color: var(--t-muted); }
+.btn-next {
+  border: 1px solid var(--t-primary); background: var(--t-primary); color: var(--t-primary-ink);
+  font-family: inherit; font-size: 12.5px; font-weight: 700;
+  padding: 9px 16px; border-radius: 6px; white-space: nowrap;
+}
+.btn-ghost {
+  border: 1px solid var(--t-border); background: transparent; color: var(--t-ink);
+  font-family: inherit; font-size: 12.5px; font-weight: 600;
+  padding: 9px 14px; border-radius: 6px;
+}
+.t-foot { margin-top: 12px; display: flex; gap: 8px; align-items: center; }
+.t-note { font-size: 11.5px; color: var(--t-muted); margin-left: auto; }
+.t-pill {
+  display: inline-block; font-size: 11px; font-weight: 700;
+  padding: 3px 9px; border-radius: 4px;
+  background: var(--t-quiet); color: var(--t-muted-strong); border: 1px solid var(--t-border);
+}
+
+/* --- 흰 도화지 대비 검사 --- */
+.hero-test {
+  margin-top: 20px; background: var(--bg);
+  border: 1px solid #D8D8D8; border-radius: 14px; padding: 16px 18px;
+  display: flex; align-items: center; gap: 18px;
+}
+.hero-test .ht-label { font-size: 12px; font-weight: 800; color: var(--muted); width: 140px; flex: none; line-height: 1.45; }
+.hero-test .ht-strip { display: flex; gap: 10px; flex: none; }
+.hero-test .ht-strip b { width: 40px; height: 56px; border-radius: 8px; display: block; }
+.hero-test .ht-art {
+  flex: 1; height: 96px; background: #FFFFFF;
+  border: 2px solid var(--border); border-radius: 10px;
+  position: relative; overflow: hidden;
+}
+.hero-test .ht-art .art { position: absolute; inset: 0; }
+.hero-test .ht-cap { font-size: 11.5px; color: var(--muted); width: 96px; flex: none; }
+
+/* =========================================================================
+   1번 · 라벤더 크레용  (Learnify 계열)
+   bg #F8F4EE / surface #FFFFFF / ink #241F2E / muted #6C6579 / border #E5DDD0
+   primary #6E4FC9 (라벤더를 AA까지 눌러 잡은 값, 흰 글씨 대비 6.3:1)
+   accent #E8613C (코랄) / yellow #F5CE4A (보조 도형용)
+   아직 안 그린 쪽 #F0EBE1 + 점선 #C6BDAC  ← 경고색 아님, 크림의 한 톤 아래
+   교사면: 같은 라벤더를 더 깊게(#4B3A8C), 크림은 회색기 있는 #F2EFE9
+   ========================================================================= */
+.t1 {
+  --bg:#F8F4EE; --surface:#FFFFFF; --ink:#241F2E; --muted:#6C6579; --border:#E5DDD0;
+  --primary:#6E4FC9; --primary-ink:#FFFFFF;
+  --accent:#E8613C; --accent-ink:#FFFFFF;
+  --empty:#F0EBE1; --empty-line:#C6BDAC; --empty-ink:#8B8271;
+  --t-bg:#F2EFE9; --t-surface:#FFFFFF; --t-ink:#2A2536; --t-muted:#736C80;
+  --t-muted-strong:#4B4456; --t-border:#DFD8CC; --t-quiet:#F5F2EC;
+  --t-primary:#4B3A8C; --t-primary-ink:#FFFFFF;
+}
+
+/* =========================================================================
+   2번 · 숲 그늘 교실  (EduLearn 계열)
+   bg #FBF7EC / surface #FFFFFF / ink #1F2E2A / muted #5C6B65 / border #E4DBC7
+   primary #2F6E62 (딥 틸, 흰 글씨 대비 6.0:1)
+   accent #E09A2E (앰버) — 앰버는 강조·오늘 표시용, 경고 의미 없음
+   아직 안 그린 쪽 #EFE9D9 + 점선 #C4BBA4
+   교사면: 틸을 더 어둡게(#22544B), 바탕은 채도 뺀 #F4F0E5
+   ========================================================================= */
+.t2 {
+  --bg:#FBF7EC; --surface:#FFFFFF; --ink:#1F2E2A; --muted:#5C6B65; --border:#E4DBC7;
+  --primary:#2F6E62; --primary-ink:#FFFFFF;
+  --accent:#E09A2E; --accent-ink:#2A2110;
+  --empty:#EFE9D9; --empty-line:#C4BBA4; --empty-ink:#847C68;
+  --t-bg:#F4F0E5; --t-surface:#FFFFFF; --t-ink:#1E2C28; --t-muted:#61706A;
+  --t-muted-strong:#3C4B46; --t-border:#DED6C4; --t-quiet:#F7F4EB;
+  --t-primary:#22544B; --t-primary-ink:#FFFFFF;
+}
+
+/* =========================================================================
+   3번 · 모래와 이끼
+   bg #F7F2E5 / surface #FFFFFF / ink #2C2F22 / muted #6B6C56 / border #E3DAC3
+   primary #5A7040 (이끼 올리브 — 성공/합격 초록이 아니라 흙빛 초록)
+   accent #DE9450 (살구) / 빨강 없음 → 잘함·못함 짝이 성립하지 않음
+   아직 안 그린 쪽 #EDE7D5 + 점선 #C2BB9F
+   교사면: 올리브를 눌러 #3F5230, 바탕 #F2EEE1
+   ========================================================================= */
+.t3 {
+  --bg:#F7F2E5; --surface:#FFFFFF; --ink:#2C2F22; --muted:#6B6C56; --border:#E3DAC3;
+  --primary:#5A7040; --primary-ink:#FFFFFF;
+  --accent:#DE9450; --accent-ink:#2B1D0F;
+  --empty:#EDE7D5; --empty-line:#C2BB9F; --empty-ink:#807A63;
+  --t-bg:#F2EEE1; --t-surface:#FFFFFF; --t-ink:#292C1F; --t-muted:#6D6E58;
+  --t-muted-strong:#484A36; --t-border:#DCD4BE; --t-quiet:#F6F3E9;
+  --t-primary:#3F5230; --t-primary-ink:#FFFFFF;
+}
+
+/* =========================================================================
+   4번 · 먹과 한지
+   bg #F5F2EC / surface #FFFFFF / ink #232833 / muted #6A6F7A / border #E0DBD1
+   primary #2B3140 (먹색 — 색이 아니라 '무게'로 행동을 표시)
+   accent #C9971C (겨자 노랑) : 유일한 색. 오늘·강조 전부 이 하나로.
+   아직 안 그린 쪽 #EDEAE3 + 점선 #C5C0B5  ← 거의 종이색, 결핍처럼 안 보임
+   교사면: 색을 더 빼고 먹색만 남김. 바탕 #F1EEE8
+   장점: 흰 도화지와 가장 안 싸운다 / 리스크: 아이에겐 심심할 수 있음
+   ========================================================================= */
+.t4 {
+  --bg:#F5F2EC; --surface:#FFFFFF; --ink:#232833; --muted:#6A6F7A; --border:#E0DBD1;
+  --primary:#2B3140; --primary-ink:#FFFFFF;
+  --accent:#C9971C; --accent-ink:#241B02;
+  --empty:#EDEAE3; --empty-line:#C5C0B5; --empty-ink:#827E74;
+  --t-bg:#F1EEE8; --t-surface:#FFFFFF; --t-ink:#232833; --t-muted:#6C717C;
+  --t-muted-strong:#454A55; --t-border:#DCD7CD; --t-quiet:#F5F3EE;
+  --t-primary:#1F2530; --t-primary-ink:#FFFFFF;
+}
+
+/* =========================================================================
+   5번 · 굵은 사인펜
+   bg #FBF6EA / surface #FFFFFF / ink #1A1A1A (레퍼런스의 검은 아웃라인 에너지)
+   muted #6E6A62 / border #1A1A1A (테두리 자체가 검정 = 도안 느낌)
+   primary #1A1A1A (검정 버튼, 흰 글씨) / accent #0E9C93 (터콰이즈) + 옐로 #F5CE4A
+   아직 안 그린 쪽 #F1ECDF + 점선 #ADA79A
+   교사면: 검은 테두리를 얇게 1px로, 터콰이즈만 액션에 남김(#0B6F69)
+   장점: 선택 상태가 색 없이도 굵기로 보임 / 리스크: 검정 면적 과하면 딱딱
+   ========================================================================= */
+.t5 {
+  --bg:#FBF6EA; --surface:#FFFFFF; --ink:#1A1A1A; --muted:#6E6A62; --border:#1A1A1A;
+  --primary:#1A1A1A; --primary-ink:#FFFFFF;
+  --accent:#0E9C93; --accent-ink:#FFFFFF;
+  --empty:#F1ECDF; --empty-line:#ADA79A; --empty-ink:#77726A;
+  --t-bg:#F4F1E8; --t-surface:#FFFFFF; --t-ink:#1A1A1A; --t-muted:#6E6A62;
+  --t-muted-strong:#3D3A34; --t-border:#D9D3C4; --t-quiet:#F7F4EC;
+  --t-primary:#0B6F69; --t-primary-ink:#FFFFFF;
+}
+/* 5번만 카드 테두리가 검정이라 두께를 올려 '도안' 느낌을 낸다 */
+.t5 .card { border-width: 3px; }
+.t5 .pg .paper { border-width: 3px; }
+.t5 .hero-test .ht-art { border-width: 3px; }
+.t5 .pg.empty .paper { border: 3px dashed var(--empty-line); }
+
+/* ---------- 요약표 ---------- */
+.summary { margin-top: 46px; border-top: 2px solid #1B1B1B; padding-top: 22px; }
+.summary h2 { font-size: 18px; margin: 0 0 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td { border: 1px solid #DEDEDE; padding: 9px 10px; text-align: left; vertical-align: top; }
+th { background: #F4F4F4; font-weight: 700; }
+td code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; }
+
+@media print {
+  body { background: #fff; }
+  .page { width: auto; padding: 0; }
+  .variant { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-head">
+    <h1>위글 웹 · 색 테마 5안</h1>
+    <p>
+      지금 팔레트(<code>#1AB8E8</code> 하늘색 / <code>#EBF8FF</code> 옅은 파랑)가 남자아이 쪽으로 기운다는 문제,
+      그리고 교사 화면이 너무 아이 같다는 문제를 함께 푸는 5개 방향입니다.
+      다섯 안 모두 <b>아이 화면이 먼저</b>고, 교사 화면은 같은 팔레트 안에서 어른 톤으로 내려앉습니다.
+      번호로 불러 주세요 — “2번으로 가자”처럼요.
+    </p>
+    <p class="refs">
+      참고 이미지에서 실제로 뽑은 값 —
+      <b>ref-01 Learnify</b> 크림 <code>#F7F5F2</code> · 라벤더 <code>#B69CE8</code> · 코랄 <code>#E85D3D</code> · 옐로 <code>#F5CE4A</code> /
+      <b>ref-02 EduLearn</b> 아이보리 <code>#FBF8F0</code> · 딥틸 <code>#2F6E62</code> · 앰버 <code>#F0A22E</code>.
+      공통점: 흰 바탕이 아니라 크림 바탕, 차분한 앵커 1색 + 따뜻한 강조 1색, 손그림 낙서 기운, 굵고 둥근 산세리프, 그림자 최소.
+      다섯 안 모두 빨강·초록의 “잘함/못함” 짝을 만들지 않았고, “아직 안 그린 쪽”은 크림보다 한 톤 낮은 중립색으로만 표현했습니다.
+    </p>
+  </header>
+
+  <!-- ================= 1번 ================= -->
+  <section class="variant t1">
+    <div class="v-head">
+      <div class="v-num">1</div>
+      <div>
+        <h2 class="v-name">라벤더 크레용</h2>
+        <p class="v-register">장난스럽고 포근한 — 남색도 분홍도 아닌 보라, 크레용 상자를 연 기분.</p>
+      </div>
+      <div class="v-source">Learnify 계열 · 라벤더 + 코랄 + 옐로</div>
+    </div>
+
+    <div class="tokens">
+      <div class="chip"><div class="sw" style="background:#F8F4EE"></div><div class="lb"><span class="role">배경</span><span class="hex">#F8F4EE</span></div></div>
+      <div class="chip"><div class="sw" style="background:#FFFFFF"></div><div class="lb"><span class="role">카드</span><span class="hex">#FFFFFF</span></div></div>
+      <div class="chip"><div class="sw" style="background:#241F2E"></div><div class="lb"><span class="role">본문 글자</span><span class="hex">#241F2E</span></div></div>
+      <div class="chip"><div class="sw" style="background:#6C6579"></div><div class="lb"><span class="role">보조 글자</span><span class="hex">#6C6579</span></div></div>
+      <div class="chip"><div class="sw" style="background:#E5DDD0"></div><div class="lb"><span class="role">테두리</span><span class="hex">#E5DDD0</span></div></div>
+      <div class="chip"><div class="sw" style="background:#6E4FC9"></div><div class="lb"><span class="role">주요 버튼</span><span class="hex">#6E4FC9</span></div></div>
+      <div class="chip"><div class="sw" style="background:#E8613C"></div><div class="lb"><span class="role">강조</span><span class="hex">#E8613C</span></div></div>
+      <div class="chip"><div class="sw" style="background:#F5CE4A"></div><div class="lb"><span class="role">보조 도형</span><span class="hex">#F5CE4A</span></div></div>
+      <div class="chip"><div class="sw" style="background:#F0EBE1"></div><div class="lb"><span class="role">아직 안 그린 쪽</span><span class="hex">#F0EBE1</span></div></div>
+      <div class="chip"><div class="sw" style="background:#4B3A8C"></div><div class="lb"><span class="role">교사면 주색</span><span class="hex">#4B3A8C</span></div></div>
+    </div>
+
+    <div class="snips">
+      <div>
+        <p class="snip-label">(a) 아이 화면 — 오늘 회차</p>
+        <div class="frame">
+          <div class="child">
+            <div class="crumb"><span class="dot"></span> 자전거 이야기 · 3회차</div>
+            <div class="card">
+              <div class="doodle">✦</div>
+              <span class="today">오늘 그릴 쪽</span>
+              <h3>친구들과 자전거 타기</h3>
+              <p class="scene">자전거를 타고 친구들과 함께 달리는 모습을 그려 봐요</p>
+              <button class="btn-start">그리기 시작</button>
+            </div>
+            <div class="strip">
+              <p class="strip-title">내 그림책</p>
+              <div class="pages">
+                <div class="pg done"><div class="paper"><div class="art a1"><i class="s1"></i><i class="s2"></i><i class="s3"></i><i class="s4"></i></div></div><div class="cap">1회차</div></div>
+                <div class="pg done"><div class="paper"><div class="art a2"><i class="s1"></i><i class="s2"></i><i class="s3"></i></div></div><div class="cap">2회차</div></div>
+                <div class="pg empty"><div class="paper"><span>＋</span></div><div class="cap">아직 안 그린 쪽</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p class="snip-label">(b) 교사 화면 — 학급 목록</p>
+        <div class="frame">
+          <div class="teacher">
+            <div class="t-bar">
+              <div class="t-brand">위글 · 학급 관리</div>
+              <div class="t-meta">2026-08-31</div>
+            </div>
+            <div class="t-colhead"><div>학급</div><div>아크</div><div>진행</div><div></div></div>
+            <div class="t-row">
+              <div class="t-class">햇살 2반<small>학생 21명</small></div>
+              <div class="t-arc">자전거 이야기<small>전체 6회차</small></div>
+              <div class="t-ep">3회차<small>오늘</small></div>
+              <button class="btn-next">다음 회차 열기</button>
+            </div>
+            <div class="t-row">
+              <div class="t-class">달빛 1반<small>학생 18명</small></div>
+              <div class="t-arc">바닷가 여행<small>전체 5회차</small></div>
+              <div class="t-ep">2회차<small>오늘</small></div>
+              <button class="btn-next">다음 회차 열기</button>
+            </div>
+            <div class="t-foot">
+              <button class="btn-ghost">아크 바꾸기</button>
+              <span class="t-pill">수업 코드 4G7K</span>
+              <span class="t-note">회차를 열면 태블릿에 오늘 장면이 바뀝니다.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-test">
+      <div class="ht-label">흰 도화지 대비<br>아이 그림이 주인공인가</div>
+      <div class="ht-strip">
+        <b style="background:#F8F4EE"></b><b style="background:#6E4FC9"></b><b style="background:#E8613C"></b><b style="background:#F5CE4A"></b>
+      </div>
+      <div class="ht-art"><div class="art a1"><i class="s1"></i><i class="s2"></i><i class="s3"></i><i class="s4"></i></div></div>
+      <div class="ht-cap">크림 바탕 위 흰 종이가 또렷하게 뜬다. 보라·코랄은 면적이 작아 그림을 이기지 않는다.</div>
+    </div>
+  </section>
+
+  <!-- ================= 2번 ================= -->
+  <section class="variant t2">
+    <div class="v-head">
+      <div class="v-num">2</div>
+      <div>
+        <h2 class="v-name">숲 그늘 교실</h2>
+        <p class="v-register">차분하고 믿음직한 — 나무 그늘 아래 교실, 오래 봐도 눈이 안 피곤한 톤.</p>
+      </div>
+      <div class="v-source">EduLearn 계열 · 딥 틸 + 앰버</div>
+    </div>
+
+    <div class="tokens">
+      <div class="chip"><div class="sw" style="background:#FBF7EC"></div><div class="lb"><span class="role">배경</span><span class="hex">#FBF7EC</span></div></div>
+      <div class="chip"><div class="sw" style="background:#FFFFFF"></div><div class="lb"><span class="role">카드</span><span class="hex">#FFFFFF</span></div></div>
+      <div class="chip"><div class="sw" style="background:#1F2E2A"></div><div class="lb"><span class="role">본문 글자</span><span class="hex">#1F2E2A</span></div></div>
+      <div class="chip"><div class="sw" style="background:#5C6B65"></div><div class="lb"><span class="role">보조 글자</span><span class="hex">#5C6B65</span></div></div>
+      <div class="chip"><div class="sw" style="background:#E4DBC7"></div><div class="lb"><span class="role">테두리</span><span class="hex">#E4DBC7</span></div></div>
+      <div class="chip"><div class="sw" style="background:#2F6E62"></div><div class="lb"><span class="role">주요 버튼</span><span class="hex">#2F6E62</span></div></div>
+      <div class="chip"><div class="sw" style="background:#E09A2E"></div><div class="lb"><span class="role">강조</span><span class="hex">#E09A2E</span></div></div>
+      <div class="chip"><div class="sw" style="background:#F7E4BC"></div><div class="lb"><span class="role">강조 옅은 면</span><span class="hex">#F7E4BC</span></div></div>
+      <div class="chip"><div class="sw" style="background:#EFE9D9"></div><div class="lb"><span class="role">아직 안 그린 쪽</span><span class="hex">#EFE9D9</span></div></div>
+      <div class="chip"><div class="sw" style="background:#22544B"></div><div class="lb"><span class="role">교사면 주색</span><span class="hex">#22544B</span></div></div>
+    </div>
+
+    <div class="snips">
+      <div>
+        <p class="snip-label">(a) 아이 화면 — 오늘 회차</p>
+        <div class="frame">
+          <div class="child">
+            <div class="crumb"><span class="dot"></span> 자전거 이야기 · 3회차</div>
+            <div class="card">
+              <div class="doodle">✳</div>
+              <span class="today">오늘 그릴 쪽</span>
+              <h3>친구들과 자전거 타기</h3>
+              <p class="scene">자전거를 타고 친구들과 함께 달리는 모습을 그려 봐요</p>
+              <button class="btn-start">그리기 시작</button>
+            </div>
+            <div class="strip">
+              <p class="strip-title">내 그림책</p>
+              <div class="pages">
+                <div class="pg done"><div class="paper"><div class="art a1"><i class="s1"></i><i class="s2"></i><i class="s3"></i><i class="s4"></i></div></div><div class="cap">1회차</div></div>
+                <div class="pg done"><div class="paper"><div class="art a2"><i class="s1"></i><i class="s2"></i><i class="s3"></i></div></div><div class="cap">2회차</div></div>
+                <div class="pg empty"><div class="paper"><span>＋</span></div><div class="cap">아직 안 그린 쪽</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p class="snip-label">(b) 교사 화면 — 학급 목록</p>
+        <div class="frame">
+          <div class="teacher">
+            <div class="t-bar">
+              <div class="t-brand">위글 · 학급 관리</div>
+              <div class="t-meta">2026-08-31</div>
+            </div>
+            <div class="t-colhead"><div>학급</div><div>아크</div><div>진행</div><div></div></div>
+            <div class="t-row">
+              <div class="t-class">햇살 2반<small>학생 21명</small></div>
+              <div class="t-arc">자전거 이야기<small>전체 6회차</small></div>
+              <div class="t-ep">3회차<small>오늘</small></div>
+              <button class="btn-next">다음 회차 열기</button>
+            </div>
+            <div class="t-row">
+              <div class="t-class">달빛 1반<small>학생 18명</small></div>
+              <div class="t-arc">바닷가 여행<small>전체 5회차</small></div>
+              <div class="t-ep">2회차<small>오늘</small></div>
+              <button class="btn-next">다음 회차 열기</button>
+            </div>
+            <div class="t-foot">
+              <button class="btn-ghost">아크 바꾸기</button>
+              <span class="t-pill">수업 코드 4G7K</span>
+              <span class="t-note">회차를 열면 태블릿에 오늘 장면이 바뀝니다.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-test">
+      <div class="ht-label">흰 도화지 대비<br>아이 그림이 주인공인가</div>
+      <div class="ht-strip">
+        <b style="background:#FBF7EC"></b><b style="background:#2F6E62"></b><b style="background:#E09A2E"></b><b style="background:#EFE9D9"></b>
+      </div>
+      <div class="ht-art"><div class="art a2"><i class="s1"></i><i class="s2"></i><i class="s3"></i></div></div>
+      <div class="ht-cap">틸은 어두워서 뒤로 물러나고 흰 종이가 앞으로 나온다. 5안 중 대비가 가장 안정적.</div>
+    </div>
+  </section>
+
+  <!-- ================= 3번 ================= -->
+  <section class="variant t3">
+    <div class="v-head">
+      <div class="v-num">3</div>
+      <div>
+        <h2 class="v-name">모래와 이끼</h2>
+        <p class="v-register">흙내음 나는 바깥놀이 — 운동장 모래와 담벼락 이끼, 계절 타지 않는 자연색.</p>
+      </div>
+      <div class="v-source">중립·따뜻 방향 A · 올리브 + 살구</div>
+    </div>
+
+    <div class="tokens">
+      <div class="chip"><div class="sw" style="background:#F7F2E5"></div><div class="lb"><span class="role">배경</span><span class="hex">#F7F2E5</span></div></div>
+      <div class="chip"><div class="sw" style="background:#FFFFFF"></div><div class="lb"><span class="role">카드</span><span class="hex">#FFFFFF</span></div></div>
+      <div class="chip"><div class="sw" style="background:#2C2F22"></div><div class="lb"><span class="role">본문 글자</span><span class="hex">#2C2F22</span></div></div>
+      <div class="chip"><div class="sw" style="background:#6B6C56"></div><div class="lb"><span class="role">보조 글자</span><span class="hex">#6B6C56</span></div></div>
+      <div class="chip"><div class="sw" style="background:#E3DAC3"></div><div class="lb"><span class="role">테두리</span><span class="hex">#E3DAC3</span></div></div>
+      <div class="chip"><div class="sw" style="background:#5A7040"></div><div class="lb"><span class="role">주요 버튼</span><span class="hex">#5A7040</span></div></div>
+      <div class="chip"><div class="sw" style="background:#DE9450"></div><div class="lb"><span class="role">강조</span><span class="hex">#DE9450</span></div></div>
+      <div class="chip"><div class="sw" style="background:#F2DFC2"></div><div class="lb"><span class="role">강조 옅은 면</span><span class="hex">#F2DFC2</span></div></div>
+      <div class="chip"><div class="sw" style="background:#EDE7D5"></div><div class="lb"><span class="role">아직 안 그린 쪽</span><span class="hex">#EDE7D5</span></div></div>
+      <div class="chip"><div class="sw" style="background:#3F5230"></div><div class="lb"><span class="role">교사면 주색</span><span class="hex">#3F5230</span></div></div>
+    </div>
+
+    <div class="snips">
+      <div>
+        <p class="snip-label">(a) 아이 화면 — 오늘 회차</p>
+        <div class="frame">
+          <div class="child">
+            <div class="crumb"><span class="dot"></span> 자전거 이야기 · 3회차</div>
+            <div class="card">
+              <div class="doodle">❊</div>
+              <span class="today">오늘 그릴 쪽</span>
+              <h3>친구들과 자전거 타기</h3>
+              <p class="scene">자전거를 타고 친구들과 함께 달리는 모습을 그려 봐요</p>
+              <button class="btn-start">그리기 시작</button>
+            </div>
+            <div class="strip">
+              <p class="strip-title">내 그림책</p>
+              <div class="pages">
+                <div class="pg done"><div class="paper"><div class="art a1"><i class="s1"></i><i class="s2"></i><i class="s3"></i><i class="s4"></i></div></div><div class="cap">1회차</div></div>
+                <div class="pg done"><div class="paper"><div class="art a2"><i class="s1"></i><i class="s2"></i><i class="s3"></i></div></div><div class="cap">2회차</div></div>
+                <div class="pg empty"><div class="paper"><span>＋</span></div><div class="cap">아직 안 그린 쪽</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p class="snip-label">(b) 교사 화면 — 학급 목록</p>
+        <div class="frame">
+          <div class="teacher">
+            <div class="t-bar">
+              <div class="t-brand">위글 · 학급 관리</div>
+              <div class="t-meta">2026-08-31</div>
+            </div>
+            <div class="t-colhead"><div>학급</div><div>아크</div><div>진행</div><div></div></div>
+            <div class="t-row">
+              <div class="t-class">햇살 2반<small>학생 21명</small></div>
+              <div class="t-arc">자전거 이야기<small>전체 6회차</small></div>
+              <div class="t-ep">3회차<small>오늘</small></div>
+              <button class="btn-next">다음 회차 열기</button>
+            </div>
+            <div class="t-row">
+              <div class="t-class">달빛 1반<small>학생 18명</small></div>
+              <div class="t-arc">바닷가 여행<small>전체 5회차</small></div>
+              <div class="t-ep">2회차<small>오늘</small></div>
+              <button class="btn-next">다음 회차 열기</button>
+            </div>
+            <div class="t-foot">
+              <button class="btn-ghost">아크 바꾸기</button>
+              <span class="t-pill">수업 코드 4G7K</span>
+              <span class="t-note">회차를 열면 태블릿에 오늘 장면이 바뀝니다.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-test">
+      <div class="ht-label">흰 도화지 대비<br>아이 그림이 주인공인가</div>
+      <div class="ht-strip">
+        <b style="background:#F7F2E5"></b><b style="background:#5A7040"></b><b style="background:#DE9450"></b><b style="background:#EDE7D5"></b>
+      </div>
+      <div class="ht-art"><div class="art a1"><i class="s1"></i><i class="s2"></i><i class="s3"></i><i class="s4"></i></div></div>
+      <div class="ht-cap">바탕 채도가 낮아 아이가 쓴 색이 무엇이든 받아 준다. 초록이 흙빛이라 ‘합격 초록’으로 안 읽힌다.</div>
+    </div>
+  </section>
+
+  <!-- ================= 4번 ================= -->
+  <section class="variant t4">
+    <div class="v-head">
+      <div class="v-num">4</div>
+      <div>
+        <h2 class="v-name">먹과 한지</h2>
+        <p class="v-register">조용하고 단정한 — 색은 겨자 노랑 딱 하나, 나머지는 종이와 먹.</p>
+      </div>
+      <div class="v-source">중립·따뜻 방향 B · 거의 무채 + 단색 강조</div>
+    </div>
+
+    <div class="tokens">
+      <div class="chip"><div class="sw" style="background:#F5F2EC"></div><div class="lb"><span class="role">배경</span><span class="hex">#F5F2EC</span></div></div>
+      <div class="chip"><div class="sw" style="background:#FFFFFF"></div><div class="lb"><span class="role">카드</span><span class="hex">#FFFFFF</span></div></div>
+      <div class="chip"><div class="sw" style="background:#232833"></div><div class="lb"><span class="role">본문 글자</span><span class="hex">#232833</span></div></div>
+      <div class="chip"><div class="sw" style="background:#6A6F7A"></div><div class="lb"><span class="role">보조 글자</span><span class="hex">#6A6F7A</span></div></div>
+      <div class="chip"><div class="sw" style="background:#E0DBD1"></div><div class="lb"><span class="role">테두리</span><span class="hex">#E0DBD1</span></div></div>
+      <div class="chip"><div class="sw" style="background:#2B3140"></div><div class="lb"><span class="role">주요 버튼</span><span class="hex">#2B3140</span></div></div>
+      <div class="chip"><div class="sw" style="background:#C9971C"></div><div class="lb"><span class="role">강조</span><span class="hex">#C9971C</span></div></div>
+      <div class="chip"><div class="sw" style="background:#F0E3C0"></div><div class="lb"><span class="role">강조 옅은 면</span><span class="hex">#F0E3C0</span></div></div>
+      <div class="chip"><div class="sw" style="background:#EDEAE3"></div><div class="lb"><span class="role">아직 안 그린 쪽</span><span class="hex">#EDEAE3</span></div></div>
+      <div class="chip"><div class="sw" style="background:#1F2530"></div><div class="lb"><span class="role">교사면 주색</span><span class="hex">#1F2530</span></div></div>
+    </div>
+
+    <div class="snips">
+      <div>
+        <p class="snip-label">(a) 아이 화면 — 오늘 회차</p>
+        <div class="frame">
+          <div class="child">
+            <div class="crumb"><span class="dot"></span> 자전거 이야기 · 3회차</div>
+            <div class="card">
+              <div class="doodle">✧</div>
+              <span class="today">오늘 그릴 쪽</span>
+              <h3>친구들과 자전거 타기</h3>
+              <p class="scene">자전거를 타고 친구들과 함께 달리는 모습을 그려 봐요</p>
+              <button class="btn-start">그리기 시작</button>
+            </div>
+            <div class="strip">
+              <p class="strip-title">내 그림책</p>
+              <div class="pages">
+                <div class="pg done"><div class="paper"><div class="art a1"><i class="s1"></i><i class="s2"></i><i class="s3"></i><i class="s4"></i></div></div><div class="cap">1회차</div></div>
+                <div class="pg done"><div class="paper"><div class="art a2"><i class="s1"></i><i class="s2"></i><i class="s3"></i></div></div><div class="cap">2회차</div></div>
+                <div class="pg empty"><div class="paper"><span>＋</span></div><div class="cap">아직 안 그린 쪽</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p class="snip-label">(b) 교사 화면 — 학급 목록</p>
+        <div class="frame">
+          <div class="teacher">
+            <div class="t-bar">
+              <div class="t-brand">위글 · 학급 관리</div>
+              <div class="t-meta">2026-08-31</div>
+            </div>
+            <div class="t-colhead"><div>학급</div><div>아크</div><div>진행</div><div></div></div>
+            <div class="t-row">
+              <div class="t-class">햇살 2반<small>학생 21명</small></div>
+              <div class="t-arc">자전거 이야기<small>전체 6회차</small></div>
+              <div class="t-ep">3회차<small>오늘</small></div>
+              <button class="btn-next">다음 회차 열기</button>
+            </div>
+            <div class="t-row">
+              <div class="t-class">달빛 1반<small>학생 18명</small></div>
+              <div class="t-arc">바닷가 여행<small>전체 5회차</small></div>
+              <div class="t-ep">2회차<small>오늘</small></div>
+              <button class="btn-next">다음 회차 열기</button>
+            </div>
+            <div class="t-foot">
+              <button class="btn-ghost">아크 바꾸기</button>
+              <span class="t-pill">수업 코드 4G7K</span>
+              <span class="t-note">회차를 열면 태블릿에 오늘 장면이 바뀝니다.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-test">
+      <div class="ht-label">흰 도화지 대비<br>아이 그림이 주인공인가</div>
+      <div class="ht-strip">
+        <b style="background:#F5F2EC"></b><b style="background:#2B3140"></b><b style="background:#C9971C"></b><b style="background:#EDEAE3"></b>
+      </div>
+      <div class="ht-art"><div class="art a2"><i class="s1"></i><i class="s2"></i><i class="s3"></i></div></div>
+      <div class="ht-cap">UI가 색을 거의 안 쓰니 그림이 가장 세게 산다. 다만 아이에겐 심심해 보일 위험이 5안 중 가장 크다.</div>
+    </div>
+  </section>
+
+  <!-- ================= 5번 ================= -->
+  <section class="variant t5">
+    <div class="v-head">
+      <div class="v-num">5</div>
+      <div>
+        <h2 class="v-name">굵은 사인펜</h2>
+        <p class="v-register">씩씩하고 또렷한 — 검은 테두리 스티커북, 색맹이어도 굵기로 읽힌다.</p>
+      </div>
+      <div class="v-source">중립·따뜻 방향 C · 검정 아웃라인 + 터콰이즈</div>
+    </div>
+
+    <div class="tokens">
+      <div class="chip"><div class="sw" style="background:#FBF6EA"></div><div class="lb"><span class="role">배경</span><span class="hex">#FBF6EA</span></div></div>
+      <div class="chip"><div class="sw" style="background:#FFFFFF"></div><div class="lb"><span class="role">카드</span><span class="hex">#FFFFFF</span></div></div>
+      <div class="chip"><div class="sw" style="background:#1A1A1A"></div><div class="lb"><span class="role">본문 글자</span><span class="hex">#1A1A1A</span></div></div>
+      <div class="chip"><div class="sw" style="background:#6E6A62"></div><div class="lb"><span class="role">보조 글자</span><span class="hex">#6E6A62</span></div></div>
+      <div class="chip"><div class="sw" style="background:#1A1A1A"></div><div class="lb"><span class="role">테두리(검정)</span><span class="hex">#1A1A1A</span></div></div>
+      <div class="chip"><div class="sw" style="background:#1A1A1A"></div><div class="lb"><span class="role">주요 버튼</span><span class="hex">#1A1A1A</span></div></div>
+      <div class="chip"><div class="sw" style="background:#0E9C93"></div><div class="lb"><span class="role">강조</span><span class="hex">#0E9C93</span></div></div>
+      <div class="chip"><div class="sw" style="background:#F5CE4A"></div><div class="lb"><span class="role">보조 도형</span><span class="hex">#F5CE4A</span></div></div>
+      <div class="chip"><div class="sw" style="background:#F1ECDF"></div><div class="lb"><span class="role">아직 안 그린 쪽</span><span class="hex">#F1ECDF</span></div></div>
+      <div class="chip"><div class="sw" style="background:#0B6F69"></div><div class="lb"><span class="role">교사면 주색</span><span class="hex">#0B6F69</span></div></div>
+    </div>
+
+    <div class="snips">
+      <div>
+        <p class="snip-label">(a) 아이 화면 — 오늘 회차</p>
+        <div class="frame">
+          <div class="child">
+            <div class="crumb"><span class="dot"></span> 자전거 이야기 · 3회차</div>
+            <div class="card">
+              <div class="doodle">★</div>
+              <span class="today">오늘 그릴 쪽</span>
+              <h3>친구들과 자전거 타기</h3>
+              <p class="scene">자전거를 타고 친구들과 함께 달리는 모습을 그려 봐요</p>
+              <button class="btn-start">그리기 시작</button>
+            </div>
+            <div class="strip">
+              <p class="strip-title">내 그림책</p>
+              <div class="pages">
+                <div class="pg done"><div class="paper"><div class="art a1"><i class="s1"></i><i class="s2"></i><i class="s3"></i><i class="s4"></i></div></div><div class="cap">1회차</div></div>
+                <div class="pg done"><div class="paper"><div class="art a2"><i class="s1"></i><i class="s2"></i><i class="s3"></i></div></div><div class="cap">2회차</div></div>
+                <div class="pg empty"><div class="paper"><span>＋</span></div><div class="cap">아직 안 그린 쪽</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p class="snip-label">(b) 교사 화면 — 학급 목록</p>
+        <div class="frame">
+          <div class="teacher">
+            <div class="t-bar">
+              <div class="t-brand">위글 · 학급 관리</div>
+              <div class="t-meta">2026-08-31</div>
+            </div>
+            <div class="t-colhead"><div>학급</div><div>아크</div><div>진행</div><div></div></div>
+            <div class="t-row">
+              <div class="t-class">햇살 2반<small>학생 21명</small></div>
+              <div class="t-arc">자전거 이야기<small>전체 6회차</small></div>
+              <div class="t-ep">3회차<small>오늘</small></div>
+              <button class="btn-next">다음 회차 열기</button>
+            </div>
+            <div class="t-row">
+              <div class="t-class">달빛 1반<small>학생 18명</small></div>
+              <div class="t-arc">바닷가 여행<small>전체 5회차</small></div>
+              <div class="t-ep">2회차<small>오늘</small></div>
+              <button class="btn-next">다음 회차 열기</button>
+            </div>
+            <div class="t-foot">
+              <button class="btn-ghost">아크 바꾸기</button>
+              <span class="t-pill">수업 코드 4G7K</span>
+              <span class="t-note">회차를 열면 태블릿에 오늘 장면이 바뀝니다.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-test">
+      <div class="ht-label">흰 도화지 대비<br>아이 그림이 주인공인가</div>
+      <div class="ht-strip">
+        <b style="background:#FBF6EA"></b><b style="background:#1A1A1A"></b><b style="background:#0E9C93"></b><b style="background:#F5CE4A"></b>
+      </div>
+      <div class="ht-art"><div class="art a1"><i class="s1"></i><i class="s2"></i><i class="s3"></i><i class="s4"></i></div></div>
+      <div class="ht-cap">검은 테두리가 액자 역할을 해서 흰 종이가 도화지처럼 딱 떨어진다. 검정 면적만 관리하면 됨.</div>
+    </div>
+  </section>
+
+  <!-- ================= 요약 ================= -->
+  <section class="summary">
+    <h2>한눈에 비교</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:9%">번호</th>
+          <th style="width:13%">이름</th>
+          <th style="width:24%">핵심 색</th>
+          <th style="width:18%">아이 화면 인상</th>
+          <th style="width:18%">교사 화면을 어른스럽게 만드는 장치</th>
+          <th style="width:18%">위험</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>1번</b></td><td>라벤더 크레용</td>
+          <td><code>#F8F4EE</code> · <code>#6E4FC9</code> · <code>#E8613C</code> · <code>#F5CE4A</code></td>
+          <td>가장 장난스럽고 밝다. 보라라서 성별 기울기가 없다.</td>
+          <td>같은 보라를 <code>#4B3A8C</code>로 깊게, 라운드 24→8px, 코랄·옐로 제거</td>
+          <td>보라를 분홍 계열로 읽는 어른이 간혹 있음</td>
+        </tr>
+        <tr>
+          <td><b>2번</b></td><td>숲 그늘 교실</td>
+          <td><code>#FBF7EC</code> · <code>#2F6E62</code> · <code>#E09A2E</code></td>
+          <td>차분하고 안정적. 오래 보는 화면에 가장 무난.</td>
+          <td>틸을 <code>#22544B</code>로, 표 형태 + 라벨 자간 확대, 앰버는 뱃지만</td>
+          <td>1~3학년에겐 다소 어른스러울 수 있음</td>
+        </tr>
+        <tr>
+          <td><b>3번</b></td><td>모래와 이끼</td>
+          <td><code>#F7F2E5</code> · <code>#5A7040</code> · <code>#DE9450</code></td>
+          <td>따뜻한 자연색. 아이 그림 색을 가장 잘 받아 준다.</td>
+          <td>올리브 <code>#3F5230</code> + 무채 라벨, 도형·별 장식 제거</td>
+          <td>올리브가 화면에 따라 탁해 보일 수 있음</td>
+        </tr>
+        <tr>
+          <td><b>4번</b></td><td>먹과 한지</td>
+          <td><code>#F5F2EC</code> · <code>#2B3140</code> · <code>#C9971C</code></td>
+          <td>가장 조용함. 그림이 유일한 색이 된다.</td>
+          <td>손댈 게 거의 없다 — 그대로가 이미 어른 톤</td>
+          <td>아이 화면이 심심할 위험이 가장 큼</td>
+        </tr>
+        <tr>
+          <td><b>5번</b></td><td>굵은 사인펜</td>
+          <td><code>#FBF6EA</code> · <code>#1A1A1A</code> · <code>#0E9C93</code> · <code>#F5CE4A</code></td>
+          <td>씩씩하고 또렷. 선택 상태가 색 없이 굵기로 읽힌다.</td>
+          <td>테두리 3px→1px, 검정 버튼 대신 터콰이즈 <code>#0B6F69</code></td>
+          <td>검정 면적이 커지면 딱딱해짐</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 style="margin-top:26px">다섯 안이 공통으로 지킨 것</h2>
+    <table>
+      <tbody>
+        <tr><th style="width:26%">빨강·초록 의미색 금지</th><td>어느 안에도 “맞음 초록 / 틀림 빨강” 짝이 없다. 3번의 초록은 흙빛 올리브라 단독으로 쓰이고, 빨강 계열은 1번 코랄뿐인데 이는 ‘오늘’ 표시용 강조지 오류색이 아니다.</td></tr>
+        <tr><th>아직 안 그린 쪽</th><td>모두 배경 크림보다 한 톤 낮은 중립색 + 점선 + <code>＋</code> 기호. 노랑·빨강 경고 톤을 쓰지 않아 “빠뜨렸다”가 아니라 “여기 아직 비어 있어”로 읽힌다.</td></tr>
+        <tr><th>색만으로 상태 표시 안 함</th><td>그린 쪽은 테두리가 진해지고 캡션 앞에 <code>✓</code>가 붙는다. 오늘 회차는 뱃지 글자(‘오늘 그릴 쪽’)로도 말한다.</td></tr>
+        <tr><th>흰 도화지가 주인공</th><td>배경을 순백이 아닌 크림으로 두어 흰 종이가 항상 배경보다 밝다. 채도 높은 색은 버튼·뱃지처럼 작은 면적에만 쓴다.</td></tr>
+        <tr><th>본문 대비</th><td>본문·보조 글자 모두 각자의 배경에서 WCAG AA(4.5:1) 이상, 주요 버튼의 흰 글씨도 AA 이상이 되도록 원본 레퍼런스 색을 눌러 잡았다(예: 라벤더 <code>#B69CE8</code> → <code>#6E4FC9</code>).</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+</body>
+</html>

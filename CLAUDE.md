@@ -19,21 +19,22 @@
 
 - 작업 저장소는 `C:\Users\user\Desktop\Project\wiggle_web`이다.
 - `C:\Users\user\Desktop\Project\wiggle_draw`는 읽기 전용 참고 자료다. 수정하거나 통째로 복사하지 않는다.
-- `wiggle_web`은 독립 Git 저장소이며 원격은 `https://github.com/yonghwan86/wiggle_web.git`이다.
+- `wiggle_web`의 정본 원격은 `https://github.com/wwwiggle/new_wiggle.git`(원격 이름 `wwwiggle`)이다 — 2026-09-07 사용자 확정.
+  `origin`(`yonghwan86/wiggle_web`)은 구 저장소로, 새 push 대상이 아니다.
 - `.openai/hosting.json`은 은퇴한 Sites 연결의 이력이다. 삭제하거나 프로젝트 ID를 바꾸지 않는다.
 - `.env.local`, API 키, 토큰, 쿠키 등 비밀값을 읽어 출력하거나 커밋하지 않는다.
 - 운영 자격증명(TURSO_*, R2_S3_*)은 `.env.local`에 `# vercel-only: KEY=value` 주석으로만 보관한다. 활성 줄로 두면 Next dev가 env를 핫리로드해 로컬 개발·테스트가 운영 DB·버킷에 그대로 쓴다(2026-08-19 실제 사고). 원격 검증이 필요할 때만 잠깐 활성화하고 즉시 되돌린다.
 
 ## 제품 불변 원칙
 
-- 수업 코드와 학급 QR은 입장 수단일 뿐 학생 작품 접근 권한이 아니다.
+- 수업 코드와 학급 QR은 입장 수단일 뿐 학생 작품 접근 권한이 아니다. 예외는 잘라 나눠 주는 아이별 쪽지 QR로, 그 아이 참여 코드를 주소 조각(`#entry=`)에 담는다(2026-09-13 사용자 결정 — 같은 쪽지에 참여 코드가 이미 글자로 인쇄돼 있어 쪽지가 입장 수단이라는 점은 같다). 참여 코드를 쿼리에 넣지 않고, 선생님 화면의 큰 QR에는 절대 담지 않는다.
 - 작품과 과정 기록은 서버가 발급한 익명 학생 ID에 저장한다.
 - 학생 이메일·학교명·점수·순위·재능 진단을 만들지 않는다.
 - 학생 실명은 교사가 만든 학급 명단에만 있고, 그 학급 담임 교사에게만 보인다(2026-09-07 사용자 결정으로 종전 실명 금지 원칙을 바꿈). 학생 화면·가족 공유·그림책·AI 요청에는 실명을 싣지 않는다. 학급을 지우면 명단도 함께 지운다.
 - AI 몽그리는 그림을 대신 완성하거나 평가하지 않는다.
-- 몽그리는 아이가 호출했을 때만 개입하고, 모르면 추측하지 않고 한 번에 하나만 질문한다.
+- 몽그리는 아이가 부를 때, 그리고 정해진 조건에서 스스로 한 번 먼저 말을 건다(2026-09-12 변경). 어느 쪽이든 그리기를 막지 않고, 모르면 추측하지 않고 한 번에 하나만 질문한다. 조건은 `tests/auto-grimi.test.mjs`가 지킨다.
 - 점선과 시범은 아이 원본 그림과 분리된 레이어이며 저장 이미지에 합성하지 않는다.
-- 초등학교 3학년 이상이 핵심 사용자다. 읽기 수준 차이를 고려해 핵심 행동은 그림, 음성, 큰 터치 목표로도 이해할 수 있어야 한다.
+- 초등학교 3~6학년이 핵심 사용자다(2026-09-12 확정). 읽기 수준 차이를 고려해 핵심 행동은 그림과 큰 터치 목표로도 이해할 수 있어야 한다(브라우저 읽어 주기 버튼은 2026-09-09 사용자 지시로 제거).
 
 ## 개발 절차
 
@@ -50,14 +51,19 @@ git diff --check
 git diff --check main...HEAD
 ```
 
-5. 모바일 UI는 최소 `320×568`, `390×844`, `844×390`에서 실제 브라우저로 확인한다 (`npm.cmd run check:browser`).
+5. 모바일 UI는 최소 `320×568`, `390×844`, `844×390`에서 실제 브라우저로 확인한다.
+   ⚠️ `browser-check.mjs`는 자기 서버를 띄우지 않는다 — 인자가 없으면 `localhost:3000`의
+   **아무 서버나** 검사한다(다른 워크트리 서버를 검사한 실사고, 2026-09-07).
+   반드시 현재 트리를 빌드해 띄우고 주소를 명시한다:
+   `npm run build && npx next start -p 3299 & node scripts/browser-check.mjs http://localhost:3299`
 6. 소스 문자열이나 CSS 정규식 검사만으로 UX 통과를 주장하지 않는다. computed size, 잘림, 스크롤, 초점, 연속 탭, 오류 복구를 실제 동작으로 검증한다.
 7. 작업 결과에는 변경 파일, 재현한 문제, 실행한 검증, 남은 위험을 사실대로 기록한다.
 8. Claude는 GitHub `main`에 직접 push하지 않는다. 기능 브랜치에 커밋·push까지 마친 뒤, 사용자가 실행할 `git push origin <브랜치>:main` 명령을 제시한다. `main` push가 곧 운영 배포다.
 
 ## 배포 (GitHub → Vercel)
 
-- 운영 주소: `https://wiggleweb.vercel.app` — Vercel 프로젝트 `wiggle-web`이 GitHub `main` push를 자동 빌드·배포한다(서울 리전 icn1). `wiggle-web.vercel.app`은 타인 소유이므로 사용·안내 금지.
+- ⚠️ **2026-09-12 실측: 운영은 지금 이 저장소를 빌드하지 않는다.** Vercel 프로젝트 `wiggle-web`이 옛 저장소 `yonghwan86/wiggle_web`에 연결돼 있어 `wwwiggle/new_wiggle`의 `main` push가 배포되지 않는다. 운영은 2026-08-23 빌드에 멈춰 있다. 연결을 바꾸기 전에는 **`main` push를 "운영 반영"이라고 보고하지 않는다**. 미결정 P-009.
+- 운영 주소: `https://wiggleweb.vercel.app` — Vercel 프로젝트 `wiggle-web`(서울 리전 icn1). `wiggle-web.vercel.app`은 타인 소유이므로 사용·안내 금지.
 - 운영 환경 변수는 Vercel 대시보드에서만 관리한다(9종: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `R2_S3_ENDPOINT`, `R2_S3_BUCKET`, `R2_S3_ACCESS_KEY_ID`, `R2_S3_SECRET_ACCESS_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `OPENAI_API_KEY`). 값에 따옴표를 넣지 않는다.
 - DB(Turso)는 첫 요청의 `ensureSchema()`가 자가 프로비저닝한다. 운영 Turso·R2 데이터를 SQL·S3로 직접 수정·삭제하지 않는다(정리도 사용자 승인 필요).
 - 교사 인증은 구글 OAuth다. 도메인을 추가하면 구글 콘솔의 승인된 리디렉션 URI에 `https://<도메인>/api/auth/google/callback`을 함께 추가해야 그 도메인에서 교사 로그인이 된다.
@@ -66,4 +72,4 @@ git diff --check main...HEAD
 
 ## 현재 우선순위
 
-우선순위와 미결정 항목의 정본은 `docs/current-state.md`와 `docs/pending-decisions.md`다. 새 기능보다 실사용 안정(비문해 저학년 독립 사용성, 저장 신뢰성)을 우선한다.
+우선순위와 미결정 항목의 정본은 `docs/current-state.md`와 `docs/pending-decisions.md`다. 새 기능보다 실사용 안정(교실에서 아이 혼자 쓸 수 있는가, 저장 신뢰성)을 우선한다.

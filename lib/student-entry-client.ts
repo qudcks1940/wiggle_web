@@ -1,29 +1,25 @@
 export type StudentEntryResponse = {
   error?: string;
-  code?: "PROFILE_EXISTS" | "PROFILE_CREDENTIALS_EXIST" | "SEAT_CLAIMED";
+  code?: "NO_ROSTER" | "ENTRY_CODE";
   classroomName?: string;
   hasProfiles?: boolean;
-  /* 선생님이 명단을 만든 학급인지. 명단 내용(번호·이름 목록)은 서버가 절대 주지 않는다. */
+  /* 선생님이 명단을 만든 학급인지. 명단 내용(번호·이름·코드 목록)은 서버가 절대 주지 않는다. */
   hasRoster?: boolean;
-  seatNumber?: number;
-  /* 그 번호로 아직 아무도 들어오지 않았는지. 실명은 담지 않는다. */
+  /* 참여 코드는 맞지만 아직 아무도 들어오지 않은 자리 — 동물을 고르면 자리가 채워진다. */
   firstTime?: boolean;
   student?: { id: string; nickname: string; animal: string; classroomName: string };
   deviceToken?: string;
   expiresAt?: string;
-  personalQrToken?: string;
 };
 
 export class StudentEntryResponseError extends Error {}
 
-export type EntryErrorKind = "code" | "password" | "general";
+export type EntryErrorKind = "code" | "general";
 
 // 아이가 스스로 복구할 행동을 고르기 위한 실패 분류:
-// code → 수업 코드 칸 강조 + 선생님 불러요, password → 그림 비밀번호 다시 골라요.
-export function classifyEntryError(input: { status: number; action: "join" | "switchProfile" | "recover"; hasPersonalQrToken: boolean }): EntryErrorKind {
-  if (input.status === 404 && input.action === "join") return "code";
-  if (input.status === 401 && input.action !== "join" && !input.hasPersonalQrToken) return "password";
-  return "general";
+// code → 수업 코드나 참여 코드가 틀림(선생님 불러요), 그 밖은 일반 오류(다시 해 보기).
+export function classifyEntryError(status: number): EntryErrorKind {
+  return status === 404 ? "code" : "general";
 }
 
 export async function readStudentEntryResponse(response: Response): Promise<StudentEntryResponse> {

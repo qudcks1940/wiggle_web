@@ -175,7 +175,7 @@ export async function deactivateProfile() {
 }
 
 export async function studentFetch(path: string, init: RequestInit = {}, profile = activeProfile()) {
-  if (!profile) throw new Error("그림 비밀번호로 내 프로필을 열어 주세요.");
+  if (!profile) throw new Error("참여 코드로 다시 들어와 주세요.");
   const headers = new Headers(init.headers);
   headers.set("authorization", `Bearer ${profile.deviceToken}`);
   if (typeof init.body === "string" && !headers.has("content-type")) headers.set("content-type", "application/json");

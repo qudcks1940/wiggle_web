@@ -2,73 +2,84 @@
 
 import { useEffect, useRef, useState } from "react";
 import { storeProfile } from "@/lib/client-session";
-import { FALLBACK_NICKNAME, NICKNAME_IDEAS, pickDifferentNickname } from "@/lib/nickname-ideas";
-import { PICTURE_PASSWORD_LENGTH } from "@/lib/picture-password";
 import { classifyEntryError, EntryErrorKind, readStudentEntryResponse, StudentEntryResponseError } from "@/lib/student-entry-client";
 import { Logo } from "./Logo";
-import { SpeakButton } from "./SpeakButton";
+import check from "./EntryCheck.module.css";
 
-const ANIMALS = ["🐰", "🐻", "🦊", "🐯", "🐼", "🐶", "🐱", "🐨", "🦁", "🐸"];
-const ANIMAL_NAMES: Record<string, string> = { "🐰": "토끼", "🐻": "곰", "🦊": "여우", "🐯": "호랑이", "🐼": "판다", "🐶": "강아지", "🐱": "고양이", "🐨": "코알라", "🦁": "사자", "🐸": "개구리" };
-const PICTURES = [
-  { value: "⭐", picture: "⭐", name: "별" },
-  { value: "🍎", picture: "🍎", name: "사과" },
-  { value: "🚲", picture: "🚲", name: "자전거" },
-  { value: "🌈", picture: "🌈", name: "무지개" },
-  { value: "⚽", picture: "⚽", name: "축구공" },
-  { value: "🌙", picture: "🌙", name: "달" },
-  { value: "꽃", picture: "🌸", name: "꽃" },
-  { value: "집", picture: "🏠", name: "집" },
-  { value: "로켓", picture: "🚀", name: "로켓" },
-  { value: "풍선", picture: "🎈", name: "풍선" },
-] as const;
-/* 입장은 선생님 명단의 번호로만 한다(2026-09-07 사용자 결정). 아이가 스스로 프로필을
- * 만들던 "새로 시작하기 / 내 그림 이어가기" 갈림길은 없앴다. */
-type Mode = "checking" | "seat" | "noRoster" | "join" | "recover" | "legacyRecover";
-type MobileStep = 1 | 2 | 3;
+import { ANIMAL_CHARACTERS, withGwaWa } from "@/lib/animal-characters";
+import { entryPathFor, parseEntryQr, readEntryHash } from "@/lib/qr-entry";
+import { QrScanner } from "./QrScanner";
 
-export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialEntry?: string; recoveryToken?: string }) {
-  const [mode, setMode] = useState<Mode>(recoveryToken ? "legacyRecover" : "checking");
+export const ENTRY_CODE_LENGTH = 4;
+const PICK_PAGE_SIZE = 10;
+/* 입장은 두 단계다: 반을 정하고(QR이 기본, 못 쓰면 수업 코드 4자리) 아이 참여 코드 4자리를 누른다.
+ * 코드가 곧 그 아이의 자리라, 다음 시간에 같은 코드를 넣으면 같은 아이로 돌아온다.
+ * 참여 코드는 2026-09-12에 네 자리로 줄였다 — 여섯 자리는 아이가 누르기 벅찼다. */
+type Mode = "checking" | "code" | "animal" | "noRoster";
+
+export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
+  const [mode, setMode] = useState<Mode>("checking");
   const [classroomName, setClassroomName] = useState("");
-  /* 선생님이 명단을 만든 학급은 번호가 곧 신원이다. 명단 자체는 서버가 주지 않으므로
-   * 아이가 자기 번호만 입력한다 — 수업 코드를 아는 사람에게 반 전체 이름이 새지 않는다. */
-  const [hasRoster, setHasRoster] = useState(false);
-  const [seatInput, setSeatInput] = useState("");
-  const [seatNumber, setSeatNumber] = useState<number | null>(null);
-  const [nickname, setNickname] = useState(NICKNAME_IDEAS["🐰"][0]);
-  const [animal, setAnimal] = useState("🐰");
-  const [pictures, setPictures] = useState<string[]>([]);
-  const [mobileStep, setMobileStep] = useState<MobileStep>(1);
+  const [codeInput, setCodeInput] = useState("");
+  const [animal, setAnimal] = useState("");
   const [error, setError] = useState("");
   const [errorKind, setErrorKind] = useState<EntryErrorKind | "">("");
   const [teacherCallOpen, setTeacherCallOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [nicknameAuto, setNicknameAuto] = useState(true);
-  const animalButtonRef = useRef<HTMLButtonElement>(null);
-  const nicknameInputRef = useRef<HTMLInputElement>(null);
-  const pictureButtonRef = useRef<HTMLButtonElement>(null);
+  const [scanning, setScanning] = useState(false);
+  // 아이별 쪽지 QR(`#entry=1234`)로 들어오면 반 확인이 끝난 뒤 이 코드로 곧바로 입장한다.
+  const pendingEntryCode = useRef<string | null>(null);
+  // 첫 입장이 확인된 참여 코드. 친구 고르기 뒤 다시 제출할 때 이 코드를 쓴다 — 그 사이 반 확인이
+  // 다시 돌면 codeInput이 비워져 "참여 코드 네 자리를 눌러 주세요"로 막혔다(2026-09-13 실측).
+  const claimCode = useRef("");
+  // 친구 고르기 쪽 넘기기(2026-09-14, 20종). 쪽 번호는 가로 스크롤 위치에서 읽는다 — 손가락으로 밀어도 맞는다.
+  const [pickPage, setPickPage] = useState(0);
+  const pagesRef = useRef<HTMLDivElement>(null);
   const entry = initialEntry;
-  const targetLength = PICTURE_PASSWORD_LENGTH;
 
   useEffect(() => {
-    setPictures([]); setError(""); setErrorKind(""); setTeacherCallOpen(false); setMobileStep(1);
-    if (recoveryToken) { setMode("legacyRecover"); return; }
+    setCodeInput(""); setAnimal(""); setError(""); setErrorKind(""); setTeacherCallOpen(false);
+    // 참여 코드는 주소 조각에만 온다. 서버로는 원래 안 가지만, 주소창과 방문 기록에 남지 않도록
+    // 어떤 네트워크 호출보다 먼저 지운다. replaceState라 뒤로 가기 기록에도 남지 않는다.
+    const fromHash = readEntryHash(location.hash);
+    if (location.hash) history.replaceState(history.state, "", location.pathname + location.search);
+    // 개발 모드(StrictMode)는 이 효과를 두 번 돌린다. 두 번째에는 조각이 이미 지워져 null이므로
+    // 덮어쓰면 받아 둔 코드가 사라진다(2026-09-13 실측). 코드가 있을 때만 저장한다.
+    if (fromHash) pendingEntryCode.current = fromHash;
     if (!initialEntry) { location.replace("/"); return; }
     void checkEntry();
-  // checkEntry only reads the two stable entry props. Keeping it outside this dependency list
+  // checkEntry only reads the stable entry prop. Keeping it outside this dependency list
   // prevents a status response from retriggering itself through mode changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialEntry, recoveryToken]);
+  }, [initialEntry]);
 
   useEffect(() => {
     const onPageShow = (event: PageTransitionEvent) => {
-      if (!event.persisted || recoveryToken || !initialEntry) return;
-      setPictures([]); setMobileStep(1); setMode("checking"); void checkEntry();
+      if (!event.persisted || !initialEntry) return;
+      setCodeInput(""); setAnimal(""); setMode("checking"); void checkEntry();
     };
     window.addEventListener("pageshow", onPageShow);
     return () => window.removeEventListener("pageshow", onPageShow);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialEntry, recoveryToken]);
+  }, [initialEntry]);
+
+  // 이미 이 반 화면에 있는데 태블릿 카메라로 쪽지 QR을 찍으면, 경로는 같고 조각만 바뀌어
+  // 페이지가 다시 읽히지 않는다(같은 문서 이동). 그러면 위의 마운트 처리가 돌지 않으므로
+  // 조각 변화를 따로 받는다. 읽자마자 지우는 규칙은 같다.
+  useEffect(() => {
+    const onHashChange = () => {
+      if (!location.hash) return;
+      const code = readEntryHash(location.hash);
+      history.replaceState(history.state, "", location.pathname + location.search);
+      if (!code) return;
+      if (mode === "code") { setCodeInput(code); void submit("", code); }
+      else pendingEntryCode.current = code;
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  // submit은 코드를 인자로 받으므로 옛 codeInput을 붙잡지 않는다. 화면 단계만 따라가면 된다.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   async function checkEntry() {
     setBusy(true); setError(""); setErrorKind(""); setTeacherCallOpen(false);
@@ -76,116 +87,43 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
       const response = await fetch("/api/student", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "entryStatus", entry }), cache: "no-store" });
       const data = await readStudentEntryResponse(response);
       if (!response.ok) {
-        setErrorKind(response.status === 404 ? "code" : "general");
+        setErrorKind(classifyEntryError(response.status));
         throw new StudentEntryResponseError(data.error ?? "수업을 확인하지 못했어요.");
       }
       setClassroomName(data.classroomName ?? "우리 반");
-      setHasRoster(Boolean(data.hasRoster));
-      setSeatInput(""); setSeatNumber(null);
+      setCodeInput("");
       // 명단이 없으면 아이가 할 수 있는 일이 없다. 선생님을 부르도록 안내한다.
-      setMode(data.hasRoster ? "seat" : "noRoster");
+      setMode(data.hasRoster ? "code" : "noRoster");
+      const scanned = pendingEntryCode.current;
+      pendingEntryCode.current = null;
+      if (data.hasRoster && scanned) { setCodeInput(scanned); void submit("", scanned); }
     } catch (cause) {
       setError(cause instanceof StudentEntryResponseError ? cause.message : "수업을 확인하는 중 연결이 끊겼어요. 다시 시도해 주세요.");
     } finally { setBusy(false); }
-  }
-
-  async function checkSeat() {
-    const parsed = Number(seatInput);
-    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 99) { setError("번호를 다시 확인해 주세요."); setErrorKind("general"); return; }
-    setBusy(true); clearEntryError();
-    try {
-      const response = await fetch("/api/student", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "seatStatus", entry, seatNumber: parsed }), cache: "no-store" });
-      const data = await readStudentEntryResponse(response);
-      if (!response.ok) { setErrorKind("general"); throw new StudentEntryResponseError(data.error ?? "번호를 확인하지 못했어요."); }
-      setSeatNumber(parsed);
-      setPictures([]); setMobileStep(1);
-      // 처음이면 동물·별명·그림 비밀번호를 고르고, 그다음부터는 그림 비밀번호만 확인한다.
-      setMode(data.firstTime ? "join" : "recover");
-      requestAnimationFrame(() => window.scrollTo(0, 0));
-    } catch (cause) {
-      setError(cause instanceof StudentEntryResponseError ? cause.message : "번호를 확인하는 중 연결이 끊겼어요.");
-    } finally { setBusy(false); }
-  }
-
-  function backToSeat() {
-    clearEntryError(); setPictures([]); setMobileStep(1); setSeatNumber(null); setMode("seat");
-    requestAnimationFrame(() => window.scrollTo(0, 0));
   }
 
   function clearEntryError() {
     setError(""); setErrorKind(""); setTeacherCallOpen(false);
   }
 
-
-  function goToStep(nextStep: MobileStep) {
-    setMobileStep(nextStep);
-    requestAnimationFrame(() => {
-      if (nextStep === 1) animalButtonRef.current?.focus();
-      else if (nextStep === 2) nicknameInputRef.current?.focus();
-      else pictureButtonRef.current?.focus();
-    });
+  function backToCode() {
+    clearEntryError(); setAnimal(""); setCodeInput(""); claimCode.current = ""; setMode("code");
+    requestAnimationFrame(() => window.scrollTo(0, 0));
   }
 
-  function appendPicture(value: string) {
-    clearEntryError();
-    setPictures((current) => current.length < targetLength ? [...current, value] : current);
-  }
-
-  function removeLastPicture() {
-    clearEntryError();
-    setPictures((current) => current.slice(0, -1));
-  }
-
-  function resetPictures() {
-    clearEntryError();
-    setPictures([]);
-  }
-
-  function pictureFor(value: string) {
-    return PICTURES.find((item) => item.value === value)?.picture ?? value;
-  }
-
-  function pictureNameFor(value: string) {
-    return PICTURES.find((item) => item.value === value)?.name ?? value;
-  }
-
-  function suggestNickname() {
-    const ideas = NICKNAME_IDEAS[animal] ?? [FALLBACK_NICKNAME];
-    setNickname(pickDifferentNickname(ideas, nickname, Math.random()));
-    setNicknameAuto(true);
-    clearEntryError();
-  }
-
-  function picturePasswordPicker({ numbered = false, showSlots = true }: { numbered?: boolean; showSlots?: boolean } = {}) {
-    const creating = mode === "join";
-    const chipsFull = pictures.length >= targetLength;
-    const legendLabel = numbered ? "3️⃣ 그림 비밀번호" : creating ? "그림 비밀번호 만들기" : "내 그림 비밀번호";
-    return <fieldset className="picture-password-picker"><legend>{legendLabel} <small>{pictures.length}/{targetLength}</small></legend><div className="picture-password-help"><p className="helper">{creating ? `같은 그림도 괜찮아요. 순서대로 ${targetLength}개 골라요.` : "만들 때 고른 순서 그대로 눌러요."}</p></div>{showSlots && <div className="password-slots" aria-label={`고른 그림 ${pictures.length}개`}>{Array.from({ length: targetLength }, (_, index) => <span className={pictures[index] ? "filled" : ""} key={index}>{pictures[index] ? pictureFor(pictures[index]) : "?"}</span>)}</div>}<div className="picture-choice-grid" role="group" aria-label={`그림 비밀번호 고르기. 현재 ${pictures.length}/${targetLength}개를 골랐어요. 같은 그림을 여러 번 고를 수 있어요.`}>{PICTURES.map((item, index) => <button ref={index === 0 ? pictureButtonRef : undefined} type="button" className="picture-chip" aria-label={chipsFull ? `${item.name} 그림. 이미 ${targetLength}개를 다 골랐어요. 바꾸려면 다시 골라요를 눌러요.` : `${item.name} 그림 추가. 현재 ${pictures.length}/${targetLength}개 선택. 같은 그림도 다시 고를 수 있어요.`} key={item.value} onClick={() => appendPicture(item.value)}><span aria-hidden="true">{item.picture}</span><small aria-hidden="true">{item.name}</small></button>)}</div><div className="password-actions"><button type="button" className={`reset-pictures-button${errorKind === "password" ? " attention" : ""}`} disabled={!pictures.length} aria-label={`고른 그림 ${targetLength}칸 모두 지우고 다시 고르기`} onClick={resetPictures}><span aria-hidden="true">🔄</span> 다시 골라요</button><button type="button" className="small-button" disabled={!pictures.length} aria-label={`마지막 그림 한 칸 지우기. 현재 ${pictures.length}개 선택.`} onClick={removeLastPicture}>↩️ 한 칸 지우기</button></div></fieldset>;
-  }
-
-
-  function errorNotice() {
-    if (!error) return null;
-    return <div className="entry-error-block">
-      <div className="error-box child-error" role="alert"><span className="child-error-icon" aria-hidden="true">⚠️</span><p>{error}</p></div>
-      {errorKind === "code" && !teacherCallOpen && <button type="button" className="button secondary full teacher-call-button" onClick={() => setTeacherCallOpen(true)}><span aria-hidden="true">🙋</span>선생님 불러요</button>}
-      {errorKind === "code" && teacherCallOpen && <div className="teacher-call-note" role="status"><span className="teacher-call-emoji" aria-hidden="true">🙋</span><p>손을 들고 선생님을 불러요.<br />수업 코드를 다시 알려 주실 거예요.</p></div>}
-    </div>;
-  }
-
-  async function submit() {
+  // code를 따로 받는 이유: QR로 채운 직후에는 setCodeInput이 아직 반영되지 않았다.
+  async function submit(chosenAnimal = "", code = codeInput) {
+    if (code.length !== ENTRY_CODE_LENGTH) { setError("참여 코드 네 자리를 눌러 주세요."); setErrorKind("general"); return; }
     clearEntryError(); setBusy(true);
-    const action = mode === "join" ? "join" : "recover";
     let failureKind: EntryErrorKind = "general";
     try {
-      const seat = seatNumber === null ? {} : { seatNumber };
-      const payload = action === "join"
-        ? { action, entry, nickname, animal, picturePassword: pictures, ...seat }
-        : recoveryToken ? { action, personalQrToken: recoveryToken } : { action, entry, nickname, animal, picturePassword: pictures, ...seat };
-      const response = await fetch("/api/student", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" });
-      failureKind = classifyEntryError({ status: response.status, action, hasPersonalQrToken: Boolean(recoveryToken) });
+      const response = await fetch("/api/student", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "join", entry, entryCode: code, ...(chosenAnimal ? { animal: chosenAnimal } : {}) }), cache: "no-store" });
+      failureKind = classifyEntryError(response.status);
       const data = await readStudentEntryResponse(response);
-      if (!response.ok || !data.student || !data.deviceToken || !data.expiresAt) throw new StudentEntryResponseError(data.error ?? "입장할 수 없어요.");
+      if (!response.ok) throw new StudentEntryResponseError(data.error ?? "입장할 수 없어요.");
+      // 코드는 맞는데 처음이면 동물 하나만 고른다. 별명은 서버가 동물에 맞춰 붙인다.
+      if (data.firstTime) { claimCode.current = code; setMode("animal"); requestAnimationFrame(() => window.scrollTo(0, 0)); return; }
+      if (!data.student || !data.deviceToken || !data.expiresAt) throw new StudentEntryResponseError(data.error ?? "입장할 수 없어요.");
       storeProfile({ studentId: data.student.id, nickname: data.student.nickname, animal: data.student.animal, classroomName: data.student.classroomName, deviceToken: data.deviceToken, expiresAt: data.expiresAt });
       location.replace("/student");
     } catch (cause) {
@@ -194,73 +132,195 @@ export function JoinClient({ initialEntry = "", recoveryToken = "" }: { initialE
     } finally { setBusy(false); }
   }
 
+  // 참여 코드 화면에서 찍은 QR. 아이별 쪽지 QR만 쓸모가 있다 — 반 QR에는 참여 코드가 없다.
+  function handleScan(text: string) {
+    setScanning(false);
+    const qr = parseEntryQr(text);
+    if (!qr) { setError("Wiggle 수업 QR이 아니에요. 내 쪽지의 QR을 찍어 주세요."); setErrorKind("general"); return; }
+    if (!qr.entryCode) { setError("이 QR에는 내 참여 코드가 없어요. 내 쪽지의 QR을 찍어 주세요."); setErrorKind("general"); return; }
+    // 지금 들어온 반의 쪽지면 바로 입장한다. 주소 조각만 바뀌는 이동은 페이지를 다시 읽지 않아
+    // 조각 처리가 돌지 않으므로, 같은 반은 여기서 직접 제출한다.
+    if (qr.classCode === entry) { setCodeInput(qr.entryCode); void submit("", qr.entryCode); return; }
+    // 다른 반 쪽지면 그 반부터 다시 확인한다(경로가 달라 실제로 다시 읽힌다).
+    location.replace(entryPathFor(qr));
+  }
+
+  function errorNotice() {
+    if (!error) return null;
+    return <div className="entry-error-block">
+      <div className="error-box child-error" role="alert"><span className="child-error-icon" aria-hidden="true">⚠️</span><p>{error}</p></div>
+      {errorKind === "code" && !teacherCallOpen && <button type="button" className="button secondary full teacher-call-button" onClick={() => setTeacherCallOpen(true)}><span aria-hidden="true">🙋</span>선생님 불러요</button>}
+      {errorKind === "code" && teacherCallOpen && <div className="teacher-call-note" role="status"><span className="teacher-call-emoji" aria-hidden="true">🙋</span><p>손을 들고 선생님을 불러요.<br />참여 코드를 다시 알려 주실 거예요.</p></div>}
+    </div>;
+  }
+
+  // 교실 장식. 배경이 아니라 독립 요소라 화면이 늘어나도 늘어나지 않고, 좁으면 CSS가 내려놓는다.
+  const scenery = (
+    <>
+      <img className={`${check.scenery} ${check.sceneryLeft}`} src="/entry-green/scene/left-group.webp" alt="" aria-hidden="true" width="700" height="881" />
+      <img className={`${check.scenery} ${check.sceneryRight}`} src="/entry-green/scene/right-group.webp" alt="" aria-hidden="true" width="392" height="571" />
+    </>
+  );
+
   if (mode === "checking") {
-    return <main className="entry-shell"><div className="entry-top"><Logo /></div><section className="entry-card entry-check-card"><div className="entry-title-row"><div><p className="eyebrow">수업에 들어가요</p><h1>{error ? "수업을 찾지 못했어요" : "우리 반을 확인하고 있어요"}</h1></div>{error && <SpeakButton text="수업 코드를 확인하지 못했어요. 화면의 안내를 보고 다시 시도하거나 선생님을 불러요." />}</div>{error ? <>{errorNotice()}<button type="button" className="button primary full" disabled={busy} onClick={() => void checkEntry()}>{busy ? "확인 중…" : "다시 확인하기"}</button><a className="text-button" href="/">수업 코드 다시 입력하기</a></> : <div className="entry-loading" role="status"><span aria-hidden="true">🎨</span><b>잠깐만 기다려 주세요</b></div>}</section></main>;
-  }
-
-  if (mode === "seat") {
-    return <main className="entry-shell"><div className="entry-top"><Logo /><span>{classroomName}</span></div>
-      <section className="entry-card seat-card">
-        <div className="entry-title-row"><div><p className="eyebrow">{classroomName}</p><h1>내 번호를 눌러요</h1></div><SpeakButton text="선생님이 알려 준 내 번호를 눌러요. 다 눌렀으면 들어가기를 눌러요." /></div>
-        <form onSubmit={(event) => { event.preventDefault(); void checkSeat(); }}>
-          <label className="seat-input-label" htmlFor="seat-number">우리 반에서 내 번호</label>
-          <input
-            id="seat-number"
-            className="seat-input"
-            type="tel"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete="off"
-            maxLength={2}
-            value={seatInput}
-            aria-label="내 번호"
-            onChange={(event) => { setSeatInput(event.target.value.replace(/[^0-9]/g, "").slice(0, 2)); clearEntryError(); }}
-          />
-          {errorNotice()}
-          <button className="button primary full child-primary-action" disabled={busy || !seatInput}><span aria-hidden="true">▶️</span>{busy ? "확인 중…" : "들어가기"}</button>
-        </form>
-        <a className="text-button" href="/">수업 코드 다시 입력하기</a>
-      </section></main>;
-  }
-
-  if (mode === "noRoster") {
-    return <main className="entry-shell"><div className="entry-top"><Logo /><span>{classroomName}</span></div>
-      <section className="entry-card entry-check-card">
-        <div className="entry-title-row"><div><p className="eyebrow">{classroomName}</p><h1>아직 준비 중이에요</h1></div><SpeakButton text="선생님이 우리 반 명단을 아직 넣지 않았어요. 선생님을 불러 주세요." /></div>
-        <p className="helper">선생님이 우리 반 명단을 넣으면 내 번호로 들어올 수 있어요.</p>
-        <button type="button" className="button primary full child-primary-action" disabled={busy} onClick={() => void checkEntry()}><span aria-hidden="true">🔄</span>{busy ? "확인 중…" : "다시 확인하기"}</button>
-        <a className="text-button" href="/">수업 코드 다시 입력하기</a>
-      </section></main>;
-  }
-
-  if (mode === "legacyRecover") {
-    return <main className="entry-shell"><div className="entry-top"><Logo /></div><section className="entry-card"><div className="entry-title-row"><div><p className="eyebrow">내 그림을 찾아요</p><h1>다시 만나서 반가워!</h1></div><SpeakButton text="화면 아래의 내 그림 찾기 버튼을 눌러요." /></div><p className="helper">안전하게 내 그림을 찾고 있어요.</p>{errorNotice()}<button className="button primary full child-primary-action" disabled={busy} onClick={() => void submit()}><span aria-hidden="true">▶️</span>{busy ? "찾는 중…" : "내 그림 찾기"}</button></section></main>;
-  }
-
-  const creating = mode === "join";
-  /* 번호로 들어온 재입장은 그림 비밀번호만 확인한다. 번호가 이미 한 사람을 가리키므로
-   * 동물·별명을 다시 묻지 않는다 — 아이가 별명을 잊어도 자기 그림으로 돌아올 수 있다. */
-  const seatRecover = seatNumber !== null && !creating;
-  const pageInstruction = seatRecover
-    ? `${seatNumber}번이 맞으면 그림 비밀번호 세 개를 순서대로 골라요. 모두 고르면 내 그림 이어가기를 눌러요.`
-    : creating
-    ? "내 동물을 고르고, 그림 별명을 정한 다음, 그림 비밀번호 세 개를 순서대로 골라요. 모두 고르면 이 모습으로 수업 들어가기를 눌러요."
-    : "전에 고른 동물과 그림 별명을 선택하고, 그림 비밀번호 세 개를 같은 순서로 골라요. 모두 고르면 내 그림 이어가기를 눌러요.";
-
-  return <main className="entry-shell entry-join-shell"><div className="entry-top entry-join-top"><Logo /></div><section className={`entry-card join-card ${creating ? "join-create" : "join-recover"}${seatRecover ? " join-seat-recover" : ""}`} data-mobile-step={seatRecover ? 3 : mobileStep}>
-    <div className="entry-title-row"><div><p className="eyebrow">{seatNumber !== null ? `${seatNumber}번` : creating ? "수업에 들어가요" : "내 그림을 찾아요"}</p><h1>{seatRecover ? "내 그림 비밀번호" : creating ? "나만의 꼬마 화가를 만들어요" : "내 꼬마 화가를 찾아요"}</h1><p className="join-subtitle">{seatRecover ? "그림 세 개를 순서대로 골라요." : creating ? "세 가지만 고르면 바로 그림 수업에 들어갈 수 있어요." : "전에 고른 세 가지를 입력하면 어느 태블릿에서나 이어갈 수 있어요."}</p></div><SpeakButton text={pageInstruction} /></div>
-    <button type="button" className="entry-mode-back" onClick={backToSeat}>← 번호 다시 입력하기</button>
-    <div className="mobile-entry-progress" aria-label={`입장 ${mobileStep}단계 / 3단계`}><span className={mobileStep >= 1 ? "active" : ""}>1 동물</span><span className={mobileStep >= 2 ? "active" : ""}>2 별명</span><span className={mobileStep >= 3 ? "active" : ""}>3 비밀번호</span></div>
-    <div className="join-card-body">
-      <div className="join-preview"><img src="/brand/student-entry-arch.png" alt="" aria-hidden="true" /><div className="join-preview-card" role="status" aria-live="polite" aria-label={`선택한 동물 ${ANIMAL_NAMES[animal]}, 별명 ${nickname || "꼬마 화가"}, 그림 비밀번호 ${pictures.length}/${targetLength}개: ${pictures.length ? pictures.map((value, index) => `${index + 1}번째 ${pictureNameFor(value)}`).join(", ") : "아직 없음"}`}><span className="join-preview-animal" data-animal-index={ANIMALS.indexOf(animal)} aria-hidden="true" /><b aria-hidden="true">{nickname || "꼬마 화가"}</b><span className="join-preview-password-title" aria-hidden="true">그림 비밀번호</span><div className="join-preview-slots" aria-hidden="true">{Array.from({ length: targetLength }, (_, index) => <span className={pictures[index] ? "filled" : ""} key={index}><i>{pictures[index] ? pictureFor(pictures[index]) : "?"}</i></span>)}</div></div></div>
-      <div className="join-controls">
-        <div className={`join-step join-step-1${mobileStep === 1 ? " active" : ""}`}><fieldset><legend>1️⃣ 내 동물</legend><div className="animal-choice-grid">{ANIMALS.map((value, index) => <button ref={index === 0 ? animalButtonRef : undefined} type="button" aria-pressed={animal === value} aria-label={`${ANIMAL_NAMES[value]} 고르기`} className={animal === value ? "emoji-chip selected" : "emoji-chip"} key={value} onClick={() => { if (nicknameAuto) setNickname(NICKNAME_IDEAS[value]?.[0] ?? "꼬마 화가"); setAnimal(value); clearEntryError(); }}><span className="animal-choice-portrait" data-animal-index={index} aria-hidden="true" /><small>{ANIMAL_NAMES[value]}</small></button>)}</div></fieldset><button type="button" className="button primary mobile-step-next" onClick={() => goToStep(2)}>별명 고르기 →</button></div>
-        <div className={`join-step join-step-2${mobileStep === 2 ? " active" : ""}`}><label><span>2️⃣ 그림 별명</span><div className="nickname-row"><input ref={nicknameInputRef} maxLength={16} value={nickname} onChange={(event) => { setNickname(event.target.value); setNicknameAuto(false); clearEntryError(); }} placeholder="예: 토끼 화가" /><button type="button" onClick={suggestNickname}>🎲 다른 별명</button></div></label><div className="mobile-step-actions"><button type="button" className="button ghost" onClick={() => goToStep(1)}>← 동물</button><button type="button" className="button primary" disabled={nickname.trim().length < 2} onClick={() => goToStep(3)}>비밀번호 고르기 →</button></div></div>
-        <div className={`join-step join-step-3${mobileStep === 3 ? " active" : ""}`}>{picturePasswordPicker({ numbered: true, showSlots: false })}<button type="button" className="button ghost mobile-step-back" onClick={() => goToStep(2)}>← 별명 다시 보기</button></div>
+    const codeError = errorKind === "code";
+    // 문구는 docs/design-assets/entry-green/README-CLAUDE.md의 확정 문구. 선생님 도움 버튼은 실제 메시지를 보내지 않고 손을 드는 안내다.
+    // 대기 상태는 2026-09-09 사용자 시안: 크림 배경 + 선 너머로 고개 내민 몽그리 + 문구 두 줄만.
+    if (!error) return <main className={`entry-check ${check.waitShell}`}>
+      <img className={check.waitMongri} src="/entry-green/wait-mongri.png" alt="" aria-hidden="true" width="476" height="340" />
+      <div role="status"><h1 id="entry-check-title">잠깐만 기다려 줘!</h1><p>수업실을 준비하고 있어요</p></div>
+    </main>;
+    const guidance = codeError ? "수업 코드가 맞는지 한 번만 더 확인해 줘." : "잠깐 연결이 어려운가 봐. 한 번 더 해 보자.";
+    return <main className={`entry-check ${check.shell}`}>
+      {scenery}
+      <div className={check.stage}>
+        <div className={check.head}>
+          <div className={check.logo}><Logo /></div>
+        </div>
+        <span className={check.sign} aria-hidden="true">우리 반</span>
+        <img className={check.duck} src="/landing-gallery/duck-painter-640.webp" alt="" aria-hidden="true" width="640" height="640" />
+        <section className={check.panel} aria-labelledby="entry-check-title">
+          <h1 id="entry-check-title">몽그리랑 다시 찾아보자!</h1>
+          <p className={check.lead}>{guidance}</p>
+          <div className={check.note}>
+            <div className="error-box child-error" role="alert"><span className="child-error-icon" aria-hidden="true">⚠️</span><p>{codeError ? "수업을 아직 찾지 못했어요" : error}</p></div>
+          </div>
+          {error && <div className={check.actions}>
+            {codeError
+              ? <a className={check.primary} href="/">수업 코드 다시 입력하기</a>
+              : <button type="button" className={check.primary} disabled={busy} onClick={() => void checkEntry()}>{busy ? "확인 중…" : "다시 확인하기"}</button>}
+            {codeError && !teacherCallOpen && <button type="button" className={`${check.help} teacher-call-button`} onClick={() => setTeacherCallOpen(true)}><span aria-hidden="true">🙋</span>선생님 불러요</button>}
+            {codeError && teacherCallOpen && <div className="teacher-call-note" role="status"><span className="teacher-call-emoji" aria-hidden="true">🙋</span><p>손을 들고 선생님을 불러요.<br />수업 코드를 다시 알려 주실 거예요.</p></div>}
+            {codeError
+              ? <button type="button" className={check.retry} disabled={busy} onClick={() => void checkEntry()}>{busy ? "확인 중…" : "다시 확인하기"}</button>
+              : <a className={check.retry} href="/">수업 코드 다시 입력하기</a>}
+          </div>}
+        </section>
       </div>
-    </div>
-    {errorNotice()}
-    <button className="button primary full child-primary-action" disabled={busy || nickname.trim().length < 2 || pictures.length !== targetLength} onClick={() => void submit()}><span aria-hidden="true">▶️</span>{busy ? (creating ? "들어가는 중…" : "찾는 중…") : creating ? "이 모습으로 수업 들어가기" : "내 그림 이어가기"}</button>
-    <p className="join-privacy-note">이름이나 학교 대신 동물과 그림 비밀번호로 안전하게 들어가요.</p>
-  </section></main>;
+    </main>;
+  }
+
+  if (mode === "code") {
+    const pressKey = (digit: string) => { clearEntryError(); setCodeInput((current) => (current + digit).slice(0, ENTRY_CODE_LENGTH)); };
+    return <main className={`${check.shell} ${check.seatShell}`}>
+      {scenery}
+      <div className={`${check.stage} ${check.seatStage}`}>
+        <div className={check.head}>
+          <div className={check.logo}><Logo /></div>
+        </div>
+        <img className={check.duck} src="/landing-gallery/duck-painter-640.webp" alt="" aria-hidden="true" width="640" height="640" />
+        <div className={check.seatTitle}>
+          <h1>내 참여 코드를 눌러요</h1>
+          <p>선생님이 준 네 자리 숫자예요.</p>
+        </div>
+        <span className={check.padBadge}>{classroomName}</span>
+        <section className={`code-card ${check.pad}`} aria-label="참여 코드 입력 수첩">
+          <form onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+            <label className={check.padLabel} htmlFor="entry-code">내 참여 코드</label>
+            <div className={check.display}>
+              <input
+                id="entry-code"
+                className="entry-code-input"
+                type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="one-time-code"
+                maxLength={ENTRY_CODE_LENGTH}
+                value={codeInput}
+                aria-label="내 참여 코드"
+                onChange={(event) => { setCodeInput(event.target.value.replace(/[^0-9]/g, "").slice(0, ENTRY_CODE_LENGTH)); clearEntryError(); }}
+              />
+            </div>
+            <div className={check.keys} role="group" aria-label="숫자판">
+              {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((digit) => <button type="button" className={check.key} key={digit} onClick={() => pressKey(digit)}>{digit}</button>)}
+              <span className={check.keyBlank} aria-hidden="true" />
+              <button type="button" className={check.key} onClick={() => pressKey("0")}>0</button>
+              <button type="button" className={`${check.key} ${check.keyErase}`} aria-label="한 자리 지우기" onClick={() => { clearEntryError(); setCodeInput((current) => current.slice(0, -1)); }}><span aria-hidden="true">⌫</span>지우기</button>
+            </div>
+            {errorNotice()}
+            <button className={`${check.enter} child-primary-action`} disabled={busy || codeInput.length !== ENTRY_CODE_LENGTH}>{busy ? "확인 중…" : "들어가기"}</button>
+          </form>
+          {/* 누르기 어려운 아이는 쪽지의 QR을 찍어 바로 들어간다. */}
+          <button type="button" className={`${check.scan} child-primary-action`} disabled={busy} onClick={() => { clearEntryError(); setScanning(true); }}><span aria-hidden="true">📷</span>내 쪽지 QR로 찍기</button>
+          <a className={check.again} href="/">수업 코드 다시 입력하기</a>
+        </section>
+      </div>
+      {scanning && <QrScanner onResult={handleScan} onClose={() => setScanning(false)} hint="내 쪽지의 QR을 네모 안에 보여 줘" />}
+    </main>;
+  }
+
+  if (mode === "animal") {
+    // 첫 입장 친구 고르기(2026-09-13 사용자 시안, docs/design-assets/animal-picker/mockup-2026-09-13.png).
+    // 고른 친구의 이름이 곧 별명이 된다 — 이름은 서버 기본 별명을 읽으므로 둘이 어긋나지 않는다.
+    const chosen = ANIMAL_CHARACTERS.find((character) => character.emoji === animal);
+    const pickPages = Array.from({ length: Math.ceil(ANIMAL_CHARACTERS.length / PICK_PAGE_SIZE) }, (_, index) => ANIMAL_CHARACTERS.slice(index * PICK_PAGE_SIZE, (index + 1) * PICK_PAGE_SIZE));
+    const goToPickPage = (page: number) => { const el = pagesRef.current; if (el) el.scrollTo({ left: page * el.clientWidth }); };
+    return <main className={check.pickShell}>
+      {/* 장식(코덱스 그림 2026-09-14). 카드 격자 옆 여백이 있는 큰 화면에서만 보인다. */}
+      <div className={check.pickDeco} aria-hidden="true">
+        <img className={check.decoWriting} src="/entry-green/picker/handwriting.webp" alt="" />
+        <img className={check.decoMongri} src="/landing-gallery/duck-painter-640.webp" alt="" />
+        <img className={check.decoSun} src="/entry-green/picker/crayon-sun.webp" alt="" />
+        <img className={check.decoRainbow} src="/entry-green/picker/crayon-rainbow.webp" alt="" />
+        <img className={check.decoFlowers} src="/entry-green/picker/crayon-flowers.webp" alt="" />
+      </div>
+      <header className={check.pickTop}>
+        <div className={check.pickLogo}><Logo /></div>
+        <span className={check.pickClass}>{classroomName}</span>
+      </header>
+      <form className={check.pickBody} onSubmit={(event) => { event.preventDefault(); void submit(animal, claimCode.current || codeInput); }}>
+        <div className={check.pickHead}>
+          <h1 id="pick-title" className={check.pickTitle}>나랑 닮은 친구를 골라요</h1>
+          <p className={check.pickLead}>마음에 드는 친구 하나를 골라 줘.</p>
+        </div>
+        <fieldset className={check.pickFieldset} aria-labelledby="pick-title">
+          <legend className={check.pickHidden}>친구 고르기</legend>
+          <div className={check.pickPager}>
+            <button type="button" className={`${check.pickArrow} ${check.pickPrev}`} disabled={pickPage === 0} onClick={() => goToPickPage(pickPage - 1)} aria-label={`앞 친구들 보기 (${pickPage + 1}/${pickPages.length}쪽)`}>‹</button>
+            {/* 쪽마다 5×2. 가로 스크롤 + 스냅이라 태블릿에서 밀어서 넘길 수 있다. 다른 쪽 카드에 초점이 가면 브라우저가 그 쪽으로 넘겨 준다. */}
+            <div ref={pagesRef} className={check.pickPages} onScroll={(event) => { const el = event.currentTarget; setPickPage(Math.round(el.scrollLeft / Math.max(1, el.clientWidth))); }}>
+              {pickPages.map((page, pageIndex) => <div key={pageIndex} className={check.pickGrid} aria-label={`${pageIndex + 1}쪽`} role="group">
+                {page.map((character) => {
+                  const selected = animal === character.emoji;
+                  return <button type="button" key={character.emoji} className={check.pickCard} aria-pressed={selected} aria-label={`${character.name}, ${character.species}`} onClick={() => { setAnimal(character.emoji); clearEntryError(); }}>
+                    {selected && <span className={check.pickCheck} aria-hidden="true">✓</span>}
+                    <img className={check.pickImage} src={character.image} alt="" aria-hidden="true" width="512" height="512" loading="eager" />
+                    <b className={check.pickName}>{character.name}</b>
+                    <small className={check.pickSpecies}>{character.species}</small>
+                  </button>;
+                })}
+              </div>)}
+            </div>
+            <button type="button" className={`${check.pickArrow} ${check.pickNext}`} disabled={pickPage >= pickPages.length - 1} onClick={() => goToPickPage(pickPage + 1)} aria-label={`다음 친구들 보기 (${pickPage + 1}/${pickPages.length}쪽)`}>›</button>
+            <div className={check.pickDots} aria-hidden="true">
+              {pickPages.map((_, pageIndex) => <span key={pageIndex} className={pageIndex === pickPage ? check.pickDotOn : check.pickDot} />)}
+            </div>
+          </div>
+        </fieldset>
+        {errorNotice()}
+        <button className={`${check.pickStart} child-primary-action`} disabled={busy || !chosen}>
+          {busy ? "들어가는 중…" : chosen ? <>{withGwaWa(chosen.name)} 시작하기 <span aria-hidden="true">›</span></> : "친구를 골라 줘"}
+        </button>
+        <button type="button" className={check.pickAgain} onClick={backToCode}>참여 코드 다시 누르기</button>
+      </form>
+    </main>;
+  }
+
+  // 명단이 아직 없는 반(2026-09-13 사용자 시안): 카드 없이 크림 바탕 + 고개 내민 몽그리 + 문구 + 버튼.
+  // 몽그리 그림(peek-mongri)은 사용자 시안에서 잘라 왔다. 불투명 그림이라 배경이 시안과 같은 #fefaea여야
+  // 경계가 보이지 않는다(원본: docs/design-assets/not-ready/mockup-2026-09-13.png).
+  return <main className={check.readyShell}>
+    <header className={check.readyTop}>
+      <div className={check.readyLogo}><Logo /></div>
+      <span className={check.readyClass}>{classroomName}</span>
+    </header>
+    <section className={check.readyBody} aria-labelledby="ready-title">
+      <img className={check.readyMongri} src="/entry-green/peek-mongri.webp" alt="" aria-hidden="true" width="384" height="368" />
+      <h1 id="ready-title" className={check.readyTitle}>아직 준비 중이에요</h1>
+      <p className={check.readyLead}>선생님이 우리 반 명단을 넣으면<br />내 참여 코드로 들어올 수 있어요.</p>
+      {error && <p className={check.readyError} role="alert">{error}</p>}
+      <button type="button" className={`${check.readyRetry} child-primary-action`} disabled={busy} onClick={() => void checkEntry()}><span aria-hidden="true">🔄</span>{busy ? "확인 중…" : "다시 확인하기"}</button>
+      <a className={check.readyAgain} href="/">수업 코드 다시 입력하기</a>
+    </section>
+  </main>;
 }

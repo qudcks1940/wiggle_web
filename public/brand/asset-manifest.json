@@ -7,28 +7,136 @@
       "source": "wiggle_draw/assets/images/logo.png",
       "sourceRole": "read-only reference",
       "sha256": "5564884B4CDDBE68192923D57282CE8037E883FF21D0231EA6FB1055C0F1E79E",
-      "approvedFor": ["web navigation brand mark"]
+      "approvedFor": [
+        "(2026-09-12부터 화면 브랜드 마크는 crayon-mark-128.png를 쓴다. 이 자산은 이력 보존용으로 남긴다)"
+      ]
+    },
+    {
+      "path": "/brand/crayon-mark-128.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 크레용 그림(1254x1254)에서 자른 128px 마크. 자르기·크기 줄이기만 했다.",
+      "sourceRole": "user-provided original",
+      "sha256": "7C499A99C6F730A1F13961E73C92DF3ECB363E287A13E257DA136921AFECB0ED",
+      "approvedFor": [
+        "화면 머리의 브랜드 마크(Logo 컴포넌트)"
+      ]
+    },
+    {
+      "path": "/brand/mongri/curious.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 몽그리 표정 여섯 장(1536x1024 시트). 칸마다 잘라 배경을 투명으로 만들고 224px로 줄였다. 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "314593EFC850FF99ACB3E05D51DE743E1A7511D558B3AE2F3CCF019B8C81FD26",
+      "approvedFor": [
+        "질문을 보여 줄 때(궁금해요)"
+      ]
+    },
+    {
+      "path": "/brand/mongri/thinking.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 몽그리 표정 여섯 장(1536x1024 시트). 칸마다 잘라 배경을 투명으로 만들고 224px로 줄였다. 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "30453DA117DDA1138FA997F5BAE6944FD9A7ACFF2FD78D7AADC26C86DD721AEA",
+      "approvedFor": [
+        "답을 기다릴 때(생각 중)"
+      ]
+    },
+    {
+      "path": "/brand/mongri/suggesting.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 몽그리 표정 여섯 장(1536x1024 시트). 칸마다 잘라 배경을 투명으로 만들고 224px로 줄였다. 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "18A51A2002CCC47C14A21776BA6A2109883C62BA01E5546ABEC37032514B4AD6",
+      "approvedFor": [
+        "다음에 그릴 일을 권할 때(이런 건 어때?)"
+      ]
+    },
+    {
+      "path": "/brand/mongri/delighted.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 몽그리 표정 여섯 장(1536x1024 시트). 칸마다 잘라 배경을 투명으로 만들고 224px로 줄였다. 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "8BD74962B4F7B2C867D79B20AEEBE5C621BFF4420FB2F433B65FCEEA4FF5C644",
+      "approvedFor": [
+        "짐작을 내놓을 때(오, 발견했어!)"
+      ]
+    },
+    {
+      "path": "/brand/mongri/listening.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 몽그리 표정 여섯 장(1536x1024 시트). 칸마다 잘라 배경을 투명으로 만들고 224px로 줄였다. 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "7F3FD0B890795905EF840C8B8140312192A20134FED4643AC8A669D960627A20",
+      "approvedFor": [
+        "아이가 답을 고른 뒤(듣고 있어)"
+      ]
+    },
+    {
+      "path": "/brand/mongri/reassuring.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 몽그리 표정 여섯 장(1536x1024 시트). 칸마다 잘라 배경을 투명으로 만들고 224px로 줄였다. 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "1F1DFF82F365F018437002E93B5035541D2210DEF8F37AD84BB0EF920039AB6E",
+      "approvedFor": [
+        "오류를 알릴 때(괜찮아)"
+      ]
     },
     {
       "path": "/brand/app_icon.png",
       "source": "wiggle_draw/assets/icon/app_icon.png",
       "sourceRole": "read-only reference",
       "sha256": "9F028F6C5A55786BED046AE5C9F2187F743453E8ECC9D548A7817D7592A084F4",
-      "approvedFor": ["favicon", "installed web shortcut"]
+      "approvedFor": [
+        "installed web shortcut",
+        "(2026-09-12부터 파비콘은 crayon-icon-*을 쓴다)"
+      ]
+    },
+    {
+      "path": "/brand/crayon-icon-512.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 크레용 그림(1254x1254). 배경 초록 위 노랑 크레용과 흰 낙서 한 줄. 자르기·크기 줄이기만 했고 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "CC75935109E6140D3132153FC79C8F6AD5389FCE16398E7C3FAD790A851ECF1C",
+      "approvedFor": [
+        "설치 아이콘·큰 화면용 512px"
+      ]
+    },
+    {
+      "path": "/brand/crayon-icon-180.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 크레용 그림(1254x1254). 배경 초록 위 노랑 크레용과 흰 낙서 한 줄. 자르기·크기 줄이기만 했고 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "7BF9E67D92F2BEE0FA7CB2D4CDEA41BB0140F619EE73FD69F67685045D7FD384",
+      "approvedFor": [
+        "iOS 홈 화면 아이콘 180px"
+      ]
+    },
+    {
+      "path": "/brand/crayon-icon-32.png",
+      "source": "사용자가 2026-09-12 채팅으로 전달한 크레용 그림(1254x1254). 배경 초록 위 노랑 크레용과 흰 낙서 한 줄. 자르기·크기 줄이기만 했고 그림은 바꾸지 않았다.",
+      "sourceRole": "user-provided original",
+      "sha256": "5D2E4AE631BAB8D2A50A4C50CF65F37717F86FD68D50449F59C92349A477A37A",
+      "approvedFor": [
+        "브라우저 탭 파비콘 32px (작은 크기라 크레용을 더 크게 잘라 씀)"
+      ]
     },
     {
       "path": "/brand/animal-portraits-v1.png",
       "source": "project-generated: AI-generated 1536x1024 RGBA sprite sheet created for the 2026-08-18 student entry redesign (introduced in commit 48ecadb; no wiggle_draw or third-party source material)",
       "sourceRole": "project-generated original",
       "sha256": "4C54C087C5E436C70DC34122E9F9A296F52B5B2C2AB39EA991AE72E06CEAAA33",
-      "approvedFor": ["repack source for /brand/animal-portraits-v2.png via scripts/repack_animal_portraits.py; not referenced by app code"]
+      "approvedFor": [
+        "repack source for /brand/animal-portraits-v2.png via scripts/repack_animal_portraits.py; not referenced by app code"
+      ]
     },
     {
       "path": "/brand/animal-portraits-v2.png",
       "source": "derived from /brand/animal-portraits-v1.png by scripts/repack_animal_portraits.py (5x2 square-cell repack, 2560x1024)",
       "sourceRole": "project-generated derivative",
       "sha256": "FEDC65E53ED7EC05425B38CE3714199BC2CF6D427915D2C97A1ED4C6237ACDBC",
-      "approvedFor": ["student entry animal picker and student ID card portraits (app/globals.css)"]
+      "approvedFor": [
+        "student entry animal picker and student ID card portraits (app/globals.css)"
+      ]
+    },
+    {
+      "path": "/entry-green/classroom-with-mongri.webp",
+      "source": "project-generated: built-in ImageGen (Codex), 2026-09-07; docs/design-assets/entry-green/assets/classroom-with-mongri.png (PROVENANCE.md, manifest.json); webp encoded with sharp",
+      "sourceRole": "project-generated original and reviewed derivatives",
+      "sha256": "51C0071BA5FE5E24805E436E7BAC72449C2A33056278D890C5E16E3806994012",
+      "approvedFor": [
+        "join entry-check screen wide-layout background (green classroom with Mongri holding the palette); text and buttons stay HTML"
+      ]
     }
   ],
   "notApproved": "All other wiggle_draw assets remain outside wiggle_web until provenance and service-use permission are reviewed."

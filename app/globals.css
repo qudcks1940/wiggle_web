@@ -2069,3 +2069,9 @@ body {
 .studio .canvas-zone .canvas-wrap,.studio .canvas-zone.has-canvas-status .canvas-wrap { width:100%; height:100%; max-width:none; max-height:none; aspect-ratio:auto; background:#fff; overflow:hidden; overflow:clip; }
 /* clip: 넘친 종이가 있으면 hidden 틀은 스크립트·초점 이동으로 몰래 스크롤돼 transform과 어긋난다. clip은 스크롤 자체가 없다. */
 .studio .canvas-stack { inset:auto; left:0; top:0; }
+/* 읽어 주는 화면에만 들리는 글. 이미 여러 화면이 .sr-only를 쓰고 있었는데 규칙이 없어 그냥 보였다. */
+.sr-only { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; border:0; }
+
+/* 복사 성공 표시(2026-09-17 사용자 요청): 누른 단추 글자가 체크로 바뀐다. 실패만 안내 줄로 알린다. */
+.copy-check { vertical-align:-3px; color:#2e9e5b; }
+.class-row-meta button .copy-check { vertical-align:-2px; }

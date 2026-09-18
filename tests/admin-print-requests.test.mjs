@@ -31,6 +31,12 @@ test('관리자 접근·업로드 검사·주문 소유권·실시간 중복 제
     server.DB.prepare('INSERT INTO device_sessions(token_hash,student_id,expires_at,last_used_at) VALUES(?,?,?,CURRENT_TIMESTAMP)').bind(await sha256(studentToken),student,new Date(Date.now()+3600000).toISOString()),
   ]);
   async function send(path, body, who='owner', status=200) {const r=await server.fetch(path,{method:'POST',headers:sessions[who],body:JSON.stringify(body)});const value=await r.json();assert.equal(r.status,status,JSON.stringify(value));return value;}
+  for (const role of ['owner','other','admin']) {
+    const identity = await (await server.fetch('/api/teacher',{headers:sessions[role]})).json();
+    assert.equal(identity.teacher.isAdmin,role==='admin');
+    const html = await (await server.fetch('/admin',{headers:sessions[role]})).text();
+    assert.equal(html.includes('관리자로 지정된 구글 계정'),role!=='admin');
+  }
   assert.equal((await server.fetch('/api/admin')).status,403);
   assert.equal((await server.fetch('/api/admin',{headers:sessions.owner})).status,403);
   await send('/api/admin',{maximum:200,basis:'동시 저장 부하 테스트'},'owner',403);

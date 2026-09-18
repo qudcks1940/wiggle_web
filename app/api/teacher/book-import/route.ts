@@ -1,6 +1,6 @@
 import { bindings } from "@/db/runtime";
 import { requireTeacher, sameOrigin, noStoreJson, jsonError, rateLimit, cleanText, id } from "@/lib/security";
-import { emptyStorybookDocument, STORYBOOK_FORMATS, type StorybookFormat } from "@/lib/storybook-model";
+import { emptyStorybookDocument, DEFAULT_STORYBOOK_FORMAT, STORYBOOK_FORMATS, type StorybookFormat } from "@/lib/storybook-model";
 import { bookClassroom } from "@/lib/book-workflow";
 export async function GET(request: Request) {
   const teacher = await requireTeacher();
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     if (prior.studentId !== student.id || prior.classroomId !== data.classroomId) return jsonError("다른 업로드 요청 번호예요.", 409);
     return noStoreJson({ id: prior.id }, { status: 200 });
   }
-  const doc = emptyStorybookDocument(data.format as StorybookFormat, id("page"), id("element"));
+  const doc = emptyStorybookDocument(DEFAULT_STORYBOOK_FORMAT, id("page"), id("element"));
   doc.pages[0].elements[0].text = "";
   await db.prepare(`INSERT INTO storybooks(id,student_id,classroom_id,title,document_json,schema_version) VALUES(?,?,?,?,?,1)`).bind(data.bookId, student.id, data.classroomId, title, JSON.stringify(doc)).run();
   return noStoreJson({ id: data.bookId }, { status: 201 });

@@ -1,3 +1,4 @@
+import { BOOK_PRINT_SPEC_UID, assertBookPrintSpec, assertBookPrintSize } from "@/lib/book-print-format";
 import "server-only";
 import { randomUUID, createHash } from "node:crypto";
 import { bindings } from "@/db/runtime";
@@ -24,10 +25,12 @@ export async function readPrintFile(key: string) {
   return new Uint8Array(await object.arrayBuffer());
 }
 export async function calculatedLayout(specUid: string, pageCount: number): Promise<PrintLayout> {
-  if (!/^[A-Za-z0-9_-]{1,80}$/.test(specUid)) throw new Error("판형을 선택해 주세요.");
+  if (specUid !== BOOK_PRINT_SPEC_UID) throw new Error("판형을 선택해 주세요.");
   const spec = await sweetbook<PrintSpec>(`/book-specs/${encodeURIComponent(specUid)}`);
   if (!Number.isInteger(pageCount) || printPageCount(pageCount, spec) !== pageCount) throw new Error(`내지는 ${spec.pageMin}~${spec.pageMax}쪽, ${spec.pageIncrement}쪽 단위로 입력해 주세요.`);
+  assertBookPrintSpec(spec);
   const size = await sweetbook<PrintSize>(`/book-specs/${encodeURIComponent(specUid)}/calculated-size?pages=${pageCount}`);
+  assertBookPrintSize(size, pageCount);
   return { spec, size, pageCount };
 }
 export async function submitPrintRequest(teacher: TeacherIdentity, body: Record<string, unknown>) {

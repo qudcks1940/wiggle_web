@@ -1,3 +1,5 @@
+import { BOOK_PRINT_SPEC_UID } from "@/lib/book-print-format";
+import { validatePrintPdf } from "@/lib/print-validation";
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { bindings } from "@/db/runtime";
@@ -9,7 +11,7 @@ export const printObjectKey = (jobId: string, kind: "cover" | "inner") => `book-
 export type PrintJob = { id: string; storybook_id: string; teacher_id: string; classroom_id: string; revision: number; environment: string; spec_uid: string; status: string; book_uid: string | null; layout_json: string | null; created_at: string };
 export async function enqueuePrint(teacherId: string, classroomId: string, ids: string[], specUid: string) {
   if (!await bookClassroom(teacherId, classroomId)) throw new Error("학급 권한이 없어요.");
-  if (!/^[a-zA-Z0-9_-]{1,80}$/.test(specUid)) throw new Error("판형을 선택해 주세요.");
+  if (specUid !== BOOK_PRINT_SPEC_UID) throw new Error("판형을 선택해 주세요.");
   const spec = await sweetbook<PrintSpec>(`/book-specs/${encodeURIComponent(specUid)}`);
   const books = [];
   for (const id of ids) {
@@ -35,6 +37,8 @@ export async function processPrint(teacherId: string, classroomId: string) {
     const size = await sweetbook<PrintSize>(`/book-specs/${encodeURIComponent(job.spec_uid)}/calculated-size?pages=${count}`);
     const { images } = await loadBookImages(book, 2600);
     const pdfs = await printPdfs(images, spec, size, book.title);
+    await validatePrintPdf(pdfs.cover, "cover", { spec, size, pageCount: pdfs.pageCount });
+    await validatePrintPdf(pdfs.inner, "inner", { spec, size, pageCount: pdfs.pageCount });
     await bindings().ARTWORKS.put(printObjectKey(job.id, "cover"), pdfs.cover, { httpMetadata: { contentType: "application/pdf" } });
     await bindings().ARTWORKS.put(printObjectKey(job.id, "inner"), pdfs.inner, { httpMetadata: { contentType: "application/pdf" } });
     const layout = { spec, size, pageCount: pdfs.pageCount, addedPages: pdfs.addedPages, originalPages: originalCount };

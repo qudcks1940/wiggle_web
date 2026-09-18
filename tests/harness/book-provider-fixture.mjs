@@ -32,13 +32,18 @@ globalThis.fetch = async (input, init = {}) => {
   if (path.endsWith("/calculated-size")) return ok(size);
   const method = init.method ?? "GET", headers = new Headers(init.headers);
   if (path === "/books" && method === "POST") {
-    const key = headers.get("idempotency-key"); assert.ok(key); assert.equal(body.creationType, "PDF_UPLOAD"); assert.equal(body.pageCount, 24);
+    const key = headers.get("idempotency-key"); assert.ok(key); assert.equal(body.creationType, "PDF_UPLOAD"); assert.equal(body.pageCount, 24); assert.equal(body.bookSpecUid, "SQUAREBOOK_HC");
     if (!books.has(key)) books.set(key, { bookUid: `bk_${key}`, pageCount: body.pageCount });
     return ok(books.get(key));
   }
   if (/\/pdf-(cover|contents)$/.test(path)) {
     const file = body.get("file"); const pdf = await PDFDocument.load(await file.arrayBuffer());
     assert.equal(pdf.getPageCount(), path.endsWith("cover") ? 1 : 24);
+    for (const page of pdf.getPages()) {
+      const expected = path.endsWith("cover") ? [544,288] : [249,254];
+      assert.ok(Math.abs(page.getWidth()*25.4/72-expected[0])<.01);
+      assert.ok(Math.abs(page.getHeight()*25.4/72-expected[1])<.01);
+    }
     return ok({ valid: true });
   }
   if (path.endsWith("/finalization")) return ok({ status: "finalized" });

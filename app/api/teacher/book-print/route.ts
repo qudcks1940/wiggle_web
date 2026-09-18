@@ -1,3 +1,4 @@
+import { BOOK_PRINT_SPEC_UID } from "@/lib/book-print-format";
 import { bindings } from "@/db/runtime";
 import { cleanText, jsonError, noStoreJson, requireTeacher, sameOrigin, rateLimit } from "@/lib/security";
 import { bookClassroom, selectedBookIds } from "@/lib/book-workflow";
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
   const jobs = await db.prepare(`SELECT p.id, p.storybook_id AS storybookId, p.revision, p.spec_uid AS specUid, p.status, p.error, p.layout_json AS layoutJson, b.title FROM book_print_jobs p JOIN storybooks b ON b.id = p.storybook_id WHERE p.teacher_id = ? AND p.classroom_id = ? AND p.environment = ? ORDER BY p.created_at DESC, p.rowid DESC LIMIT 1000`).bind(teacher.id, classroomId, printEnvironment()).all();
   let specs: PrintSpec[] = [], configError = "";
   if (printConfigured()) {
-    try { specs = await sweetbook<PrintSpec[]>("/book-specs"); if (!Array.isArray(specs)) throw new Error("판형 목록 응답을 확인해 주세요."); }
+    try { specs = await sweetbook<PrintSpec[]>("/book-specs"); if (!Array.isArray(specs)) throw new Error("판형 목록 응답을 확인해 주세요."); specs = specs.filter((spec) => spec.bookSpecUid === BOOK_PRINT_SPEC_UID); }
     catch (error) { configError = error instanceof Error ? error.message : "판형 목록을 불러오지 못했어요."; }
   }
   return noStoreJson({ configured: printConfigured(), environment: printEnvironment(), specs, configError, jobs: jobs.results });

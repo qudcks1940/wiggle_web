@@ -3,6 +3,13 @@
 > 마지막 갱신: 2026-09-18
 > 목적: 긴 대화가 압축되거나 담당 AI가 바뀌어도 실제 구현·검증·배포 상태를 잃지 않기 위한 기준 문서
 
+## 2026-09-18 관리자 진입 버튼 (로컬 검증 완료)
+
+- PR #7이 병합된 최신 main `debb800`에서 `codex/admin-entry` 생성.
+- 교사 API가 서버의 isAdmin 판단을 전달하고 /teacher 머리 줄에 관리자에게만 /admin 링크 표시. 기존 /admin·관리자 API의 서버 접근 제한 유지.
+- production build·전체 테스트 350/350·typecheck·lint(기존 경고만)·diff check 통과. 실제 Chrome에서 관리자만 버튼 표시/클릭 진입, 일반 교사 직접 URL 제한·관리자 API 403, 320/390/844/1440 폭 넘침 없음 확인.
+- 사용자 요청으로 개인 fork `qudcks1940/wiggle_web`의 `codex/admin-entry`에 커밋·push. main push/운영 배포 없음.
+
 ## 2026-09-17 BookPrint 하드커버 고정 (로컬 검증 완료)
 
 - 2026-09-18 PR 준비: 구현 `3374d52`, 최신 main `32d94fd` 병합 `8fc9ff1`. CSS 끝부분 양쪽 추가 규칙 보존. 병합 후 production build·전체 테스트 350/350·typecheck·lint·diff check 통과. 개인 fork `qudcks1940/wiggle_web`의 `codex/bookprint-squarebook`에 push하고 운영 저장소 main 대상으로 [PR #7](https://github.com/yonghwan86/wiggle_web/pull/7) 생성 완료. 교사/관리자 브라우저 재검증도 통과. API 키/환경 파일 제외, main 병합·배포 없음.

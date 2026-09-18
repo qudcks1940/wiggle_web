@@ -1,10 +1,11 @@
+import { assertBookPrintSpec, assertBookPrintSize } from "@/lib/book-print-format";
 import "server-only";
 import { readFile } from "node:fs/promises";
 import { Resvg } from "@resvg/resvg-js";
 import sharp from "sharp";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import type { StorybookDocument } from "@/lib/storybook-model";
+import { storybookAspectRatio, type StorybookDocument } from "@/lib/storybook-model";
 import type { BookFeedback, Rubric } from "@/lib/book-rubric";
 
 export const FONT_PATH = `${process.cwd()}/public/fonts/NanumGothic-Regular.ttf`;
@@ -24,7 +25,7 @@ export function wrapText(text: string, width: number, measure: (s: string) => nu
 
 // Uses the saved geometry, z-order, opacity, rotation and crop; never a text-only assessment.
 export async function renderBookPages(document: StorybookDocument, assets: Map<string, Buffer>, width = 1200) {
-  const ratio = document.format === "landscape" ? 4 / 3 : document.format === "portrait" ? 3 / 4 : 1;
+  const ratio = storybookAspectRatio(document.format);
   const height = Math.round(width / ratio);
   const pdf = await PDFDocument.create(); pdf.registerFontkit(fontkit);
   const font = await pdf.embedFont(await readFile(FONT_PATH), { subset: false });
@@ -105,7 +106,9 @@ export function printPageCount(original: number, spec: PrintSpec) {
   return count;
 }
 export async function printPdfs(images: Buffer[], spec: PrintSpec, size: PrintSize, title: string) {
+  assertBookPrintSpec(spec);
   const count = printPageCount(images.length, spec);
+  assertBookPrintSize(size, count);
   const pt = (mm: number) => mm * 72 / 25.4;
   if (![size.coverWidthMm, size.coverHeightMm, size.innerWidthMm, size.innerHeightMm, spec.innerTrimWidthMm, spec.innerTrimHeightMm].every((n) => Number.isFinite(n) && n > 0 && n < 2000)) throw new Error("인쇄 크기 응답이 올바르지 않아요.");
   const inner = await PDFDocument.create(), cover = await PDFDocument.create();
@@ -115,10 +118,14 @@ export async function printPdfs(images: Buffer[], spec: PrintSpec, size: PrintSi
     const p = inner.addPage([pt(size.innerWidthMm), pt(size.innerHeightMm)]);
     for (let j = 0; j < (spread ? 2 : 1); j++) {
       const src = images[i + j]; if (!src) continue;
-      const img = await inner.embedJpg(src);
-      const cell = p.getWidth() / (spread ? 2 : 1), margin = pt(10);
-      const scale = Math.min((cell - margin * 2) / img.width, (p.getHeight() - margin * 2) / img.height);
-      p.drawImage(img, { x: j * cell + (cell - img.width * scale) / 2, y: (p.getHeight() - img.height * scale) / 2, width: img.width * scale, height: img.height * scale });
+      // Fit the saved page inside the trim without distortion. Extend its edge pixels
+      // through the 3mm bleed, so trimming cannot expose an accidental white border.
+      const trimW = 2430, trimH = 2480, bleed = 30;
+      const trimmed = await sharp(src).resize(trimW, trimH, { fit: "contain", background: "#ffffff" }).extend({ top: bleed, bottom: bleed, left: bleed, right: bleed, extendWith: "copy" }).jpeg({ quality: 95 }).toBuffer();
+      const full = await inner.embedJpg(trimmed);
+      p.drawImage(full, { x: 0, y: 0, width: p.getWidth(), height: p.getHeight() });
+      p.setTrimBox(pt(3), pt(3), pt(243), pt(248));
+      p.setBleedBox(0, 0, p.getWidth(), p.getHeight());
     }
   }
   const p = cover.addPage([pt(size.coverWidthMm), pt(size.coverHeightMm)]);

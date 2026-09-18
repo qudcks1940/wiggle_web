@@ -9,7 +9,7 @@ import {
   createStorybookTextElement,
   DEFAULT_STORYBOOK_TEXT,
   MAX_STORYBOOK_PAGES,
-  STORYBOOK_FORMATS,
+  storybookAspectRatio,
   STORYBOOK_IMAGE_AREA,
   STORYBOOK_TEXT_BOX,
   type StorybookDocument,
@@ -34,7 +34,7 @@ function clonePage(page: StorybookPage): StorybookPage {
 }
 function clamp(value: number, min: number, max: number) { return Math.max(min, Math.min(max, value)); }
 function nextZ(page: StorybookPage) { return Math.min(10_000, page.elements.reduce((max, element) => element.type === "image" ? Math.max(max, element.zIndex) : max, 0) + 1); }
-function formatAspectRatio(format: StorybookFormat) { return format === "landscape" ? 4 / 3 : format === "portrait" ? 3 / 4 : 1; }
+const formatAspectRatio = storybookAspectRatio;
 const FULL_IMAGE_CROP: StorybookCrop = { x: 0, y: 0, width: 1, height: 1 };
 
 function fitImageToArea(element: Pick<StorybookElement, "x" | "y" | "width" | "height">, format: StorybookFormat, aspectRatio?: number) {
@@ -417,7 +417,7 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
     setAddingAsset(true); setError("");
     try {
       const asset = await uploadPngAsset(dataUrl, "오린 캐릭터를 저장하지 못했어요.");
-      const stageRatio = currentDocument.format === "landscape" ? 4 / 3 : currentDocument.format === "portrait" ? 3 / 4 : 1;
+      const stageRatio = storybookAspectRatio(currentDocument.format);
       changeDocument((current) => ({ ...current, pages: current.pages.map((storyPage, index) => {
         if (index !== target.pageIndex) return storyPage;
         return { ...storyPage, elements: storyPage.elements.map((element) => {
@@ -462,20 +462,6 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
     setPageIndex(destination);
   }
 
-  function changeFormat(format: StorybookFormat) {
-    if (!document || document.format === format) return;
-    changeDocument((current) => ({
-      ...current,
-      format,
-      pages: current.pages.map((storyPage) => ({
-        ...storyPage,
-        elements: storyPage.elements.map((element) => element.type === "image"
-          ? { ...element, ...fitImageToArea(element, format, element.aspectRatio) }
-          : { ...element, ...STORYBOOK_TEXT_BOX, rotation: 0, opacity: 1, locked: true, align: "center" }),
-      })),
-    }));
-    setSelectedId(null);
-  }
 
   function syncImageContentBounds(element: StorybookElement, image: HTMLImageElement, force = false) {
     if (!document || image.naturalWidth <= 0 || image.naturalHeight <= 0) return;
@@ -620,7 +606,7 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
     <div className="storybook-editor-body">
       <aside className="storybook-page-rail" aria-label="그림책 쪽 목록">{document.pages.map((item, index) => <button type="button" className={index === pageIndex ? "active" : ""} key={item.id} onClick={() => { setPageIndex(index); setSelectedId(null); }}><span className={`format-${document.format} ${item.backgroundAssetId ? "has-background" : ""}`} style={{ background: item.background }}>{item.elements.slice().sort((a, b) => a.zIndex - b.zIndex).map((element) => <i key={element.id} className={element.type} style={{ left: `${element.x * 100}%`, top: `${element.y * 100}%`, width: `${element.width * 100}%`, height: `${element.height * 100}%` }} />)}</span><b>{index + 1}</b></button>)}<button type="button" className="add-page" disabled={document.pages.length >= MAX_STORYBOOK_PAGES} onClick={addPage}>＋<span>쪽 추가</span></button></aside>
       <section className="storybook-workspace">
-        <div className="storybook-toolbar" aria-label="그림책 도구"><button type="button" disabled={!historyState.undo} onClick={undo}>↶ 되돌리기</button><button type="button" disabled={!historyState.redo} onClick={redo}>↷ 다시하기</button><button type="button" onClick={() => storyTextRef.current?.focus()}>✏️ 이야기 쓰기</button>{!teacherBookId && <button type="button" onClick={() => void openArtworkPicker()}>🎨 내 그림</button>}<button type="button" onClick={() => fileRef.current?.click()}>🖼️ 새 그림</button><input ref={fileRef} type="file" accept="image/*" hidden onChange={(event) => void uploadFile(event.target.files?.[0], "element")} /><button type="button" onClick={() => backgroundFileRef.current?.click()}>🌄 배경 넣기</button><input ref={backgroundFileRef} type="file" accept="image/*" hidden onChange={(event) => void uploadFile(event.target.files?.[0], "background")} /><div className="storybook-format-switcher" aria-label="그림책 모양">{STORYBOOK_FORMATS.map((format) => <button type="button" key={format} className={document.format === format ? "active" : ""} onClick={() => changeFormat(format)}>{format === "landscape" ? "▭ 가로" : format === "portrait" ? "▯ 세로" : "□ 정사각"}</button>)}</div><button type="button" disabled={pageIndex === 0} onClick={() => movePage(-1)}>← 쪽 이동</button><button type="button" disabled={pageIndex === document.pages.length - 1} onClick={() => movePage(1)}>쪽 이동 →</button><button type="button" onClick={duplicatePage}>쪽 복제</button><button type="button" disabled={document.pages.length === 1} onClick={deletePage}>쪽 삭제</button></div>
+        <div className="storybook-toolbar" aria-label="그림책 도구"><button type="button" disabled={!historyState.undo} onClick={undo}>↶ 되돌리기</button><button type="button" disabled={!historyState.redo} onClick={redo}>↷ 다시하기</button><button type="button" onClick={() => storyTextRef.current?.focus()}>✏️ 이야기 쓰기</button>{!teacherBookId && <button type="button" onClick={() => void openArtworkPicker()}>🎨 내 그림</button>}<button type="button" onClick={() => fileRef.current?.click()}>🖼️ 새 그림</button><input ref={fileRef} type="file" accept="image/*" hidden onChange={(event) => void uploadFile(event.target.files?.[0], "element")} /><button type="button" onClick={() => backgroundFileRef.current?.click()}>🌄 배경 넣기</button><input ref={backgroundFileRef} type="file" accept="image/*" hidden onChange={(event) => void uploadFile(event.target.files?.[0], "background")} /><button type="button" disabled={pageIndex === 0} onClick={() => movePage(-1)}>← 쪽 이동</button><button type="button" disabled={pageIndex === document.pages.length - 1} onClick={() => movePage(1)}>쪽 이동 →</button><button type="button" onClick={duplicatePage}>쪽 복제</button><button type="button" disabled={document.pages.length === 1} onClick={deletePage}>쪽 삭제</button></div>
         <div className="storybook-stage-wrap"><div ref={bindStage} className={`storybook-stage format-${document.format}`} style={{ background: page.background }} onPointerDown={(event) => { if ((event.target as HTMLElement).closest(".moveable-control-box")) return; setSelectedId(null); }}>
           <div className="storybook-stage-content">
             {renderBackground(page)}
@@ -677,7 +663,7 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
       <aside className="storybook-inspector"><h2>{selected ? "그림 꾸미기" : "쪽 꾸미기"}</h2>
         {pageText && <section className="storybook-story-control"><h3>이야기 글 <small>위쪽 가운데 고정</small></h3><label>이 쪽의 이야기<textarea ref={storyTextRef} maxLength={800} value={pageText.text ?? ""} onChange={(event) => updatePageText({ text: event.target.value })} /></label><label>글자 크기<input type="range" min="0.026" max="0.075" step="0.002" value={pageText.fontSize} onChange={(event) => updatePageText({ fontSize: Number(event.target.value) })} /></label><label>글자 색<input type="color" value={pageText.color} onChange={(event) => updatePageText({ color: event.target.value.toUpperCase() })} /></label><p>글은 한 쪽에 하나만 들어가며 항상 위쪽 가운데에 보여요.</p></section>}
         {selected && <><section className="storybook-image-controls"><label>그림 크기 <b>{Math.round(selected.width * 100)}%</b><input aria-label="그림 크기" type="range" min="0.08" max={STORYBOOK_IMAGE_AREA.width} step="0.01" value={selected.width} onInput={(event) => { const width = Number(event.currentTarget.value); updateSelected(fitImageToArea({ ...selected, x: selected.x + (selected.width - width) / 2, width }, document.format, selected.aspectRatio)); }} /></label><button type="button" className="button secondary full" onClick={tightenSelectedImage}>✨ 빈 여백 없이 맞추기</button><button type="button" className="button secondary full" onClick={() => updateSelected(fitImageToArea(STORYBOOK_IMAGE_AREA, document.format, selected.aspectRatio))}>그림 영역에 크게 맞추기</button><button type="button" className="button primary full cutout-open-button" disabled={!selectedImageAsset || addingAsset} onClick={() => { if (selectedImageAsset) setCutoutTarget({ asset: selectedImageAsset, elementId: selected.id, pageIndex }); }}>✂️ 캐릭터만 오리기</button><p>흰색이나 투명한 빈 여백은 자동으로 빼고, 보이는 그림과 선택 박스를 같은 크기로 맞춰요.</p></section><label>투명도<input type="range" min="0.05" max="1" step="0.05" value={selected.opacity} onChange={(event) => updateSelected({ opacity: Number(event.target.value) })} /></label><label>기울기<input type="range" min="-180" max="180" step="1" value={selected.rotation} onChange={(event) => updateSelected({ rotation: Number(event.target.value) })} /></label><div className="storybook-layer-buttons"><button type="button" onClick={() => updateSelected({ zIndex: nextZ(page) })}>맨 앞으로</button><button type="button" onClick={sendSelectedToBack}>맨 뒤로</button><button type="button" onClick={duplicateSelected}>복제</button><button type="button" onClick={() => updateSelected({ locked: !selected.locked })}>{selected.locked ? "🔓 잠금 풀기" : "🔒 잠그기"}</button><button type="button" className="danger" onClick={deleteSelected}>삭제</button></div></>}
-        <section className="storybook-page-controls"><h3>책 모양</h3><div className="storybook-inspector-formats">{STORYBOOK_FORMATS.map((format) => <button type="button" key={format} className={document.format === format ? "active" : ""} onClick={() => changeFormat(format)}>{format === "landscape" ? "▭ 가로" : format === "portrait" ? "▯ 세로" : "□ 정사각"}</button>)}</div><label>배경색<input type="color" value={page.background} onChange={(event) => changeDocument((current) => ({ ...current, pages: current.pages.map((value, index) => index === pageIndex ? { ...value, background: event.target.value.toUpperCase() } : value) }))} /></label><button type="button" className="button secondary full" onClick={() => backgroundFileRef.current?.click()}>🌄 페이지 전체 배경 넣기</button>{page.backgroundAssetId && <button type="button" className="text-button full" onClick={() => changeDocument((current) => ({ ...current, pages: current.pages.map((value, index) => index === pageIndex ? { ...value, backgroundAssetId: undefined } : value) }))}>배경 그림 지우기</button>}<p>배경 그림은 페이지 전체를 채우고, 그 위에 이야기 글과 그림이 올라가요.</p></section>
+        <section className="storybook-page-controls"><h3>페이지 배경</h3><label>배경색<input type="color" value={page.background} onChange={(event) => changeDocument((current) => ({ ...current, pages: current.pages.map((value, index) => index === pageIndex ? { ...value, background: event.target.value.toUpperCase() } : value) }))} /></label><button type="button" className="button secondary full" onClick={() => backgroundFileRef.current?.click()}>🌄 페이지 전체 배경 넣기</button>{page.backgroundAssetId && <button type="button" className="text-button full" onClick={() => changeDocument((current) => ({ ...current, pages: current.pages.map((value, index) => index === pageIndex ? { ...value, backgroundAssetId: undefined } : value) }))}>배경 그림 지우기</button>}<p>배경 그림은 페이지 전체를 채우고, 그 위에 이야기 글과 그림이 올라가요.</p></section>
       </aside>
     </div>
 

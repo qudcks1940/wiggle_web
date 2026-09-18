@@ -1,7 +1,17 @@
 # Wiggle Web 현재 상태
 
-> 마지막 갱신: 2026-09-16
+> 마지막 갱신: 2026-09-18
 > 목적: 긴 대화가 압축되거나 담당 AI가 바뀌어도 실제 구현·검증·배포 상태를 잃지 않기 위한 기준 문서
+
+## 2026-09-17 BookPrint 하드커버 고정 (로컬 검증 완료)
+
+- 2026-09-18 PR 준비: 구현 `3374d52`, 최신 main `32d94fd` 병합 `8fc9ff1`. CSS 끝부분 양쪽 추가 규칙 보존. 병합 후 production build·전체 테스트 350/350·typecheck·lint·diff check 통과. 개인 fork `qudcks1940/wiggle_web`의 `codex/bookprint-squarebook`에 push하고 운영 저장소 main 대상으로 [PR #7](https://github.com/yonghwan86/wiggle_web/pull/7) 생성 완료. 교사/관리자 브라우저 재검증도 통과. API 키/환경 파일 제외, main 병합·배포 없음.
+
+- 사용자 지정 main `cdfe23e`를 `C:/Users/user/Desktop/Project/wiggle_web_bookprint_20260917`에 새 clone. 브랜치 `codex/bookprint-squarebook`, 원래 작업 폴더 보존. main push·배포 없음.
+- 새 책 생성/작품에서 생성/PDF 가져오기는 `squarebook-hc`(243:248) 고정. 모양 선택/변경 UI 제거. 기존 저장 책 비율 보존, DB 일괄 변환 없음.
+- 인쇄 상품 SQUAREBOOK_HC 고정, 공식 규격과 제작사 계산 응답 교차 확인. 내지는 재단 크기에 맞춘 원고+3mm 가장자리 도련으로 만들고, 생성 후 표지·내지 전 페이지를 재검사한다. 기존 관리자 전송/발주 권한과 주문 흐름 유지.
+- typecheck, lint 오류 0(기존 경고 13), production build, 전체 테스트 349/349, 기본 check:browser 전 항목 및 check-book-browser(교사/관리자 5화면×4크기) 통과. 새 책 실제 생성/단일 버튼/미리보기/243:248 비율을 320·390·844·1440 폭에서 실측, PDF 렌더 육안 확인. 최초 1건 실패는 Windows CRLF를 허용하지 않는 기존 테스트 정규식이 원인으로, clone 작업 파일을 Git 정본 LF로 맞춰 통과(관계없는 소스 변경 없음).
+- 실제 제공자 API 접수와 사용자 배포 후 운영 검증은 아직 하지 않음. 모의 제작사 전송에서 상품 UID와 표지/내지 전 페이지 크기·쪽 수를 검증했다. 2026-09-18 사용자 요청으로 기능 브랜치를 커밋하고 개인 fork에 push한 뒤 운영 저장소 main 대상 PR을 제출한다. main 병합·운영 배포는 하지 않는다.
 
 ## 2026-09-16 관리자 운영·원고 주문 접수 (로컬 검증 완료)
 

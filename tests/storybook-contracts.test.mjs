@@ -85,11 +85,10 @@ test("학생 화면에 실제 그림책 진입·편집·가져오기·미리보�
   assert.match(home, /href="\/student\/books"/); // 학생 홈 은퇴 뒤에는 내 그림 화면이 그림책 입구다
   assert.match(detail, /이 그림으로 그림책 만들기/);
   assert.match(detail, /artworkId: artwork\.id/);
-  assert.match(detail, /먼저 책 모양을 골라요/);
-  assert.match(detail, /STORYBOOK_FORMATS\.map/);
-  assert.match(detail, /makeStorybook\(format\)/);
-  assert.match(library, /가로 그림책/);
-  assert.match(library, /세로 그림책/);
+  assert.doesNotMatch(detail, /formatPickerOpen|STORYBOOK_FORMATS\.map/);
+  assert.match(detail, /makeStorybook\(\)/);
+  assert.match(library, /새 그림책 만들기/);
+  assert.doesNotMatch(library, /가로 그림책|세로 그림책/);
   assert.match(library, /activeProfile/);
   assert.match(library, /\/join\?next=/);
   assert.match(library, /URLSearchParams\(location\.search\)\.get\("create"\)/);
@@ -105,9 +104,7 @@ test("학생 화면에 실제 그림책 진입·편집·가져오기·미리보�
   assert.match(editor, /🖼️ 새 그림/);
   assert.match(editor, /🌄 배경 넣기/);
   assert.match(editor, /페이지 전체 배경 넣기/);
-  assert.match(editor, /▭ 가로/);
-  assert.match(editor, /▯ 세로/);
-  assert.match(editor, /□ 정사각/);
+  assert.doesNotMatch(editor, /changeFormat|storybook-format-switcher|storybook-inspector-formats/);
   assert.match(editor, /쪽 복제/);
   assert.match(editor, /↶ 되돌리기/);
   assert.match(editor, /↷ 다시하기/);

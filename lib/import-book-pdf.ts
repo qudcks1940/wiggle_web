@@ -1,4 +1,4 @@
-import { emptyStorybookDocument, MAX_STORYBOOK_PAGES, type StorybookFormat } from "@/lib/storybook-model";
+import { emptyStorybookDocument, MAX_STORYBOOK_PAGES, DEFAULT_STORYBOOK_FORMAT, storybookAspectRatio } from "@/lib/storybook-model";
 import { teacherRequest, postJson } from "@/app/components/book-workflow-client";
 
 export async function importBookPdf(file: File, classroomId: string, studentId: string, title: string, progress: (text: string) => void) {
@@ -10,10 +10,8 @@ export async function importBookPdf(file: File, classroomId: string, studentId: 
   try {
     const pdf = await task.promise;
     if (pdf.numPages < 1 || pdf.numPages > MAX_STORYBOOK_PAGES) throw new Error(`PDF는 1~${MAX_STORYBOOK_PAGES}쪽까지 가져올 수 있어요.`);
-    const first = await pdf.getPage(1), firstSize = first.getViewport({ scale: 1 });
-    const ratio = firstSize.width / firstSize.height;
-    const format: StorybookFormat = ratio > 1.15 ? "landscape" : ratio < .87 ? "portrait" : "square";
-    const targetRatio = format === "landscape" ? 4 / 3 : format === "portrait" ? 3 / 4 : 1;
+    const format = DEFAULT_STORYBOOK_FORMAT;
+    const targetRatio = storybookAspectRatio(format);
     const doc = emptyStorybookDocument(format); doc.pages = [];
     bookId = `storybook_${crypto.randomUUID().replaceAll("-", "")}`;
     await teacherRequest("/api/teacher/book-import", postJson({ classroomId, studentId, title, format, pageCount: pdf.numPages, bookId }));

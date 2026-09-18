@@ -4,8 +4,13 @@ export const MAX_STORYBOOK_ELEMENTS_PER_PAGE = 50;
 export const MAX_STORYBOOK_DOCUMENT_BYTES = 250_000;
 export const MAX_STORYBOOK_TEXT_GRAPHEMES = 800;
 
-export const STORYBOOK_FORMATS = ["landscape", "portrait", "square"] as const;
+// Legacy formats remain readable so existing books are never silently reshaped.
+export const DEFAULT_STORYBOOK_FORMAT = "squarebook-hc";
+export const STORYBOOK_FORMATS = ["landscape", "portrait", "square", DEFAULT_STORYBOOK_FORMAT] as const;
 export type StorybookFormat = (typeof STORYBOOK_FORMATS)[number];
+export function storybookAspectRatio(format: StorybookFormat) {
+  return format === "squarebook-hc" ? 243 / 248 : format === "landscape" ? 4 / 3 : format === "portrait" ? 3 / 4 : 1;
+}
 export type StorybookTextAlign = "left" | "center" | "right";
 export type StorybookCrop = { x: number; y: number; width: number; height: number };
 
@@ -181,6 +186,6 @@ export function createStorybookTextElement(id = "element_startertext0001"): Stor
   };
 }
 
-export function emptyStorybookDocument(format: StorybookFormat = "landscape", pageId = "page_starter0001", textElementId = "element_startertext0001"): StorybookDocument {
+export function emptyStorybookDocument(format: StorybookFormat = DEFAULT_STORYBOOK_FORMAT, pageId = "page_starter0001", textElementId = "element_startertext0001"): StorybookDocument {
   return { schemaVersion: 1, format, pages: [{ id: pageId, background: "#FFFFFF", elements: [createStorybookTextElement(textElementId)] }] };
 }

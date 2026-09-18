@@ -1,7 +1,9 @@
 export const STORYBOOK_SCHEMA_VERSION = 1;
+// Student authoring limit only; imported PDFs have no page-count ceiling.
 export const MAX_STORYBOOK_PAGES = 24;
 export const MAX_STORYBOOK_ELEMENTS_PER_PAGE = 50;
-export const MAX_STORYBOOK_DOCUMENT_BYTES = 250_000;
+// Keep metadata below the hosting request-body limit, independently of print page counts.
+export const MAX_STORYBOOK_DOCUMENT_BYTES = 3_500_000;
 export const MAX_STORYBOOK_TEXT_GRAPHEMES = 800;
 
 // Legacy formats remain readable so existing books are never silently reshaped.
@@ -142,7 +144,7 @@ export function validateStorybookDocument(value: unknown): StorybookDocument | n
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const document = value as Partial<StorybookDocument>;
   if (document.schemaVersion !== STORYBOOK_SCHEMA_VERSION || !STORYBOOK_FORMATS.includes(document.format as StorybookFormat)) return null;
-  if (!Array.isArray(document.pages) || document.pages.length < 1 || document.pages.length > MAX_STORYBOOK_PAGES) return null;
+  if (!Array.isArray(document.pages) || document.pages.length < 1) return null;
 
   const pageIds = new Set<string>();
   const elementIds = new Set<string>();

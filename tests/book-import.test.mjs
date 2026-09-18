@@ -17,11 +17,11 @@ test("PDF 가져오기·교사 편집: 학생 연결, 권한 격리, 이미지·
   ]);
   const headers = { cookie:`wiggle_teacher=${token}`, "content-type":"application/json" };
   const bookId = `storybook_${randomUUID().replaceAll("-","")}`;
-  const data={ classroomId:room,studentId:student,bookId,format:"portrait",pageCount:2,title:"PDF 가져온 책" };
+  const data={ classroomId:room,studentId:student,bookId,format:"portrait",pageCount:131,title:"PDF 가져온 책" };
   async function send(path,body,method="POST") { return server.fetch(path,{method,headers,body:JSON.stringify(body)}); }
   assert.equal((await server.fetch("/api/teacher/book-import",{method:"POST",body:JSON.stringify(data)})).status,401);
   assert.equal((await send("/api/teacher/book-import",{...data,studentId:"student_other"})).status,400);
-  assert.equal((await send("/api/teacher/book-import",{...data,pageCount:25})).status,400);
+  for (const pageCount of [0, -1, 1.5, "25", null, Number.MAX_SAFE_INTEGER + 1]) assert.equal((await send("/api/teacher/book-import",{...data,pageCount})).status,400);
   assert.equal((await send("/api/teacher/book-import",data)).status,201);
   assert.equal((await send("/api/teacher/book-import",data)).status,200);
   const base=`/api/teacher/book-editor/${bookId}`;
@@ -33,10 +33,17 @@ test("PDF 가져오기·교사 편집: 학생 연결, 권한 격리, 이미지·
   assert.equal(upload.status,201);const {asset}=await upload.json();
   assert.equal((await server.fetch(base+'/assets/'+asset.id,{headers})).status,200);
   const doc=emptyStorybookDocument('portrait');doc.pages[0].backgroundAssetId=asset.id;doc.pages[0].elements[0].text='';
+  doc.pages = Array.from({ length: 131 }, (_, i) => {
+    const page = emptyStorybookDocument('squarebook-hc', `page_import${i.toString().padStart(8,'0')}`, `element_import${i.toString().padStart(8,'0')}`).pages[0];
+    page.backgroundAssetId = asset.id; page.elements[0].text = `Page ${i+1}`; return page;
+  });
   const change={requestId:'teacher_save_request_001',expectedRevision:0,title:'PDF 수정본',document:doc,complete:true};
   assert.equal((await send(base,change,"PUT")).status,200);
   assert.equal((await (await send(base,change,"PUT")).json()).duplicate,true);
   assert.equal((await send(base,{...change,requestId:'teacher_save_request_002'},"PUT")).status,409);
+  const reloaded = await (await server.fetch(base,{headers})).json();
+  assert.equal(reloaded.storybook.document.pages.length,131);
+  assert.equal(reloaded.storybook.document.pages[130].elements[0].text,'Page 131');
   const bad=structuredClone(doc);bad.pages[0].backgroundAssetId='asset_foreign0001';
   assert.equal((await send(base,{...change,expectedRevision:1,requestId:'teacher_save_request_003',document:bad},"PUT")).status,403);
   // A valid session for a different teacher must not access or mutate this book.

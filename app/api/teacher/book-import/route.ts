@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   if (!await bookClassroom(teacher.id, data.classroomId ?? "")) return jsonError("학급 권한이 없어요.", 403);
   const student = await bindings().DB.prepare(`SELECT id FROM student_profiles WHERE id=? AND classroom_id=? AND archived_at IS NULL AND seat_number IS NOT NULL`).bind(data.studentId ?? "", data.classroomId).first<{ id: string }>();
   if (!student) return jsonError("이 그림책의 학생을 학급 명단에서 선택해 주세요.", 400);
-  if (!STORYBOOK_FORMATS.includes(data.format) || !Number.isInteger(data.pageCount) || data.pageCount < 1 || data.pageCount > 24) return jsonError("PDF는 1~24쪽이어야 해요.");
+  if (!STORYBOOK_FORMATS.includes(data.format) || !Number.isSafeInteger(data.pageCount) || data.pageCount < 1) return jsonError("PDF의 형식과 쪽 수를 확인해 주세요.");
   if (typeof data.bookId !== "string" || !/^storybook_[a-f0-9]{32}$/.test(data.bookId)) return jsonError("업로드 요청 번호가 올바르지 않아요.");
   const title = cleanText(data.title, 60);
   if (!title) return jsonError("그림책 제목을 입력해 주세요.");

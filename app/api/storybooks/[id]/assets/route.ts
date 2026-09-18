@@ -33,7 +33,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const storybookId = cleanText((await context.params).id, 80);
   if (!(await ownedStorybook(storybookId, student.id))) return jsonError("내 그림책이 아니거나 찾을 수 없어요.", 404);
   const currentAssets = await storybookAssets(storybookId, student.id);
-  if (currentAssets.length >= MAX_ASSETS_PER_BOOK) return jsonError("한 그림책에는 이미지 60개까지 넣을 수 있어요.", 413);
+  if (!new URL(request.url).pathname.startsWith("/api/teacher/") && currentAssets.length >= MAX_ASSETS_PER_BOOK) return jsonError("한 그림책에는 이미지 60개까지 넣을 수 있어요.", 413);
   const contentType = request.headers.get("content-type") ?? "";
   const payload = contentType.startsWith("application/json")
     ? await request.json().catch(() => ({})) as Record<string, unknown>

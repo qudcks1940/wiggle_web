@@ -431,14 +431,14 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
   }
 
   function addPage() {
-    if (!document || document.pages.length >= MAX_STORYBOOK_PAGES) return;
+    if (!document || (!teacherBookId && document.pages.length >= MAX_STORYBOOK_PAGES)) return;
     const next: StorybookPage = { id: clientId("page"), background: "#FFFFFF", elements: [createStorybookTextElement(clientId("element"))] };
     changeDocument((current) => ({ ...current, pages: [...current.pages, next] }));
     setPageIndex(document.pages.length); setSelectedId(null);
   }
 
   function duplicatePage() {
-    if (!document || !page || document.pages.length >= MAX_STORYBOOK_PAGES) return;
+    if (!document || !page || (!teacherBookId && document.pages.length >= MAX_STORYBOOK_PAGES)) return;
     const copy = clonePage(page);
     changeDocument((current) => ({ ...current, pages: [...current.pages.slice(0, pageIndex + 1), copy, ...current.pages.slice(pageIndex + 1)] }));
     setPageIndex(pageIndex + 1); setSelectedId(null);
@@ -604,7 +604,7 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
     {error && <p className="error-box storybook-editor-error" role="alert">{error}<button type="button" onClick={() => setError("")}>닫기</button></p>}
     {teacherBookId && <p className="storybook-editor-error">PDF 원본은 쪽 배경입니다. 원본 글자 개별 수정은 지원하지 않으며, 이야기·그림 추가, 배경 교체, 쪽 순서 변경이 가능합니다. 수정 후 완성하기를 눌러야 새 피드백과 주문에 반영됩니다.</p>}
     <div className="storybook-editor-body">
-      <aside className="storybook-page-rail" aria-label="그림책 쪽 목록">{document.pages.map((item, index) => <button type="button" className={index === pageIndex ? "active" : ""} key={item.id} onClick={() => { setPageIndex(index); setSelectedId(null); }}><span className={`format-${document.format} ${item.backgroundAssetId ? "has-background" : ""}`} style={{ background: item.background }}>{item.elements.slice().sort((a, b) => a.zIndex - b.zIndex).map((element) => <i key={element.id} className={element.type} style={{ left: `${element.x * 100}%`, top: `${element.y * 100}%`, width: `${element.width * 100}%`, height: `${element.height * 100}%` }} />)}</span><b>{index + 1}</b></button>)}<button type="button" className="add-page" disabled={document.pages.length >= MAX_STORYBOOK_PAGES} onClick={addPage}>＋<span>쪽 추가</span></button></aside>
+      <aside className="storybook-page-rail" aria-label="그림책 쪽 목록">{document.pages.map((item, index) => <button type="button" className={index === pageIndex ? "active" : ""} key={item.id} onClick={() => { setPageIndex(index); setSelectedId(null); }}><span className={`format-${document.format} ${item.backgroundAssetId ? "has-background" : ""}`} style={{ background: item.background }}>{item.elements.slice().sort((a, b) => a.zIndex - b.zIndex).map((element) => <i key={element.id} className={element.type} style={{ left: `${element.x * 100}%`, top: `${element.y * 100}%`, width: `${element.width * 100}%`, height: `${element.height * 100}%` }} />)}</span><b>{index + 1}</b></button>)}<button type="button" className="add-page" disabled={(!teacherBookId && document.pages.length >= MAX_STORYBOOK_PAGES)} onClick={addPage}>＋<span>쪽 추가</span></button></aside>
       <section className="storybook-workspace">
         <div className="storybook-toolbar" aria-label="그림책 도구"><button type="button" disabled={!historyState.undo} onClick={undo}>↶ 되돌리기</button><button type="button" disabled={!historyState.redo} onClick={redo}>↷ 다시하기</button><button type="button" onClick={() => storyTextRef.current?.focus()}>✏️ 이야기 쓰기</button>{!teacherBookId && <button type="button" onClick={() => void openArtworkPicker()}>🎨 내 그림</button>}<button type="button" onClick={() => fileRef.current?.click()}>🖼️ 새 그림</button><input ref={fileRef} type="file" accept="image/*" hidden onChange={(event) => void uploadFile(event.target.files?.[0], "element")} /><button type="button" onClick={() => backgroundFileRef.current?.click()}>🌄 배경 넣기</button><input ref={backgroundFileRef} type="file" accept="image/*" hidden onChange={(event) => void uploadFile(event.target.files?.[0], "background")} /><button type="button" disabled={pageIndex === 0} onClick={() => movePage(-1)}>← 쪽 이동</button><button type="button" disabled={pageIndex === document.pages.length - 1} onClick={() => movePage(1)}>쪽 이동 →</button><button type="button" onClick={duplicatePage}>쪽 복제</button><button type="button" disabled={document.pages.length === 1} onClick={deletePage}>쪽 삭제</button></div>
         <div className="storybook-stage-wrap"><div ref={bindStage} className={`storybook-stage format-${document.format}`} style={{ background: page.background }} onPointerDown={(event) => { if ((event.target as HTMLElement).closest(".moveable-control-box")) return; setSelectedId(null); }}>

@@ -1,5 +1,18 @@
-import { emptyStorybookDocument, MAX_STORYBOOK_PAGES, DEFAULT_STORYBOOK_FORMAT, storybookAspectRatio } from "@/lib/storybook-model";
-import { teacherRequest, postJson } from "@/app/components/book-workflow-client";
+import { emptyStorybookDocument, DEFAULT_STORYBOOK_FORMAT, storybookAspectRatio } from "@/lib/storybook-model";
+import { postJson } from "@/app/components/book-workflow-client";
+
+async function importRequest<T>(url: string, init: RequestInit): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(url, { cache: "no-store", ...init });
+    if (response.status === 429 && attempt < 3) {
+      await new Promise((resolve) => setTimeout(resolve, 60_000));
+      continue;
+    }
+    const data = await response.json() as T & { error?: string };
+    if (!response.ok) throw new Error(data.error ?? "PDF를 가져오지 못했어요.");
+    return data;
+  }
+}
 
 export async function importBookPdf(file: File, classroomId: string, studentId: string, title: string, progress: (text: string) => void) {
   if (!file.name.toLowerCase().endsWith(".pdf") || file.size < 5 || file.size > 30_000_000) throw new Error("30MB 이하의 PDF를 선택해 주세요.");
@@ -9,12 +22,12 @@ export async function importBookPdf(file: File, classroomId: string, studentId: 
   let bookId = "";
   try {
     const pdf = await task.promise;
-    if (pdf.numPages < 1 || pdf.numPages > MAX_STORYBOOK_PAGES) throw new Error(`PDF는 1~${MAX_STORYBOOK_PAGES}쪽까지 가져올 수 있어요.`);
+    if (!Number.isSafeInteger(pdf.numPages) || pdf.numPages < 1) throw new Error("PDF에 가져올 쪽이 없어요.");
     const format = DEFAULT_STORYBOOK_FORMAT;
     const targetRatio = storybookAspectRatio(format);
     const doc = emptyStorybookDocument(format); doc.pages = [];
     bookId = `storybook_${crypto.randomUUID().replaceAll("-", "")}`;
-    await teacherRequest("/api/teacher/book-import", postJson({ classroomId, studentId, title, format, pageCount: pdf.numPages, bookId }));
+    await importRequest("/api/teacher/book-import", postJson({ classroomId, studentId, title, format, pageCount: pdf.numPages, bookId }));
     let revision = 0;
     for (let n = 1; n <= pdf.numPages; n++) {
       progress(`${file.name} · ${n}/${pdf.numPages}쪽 가져오는 중`);
@@ -35,11 +48,11 @@ export async function importBookPdf(file: File, classroomId: string, studentId: 
         blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
       }
       if (!blob || blob.size > 3_500_000) throw new Error("한 쪽의 이미지가 너무 커요. PDF 해상도를 줄여 다시 올려 주세요.");
-      const { asset } = await teacherRequest<{ asset: { id: string } }>(`/api/teacher/book-editor/${bookId}/assets`, { method: "POST", headers: { "content-type": "image/png" }, body: blob });
+      const { asset } = await importRequest<{ asset: { id: string } }>(`/api/teacher/book-editor/${bookId}/assets`, { method: "POST", headers: { "content-type": "image/png" }, body: blob });
       const imported = emptyStorybookDocument(format, `page_${crypto.randomUUID().replaceAll("-", "")}`, `element_${crypto.randomUUID().replaceAll("-", "")}`).pages[0];
       imported.backgroundAssetId = asset.id; imported.elements[0].text = ""; doc.pages.push(imported);
       // Save each successful page as a recoverable draft, but expose feedback/order only after all pages exist.
-      const saved = await teacherRequest<{ revision: number }>(`/api/teacher/book-editor/${bookId}`, postJson({ requestId: `import_${crypto.randomUUID().replaceAll("-", "")}`, expectedRevision: revision, title, document: doc, complete: n === pdf.numPages }, "PUT"));
+      const saved = await importRequest<{ revision: number }>(`/api/teacher/book-editor/${bookId}`, postJson({ requestId: `import_${crypto.randomUUID().replaceAll("-", "")}`, expectedRevision: revision, title, document: doc, complete: n === pdf.numPages }, "PUT"));
       revision = saved.revision; page.cleanup(); canvas.width = canvas.height = 1;
     }
     return bookId;

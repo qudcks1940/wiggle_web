@@ -5,7 +5,7 @@
 
 ## 2026-09-17 BookPrint 하드커버 고정 (로컬 검증 완료)
 
-- 2026-09-18 PR 준비: 구현 `3374d52`, 최신 main `32d94fd` 병합 `8fc9ff1`. CSS 끝부분 양쪽 추가 규칙 보존. 병합 후 production build·전체 테스트 350/350·typecheck·lint·diff check 통과. 개인 fork `qudcks1940/wiggle_web`의 `codex/bookprint-squarebook`에서 운영 저장소 main 대상으로 제출. API 키/환경 파일 제외.
+- 2026-09-18 PR 준비: 구현 `3374d52`, 최신 main `32d94fd` 병합 `8fc9ff1`. CSS 끝부분 양쪽 추가 규칙 보존. 병합 후 production build·전체 테스트 350/350·typecheck·lint·diff check 통과. 개인 fork `qudcks1940/wiggle_web`의 `codex/bookprint-squarebook`에 push하고 운영 저장소 main 대상으로 [PR #7](https://github.com/yonghwan86/wiggle_web/pull/7) 생성 완료. 교사/관리자 브라우저 재검증도 통과. API 키/환경 파일 제외, main 병합·배포 없음.
 
 - 사용자 지정 main `cdfe23e`를 `C:/Users/user/Desktop/Project/wiggle_web_bookprint_20260917`에 새 clone. 브랜치 `codex/bookprint-squarebook`, 원래 작업 폴더 보존. main push·배포 없음.
 - 새 책 생성/작품에서 생성/PDF 가져오기는 `squarebook-hc`(243:248) 고정. 모양 선택/변경 UI 제거. 기존 저장 책 비율 보존, DB 일괄 변환 없음.

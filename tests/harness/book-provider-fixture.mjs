@@ -15,6 +15,7 @@ globalThis.fetch = async (input, init = {}) => {
   }
   const body = typeof init.body === "string" ? JSON.parse(init.body) : init.body;
   if (url.hostname === "api.openai.com") {
+    if (process.env.WIGGLE_BOOK_PROVIDER_DELAY_MS) await new Promise(resolve => setTimeout(resolve, Math.min(5000, Number(process.env.WIGGLE_BOOK_PROVIDER_DELAY_MS) || 0)));
     assert.equal(body.store, false);
     const rubric = JSON.parse(body.instructions.split("<rubric_data>\n")[1].split("\n</rubric_data>")[0]);
     const content = body.input[0].content, texts = content.filter((c) => c.type === "input_text"), images = content.filter((c) => c.type === "input_image");

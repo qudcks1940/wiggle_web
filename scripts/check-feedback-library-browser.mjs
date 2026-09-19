@@ -1,0 +1,63 @@
+// Run after npm run build. Set BOOK_PLAYWRIGHT_MODULE and optionally BOOK_CHROME_PATH.
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {createRequire} from 'node:module';
+import {readFile, mkdir} from 'node:fs/promises';
+import {unzipSync} from 'fflate';
+import {PDFDocument} from 'pdf-lib';
+import {startTestServer} from '../tests/harness/server.mjs';
+import {sha256} from '../lib/token-crypto.ts';
+import {emptyStorybookDocument} from '../lib/storybook-model.ts';
+const require=createRequire(import.meta.url),{chromium}=require(process.env.BOOK_PLAYWRIGHT_MODULE || 'playwright');
+const server=await startTestServer({env:{OPENAI_API_KEY:'fixture',WIGGLE_BOOK_PROVIDER_FIXTURE:'true',WIGGLE_BOOK_PROVIDER_DELAY_MS:'2200',NODE_OPTIONS:'--import='+new URL('../tests/harness/book-provider-fixture.mjs',import.meta.url).href}});
+await server.fetch('/api/student');
+const teacher='teacher_feedback', room='class_feedback', token=randomUUID(), students=['student_feedback01','student_feedback02'];
+await server.DB.batch([
+ server.DB.prepare("INSERT INTO teachers(id,email,display_name) VALUES(?,?,'피드백 교사')").bind(teacher,'feedback@example.test'),
+ server.DB.prepare("INSERT INTO classrooms(id,teacher_id,display_name,class_code,join_token) VALUES(?,?,'피드백 반','1928',?)").bind(room,teacher,randomUUID()),
+ ...students.map((id,i)=>server.DB.prepare("INSERT INTO student_profiles(id,classroom_id,nickname,animal,last_activity_at,seat_number,real_name) VALUES(?,?,'별명','cat',CURRENT_TIMESTAMP,?,'테스트실명')").bind(id,room,i+1)),
+ server.DB.prepare("INSERT INTO teacher_sessions(token_hash,teacher_id,expires_at,last_used_at) VALUES(?,?,?,CURRENT_TIMESTAMP)").bind(await sha256(token),teacher,new Date(Date.now()+3600000).toISOString()),
+ ...[0,1,2].map(i=>{const doc=emptyStorybookDocument();doc.pages[0].elements[0].text='이야기 '+i;return server.DB.prepare("INSERT INTO storybooks(id,student_id,classroom_id,title,document_json,schema_version,revision,status,completed_at) VALUES(?,?,?,?,?,1,1,'complete',CURRENT_TIMESTAMP)").bind('storybook_feedback000'+i,students[i<2?0:1],room,'같은 제목',JSON.stringify(doc));})
+]);
+const browser=await chromium.launch({executablePath:process.env.BOOK_CHROME_PATH || undefined,headless:true});
+try {
+ const context=await browser.newContext();await context.addCookies([{name:'wiggle_teacher',value:token,url:server.origin}]);
+ const page=await context.newPage();page.setDefaultTimeout(30000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(server.origin+'/teacher/class/'+room+'/books');
+ const group1=page.getByRole('region',{name:'1번 테스트실명 그림책',exact:true}),group2=page.getByRole('region',{name:'2번 테스트실명 그림책',exact:true});
+ await group1.waitFor();
+ await page.getByLabel('학년',{exact:true}).fill('4');await page.getByLabel('반',{exact:true}).fill('7');await page.getByRole('button',{name:'학년·반 저장',exact:true}).click();await page.getByText('학년·반을 저장했어요.',{exact:true}).first().waitFor();assert.equal(await group1.locator('.book-library-card').count(),2);assert.equal(await group2.locator('.book-library-card').count(),1);
+ await page.getByLabel('전체 선택',{exact:true}).check();
+ assert.equal(await page.getByRole('button',{name:'선택한 피드백 PDF 받기',exact:true}).isDisabled(),true);
+ await page.getByRole('button',{name:'선택한 책 피드백 만들기',exact:true}).click();
+ await page.getByRole('button',{name:'피드백 만드는 중…',exact:true}).first().waitFor();
+ await page.waitForFunction(()=>document.querySelector('.feedback-progress')?.textContent.includes('피드백 작성 중'));
+ assert.equal(await page.locator('.feedback-spinner').first().isVisible(),true);
+ await page.getByRole('button',{name:'현재 책까지 처리',exact:true}).click();
+ await page.getByText(/처리를 멈췄어요/).first().waitFor();
+ await page.getByRole('button',{name:'대기 작업 이어서 처리',exact:true}).click();
+ await page.getByText(/피드백 처리 완료/).first().waitFor();
+ const files1=page.getByRole('region',{name:'1번 테스트실명 피드백 파일',exact:true}),files2=page.getByRole('region',{name:'2번 테스트실명 피드백 파일',exact:true});
+ assert.equal(await files1.locator('li').count(),2);assert.equal(await files2.locator('li').count(),1);
+ await page.route('**/api/teacher/book-feedback/*?format=pdf',async route=>{await new Promise(r=>setTimeout(r,800));await route.continue();});
+ let event=page.waitForEvent('download');await files1.getByRole('button',{name:'이 학생 PDF 모두 받기 (ZIP)',exact:true}).click();
+ await page.locator('.feedback-files .feedback-progress').waitFor();assert.ok(await page.locator('.feedback-files .feedback-progress').innerText().then(t=>t.includes('PDF 준비 중')));
+ const zip=await event;const entries=unzipSync(await readFile(await zip.path()));assert.equal(Object.keys(entries).length,2);
+ for(const bytes of Object.values(entries)) assert.ok((await PDFDocument.load(bytes)).getPageCount()>0);
+ await page.getByText(/2권의 피드백 파일 다운로드를 시작/).first().waitFor();
+ event=page.waitForEvent('download');await files2.getByRole('button',{name:'PDF 받기',exact:true}).click();assert.ok((await event).suggestedFilename().endsWith('.pdf'));
+ await page.getByText(/1권의 피드백 파일 다운로드를 시작/).first().waitFor();
+ await page.unroute('**/api/teacher/book-feedback/*?format=pdf');
+ await page.route('**/api/teacher/book-feedback/*?format=pdf',route=>route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({error:'PDF 검증용 실패'})}));
+ await files2.getByRole('button',{name:'PDF 받기',exact:true}).click();await page.getByRole('alert').filter({hasText:'PDF 검증용 실패'}).waitFor();
+ assert.equal(await files2.getByRole('button',{name:'PDF 받기',exact:true}).isEnabled(),true);
+ await page.unroute('**/api/teacher/book-feedback/*?format=pdf');
+ await page.reload();await files1.waitFor();assert.equal(await files1.locator('li').count(),2);
+ await server.DB.prepare("UPDATE book_feedback_jobs SET status='processing' WHERE storybook_id='storybook_feedback0000'").run();
+ await page.reload();await page.locator('.feedback-progress').waitFor();
+ await server.DB.prepare("UPDATE book_feedback_jobs SET status='complete' WHERE storybook_id='storybook_feedback0000'").run();
+ await page.locator('.feedback-progress').waitFor({state:'detached'});
+ await mkdir('work/feedback-qa',{recursive:true});
+ for(const [width,height] of [[320,568],[390,844],[844,390],[1440,1000]]) {await page.setViewportSize({width,height});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:`work/feedback-qa/${width}.png`,fullPage:true});}
+ assert.deepEqual(errors,[]);console.log('PASS student identity grouping, live generation progress, stop/resume, persistent PDF collections, same-title ZIP contains two valid PDFs, single PDF, download progress/error recovery, four widths');
+} finally {await browser.close();await server.dispose();}

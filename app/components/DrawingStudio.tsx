@@ -101,24 +101,7 @@ const SHAPE_KINDS = [
   { kind: "cloud", icon: "☁", label: "구름" },
 ] as const;
 const BASIC_SHAPE_COUNT = 4;
-type ReflectionChoice = { emoji: string; label: string; value: string };
 
-function favoritePartChoices(lesson?: Lesson): ReflectionChoice[] {
-  const topic = lesson?.topic.trim();
-  const shortTopic = topic ? Array.from(topic).slice(0, 7).join("") : "주인공";
-  return [
-    { emoji: lesson?.emoji ?? "⭐", label: shortTopic, value: topic ? `내가 그린 ${topic}` : "내가 그린 주인공" },
-    { emoji: "〰️", label: "선·모양", value: "내가 그린 선과 모양" },
-    { emoji: "✨", label: "더한 것", value: "내가 새로 더한 것" },
-    { emoji: "🖼️", label: "그림 전체", value: "그림 전체" },
-  ];
-}
-const FAVORITE_REASON_CHOICES = [
-  { emoji: "😄", label: "재미있어", value: "그리면서 재미있어서" },
-  { emoji: "🌈", label: "색이 좋아", value: "내가 고른 색이 마음에 들어서" },
-  { emoji: "💡", label: "내 생각", value: "내 생각을 그림에 넣어서" },
-  { emoji: "💪", label: "해냈어", value: "어려워도 끝까지 그려서" },
-];
 const TEXT_KIND_OPTIONS: Array<{ kind: TextKind; icon: string; label: string; help: string }> = [
   { kind: "label", icon: "🏷️", label: "이름표", help: "짧은 낱말" },
   { kind: "title", icon: "✨", label: "제목", help: "그림의 이름" },
@@ -515,7 +498,6 @@ export function DrawingStudio() {
   // 지난 회차 서랍(Story 3.1) — 같은 아크의 다른 회차 그림. 보기 전용이며 도화지를 딤 처리하지 않는다.
   const [documentState, setDocumentState] = useState<DrawDocument>(emptyDocument());
   const lesson = useMemo(() => (params.id === "new" ? requestedLesson : lessonBySlug(artwork?.lessonSlug)), [artwork?.lessonSlug, params.id, requestedLesson]);
-  const reflectionPartChoices = useMemo(() => favoritePartChoices(lesson), [lesson]);
   const [studioTool, setStudioTool] = useState<StudioTool>("pencil");
   const [color, setColor] = useState(PALETTE[0]);
   // 그리기 굵기와 지우개 굵기를 따로 기억한다. 하나로 합치면 지우개를 한 번 쓸 때마다
@@ -566,8 +548,6 @@ export function DrawingStudio() {
   const [reflectionOpen, setReflectionOpen] = useState(false);
   const [completionState, setCompletionState] = useState<"idle" | "saving" | "error">("idle");
   const [completionError, setCompletionError] = useState("");
-  const [favoritePart, setFavoritePart] = useState("");
-  const [favoriteReason, setFavoriteReason] = useState("");
   // 틀리는 해석자. 몽그리가 쉬고 있어도 완성은 그대로 되어야 하므로 전부 선택 항목이다.
   const [interpretation, setInterpretation] = useState<StoryInterpretation | null>(null);
   const [interpretLoading, setInterpretLoading] = useState(false);
@@ -2337,12 +2317,9 @@ export function DrawingStudio() {
     try {
       const ok = await save(documentStateRef.current, {
         complete: true,
-        reflection: {
-          favoritePart,
-          favoriteReason,
-          spokenDescription: `${favoritePart}을(를) 그렸어요.`,
-          storyText,
-        },
+        // 2026-09-20 사용자 지시로 "마음에 드는 곳·왜 마음에 들어" 고르기를 없앴다.
+        // 아이 말로 남는 것은 몽그리 짐작을 고친 문장(storyText) 하나다.
+        reflection: { favoritePart: "", favoriteReason: "", spokenDescription: "", storyText },
       });
       if (ok) {
         location.href = "/student/archive";
@@ -3375,44 +3352,11 @@ export function DrawingStudio() {
                 )}
               </div>
             )}
-            <div className="reflection-question">
-              <p>마음에 드는 곳은?</p>
-              <div className="reflection-choice-grid">
-                {reflectionPartChoices.map((choice) => (
-                  <button type="button" aria-pressed={favoritePart === choice.value} onClick={() => setFavoritePart(choice.value)} key={choice.value}>
-                    <span>{choice.emoji}</span>
-                    {choice.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="reflection-question">
-              <p>왜 마음에 들어?</p>
-              <div className="reflection-choice-grid">
-                {FAVORITE_REASON_CHOICES.map((choice) => (
-                  <button type="button" aria-pressed={favoriteReason === choice.value} onClick={() => setFavoriteReason(choice.value)} key={choice.value}>
-                    <span>{choice.emoji}</span>
-                    {choice.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <details className="reflection-write-more">
-              <summary>⌨️ 직접 글로 쓰고 싶어요</summary>
-              <label htmlFor="favorite-part">
-                마음에 드는 곳
-                <input id="favorite-part" maxLength={80} value={favoritePart} onChange={(event) => setFavoritePart(event.target.value)} placeholder="예: 무지개 꼬리" />
-              </label>
-              <label htmlFor="favorite-reason">
-                마음에 드는 이유
-                <textarea id="favorite-reason" maxLength={180} value={favoriteReason} onChange={(event) => setFavoriteReason(event.target.value)} placeholder="예: 내가 고른 색이 좋아서" />
-              </label>
-            </details>
             <div className="modal-actions">
               <button className="button secondary" disabled={completionState === "saving"} onClick={closeReflection}>
                 🎨 더 그릴래
               </button>
-              <button className="button primary child-primary-action" aria-busy={completionState === "saving"} disabled={!favoritePart || !favoriteReason || completionState === "saving"} onClick={complete}>
+              <button className="button primary child-primary-action" aria-busy={completionState === "saving"} disabled={completionState === "saving"} onClick={complete}>
                 <span aria-hidden="true">{completionState === "saving" ? "⏳" : "⭐"}</span>{completionState === "saving" ? "작품을 안전하게 저장 중…" : completionState === "error" ? "다시 저장하기" : "작품 완성"}
               </button>
             </div>

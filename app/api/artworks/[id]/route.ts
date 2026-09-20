@@ -75,7 +75,8 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   const reflection = (payload.reflection ?? {}) as Record<string, unknown>;
   const favoritePart = cleanText(reflection.favoritePart, 80); const favoriteReason = cleanText(reflection.favoriteReason, 180);
   const spokenDescription = cleanText(reflection.spokenDescription, 300); const storyText = cleanText(reflection.storyText, 600);
-  if (complete && (!favoritePart || !favoriteReason)) return jsonError("마음에 드는 곳과 이유를 모두 적어 주세요.");
+  // 2026-09-20 사용자 지시로 "마음에 드는 곳·왜 마음에 들어" 고르기를 없앴다. 소감은 더 이상 완성의 조건이 아니다
+  // (몽그리 짐작을 고친 문장 storyText만 남는다). 옛 기록은 그대로 두고, 빈 값으로도 완성이 저장된다.
 
   const newRevision = artwork.revision + 1; const thumbnail = decodeImage(payload.thumbnailDataUrl, 500_000); const finalImage = complete ? decodeImage(payload.finalDataUrl, 3_500_000) : null;
   if (payload.thumbnailDataUrl && !thumbnail) return jsonError("썸네일 파일을 확인해 주세요.", 413);

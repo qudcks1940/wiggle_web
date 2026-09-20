@@ -41,7 +41,11 @@ test("drawing, navigation and reflection retain familiar visual actions when tex
   // 자리는 내 그림 하나뿐이라, 거기서 새 그림·그림책·수업 마치기를 그림 표지로 고른다.
   // 기다리는 화면은 글자 대신 몽그리 그림이 먼저다(2026-09-20) — 글을 못 읽어도 무엇을 기다리는지 안다.
   assert.match(entry, /<WaitMongri line="도화지를 펴고 있어요" \/>/);
-  assert.match(archive, /<span aria-hidden="true">🎨<\/span>새 그림/);
+  // 2026-09-20 GPT 인계로 보관함에서 「새 그림」을 뺐다(archive-sketchbook-handoff).
+  // 남은 두 길과 그림 넘기기 단추가 글 대신 그림으로 보여야 한다는 뜻은 그대로다.
+  assert.doesNotMatch(archive.slice(archive.indexOf("return <main")), /새 그림/);
+  assert.match(archive, /aria-label="이전 그림 보기"/);
+  assert.match(archive, /aria-label="다음 그림 보기"/);
   // 2026-09-20 보관함을 펼친 책으로 바꾸며 표지 그림을 시안에 맞췄다(📘→📖, 🚪→📕).
   // 지키려는 것은 특정 이모지가 아니라 "글을 못 읽어도 고를 그림이 있다"는 것이다.
   assert.match(archive, /<span aria-hidden="true">📖<\/span>그림책/);

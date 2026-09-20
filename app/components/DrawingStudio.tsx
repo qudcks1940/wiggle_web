@@ -18,6 +18,7 @@ import { activeProfile, clearQueuedArtworkSaves, createSerialTaskQueue, deleteQu
 
 import type { QueuedArtworkDraft } from "@/lib/client-session";
 import { Logo } from "./Logo";
+import { WaitMongri } from "./WaitMongri";
 import { useModalDialog } from "./useModalDialog";
 import { ColorPickerDialog } from "./ColorPickerDialog";
 import { StudentMessageCenter, StudentTeacherMessage } from "./StudentMessageCenter";
@@ -2679,7 +2680,13 @@ export function DrawingStudio() {
     );
   }
 
-  if (!artwork) return <main className="drawing-loading">{saveState}</main>;
+  // 기다리는 화면은 입장 확인과 같은 것을 쓴다(2026-09-20 사용자 요청). 불러오기가 실패하면 그 문구를 둘째 줄에 보여 준다.
+  if (!artwork) {
+    // 실패 문구가 영어(예: "Failed to fetch")일 수 있다 — 아이가 읽는 줄이므로 우리말 안내로 바꾼다.
+    const waiting = saveState === "불러오는 중";
+    const koreanMessage = /[가-힣]/.test(saveState) ? saveState : "연결이 잠깐 어려워요. 다시 들어와 줄래?";
+    return <WaitMongri line={waiting ? "도화지를 펴고 있어요" : koreanMessage} />;
+  }
   const step = lesson ? Math.min(artwork.currentStep, lesson.steps.length - 1) : 0;
   const guideNotice = guidePhase === "demo" ? "연필이 먼저 보여줄게!" : guidePhase === "practice" ? (guidePracticeTried ? "한 번 따라 했어! 이제 점선 없이도 해볼까?" : "이제 네 차례야. 아무 점선이나 골라서 시작해 봐.") : "";
   const choiceFeedback = childChoice ? CHOICE_DRAWING_SETUP[childChoice]?.feedback ?? "고른 모습을 그림에 직접 더해요." : "";

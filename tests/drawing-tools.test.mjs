@@ -249,3 +249,26 @@ test("lesson guides use a pencil demo before dotted practice without leaving the
   assert.match(studio, /점선만 보기/);
   assert.match(studio, /className=\{guidePhase !== "independent" && lessonGuideAvailable \? "guide-canvas" : "guide-canvas hidden"\}/);
 });
+
+test("기다리는 화면은 입장 확인과 같은 몽그리 화면을 쓴다", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+  const [wait, join, page, css] = await Promise.all([
+    read("../app/components/WaitMongri.tsx"),
+    read("../app/components/JoinClient.tsx"),
+    read("../app/student/draw/[id]/page.tsx"),
+    read("../app/globals.css"),
+  ]);
+  // 2026-09-20 사용자 요청: 그리기 화면도 입장 화면처럼 몽그리가 뜨는 대기 화면을 쓴다.
+  assert.match(wait, /wait-mongri\.png/);
+  assert.match(wait, /check\.waitShell/);
+  assert.match(join, /<WaitMongri line="수업실을 준비하고 있어요"/);
+  assert.match(studio, /return <WaitMongri line=\{waiting \? "도화지를 펴고 있어요" : koreanMessage\} \/>;/);
+  // 실패 문구가 영어로 나오면 아이가 읽지 못한다.
+  assert.match(studio, /\/\[가-힣\]\/\.test\(saveState\) \? saveState : "연결이 잠깐 어려워요/);
+  assert.match(page, /<Suspense fallback=\{<WaitMongri line="도화지를 펴고 있어요" \/>\}>/);
+  // 글자만 있던 옛 대기 화면은 남아 있으면 안 된다 — 한쪽만 고쳐지는 원인이 된다.
+  assert.doesNotMatch(studio, /drawing-loading/);
+  assert.doesNotMatch(page, /drawing-loading/);
+  assert.doesNotMatch(css, /\.drawing-loading/);
+});

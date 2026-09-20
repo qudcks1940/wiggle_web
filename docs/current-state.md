@@ -1165,6 +1165,7 @@ typecheck·lint(오류 0), `npm test` 323/324(실패 1은 Node 22.13 환경 문�
 - `app/components/WaitMongri.tsx`를 만들어 입장 확인(`JoinClient`)과 그리기 화면(`DrawingStudio`의 불러오는 중, `app/student/draw/[id]/page.tsx`의 Suspense)이 같은 화면을 쓴다. 모습은 2026-09-09 입장 화면 시안 그대로이고 문구만 화면에 맞춘다.
 - 실패 문구가 영어로 나올 수 있어(`Failed to fetch`) 우리말이 아니면 "연결이 잠깐 어려워요. 다시 들어와 줄래?"로 바꿔 보여 준다.
 - 글자만 있던 `.drawing-loading` 규칙과 문구는 지웠다.
+- (같은 날 보고) `/student`에서 도화지로 넘어가는 중간 화면(`StudentEntry`)에 옛 "🎨 도화지를 펴는 중…" 카드가 남아 먼저 스쳐 지나갔다. 그 화면도 같은 대기 화면을 쓰게 바꿨다(실패했을 때만 다시 해 보기 안내를 연다). 실측: `/student`부터 도화지까지 0.4초 간격으로 훑어 옛 화면이 한 번도 나타나지 않는 것을 확인했다.
 - 검증: 실제 브라우저에서 작품 API를 막아 대기 화면을 띄워 1180×820·390×844 모두 몽그리 그림(330×236·220×157)과 두 줄이 입장 화면과 같게 나오는 것을 확인했다. typecheck 0, lint 오류 0, `npm test` 356/356, `browser-check` 통과.
 
 ## 2026-09-20 명단 추가를 번호 칸·이름 칸으로 (`claude/roster-number-name-fields`)

@@ -267,6 +267,10 @@ test("기다리는 화면은 입장 확인과 같은 몽그리 화면을 쓴다"
   // 실패 문구가 영어로 나오면 아이가 읽지 못한다.
   assert.match(studio, /\/\[가-힣\]\/\.test\(saveState\) \? saveState : "연결이 잠깐 어려워요/);
   assert.match(page, /<Suspense fallback=\{<WaitMongri line="도화지를 펴고 있어요" \/>\}>/);
+  // /student에서 도화지로 넘어가는 중간 화면도 같은 화면을 쓴다 — 예전에는 글자만 있는 화면이 먼저 스쳐 지나갔다.
+  const entry = await read("../app/components/StudentEntry.tsx");
+  assert.match(entry, /if \(!error\) return <WaitMongri line="도화지를 펴고 있어요" \/>;/);
+  assert.doesNotMatch(entry, /도화지를 펴는 중/);
   // 글자만 있던 옛 대기 화면은 남아 있으면 안 된다 — 한쪽만 고쳐지는 원인이 된다.
   assert.doesNotMatch(studio, /drawing-loading/);
   assert.doesNotMatch(page, /drawing-loading/);

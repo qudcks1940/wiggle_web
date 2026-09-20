@@ -39,7 +39,8 @@ test("entry can be completed with a number pad and one animal picture instead of
 test("drawing, navigation and reflection retain familiar visual actions when text is not understood", () => {
   // 커리큘럼 은퇴(2026-09-12): 홈이 사라지고 아이는 바로 도화지로 간다. 도화지 밖의
   // 자리는 내 그림 하나뿐이라, 거기서 새 그림·그림책·수업 마치기를 그림 표지로 고른다.
-  assert.match(entry, /도화지를 펴는 중/);
+  // 기다리는 화면은 글자 대신 몽그리 그림이 먼저다(2026-09-20) — 글을 못 읽어도 무엇을 기다리는지 안다.
+  assert.match(entry, /<WaitMongri line="도화지를 펴고 있어요" \/>/);
   assert.match(archive, /<span aria-hidden="true">🎨<\/span>새 그림/);
   assert.match(archive, /<span aria-hidden="true">📘<\/span>그림책/);
   assert.match(archive, /<span aria-hidden="true">🚪<\/span>\{leaving \? "나가는 중…" : "수업 마치기"\}/);

@@ -27,9 +27,10 @@ export const isDocumentSpan = (value: unknown): value is DocumentSpan => DOCUMEN
 export function documentSpan(document: Pick<DrawDocument, "span">): DocumentSpan {
   return document.span ?? 1;
 }
-/** 화면에서 고른 크기(픽셀·글자 단계)를 도화지 단위로 바꾼다. 좁은 도화지(span 1)는 그대로다. */
-export const toDocumentUnits = (screenValue: number, span: number) => Math.round(screenValue * span);
-export const toScreenUnits = (documentValue: number, span: number) => Math.round(documentValue / span);
+/** 화면에서 고른 크기(굵기·글자 단계)를 도화지 단위로 바꾼다. 넓은 도화지는 100%에서 화면 span장 너비로
+ *  펼쳐지므로, 같은 굵기로 보이려면 저장 값을 span으로 나눈다. 좁은 도화지(span 1)는 그대로여서 옛 작품과 같다. */
+export const toDocumentUnits = (screenValue: number, span: number) => Math.round(screenValue / span * 100) / 100;
+export const toScreenUnits = (documentValue: number, span: number) => Math.round(documentValue * span);
 /** 그린 것이 차지하는 칸(0~1). 넓은 도화지에서 완성 PNG·썸네일을 그림에 맞춰 잘라내는 데 쓴다.
  *  아무것도 없으면 null. 굵은 선이 잘리지 않게 가장 굵은 선의 절반만큼 넓혀 준다. */
 export function contentBounds(document: DrawDocument): { x: number; y: number; width: number; height: number } | null {
@@ -55,8 +56,9 @@ export function contentBounds(document: DrawDocument): { x: number; y: number; w
   return { x: left, y: top, width: Math.max(0.02, right - left), height: Math.max(0.02, bottom - top) };
 }
 
+/** 글자 크기도 굵기와 같은 규칙이다 — 넓은 도화지에서는 TEXT_SIZES를 span으로 나눈 값이 저장된다. */
 export const isTextSize = (value: unknown): value is number =>
-  typeof value === "number" && DOCUMENT_SPANS.some((span) => TEXT_SIZES.includes((value / span) as TextSize));
+  typeof value === "number" && Number.isFinite(value) && value >= TEXT_SIZES[0] / DOCUMENT_SPANS[DOCUMENT_SPANS.length - 1] - 0.01 && value <= TEXT_SIZES[TEXT_SIZES.length - 1] + 0.01;
 export const DEFAULT_DOCUMENT_HEIGHT = 640;
 
 export function isDocumentHeight(value: unknown): value is number {
@@ -82,7 +84,9 @@ export const STROKE_TOOLS = ["pen", "pencil", "crayon", "marker", "watercolor", 
 /* 굵기는 도화지 단위(가로 1024 기준)다. 화면에서 고르는 값은 1~60픽셀이고, 넓은 도화지(span)에서는
  * 화면 한 픽셀이 도화지 단위로 span배라 저장 값도 그만큼 커진다. 그래서 상한은 60 × 가장 넓은 도화지다. */
 export const STROKE_WIDTH_MIN = 1;
-export const STROKE_WIDTH_MAX = 60 * 3;
+export const STROKE_WIDTH_MAX = 60;
+/* 넓은 도화지에서는 화면 1픽셀이 도화지 1/3단위라 소수 굵기가 필요하다(0.01 단위까지). */
+export const STROKE_WIDTH_UNIT_MIN = 0.2;
 export const STROKE_WIDTH_SCREEN_MAX = 60;
 export const SHAPE_KINDS = ["line", "circle", "triangle", "rectangle", "rounded-rectangle", "star", "heart", "arrow", "curve", "cloud"] as const;
 export const TEXT_KINDS = ["label", "title", "speech"] as const;
@@ -142,7 +146,9 @@ type Point = { x: number; y: number; pressure?: number };
 
 export type StrokeTool = (typeof STROKE_TOOLS)[number];
 export type StrokeWidth = number;
-export const isStrokeWidth = (value: unknown): value is StrokeWidth => Number.isInteger(value) && (value as number) >= STROKE_WIDTH_MIN && (value as number) <= STROKE_WIDTH_MAX;
+export const isStrokeWidth = (value: unknown): value is StrokeWidth =>
+  typeof value === "number" && Number.isFinite(value) && value >= STROKE_WIDTH_UNIT_MIN && value <= STROKE_WIDTH_MAX
+  && Math.abs(value * 100 - Math.round(value * 100)) < 1e-9;
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
 export type TextKind = (typeof TEXT_KINDS)[number];
 export type TextSize = (typeof TEXT_SIZES)[number];

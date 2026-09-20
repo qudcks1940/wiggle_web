@@ -111,21 +111,30 @@ test("넓은 도화지(span): 저장 형식은 그대로 두고 화면에서 몇
   assert.equal(withSpan(4), null);
   assert.equal(withSpan(0), null);
   assert.equal(validateDrawDocument({ schemaVersion: 1, rendererVersion: 1, size: 1024, height: 640, ops: [] })?.span, undefined);
-  // 화면에서 고른 굵기·글자 크기는 도화지 단위로 span배가 된다(화면에서 같은 크기로 보이게).
-  assert.equal(toDocumentUnits(16, 3), 48);
-  assert.equal(toScreenUnits(48, 3), 16);
+  // 넓은 도화지는 100%에서 화면 span장 너비로 펼쳐지므로, 화면에서 같은 굵기로 보이려면 저장 값을 span으로 나눈다.
+  // (2026-09-20 회귀: 곱하는 쪽으로 넣어 100%에서 선이 아홉 배로 두꺼웠다.)
+  assert.equal(toDocumentUnits(16, 3), 5.33);
+  assert.equal(toScreenUnits(5.33, 3), 16);
   assert.equal(toDocumentUnits(16, 1), 16);
+  const screenPx = (units, span, frame = 1180) => units / 1024 * frame * span;
+  assert.ok(Math.abs(screenPx(toDocumentUnits(16, 3), 3) - screenPx(16, 1)) < 0.2, "100%에서 옛 도화지와 같은 굵기로 보여야 한다");
 });
 
 test("넓은 도화지의 굵기·글자 크기는 저장 검증을 통과한다", () => {
   const now = new Date().toISOString();
   const doc = (ops) => ({ schemaVersion: 1, rendererVersion: 1, size: 1024, height: 640, span: 3, ops });
   const stroke = (width) => ({ opId: "op_wide001", clientOpId: "client_wide001", type: "stroke", at: now, tool: "crayon", color: "#E53935", width, points: [{ x: 0.2, y: 0.2, pressure: 0.5 }] });
-  assert.ok(validateDrawDocument(doc([stroke(180)])), "60픽셀 × span 3 = 180은 통과해야 한다");
-  assert.equal(validateDrawDocument(doc([stroke(181)])), null);
+  // 넓은 도화지에서는 소수 굵기가 나온다(16 ÷ 3). 정수만 받으면 가는 선을 그릴 수 없다.
+  assert.ok(validateDrawDocument(doc([stroke(5.33)])), "16 ÷ span 3 = 5.33은 통과해야 한다");
+  assert.equal(validateDrawDocument(doc([stroke(5.333)])), null, "0.01보다 잘게 쪼갠 값은 거절한다");
+  assert.ok(validateDrawDocument(doc([stroke(60)])), "가장 굵은 값은 그대로 60이다");
+  assert.equal(validateDrawDocument(doc([stroke(61)])), null);
+  assert.equal(validateDrawDocument(doc([stroke(0.1)])), null);
   const text = (fontSize) => ({ opId: "op_wide002", clientOpId: "client_wide002", type: "text", at: now, textObjectId: "text_abcd1234", text: "안녕", textKind: "label", fontSize, color: "#1B3A57", points: [{ x: 0.5, y: 0.5 }] });
-  assert.ok(validateDrawDocument(doc([text(192)])), "64 × 3 = 192는 통과해야 한다");
-  assert.equal(validateDrawDocument(doc([text(200)])), null);
+  assert.ok(validateDrawDocument(doc([text(21.33)])), "64 ÷ 3 = 21.33은 통과해야 한다");
+  assert.ok(validateDrawDocument(doc([text(84)])), "가장 큰 글자는 그대로 84다");
+  assert.equal(validateDrawDocument(doc([text(120)])), null);
+  assert.equal(validateDrawDocument(doc([text(4)])), null);
 });
 
 test("그린 칸(contentBounds)은 완성 PNG를 그림에 맞춰 잘라내는 기준이다", async () => {

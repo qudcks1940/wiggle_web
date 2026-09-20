@@ -181,7 +181,9 @@ export async function GET(request: Request) {
   const archivedStudents = await db.prepare(`SELECT s.id, s.nickname, s.animal, s.seat_number AS seatNumber, s.real_name AS realName, s.last_activity_at AS lastActivityAt, s.archived_at AS archivedAt, COUNT(a.id) AS artworkCount FROM student_profiles s LEFT JOIN artworks a ON a.student_id = s.id WHERE s.classroom_id = ? AND s.archived_at IS NOT NULL GROUP BY s.id ORDER BY s.archived_at DESC, s.nickname COLLATE NOCASE`).bind(classroomId).all<{ id: string; nickname: string; animal: string; seatNumber: number | null; realName: string | null; lastActivityAt: string; archivedAt: string; artworkCount: number }>();
   const messages = await db.prepare(`SELECT m.id, m.student_id AS studentId, m.body, m.created_at AS createdAt, s.nickname, COUNT(r.student_id) AS seenCount FROM teacher_messages m LEFT JOIN student_profiles s ON s.id = m.student_id LEFT JOIN message_receipts r ON r.message_id = m.id WHERE m.classroom_id = ? GROUP BY m.id ORDER BY m.created_at DESC, m.id DESC LIMIT 30`).bind(classroomId).all();
   const familyLinks = await db.prepare(`SELECT l.id, l.student_id AS studentId, l.scope, l.expires_at AS expiresAt, l.revoked_at AS revokedAt, l.created_at AS createdAt, COUNT(f.artwork_id) AS artworkCount FROM family_share_links l JOIN student_profiles s ON s.id = l.student_id LEFT JOIN family_share_artworks f ON f.link_id = l.id WHERE l.teacher_id = ? AND s.classroom_id = ? GROUP BY l.id ORDER BY l.created_at DESC LIMIT 50`).bind(teacher.id, classroomId).all();
-  return noStoreJson({ teacher, classroom, students: hydrated, archivedStudents: archivedStudents.results, messages: messages.results, familyLinks: familyLinks.results });
+  // serverNow: 손든 뒤 얼마나 기다렸는지를 교사 화면이 서버 시계 기준으로 계산하게 한다.
+  // 교사 기기 시계가 틀어져 있어도 "3분째"가 어긋나지 않는다.
+  return noStoreJson({ teacher, classroom, students: hydrated, archivedStudents: archivedStudents.results, messages: messages.results, familyLinks: familyLinks.results, serverNow: new Date().toISOString() });
 }
 
 /* 교사가 입력하는 학급 명단. 번호는 학급 안에서 고유하고, 실명은 담임에게만 보인다.

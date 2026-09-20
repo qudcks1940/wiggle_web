@@ -26,7 +26,9 @@ test("그리는 중에는 절대 뜨지 않고, 완성·충돌·선생님 보기
   assert.match(ready, /now - lastStrokeAtRef\.current < AUTO_GRIMI\.idleMs\) return false/);
   assert.match(ready, /artwork\.status === "complete"\) return false/);
   assert.match(ready, /grimiLoading \|\| grimiOpen \|\| reflectionOpen \|\| interpretLoading\) return false/);
-  assert.match(ready, /conflictDraftRef\.current \|\| teacherViewing\) return false/);
+  // 2026-09-20: 손을 들고 선생님을 기다리는 아이도 자동 개입에서 뺐다. 손든 상태는 "손이 멈춘 상태"라
+  // idleMs 조건에 그대로 걸려, 막지 않으면 선생님을 부른 직후 몽그리가 끼어든다.
+  assert.match(ready, /conflictDraftRef\.current \|\| teacherViewing \|\| handRaised\) return false/);
   assert.match(ready, /ops\.length < AUTO_GRIMI\.minOps\) return false/);
   // 획을 그을 때마다 시계를 다시 잰다. 이것이 없으면 그리는 중에도 시간이 흐른다.
   assert.match(studio, /lastStrokeAtRef\.current = Date\.now\(\);/);

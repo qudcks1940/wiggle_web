@@ -71,11 +71,14 @@ test("all tools have recognizable visual icons and child-readable size labels", 
 test("palette shows every basic color without scrolling and the rainbow button opens a detailed picker", async () => {
   assert.doesNotMatch(studio, /colorsExpanded|MORE_PALETTE/);
   assert.match(studio, /import \{ ColorPickerDialog \} from "\.\/ColorPickerDialog"/);
-  // 막대에는 자주 쓰는 8색 + 무지개. 무지개는 12색 창(스크롤 없음)을 열고, 거기서 색 더보기가 상세 고르기 대화상자를 연다.
+  // 막대에는 단색 점 + 자주 쓰는 8색 + 무지개. 단색 점은 12색 창(스크롤 없음)을, 무지개는 색 섞는 대화상자를 연다(2026-09-20).
   assert.match(studio, /const DOCK_QUICK_COLORS = 8;/);
-  assert.match(studio, /className="dock-more-colors"[^>]*aria-haspopup="true"/);
-  assert.match(studio, /<div className="dock-palette" role="group" aria-label="모든 색">\s*\{PALETTE\.map/);
-  assert.match(studio, /className="dock-palette-wheel" aria-haspopup="dialog"[\s\S]*?setColorPickerOpen\(true\)/);
+  assert.match(studio, /className="dock-current-color"[^>]*aria-haspopup="true"[\s\S]*?setPaletteOpen\(\(value\) => !value\)/);
+  assert.match(studio, /className="dock-more-colors"[^>]*aria-haspopup="dialog"[\s\S]*?setColorPickerOpen\(true\)/);
+  assert.match(studio, /<div className="dock-palette" role="group" aria-label="단색 고르기">\s*\{PALETTE\.map/);
+  // 단색 창에는 단색만 둔다 — 섞는 색으로 가는 단추를 그 안에 두면 두 단추가 같은 일을 한다.
+  assert.doesNotMatch(studio, /dock-palette-wheel/);
+  assert.doesNotMatch(css, /dock-palette-wheel/);
   assert.match(studio, /<ColorPickerDialog color=\{selectedColor\} names=\{COLOR_NAMES\}/);
   assert.match(css, /\.dock-color,\.dock-current-color,\.dock-more-colors \{[^}]*min-width:44px; min-height:44px;/);
   assert.match(css, /\.dock-palette \{[^}]*grid-template-columns:repeat\(4,48px\)/);

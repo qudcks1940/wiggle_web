@@ -42,8 +42,10 @@ test("drawing, navigation and reflection retain familiar visual actions when tex
   // 기다리는 화면은 글자 대신 몽그리 그림이 먼저다(2026-09-20) — 글을 못 읽어도 무엇을 기다리는지 안다.
   assert.match(entry, /<WaitMongri line="도화지를 펴고 있어요" \/>/);
   assert.match(archive, /<span aria-hidden="true">🎨<\/span>새 그림/);
-  assert.match(archive, /<span aria-hidden="true">📘<\/span>그림책/);
-  assert.match(archive, /<span aria-hidden="true">🚪<\/span>\{leaving \? "나가는 중…" : "수업 마치기"\}/);
+  // 2026-09-20 보관함을 펼친 책으로 바꾸며 표지 그림을 시안에 맞췄다(📘→📖, 🚪→📕).
+  // 지키려는 것은 특정 이모지가 아니라 "글을 못 읽어도 고를 그림이 있다"는 것이다.
+  assert.match(archive, /<span aria-hidden="true">📖<\/span>그림책/);
+  assert.match(archive, /<span aria-hidden="true">📕<\/span>\{leaving \? "나가는 중…" : "수업 마치기"\}/);
   assert.match(studio, /⬅️ 이전/);
   assert.match(studio, /step === lesson\.steps\.length - 1 \? "⭐" : "➡️"/);
   // 2026-09-20 사용자 지시로 "마음에 드는 곳·왜 마음에 들어" 고르기를 없앴다.

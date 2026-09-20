@@ -35,13 +35,6 @@ function ArtworkPreview({ artwork }: { artwork: ArchiveArtwork }) {
   return <span aria-label={failed ? "그림 미리보기를 불러오지 못했어요" : "그림 미리보기를 불러오는 중"}>{artwork.status === "complete" ? "🌟" : "✏️"}</span>;
 }
 
-function modeLabel(artwork: ArchiveArtwork) {
-  // 레슨 카탈로그는 은퇴했다(Story 2.3) — 남은 레거시 작품은 자기 제목으로 표시한다.
-  if (artwork.learningMode === "practice") return "선·도형 기초";
-  if (artwork.learningMode === "guided") return "따라 그리기";
-  if (artwork.learningMode === "observe") return "관찰 그리기";
-  return "자유 창작";
-}
 
 export function Archive() {
   const [data, setData] = useState<{ student: { nickname: string; animal: string }; artworks: ArchiveArtwork[] } | null>(null);
@@ -79,6 +72,7 @@ export function Archive() {
   }, []);
 
   const [leaving, setLeaving] = useState(false);
+  const [selectedId, setSelectedId] = useState("");
   useEffect(() => { void loadArchive(); }, [loadArchive]);
   async function leaveClass() {
     if (leaving) return;
@@ -86,11 +80,58 @@ export function Archive() {
     await deactivateProfile().catch(() => undefined);
     location.replace("/join");
   }
+
+  const artworks = data?.artworks ?? [];
+  // 고른 것이 없거나 목록에서 사라졌으면 가장 최근 그림을 편다.
+  const selected = artworks.find((artwork) => artwork.id === selectedId) ?? artworks[0] ?? null;
+  const drawing = selected?.status !== "complete";
+
   /* 학생 홈이 없어져(2026-09-12) 이 화면이 도화지 밖의 유일한 자리다 —
-   * 새 그림·그림책·수업 마치기를 여기서 연다. */
-  return <main className="app-shell archive-page"><header className="app-header"><Logo /><nav className="archive-actions" aria-label="내 그림 메뉴">
-      <a className="button primary child-primary-action" href="/student/draw/new?mode=free"><span aria-hidden="true">🎨</span>새 그림</a>
-      <a className="small-button" href="/student/books"><span aria-hidden="true">📘</span>그림책</a>
-      <button type="button" className="small-button" onClick={() => void leaveClass()} disabled={leaving}><span aria-hidden="true">🚪</span>{leaving ? "나가는 중…" : "수업 마치기"}</button>
-    </nav></header><section className="archive-hero"><div><p className="eyebrow">내가 그린 생각을 다시 봐요</p><h1>{data ? `${data.student.animal} ${data.student.nickname}의` : "나의"}<br />내 그림</h1></div><span className="growth-flower">🖼️</span></section>{error && <p className="error-box" role="alert">{error}</p>}{data && (data.artworks.length ? <><div className="archive-grid">{data.artworks.map((artwork) => <a className="archive-card" href={artwork.status === "complete" ? `/student/archive/${artwork.id}` : `/student/draw/${artwork.id}`} key={artwork.id}><div className="archive-paper"><ArtworkPreview artwork={artwork} /></div><div><small>{modeLabel(artwork)}</small><h2>{artwork.title}</h2><p>{artwork.status === "complete" ? "👀 완성한 그림 다시 보기" : "✏️ 이어 그리기"}</p><time dateTime={artwork.completedAt ?? artwork.updatedAt}>{new Date(artwork.completedAt ?? artwork.updatedAt).toLocaleDateString("ko-KR")}</time></div></a>)}</div>{hasMore && <button type="button" className="button secondary archive-more-button" disabled={loadingMore} onClick={() => void loadArchive(nextOffset, true)}>{loadingMore ? "이전 그림 불러오는 중…" : "이전 그림 더 보기"}</button>}</> : <div className="empty-state">아직 그림이 없어요. 활동을 골라 첫 그림을 시작해 봐요.<br /><a className="button secondary" href="/student/activities">🎨 활동 고르기</a></div>)}</main>;
+   * 새 그림·그림책·수업 마치기를 여기서 연다.
+   * 2026-09-20 사용자 시안대로 펼친 책으로 바꿨다: 왼쪽은 그림 목록, 오른쪽은 고른 그림 한 장.
+   * 책 껍데기는 이미 있는 `.teacher-activity-book`·`.book-page` 모양을 그대로 쓴다(교사 전용이 아니라
+   * 저장소의 공통 「펼친 책」 모양이다). 새 껍데기를 만들면 같은 그림이 두 벌이 된다. */
+  return <main className="app-shell archive-page archive-book-page">
+    <header className="app-header"><Logo /><nav className="archive-actions" aria-label="내 그림 메뉴">
+      <a className="small-button" href="/student/books"><span aria-hidden="true">📖</span>그림책</a>
+      <button type="button" className="small-button archive-finish" onClick={() => void leaveClass()} disabled={leaving}><span aria-hidden="true">📕</span>{leaving ? "나가는 중…" : "수업 마치기"}</button>
+    </nav></header>
+    {error && <p className="error-box" role="alert">{error}</p>}
+    <div className="teacher-activity-book archive-book">
+      <section className="book-page book-copy-page archive-book-list" aria-label="내 그림 목록">
+        <h1>{data ? `${data.student.nickname}의 그림 모음` : "내 그림 모음"}</h1>
+        {artworks.length ? <>
+          <ul>
+            {artworks.map((artwork) => (
+              <li key={artwork.id}>
+                <button type="button" aria-current={selected?.id === artwork.id ? "true" : undefined} onClick={() => setSelectedId(artwork.id)}>
+                  <span className="archive-book-thumb"><ArtworkPreview artwork={artwork} /></span>
+                  <span className="archive-book-meta">
+                    <b>{artwork.title}</b>
+                    <time dateTime={artwork.completedAt ?? artwork.updatedAt}>{new Date(artwork.completedAt ?? artwork.updatedAt).toLocaleDateString("ko-KR")}</time>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {hasMore && <button type="button" className="button secondary archive-more-button" disabled={loadingMore} onClick={() => void loadArchive(nextOffset, true)}>{loadingMore ? "이전 그림 불러오는 중…" : "이전 그림 더 보기"}</button>}
+        </> : <p className="archive-book-empty">아직 그림이 없어요. 새 그림을 시작해 봐요.</p>}
+        {/* 시안에는 없지만, 이 화면 말고는 새 그림을 시작할 자리가 없어 남겼다. */}
+        <a className="button primary child-primary-action archive-new" href="/student/draw/new?mode=free"><span aria-hidden="true">🎨</span>새 그림</a>
+      </section>
+      <div className="book-binding" aria-hidden="true"><i /><i /><i /></div>
+      <section className="book-page book-visual-page archive-book-view" aria-label="고른 그림">
+        {selected ? <>
+          <div className="archive-book-head">
+            <h2>{selected.title}</h2>
+            <p className="archive-book-status"><span aria-hidden="true">{drawing ? "✏️" : "🌟"}</span>{drawing ? "그리는 중" : "완성"}</p>
+          </div>
+          <div className="archive-book-paper"><ArtworkPreview artwork={selected} /></div>
+          <a className="button primary child-primary-action archive-book-open" href={drawing ? `/student/draw/${selected.id}` : `/student/archive/${selected.id}`}>
+            <span aria-hidden="true">{drawing ? "✏️" : "👀"}</span>{drawing ? "이어 그리기" : "다시 보기"}
+          </a>
+        </> : <p className="archive-book-empty">왼쪽에서 그림을 고르면 여기에 크게 보여요.</p>}
+      </section>
+    </div>
+  </main>;
 }

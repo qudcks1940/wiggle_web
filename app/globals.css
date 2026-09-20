@@ -2074,3 +2074,71 @@ body {
 /* 복사 성공 표시(2026-09-17 사용자 요청): 누른 단추 글자가 체크로 바뀐다. 실패만 안내 줄로 알린다. */
 .copy-check { vertical-align:-3px; color:#2e9e5b; }
 .class-row-meta button .copy-check { vertical-align:-2px; }
+
+/* 내 그림 보관함을 펼친 책으로 (2026-09-20 사용자 시안).
+   책 껍데기(.teacher-activity-book·.book-page)는 저장소에 이미 있는 모양을 그대로 쓰고,
+   여기서는 두 쪽 안의 내용만 정한다. */
+.archive-book-page { display:grid; gap:18px; align-content:start; }
+.archive-book { width:min(1500px,100%); margin:0 auto; aspect-ratio:auto; min-height:min(72vh,620px); }
+.archive-book>.book-page { align-items:stretch; align-content:start; }
+.archive-finish { background:#ffe07a; border-color:#e8c250; color:#6b4a00; font-weight:900; }
+
+/* 왼쪽: 그림 목록 */
+.archive-book-list { display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:14px; }
+.archive-book-list>h1 { position:relative; margin:0; font-size:clamp(22px,2.2vw,30px); letter-spacing:-.04em; }
+.archive-book-list>h1:after { content:""; position:absolute; left:0; bottom:-8px; width:72px; height:6px; border-radius:999px; background:var(--yellow,#ffd85a); }
+.archive-book-list>ul { display:grid; gap:8px; align-content:start; margin:10px 0 0; padding:0 4px 0 0; list-style:none; overflow-y:auto; min-height:0; }
+.archive-book-list li>button { display:flex; align-items:center; gap:12px; width:100%; min-height:64px; padding:8px 12px; border:2px solid transparent; border-radius:14px; background:none; text-align:left; cursor:pointer; }
+.archive-book-list li>button[aria-current="true"] { background:#e7f2e3; border-color:#cfe4c6; }
+.archive-book-thumb { flex:0 0 auto; display:grid; place-items:center; width:62px; height:48px; overflow:hidden; border:1px solid #e6e2d4; border-radius:9px; background:#fff; font-size:22px; }
+.archive-book-thumb img { width:100%; height:100%; object-fit:contain; }
+.archive-book-meta { display:grid; gap:2px; min-width:0; }
+.archive-book-meta b { font-size:17px; font-weight:800; overflow-wrap:anywhere; }
+.archive-book-meta time { color:var(--secondary,#5d6b57); font-size:14px; font-weight:700; }
+.archive-book-empty { margin:0; color:var(--secondary,#5d6b57); font-size:16px; font-weight:700; line-height:1.6; }
+.archive-new { justify-self:start; }
+
+/* 오른쪽: 고른 그림 한 장 */
+.archive-book-view { display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:14px; justify-items:stretch; }
+.archive-book-head { display:grid; gap:8px; justify-items:start; }
+.archive-book-head h2 { margin:0; font-size:clamp(22px,2.4vw,32px); letter-spacing:-.04em; }
+.archive-book-status { display:inline-flex; align-items:center; gap:7px; margin:0; padding:5px 14px; border-radius:999px; background:#eef1ec; color:#465443; font-size:14px; font-weight:800; }
+.archive-book-paper { display:grid; place-items:center; min-height:0; overflow:hidden; border-radius:14px; background:#fff; }
+.archive-book-paper img { max-width:100%; max-height:100%; object-fit:contain; }
+.archive-book-paper span { font-size:44px; }
+.archive-book-open { justify-self:end; }
+@media (max-width:720px) {
+  /* 좁은 화면에서는 책을 펼치지 않고 위아래로 쌓는다 — 두 쪽을 나란히 두면 둘 다 못 읽는다. */
+  .archive-book { grid-template-columns:minmax(0,1fr); min-height:0; }
+  .archive-book>.book-binding { display:none; }
+  .archive-book-list>ul { max-height:38vh; }
+  .archive-book-paper { min-height:220px; }
+  .archive-book-open,.archive-new { justify-self:stretch; }
+}
+
+/* 보관함 책은 시안대로 "평평한 초록 책"이다.
+   공통 `.teacher-activity-book`은 사진 질감 이미지를 배경으로 덮어쓰므로, 보관함에서만 되돌린다. */
+.archive-book.teacher-activity-book {
+  aspect-ratio:auto;
+  padding:26px 30px 30px;
+  grid-template-columns:minmax(0,1fr) 18px minmax(0,1fr);
+  border:10px solid #389a49;
+  border-radius:30px 30px 22px 22px;
+  background:#288338;
+  box-shadow:0 15px 0 #1f6f2d,0 24px 34px rgba(39,79,47,.18);
+}
+/* 시안에는 노란 책갈피 탭이 없다 — 공통 책의 탭을 보관함에서만 끈다. */
+.archive-book.teacher-activity-book:before,.archive-book.teacher-activity-book:after { display:none; }
+.archive-book>.book-page { padding:34px clamp(22px,2.6vw,40px) 30px; background:#fffdf7; box-shadow:inset 0 0 0 2px #ece7da,inset 0 -12px 18px rgba(143,116,62,.07); }
+.archive-book>.book-copy-page { border-radius:18px 5px 5px 18px; }
+.archive-book>.book-visual-page { border-radius:5px 18px 18px 5px; }
+.archive-book>.book-binding { opacity:1; }
+.archive-book>.book-binding i { display:none; }
+/* 시안의 주 행동은 진초록 하나다. 새 그림은 조용한 단추로 둔다. */
+.archive-book .archive-book-open { background:#1f6f2d; border-color:#1f6f2d; color:#fff; box-shadow:none; }
+.archive-book .archive-new { background:#fff; border:2px solid #cfe0c8; color:#2f6b3a; box-shadow:none; }
+@media (max-width:720px) {
+  .archive-book.teacher-activity-book { grid-template-columns:minmax(0,1fr); padding:18px; }
+  .archive-book.teacher-activity-book:before,.archive-book.teacher-activity-book:after { display:none; }
+  .archive-book>.book-copy-page,.archive-book>.book-visual-page { border-radius:16px; }
+}

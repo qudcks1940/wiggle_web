@@ -10,7 +10,7 @@ import { DrawingInputMode, INPUT_MODE_EVENT } from "@/lib/input-mode";
 import { CanvasView, clampView, coverPaper, IDENTITY_VIEW, MAX_SCALE, pinchView, zoomView } from "@/lib/canvas-view";
 import { lessonBySlug, Lesson } from "@/lib/lesson-content";
 import { guideMarksForVariant } from "@/lib/lesson-guide-variants";
-import { ArrowLeftIcon, CheckIcon, ChevronUpIcon, HandIcon, MoreHorizontalIcon, Redo2Icon, Undo2Icon } from "./StudioIcons";
+import { ArrowLeftIcon, CheckIcon, ChevronUpIcon, HandIcon, MoreHorizontalIcon, Redo2Icon, Trash2Icon, Undo2Icon } from "./StudioIcons";
 import { createLessonStepBaseline, isLessonStepProgress, lessonStepActionStatus, LessonStepProgress } from "@/lib/lesson-step-progress";
 import { lockGuideTrace, snapGuideTrace } from "@/lib/trace-guidance.mjs";
 import { clampTextPlacement, suggestTextPlacement } from "@/lib/text-placement";
@@ -3038,7 +3038,7 @@ export function DrawingStudio() {
         </section>
         {/* 도구 막대(2026-09-14 사용자 결정 — 시안 docs/design-assets/studio-tool-dock/B-crayon-box.webp).
             화면 아래에 떠 있는 크림색 막대에 세워진 도구, 고른 도구는 올라오고 진초록 바탕. 붓 끝·띠는 지금 색으로 칠한다.
-            고른 도구를 한 번 더 누르면 굵기 5단이 위에 뜬다. 채우기·도형·글씨·입력 방법·전체 지우기는 ⋯ 안에 있다. */}
+            고른 도구를 한 번 더 누르면 굵기 자가 위에 뜬다. 채우기·도형·글씨·입력 방법은 ⋯ 안에 있다. */}
         <aside className={`tool-dock${dockOpen ? "" : " is-collapsed"}`} aria-label="그리기 도구 모음" style={{ "--dock-color": selectedColor } as React.CSSProperties}>
           {/* 아코디언(2026-09-15 사용자: "누르면 위로 올라가고 내리면 아래로 내려가는 느낌"): 막대가 화면 아래로 미끄러져 내려가고 손잡이 탭만 남는다. */}
           <button
@@ -3064,6 +3064,10 @@ export function DrawingStudio() {
             </button>
             <button type="button" aria-label="다시하기" title="다시하기" onClick={redoLast} disabled={Boolean(conflictDraft) || (!redo.length && !hasClearToRedo)}>
               <Redo2Icon size={22} />
+            </button>
+            {/* 전체 지우기는 2026-09-20 사용자 요청으로 ⋯ 안에서 막대로 꺼냈다. 실수로 눌러도 확인 창을 지나고 되돌리기 한 번으로 되살아난다. */}
+            <button type="button" className="dock-clear" aria-label="전체 지우기" title="전체 지우기" onClick={() => setClearConfirmOpen(true)} disabled={Boolean(conflictDraft) || !documentState.ops.length}>
+              <Trash2Icon size={22} />
             </button>
           </div>
           <div className="dock-tools" role="group" aria-label="도구">
@@ -3228,14 +3232,6 @@ export function DrawingStudio() {
                   <button type="button" aria-pressed={inputMode === "pen"} onClick={enablePenMode}><span>✍️</span><b>펜 모드</b><small>손바닥은 그려지지 않아요</small></button>
                   <button type="button" aria-pressed={inputMode === "finger"} onClick={disablePenMode}><span>☝️</span><b>손가락 모드</b><small>손가락으로 그려요</small></button>
                 </div>
-                <button
-                  type="button"
-                  className="clear-all-button"
-                  disabled={Boolean(conflictDraft) || !documentState.ops.length}
-                  onClick={() => setClearConfirmOpen(true)}
-                >
-                  <span aria-hidden="true">🗑️</span><b>전체 지우기</b>
-                </button>
             </div>
           )}
         </aside>

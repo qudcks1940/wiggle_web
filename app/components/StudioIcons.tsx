@@ -43,6 +43,14 @@ export const EraserIcon = (props: IconProps) => (
     <path d="M22 21H7M5 13l6 6" />
   </Icon>
 );
+/* 전체 지우기(2026-09-20 사용자 요청으로 도구 막대에 꺼냈다) — 휴지통 */
+export const Trash2Icon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    <path d="M10 11v6M14 11v6" />
+  </Icon>
+);
 export const MoreHorizontalIcon = (props: IconProps) => (
   <Icon {...props}><circle cx="5" cy="12" r="1.4" /><circle cx="12" cy="12" r="1.4" /><circle cx="19" cy="12" r="1.4" /></Icon>
 );

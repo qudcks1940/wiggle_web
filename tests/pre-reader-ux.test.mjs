@@ -46,8 +46,9 @@ test("drawing, navigation and reflection retain familiar visual actions when tex
   assert.match(archive, /<span aria-hidden="true">🚪<\/span>\{leaving \? "나가는 중…" : "수업 마치기"\}/);
   assert.match(studio, /⬅️ 이전/);
   assert.match(studio, /step === lesson\.steps\.length - 1 \? "⭐" : "➡️"/);
-  assert.match(studio, /favoritePartChoices/);
-  assert.match(studio, /FAVORITE_REASON_CHOICES/);
+  // 2026-09-20 사용자 지시로 "마음에 드는 곳·왜 마음에 들어" 고르기를 없앴다.
+  // 마무리에 남는 것은 몽그리 짐작을 고르는 칩(같은 reflection-choice-grid)과 완성 단추다.
+  assert.doesNotMatch(studio, /favoritePartChoices|FAVORITE_REASON_CHOICES|마음에 드는 곳은\?|왜 마음에 들어\?/);
   assert.match(studio, /className="reflection-choice-grid"/);
   assert.match(studio, /정답이 아니에요\. 네가 보고 직접 골라요\./);
   assert.match(studio, /<span aria-hidden="true">\{completionState === "saving" \? "⏳" : "⭐"\}<\/span>/);

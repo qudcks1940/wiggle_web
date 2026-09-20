@@ -71,7 +71,8 @@ export function queuedArtworkDraft(save: QueuedSave): QueuedArtworkDraft | null 
       storyText: typeof rawReflection.storyText === "string" ? rawReflection.storyText.slice(0, 600) : "",
     };
     const finalDataUrl = typeof payload.finalDataUrl === "string" && payload.finalDataUrl.startsWith("data:image/png;base64,") && payload.finalDataUrl.length <= 5_000_000 ? payload.finalDataUrl : undefined;
-    if (complete && (!reflection.favoritePart.trim() || !reflection.favoriteReason.trim() || !finalDataUrl)) return null;
+    // 소감 두 칸은 2026-09-20에 없앴다. 완성에 필요한 것은 완성 그림뿐이다.
+    if (complete && !finalDataUrl) return null;
     return { save, document, currentStep, complete, reflection: complete ? reflection : undefined, finalDataUrl };
   } catch { return null; }
 }

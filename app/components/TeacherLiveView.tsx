@@ -64,7 +64,8 @@ export function TeacherLiveView({ classroomId, studentId, nickname, onPost }: {
   }, [load]);
 
   const docHeight = artwork ? documentHeight(artwork.document) : 640;
-  const markUnitScale = artwork ? documentSpan(artwork.document) : 1;
+  // 넓은 도화지는 100%에서 화면 span장 너비라, 같은 굵기로 보이려면 도화지 단위 굵기를 span으로 나눈다.
+  const markUnitScale = artwork ? 1 / documentSpan(artwork.document) : 1;
 
   // 아이 그림: 저장 번호가 바뀔 때만 다시 그린다(3초마다 같은 그림을 다시 그리지 않는다).
   useEffect(() => {

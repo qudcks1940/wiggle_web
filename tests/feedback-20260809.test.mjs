@@ -198,7 +198,8 @@ test("the UI source keeps completion, archive, palette, help-choice and touch pr
   assert.match(studio, /작품을 안전하게 저장 중/);
   assert.match(studio, /갈색/);
   assert.match(studio, /민트/);
-  assert.match(studio, /색 더보기/);
+  // 2026-09-20: `색 더보기` 단추는 사라지고 무지개 단추가 그 화면을 직접 연다.
+  assert.match(studio, /className="dock-more-colors"[^>]*aria-label="색 섞어 고르기"/);
   assert.match(studio, /펜 모드/);
   assert.match(studio, /손가락 모드/);
   assert.match(globalCss, /-webkit-touch-callout:\s*none/);

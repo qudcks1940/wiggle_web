@@ -10,7 +10,7 @@ import { DrawingInputMode, INPUT_MODE_EVENT } from "@/lib/input-mode";
 import { CanvasView, clampView, coverPaper, IDENTITY_VIEW, MAX_SCALE, pinchView, zoomView } from "@/lib/canvas-view";
 import { lessonBySlug, Lesson } from "@/lib/lesson-content";
 import { guideMarksForVariant } from "@/lib/lesson-guide-variants";
-import { ArrowLeftIcon, CheckIcon, ChevronUpIcon, HandIcon, MoreHorizontalIcon, Redo2Icon, Undo2Icon } from "./StudioIcons";
+import { ArrowLeftIcon, CheckIcon, ChevronUpIcon, HandIcon, MoreHorizontalIcon, Redo2Icon, Trash2Icon, Undo2Icon } from "./StudioIcons";
 import { createLessonStepBaseline, isLessonStepProgress, lessonStepActionStatus, LessonStepProgress } from "@/lib/lesson-step-progress";
 import { lockGuideTrace, snapGuideTrace } from "@/lib/trace-guidance.mjs";
 import { clampTextPlacement, suggestTextPlacement } from "@/lib/text-placement";
@@ -963,7 +963,7 @@ export function DrawingStudio() {
     const context = canvas.getContext("2d");
     if (!context) return;
     context.clearRect(0, 0, canvas.width, canvas.height);
-    if (visibleMark) drawMarkStrokes(context, visibleMark.strokes, DOCUMENT_SIZE, markDocHeight, 0.9, markSpan);
+    if (visibleMark) drawMarkStrokes(context, visibleMark.strokes, DOCUMENT_SIZE, markDocHeight, 0.9, 1 / markSpan);
   }, [visibleMark, markDocHeight, markSpan]);
   async function answerTeacherMark(answer: MarkAnswer) {
     if (!visibleMark) return;
@@ -3040,7 +3040,7 @@ export function DrawingStudio() {
         </section>
         {/* 도구 막대(2026-09-14 사용자 결정 — 시안 docs/design-assets/studio-tool-dock/B-crayon-box.webp).
             화면 아래에 떠 있는 크림색 막대에 세워진 도구, 고른 도구는 올라오고 진초록 바탕. 붓 끝·띠는 지금 색으로 칠한다.
-            고른 도구를 한 번 더 누르면 굵기 5단이 위에 뜬다. 채우기·도형·글씨·입력 방법·전체 지우기는 ⋯ 안에 있다. */}
+            고른 도구를 한 번 더 누르면 굵기 자가 위에 뜬다. 채우기·도형·글씨·입력 방법은 ⋯ 안에 있다. */}
         <aside className={`tool-dock${dockOpen ? "" : " is-collapsed"}`} aria-label="그리기 도구 모음" style={{ "--dock-color": selectedColor } as React.CSSProperties}>
           {/* 아코디언(2026-09-15 사용자: "누르면 위로 올라가고 내리면 아래로 내려가는 느낌"): 막대가 화면 아래로 미끄러져 내려가고 손잡이 탭만 남는다. */}
           <button
@@ -3066,6 +3066,10 @@ export function DrawingStudio() {
             </button>
             <button type="button" aria-label="다시하기" title="다시하기" onClick={redoLast} disabled={Boolean(conflictDraft) || (!redo.length && !hasClearToRedo)}>
               <Redo2Icon size={22} />
+            </button>
+            {/* 전체 지우기는 2026-09-20 사용자 요청으로 ⋯ 안에서 막대로 꺼냈다. 실수로 눌러도 확인 창을 지나고 되돌리기 한 번으로 되살아난다. */}
+            <button type="button" className="dock-clear" aria-label="전체 지우기" title="전체 지우기" onClick={() => setClearConfirmOpen(true)} disabled={Boolean(conflictDraft) || !documentState.ops.length}>
+              <Trash2Icon size={22} />
             </button>
           </div>
           <div className="dock-tools" role="group" aria-label="도구">
@@ -3098,16 +3102,18 @@ export function DrawingStudio() {
             {PALETTE.slice(0, DOCK_QUICK_COLORS).map((value) => (
               <button type="button" className="dock-color" aria-label={COLOR_NAMES[value]} title={COLOR_NAMES[value]} aria-pressed={selectedColor === value} onClick={() => pickColor(value)} key={value} style={{ background: value }} />
             ))}
-            {/* 좁은 화면은 색 점 대신 지금 색 하나를 두고, 누르면 12색 창이 열린다. */}
+            {/* 단색 점: 누르면 단색 12색 창이 열린다. 좁은 화면에서는 색 점 여덟 개 대신 이것만 보인다. */}
             <button type="button" className="dock-current-color" aria-label={`색 고르기, 지금 ${COLOR_NAMES[selectedColor] ?? "고른 색"}`} aria-haspopup="true" aria-expanded={paletteOpen} onClick={() => { setPaletteOpen((value) => !value); setToolSheetOpen(false); setWidthSliderOpen(false); }} style={{ background: selectedColor }} />
-            {/* 무지개: 12색 창. 팔레트 밖의 색을 쓰는 동안은 눌린 상태로 두고 고른 색을 안쪽 테두리로 보여 준다. */}
-            <button type="button" className="dock-more-colors" aria-label="다른 색 고르기" title="다른 색 고르기" aria-haspopup="true" aria-expanded={paletteOpen} aria-pressed={customColor} style={customColor ? { boxShadow: `inset 0 0 0 6px ${selectedColor}` } : undefined} onClick={() => { setPaletteOpen((value) => !value); setToolSheetOpen(false); setWidthSliderOpen(false); }} />
+            {/* 무지개는 섞는 색 화면으로 바로 간다(2026-09-20 사용자 결정). 단색 점과 같은 창을 열면
+                두 단추가 같은 일을 해 무엇이 무엇인지 아이가 구분할 수 없었다.
+                팔레트 밖의 색을 쓰는 동안은 눌린 상태로 두고 고른 색을 안쪽 테두리로 보여 준다. */}
+            <button type="button" className="dock-more-colors" aria-label="색 섞어 고르기" title="색 섞어 고르기" aria-haspopup="dialog" aria-expanded={colorPickerOpen} aria-pressed={customColor} style={customColor ? { boxShadow: `inset 0 0 0 6px ${selectedColor}` } : undefined} onClick={() => { setPaletteOpen(false); setToolSheetOpen(false); setWidthSliderOpen(false); setColorPickerOpen(true); }} />
+            {/* 단색 점이 여는 창에는 단색만 둔다. 섞는 색은 무지개 단추 몫이다. */}
             {paletteOpen && (
-              <div className="dock-palette" role="group" aria-label="모든 색">
+              <div className="dock-palette" role="group" aria-label="단색 고르기">
                 {PALETTE.map((value) => (
                   <button type="button" className="dock-color" aria-label={COLOR_NAMES[value]} title={COLOR_NAMES[value]} aria-pressed={selectedColor === value} onClick={() => { pickColor(value); setPaletteOpen(false); }} key={value} style={{ background: value }} />
                 ))}
-                <button type="button" className="dock-palette-wheel" aria-haspopup="dialog" aria-expanded={colorPickerOpen} onClick={() => { setPaletteOpen(false); setColorPickerOpen(true); }}>🎨 색 더보기</button>
               </div>
             )}
           </div>
@@ -3230,14 +3236,6 @@ export function DrawingStudio() {
                   <button type="button" aria-pressed={inputMode === "pen"} onClick={enablePenMode}><span>✍️</span><b>펜 모드</b><small>손바닥은 그려지지 않아요</small></button>
                   <button type="button" aria-pressed={inputMode === "finger"} onClick={disablePenMode}><span>☝️</span><b>손가락 모드</b><small>손가락으로 그려요</small></button>
                 </div>
-                <button
-                  type="button"
-                  className="clear-all-button"
-                  disabled={Boolean(conflictDraft) || !documentState.ops.length}
-                  onClick={() => setClearConfirmOpen(true)}
-                >
-                  <span aria-hidden="true">🗑️</span><b>전체 지우기</b>
-                </button>
             </div>
           )}
         </aside>

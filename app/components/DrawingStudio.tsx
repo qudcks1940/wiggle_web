@@ -3100,16 +3100,18 @@ export function DrawingStudio() {
             {PALETTE.slice(0, DOCK_QUICK_COLORS).map((value) => (
               <button type="button" className="dock-color" aria-label={COLOR_NAMES[value]} title={COLOR_NAMES[value]} aria-pressed={selectedColor === value} onClick={() => pickColor(value)} key={value} style={{ background: value }} />
             ))}
-            {/* 좁은 화면은 색 점 대신 지금 색 하나를 두고, 누르면 12색 창이 열린다. */}
+            {/* 단색 점: 누르면 단색 12색 창이 열린다. 좁은 화면에서는 색 점 여덟 개 대신 이것만 보인다. */}
             <button type="button" className="dock-current-color" aria-label={`색 고르기, 지금 ${COLOR_NAMES[selectedColor] ?? "고른 색"}`} aria-haspopup="true" aria-expanded={paletteOpen} onClick={() => { setPaletteOpen((value) => !value); setToolSheetOpen(false); setWidthSliderOpen(false); }} style={{ background: selectedColor }} />
-            {/* 무지개: 12색 창. 팔레트 밖의 색을 쓰는 동안은 눌린 상태로 두고 고른 색을 안쪽 테두리로 보여 준다. */}
-            <button type="button" className="dock-more-colors" aria-label="다른 색 고르기" title="다른 색 고르기" aria-haspopup="true" aria-expanded={paletteOpen} aria-pressed={customColor} style={customColor ? { boxShadow: `inset 0 0 0 6px ${selectedColor}` } : undefined} onClick={() => { setPaletteOpen((value) => !value); setToolSheetOpen(false); setWidthSliderOpen(false); }} />
+            {/* 무지개는 섞는 색 화면으로 바로 간다(2026-09-20 사용자 결정). 단색 점과 같은 창을 열면
+                두 단추가 같은 일을 해 무엇이 무엇인지 아이가 구분할 수 없었다.
+                팔레트 밖의 색을 쓰는 동안은 눌린 상태로 두고 고른 색을 안쪽 테두리로 보여 준다. */}
+            <button type="button" className="dock-more-colors" aria-label="색 섞어 고르기" title="색 섞어 고르기" aria-haspopup="dialog" aria-expanded={colorPickerOpen} aria-pressed={customColor} style={customColor ? { boxShadow: `inset 0 0 0 6px ${selectedColor}` } : undefined} onClick={() => { setPaletteOpen(false); setToolSheetOpen(false); setWidthSliderOpen(false); setColorPickerOpen(true); }} />
+            {/* 단색 점이 여는 창에는 단색만 둔다. 섞는 색은 무지개 단추 몫이다. */}
             {paletteOpen && (
-              <div className="dock-palette" role="group" aria-label="모든 색">
+              <div className="dock-palette" role="group" aria-label="단색 고르기">
                 {PALETTE.map((value) => (
                   <button type="button" className="dock-color" aria-label={COLOR_NAMES[value]} title={COLOR_NAMES[value]} aria-pressed={selectedColor === value} onClick={() => { pickColor(value); setPaletteOpen(false); }} key={value} style={{ background: value }} />
                 ))}
-                <button type="button" className="dock-palette-wheel" aria-haspopup="dialog" aria-expanded={colorPickerOpen} onClick={() => { setPaletteOpen(false); setColorPickerOpen(true); }}>🎨 색 더보기</button>
               </div>
             )}
           </div>

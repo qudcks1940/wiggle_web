@@ -963,7 +963,7 @@ export function DrawingStudio() {
     const context = canvas.getContext("2d");
     if (!context) return;
     context.clearRect(0, 0, canvas.width, canvas.height);
-    if (visibleMark) drawMarkStrokes(context, visibleMark.strokes, DOCUMENT_SIZE, markDocHeight, 0.9, markSpan);
+    if (visibleMark) drawMarkStrokes(context, visibleMark.strokes, DOCUMENT_SIZE, markDocHeight, 0.9, 1 / markSpan);
   }, [visibleMark, markDocHeight, markSpan]);
   async function answerTeacherMark(answer: MarkAnswer) {
     if (!visibleMark) return;

@@ -93,8 +93,8 @@ test("교사 화면이 파일을 서버로 보내지 않고 그 자리에서 읽
   assert.match(settings, /엑셀·CSV 파일 불러오기/);
   // 파일을 업로드하는 경로가 생기면 안 된다 — 실명이 든 파일이다.
   assert.doesNotMatch(settings, /FormData|fetch\([^)]*file/);
-  // 읽은 결과는 입력칸을 채울 뿐이고, 저장은 교사가 확인한 뒤 기존 addStudents로 간다.
-  assert.match(settings, /setRoster\(read\.text\)/);
+  // 읽은 결과는 번호·이름 칸을 채울 뿐이고, 저장은 교사가 확인한 뒤 기존 addStudents로 간다.
+  assert.match(settings, /rosterTextToRows\(read\.text\)/);
   assert.match(settings, /onAction\("addStudents", \{ roster: parsed\.entries \}\)/);
 });
 

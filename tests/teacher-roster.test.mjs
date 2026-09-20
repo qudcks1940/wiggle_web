@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { parseRosterText } from "../lib/roster.ts";
+import { parseRosterRows, parseRosterText, rosterTextToRows } from "../lib/roster.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -27,6 +27,34 @@ test("명단 입력은 같은 번호와 빈 이름, 범위 밖 번호를 잡아�
   // 이름 없이 번호만 있는 줄은 읽지 못한 줄로 잡는다.
   assert.equal(parseRosterText("7").entries.length, 0);
   assert.equal(parseRosterText("7").errors.length, 1);
+});
+
+/* 2026-09-20 사용자 결정: 화면은 번호 칸과 이름 칸을 따로 받는다.
+ * 줄 파서(parseRosterText)는 파일·붙여넣기 입구로만 남는다. */
+test("칸 입력은 번호와 이름을 그대로 읽고, 이름이 빈 줄은 아직 안 쓴 줄로 건너뛴다", () => {
+  const { entries, errors } = parseRosterRows([
+    { seat: "1", name: "김민준" },
+    // 화면이 번호를 미리 채워 두므로 이런 줄이 늘 남아 있다. 열자마자 오류가 뜨면 안 된다.
+    { seat: "3", name: "" },
+    { seat: " 2 ", name: " 이서연 " },
+  ]);
+  assert.deepEqual(errors, []);
+  assert.deepEqual(entries, [{ seatNumber: 1, realName: "김민준" }, { seatNumber: 2, realName: "이서연" }]);
+});
+
+test("칸 입력은 빈 번호·숫자가 아닌 번호·중복 번호를 각각 다르게 알려 준다", () => {
+  assert.match(parseRosterRows([{ seat: "", name: "김민준" }]).errors[0], /1번째 줄의 번호가 비어 있어요/);
+  assert.match(parseRosterRows([{ seat: "일", name: "김민준" }]).errors[0], /숫자로 적어 주세요/);
+  assert.match(parseRosterRows([{ seat: "100", name: "김민준" }]).errors[0], /1~99/);
+  assert.match(parseRosterRows([{ seat: "3", name: "김민준" }, { seat: "3", name: "이서연" }]).errors[0], /3번이 두 번/);
+  // 잘못된 줄 하나가 나머지를 버리지 않는다 — 교사는 그 칸만 고치면 된다.
+  assert.equal(parseRosterRows([{ seat: "", name: "김민준" }, { seat: "2", name: "이서연" }]).entries.length, 1);
+});
+
+test("파일과 붙여넣기 글자는 칸으로 펼쳐지고, 읽지 못한 줄도 글자를 잃지 않는다", () => {
+  assert.deepEqual(rosterTextToRows("1 김민준\n2. 이서연\n"), [{ seat: "1", name: "김민준" }, { seat: "2", name: "이서연" }]);
+  // 번호 없이 이름만 붙여 넣으면 이름 칸에 남는다. 번호는 화면이 앞 줄 다음 번호로 채운다.
+  assert.deepEqual(rosterTextToRows("박지호"), [{ seat: "", name: "박지호" }]);
 });
 
 test("서버는 명단 값을 스스로 검증한다 — 화면 검사만 믿지 않는다", async () => {

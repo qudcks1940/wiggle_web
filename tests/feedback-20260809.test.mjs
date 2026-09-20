@@ -214,8 +214,10 @@ test("the UI source keeps completion, archive, palette, help-choice and touch pr
   assert.match(artworkRoute, /settleUploadsBeforeCleanup/);
   assert.match(uploads, /Promise\.allSettled/);
   assert.match(artworkImageRoute, /variant === "final"[\s\S]*finalImageKey[\s\S]*thumbnailKey/);
-  assert.match(archive, /\/image`/);
-  assert.doesNotMatch(archive, /variant=final/);
+  assert.match(archive, /\/image\$\{full \? "\?variant=final" : ""\}`/);
+  // 원본은 펼친 쪽의 한 장에만 쓴다. 목록 전부가 원본을 받으면 교실 회선이 그만큼 더 든다
+  // (2026-09-20 보관함 재설계 전에는 원본을 아예 쓰지 않았고, 규칙의 뜻은 "목록은 썸네일"이다).
+  assert.match(archive, /<ArtworkPreview artwork=\{artwork\} \/>/);
   assert.match(teacherRoute, /COALESCE\(a\.thumbnail_key, a\.final_image_key\)/);
   assert.doesNotMatch(teacherRoute, /Math\.min\(500/);
   assert.match(teacher, /studentHistoryRequestRef/);

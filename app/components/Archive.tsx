@@ -6,7 +6,9 @@ import { Logo } from "./Logo";
 
 type ArchiveArtwork = { id: string; title: string; learningMode: string; lessonSlug: string | null; status: string; hasImage: number | boolean; updatedAt: string; completedAt: string | null };
 
-function ArtworkPreview({ artwork }: { artwork: ArchiveArtwork }) {
+/* full=true면 완성본 원본을 받는다. 오른쪽 큰 쪽에서 256px 썸네일을 키우면 뭉개진다.
+   완성 전 작품은 서버가 썸네일로 되돌려 주므로 둘 다 안전하다. */
+function ArtworkPreview({ artwork, full = false }: { artwork: ArchiveArtwork; full?: boolean }) {
   const [imageUrl, setImageUrl] = useState("");
   const [failed, setFailed] = useState(false);
 
@@ -14,7 +16,7 @@ function ArtworkPreview({ artwork }: { artwork: ArchiveArtwork }) {
     if (!artwork.hasImage) return;
     const controller = new AbortController();
     let objectUrl = "";
-    studentFetch(`/api/artworks/${encodeURIComponent(artwork.id)}/image`, { signal: controller.signal })
+    studentFetch(`/api/artworks/${encodeURIComponent(artwork.id)}/image${full ? "?variant=final" : ""}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error("preview unavailable");
         const blob = await response.blob();
@@ -29,7 +31,7 @@ function ArtworkPreview({ artwork }: { artwork: ArchiveArtwork }) {
       controller.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [artwork.hasImage, artwork.id]);
+  }, [artwork.hasImage, artwork.id, full]);
 
   if (imageUrl) return <img src={imageUrl} alt={`${artwork.title} 그림 미리보기`} />;
   return <span aria-label={failed ? "그림 미리보기를 불러오지 못했어요" : "그림 미리보기를 불러오는 중"}>{artwork.status === "complete" ? "🌟" : "✏️"}</span>;
@@ -89,16 +91,16 @@ export function Archive() {
   /* 학생 홈이 없어져(2026-09-12) 이 화면이 도화지 밖의 유일한 자리다 —
    * 새 그림·그림책·수업 마치기를 여기서 연다.
    * 2026-09-20 사용자 시안대로 펼친 책으로 바꿨다: 왼쪽은 그림 목록, 오른쪽은 고른 그림 한 장.
-   * 책 껍데기는 이미 있는 `.teacher-activity-book`·`.book-page` 모양을 그대로 쓴다(교사 전용이 아니라
-   * 저장소의 공통 「펼친 책」 모양이다). 새 껍데기를 만들면 같은 그림이 두 벌이 된다. */
-  return <main className="app-shell archive-page archive-book-page">
+   * 공통 `.teacher-activity-book`을 쓰려 했으나 그 규칙의 가로세로 비율이 높이를 묶어 책이 화면을
+   * 채우지 못했다. 시안은 책이 화면을 가득 채우므로 보관함 전용 클래스로 직접 그린다. */
+  return <main className="archive-book-page">
     <header className="app-header"><Logo /><nav className="archive-actions" aria-label="내 그림 메뉴">
       <a className="small-button" href="/student/books"><span aria-hidden="true">📖</span>그림책</a>
       <button type="button" className="small-button archive-finish" onClick={() => void leaveClass()} disabled={leaving}><span aria-hidden="true">📕</span>{leaving ? "나가는 중…" : "수업 마치기"}</button>
     </nav></header>
     {error && <p className="error-box" role="alert">{error}</p>}
-    <div className="teacher-activity-book archive-book">
-      <section className="book-page book-copy-page archive-book-list" aria-label="내 그림 목록">
+    <div className="archive-book">
+      <section className="archive-book-page-left archive-book-list" aria-label="내 그림 목록">
         <h1>{data ? `${data.student.nickname}의 그림 모음` : "내 그림 모음"}</h1>
         {artworks.length ? <>
           <ul>
@@ -119,14 +121,13 @@ export function Archive() {
         {/* 시안에는 없지만, 이 화면 말고는 새 그림을 시작할 자리가 없어 남겼다. */}
         <a className="button primary child-primary-action archive-new" href="/student/draw/new?mode=free"><span aria-hidden="true">🎨</span>새 그림</a>
       </section>
-      <div className="book-binding" aria-hidden="true"><i /><i /><i /></div>
-      <section className="book-page book-visual-page archive-book-view" aria-label="고른 그림">
+      <section className="archive-book-page-right archive-book-view" aria-label="고른 그림">
         {selected ? <>
           <div className="archive-book-head">
             <h2>{selected.title}</h2>
-            <p className="archive-book-status"><span aria-hidden="true">{drawing ? "✏️" : "🌟"}</span>{drawing ? "그리는 중" : "완성"}</p>
+            <p className="archive-book-status"><span className="archive-book-status-icon" aria-hidden="true">{drawing ? "✏️" : "🌟"}</span><span>{drawing ? "그리는 중" : "완성"}</span></p>
           </div>
-          <div className="archive-book-paper"><ArtworkPreview artwork={selected} /></div>
+          <div className="archive-book-paper"><ArtworkPreview artwork={selected} full /></div>
           <a className="button primary child-primary-action archive-book-open" href={drawing ? `/student/draw/${selected.id}` : `/student/archive/${selected.id}`}>
             <span aria-hidden="true">{drawing ? "✏️" : "👀"}</span>{drawing ? "이어 그리기" : "다시 보기"}
           </a>

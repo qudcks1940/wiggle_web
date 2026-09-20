@@ -28,7 +28,7 @@ test("enforces ownership, hashing, expiry, rate limits and idempotent revisions"
   assert.doesNotMatch(rateLimitModule, /SELECT count[\s\S]*prepare\(`UPDATE rate_limits SET count = count \+ 1/);
   assert.match(artwork, /student_id = \?/); assert.match(artwork, /REVISION_CONFLICT/); assert.match(artwork, /artwork_mutations/); assert.match(artwork, /ARTWORKS\.put/); assert.match(artwork, /last_mutation_id/);
   assert.match(artworkImage, /studentFromRequest/); assert.match(artworkImage, /WHERE id = \? AND student_id = \?/); assert.match(artworkImage, /ARTWORKS\.get/); assert.match(artworkImage, /private, no-store/);
-  assert.match(student, /AS hasImage/); assert.match(archive, /studentFetch\(`\/api\/artworks\/\$\{encodeURIComponent\(artwork\.id\)\}\/image`/); assert.match(archive, /URL\.revokeObjectURL/);
+  assert.match(student, /AS hasImage/); assert.match(archive, /studentFetch\(`\/api\/artworks\/\$\{encodeURIComponent\(artwork\.id\)\}\/image\$\{full \? "\?variant=final" : ""\}`/); assert.match(archive, /URL\.revokeObjectURL/);
   assert.match(teacher, /teacher_id = \?/); assert.match(teacher, /student_profiles WHERE id = \? AND classroom_id = \?/); assert.match(student, /entry_code = \?/); assert.match(student, /token_hash/);
 });
 

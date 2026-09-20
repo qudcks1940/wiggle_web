@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { storeProfile } from "@/lib/client-session";
 import { classifyEntryError, EntryErrorKind, readStudentEntryResponse, StudentEntryResponseError } from "@/lib/student-entry-client";
 import { Logo } from "./Logo";
+import { WaitMongri } from "./WaitMongri";
 import check from "./EntryCheck.module.css";
 
 import { ANIMAL_CHARACTERS, withGwaWa } from "@/lib/animal-characters";
@@ -166,10 +167,7 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
     const codeError = errorKind === "code";
     // 문구는 docs/design-assets/entry-green/README-CLAUDE.md의 확정 문구. 선생님 도움 버튼은 실제 메시지를 보내지 않고 손을 드는 안내다.
     // 대기 상태는 2026-09-09 사용자 시안: 크림 배경 + 선 너머로 고개 내민 몽그리 + 문구 두 줄만.
-    if (!error) return <main className={`entry-check ${check.waitShell}`}>
-      <img className={check.waitMongri} src="/entry-green/wait-mongri.png" alt="" aria-hidden="true" width="476" height="340" />
-      <div role="status"><h1 id="entry-check-title">잠깐만 기다려 줘!</h1><p>수업실을 준비하고 있어요</p></div>
-    </main>;
+    if (!error) return <WaitMongri line="수업실을 준비하고 있어요" titleId="entry-check-title" />;
     const guidance = codeError ? "수업 코드가 맞는지 한 번만 더 확인해 줘." : "잠깐 연결이 어려운가 봐. 한 번 더 해 보자.";
     return <main className={`entry-check ${check.shell}`}>
       {scenery}

@@ -56,7 +56,9 @@ test("all tools have recognizable visual icons and child-readable size labels", 
   assert.match(studio, /maskImage: `url\(\/drawing-tools\/dock\/\$\{tool\.id\}-tint\.webp\)`/);
   assert.match(studio, /aria-label="좌우 대칭" title="좌우 대칭"/);
   // 굵기는 5단 버튼이 아니라 1픽셀 단위로 끄는 슬라이더다.
-  assert.match(studio, /<input type="range" min=\{STROKE_WIDTH_MIN\} max=\{STROKE_WIDTH_MAX\} step=\{1\} value=\{width\} aria-label="선 굵기"/);
+  // 화면에서 고르는 값은 1~60픽셀이고, 저장은 도화지 단위다(넓은 도화지는 span배).
+  assert.match(studio, /<input type="range" min=\{STROKE_WIDTH_MIN\} max=\{STROKE_WIDTH_SCREEN_MAX\} step=\{1\} value=\{width\} aria-label="선 굵기"/);
+  assert.match(studio, /const documentWidthUnits = \(screenWidth: number\) => toDocumentUnits\(screenWidth, documentSpan\(documentStateRef\.current\)\);/);
   assert.match(studio, /aria-label="1픽셀 얇게"[\s\S]*aria-label="1픽셀 굵게"/);
   assert.doesNotMatch(studio, /STROKE_WIDTH_LABELS|STROKE_WIDTHS/);
   assert.match(css, /\.dock-tool-tint \{[^}]*var\(--dock-color/);
@@ -195,7 +197,10 @@ test("도화지 비율은 문서가 정하고, 화면·래스터·저장 이미�
   // 옆으로 넓은 화면에서는 종이가 틀을 덮고 넘친 만큼 옮겨 본다(2026-09-15 "도화지 크기는 화면을 꽉채우지 안 잖아").
   assert.match(studio, /if \(next < from \|\| activePoints\.current\.size \|\| artworkRef\.current\?\.status === "complete" \|\| conflictDraftRef\.current\) return;/);
   assert.match(studio, /growDrawOps\(current\.ops, from, next\)/);
-  assert.match(studio, /const paper = coverPaper\(frame\.width, frame\.height, documentHeight\(documentState\)\);/);
+  // 도화지는 100%에서 화면 span장 너비다(2026-09-20 큰 도화지). 끝까지 축소하면 1/span에서 전체가 보인다.
+  assert.match(studio, /const screenPaper = coverPaper\(frame\.width, frame\.height, documentHeight\(documentState\)\);/);
+  assert.match(studio, /const paper = \{ width: screenPaper\.width \* span, height: screenPaper\.height \* span \};/);
+  assert.match(studio, /min: 1 \/ span, max: MAX_SCALE/);
   assert.match(studio, /clampDocumentHeight\(DOCUMENT_SIZE \* height \/ width\)/);
 });
 
@@ -243,4 +248,31 @@ test("lesson guides use a pencil demo before dotted practice without leaving the
   assert.match(studio, /이제 네 차례야\. 아무 점선이나 골라서 시작해 봐\./);
   assert.match(studio, /점선만 보기/);
   assert.match(studio, /className=\{guidePhase !== "independent" && lessonGuideAvailable \? "guide-canvas" : "guide-canvas hidden"\}/);
+});
+
+test("기다리는 화면은 입장 확인과 같은 몽그리 화면을 쓴다", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
+  const [wait, join, page, css] = await Promise.all([
+    read("../app/components/WaitMongri.tsx"),
+    read("../app/components/JoinClient.tsx"),
+    read("../app/student/draw/[id]/page.tsx"),
+    read("../app/globals.css"),
+  ]);
+  // 2026-09-20 사용자 요청: 그리기 화면도 입장 화면처럼 몽그리가 뜨는 대기 화면을 쓴다.
+  assert.match(wait, /wait-mongri\.png/);
+  assert.match(wait, /check\.waitShell/);
+  assert.match(join, /<WaitMongri line="수업실을 준비하고 있어요"/);
+  assert.match(studio, /return <WaitMongri line=\{waiting \? "도화지를 펴고 있어요" : koreanMessage\} \/>;/);
+  // 실패 문구가 영어로 나오면 아이가 읽지 못한다.
+  assert.match(studio, /\/\[가-힣\]\/\.test\(saveState\) \? saveState : "연결이 잠깐 어려워요/);
+  assert.match(page, /<Suspense fallback=\{<WaitMongri line="도화지를 펴고 있어요" \/>\}>/);
+  // /student에서 도화지로 넘어가는 중간 화면도 같은 화면을 쓴다 — 예전에는 글자만 있는 화면이 먼저 스쳐 지나갔다.
+  const entry = await read("../app/components/StudentEntry.tsx");
+  assert.match(entry, /if \(!error\) return <WaitMongri line="도화지를 펴고 있어요" \/>;/);
+  assert.doesNotMatch(entry, /도화지를 펴는 중/);
+  // 글자만 있던 옛 대기 화면은 남아 있으면 안 된다 — 한쪽만 고쳐지는 원인이 된다.
+  assert.doesNotMatch(studio, /drawing-loading/);
+  assert.doesNotMatch(page, /drawing-loading/);
+  assert.doesNotMatch(css, /\.drawing-loading/);
 });

@@ -81,11 +81,13 @@ test("undoing a clear does not resurrect a stale earlier clear once a normal edi
 test("clear-all button in DrawingStudio requires a confirmation modal and is disabled when ops is empty or editing is locked", async () => {
   const studio = compactSource(await readFile(new URL("../app/components/DrawingStudio.tsx", import.meta.url), "utf8"));
   // The button never clears directly — it only opens the confirmation modal.
+  // 2026-09-20 사용자 요청으로 ⋯ 안에서 도구 막대(되돌리기·다시하기 옆)로 옮겼다.
   assert.match(
     studio,
-    /<button\s+type="button"\s+className="clear-all-button"\s+disabled=\{Boolean\(conflictDraft\) \|\| !documentState\.ops\.length\}\s+onClick=\{\(\) => setClearConfirmOpen\(true\)\}/,
+    /<button type="button" className="dock-clear" aria-label="전체 지우기" title="전체 지우기" onClick=\{\(\) => setClearConfirmOpen\(true\)\} disabled=\{Boolean\(conflictDraft\) \|\| !documentState\.ops\.length\}>/,
   );
-  assert.doesNotMatch(studio, /className="clear-all-button"[^>]*onClick=\{clearAllOps\}/, "the button must open the confirm modal, not clear directly");
+  assert.doesNotMatch(studio, /className="dock-clear"[^>]*onClick=\{clearAllOps\}/, "the button must open the confirm modal, not clear directly");
+  assert.doesNotMatch(studio, /clear-all-button/, "같은 단추를 두 곳에 두지 않는다");
   // The modal only clears on explicit confirmation, and can be dismissed without side effects.
   assert.match(studio, /clearConfirmOpen && \(/);
   assert.match(studio, /onClick=\{\(\) => setClearConfirmOpen\(false\)\}>아니요<\/button>/);

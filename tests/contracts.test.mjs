@@ -42,6 +42,8 @@ test("keeps canvas contracts and guide data separate", async () => {
   assert.match(studio, /item\.step === lessonStep \+ 1/); assert.doesNotMatch(studio, /item\.step <= lessonStep \+ 1/);
   assert.match(studio, /<canvas\s+ref=\{guideRef\}[\s\S]*<canvas\s+ref=\{canvasRef\}/);
   assert.match(css, /\.draw-canvas \{ z-index:2; touch-action:none; \}\.guide-canvas \{ z-index:3; pointer-events:none; \}/);
+  // 그리는 중인 획을 올리는 층은 도화지와 같은 층(z-index 2)에 겹치고 입력은 받지 않는다 — 점선 층(3) 아래다.
+  assert.match(css, /\.live-canvas \{ z-index:2; pointer-events:none; \}/);
   // 레슨 카탈로그는 은퇴했다(Story 2.3) — 다시 채워지면 이 단언이 그 사실을 크게 알린다.
   assert.equal(catalog.LESSONS.length, 0, "레슨 카탈로그는 비어 있어야 한다 — 커리큘럼 정본은 lib/arc-content.ts다");
   assert.equal(catalog.normalizeActivityKey("자유롭게 그리기"), "free");

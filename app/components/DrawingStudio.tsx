@@ -177,6 +177,27 @@ function renderDocument(canvas: HTMLCanvasElement, document: DrawDocument, width
   renderDrawDocument(context, document.ops, size);
 }
 
+/* 그리는 중인 획을 올리는 얇은 층. 도화지와 픽셀 크기를 맞춰 두면 문서 좌표를 그대로 쓸 수 있고,
+ * 반투명 브러시도 층 전체를 지우고 획을 다시 그리면 알파가 겹치지 않는다. 예전에는 같은 일을
+ * 도화지 위에서 하느라 이벤트마다 캔버스 전체를 ImageData로 뜨고 되돌렸다(아이패드 미니에서 34MB·약 38ms). */
+function liveStrokeContext(live: HTMLCanvasElement | null, canvas: HTMLCanvasElement) {
+  if (!live) return null;
+  // width/height를 다시 넣으면 층이 비워진다 — 크기가 같을 때만 clearRect를 쓴다.
+  if (live.width !== canvas.width || live.height !== canvas.height) {
+    live.width = canvas.width;
+    live.height = canvas.height;
+    return live.getContext("2d");
+  }
+  const context = live.getContext("2d");
+  if (context) context.clearRect(0, 0, live.width, live.height);
+  return context;
+}
+
+function clearLiveStroke(live: HTMLCanvasElement | null) {
+  const context = live?.getContext("2d");
+  if (live && context) context.clearRect(0, 0, live.width, live.height);
+}
+
 function renderLiveStroke(canvas: HTMLCanvasElement, tool: Tool, color: string, width: StrokeWidth, points: Array<{ x: number; y: number; pressure: number }>) {
   const context = canvas.getContext("2d");
   if (!context || !points.length) return;
@@ -583,6 +604,8 @@ export function DrawingStudio() {
   const [runSerial] = useState(createSerialTaskQueue);
   const [saveBranchId] = useState(() => `branch_${crypto.randomUUID().replaceAll("-", "")}`);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // 그리는 중인 반투명 획을 올리는 층. 도화지와 픽셀 크기가 같아 좌표 변환이 필요 없다.
+  const liveCanvasRef = useRef<HTMLCanvasElement>(null);
   const guideRef = useRef<HTMLCanvasElement>(null);
   const eraserFootprintRef = useRef<HTMLDivElement>(null);
   const guideAnimationRef = useRef<number | null>(null);
@@ -612,7 +635,6 @@ export function DrawingStudio() {
     origin: { x: number; y: number };
     moved: boolean;
   } | null>(null);
-  const shapeSnapshotRef = useRef<ImageData | null>(null);
   const textDragRef = useRef<{ pointerId: number; moved: boolean; startX: number; startY: number } | null>(null);
   const gestureTouches = useRef(new Map<number, { x: number; y: number }>());
   const singleTouchTapRef = useRef(new Map<number, { at: number; x: number; y: number; moved: boolean }>());
@@ -629,7 +651,10 @@ export function DrawingStudio() {
   } | null>(null);
   // 반투명 브러시(크레용·수채)의 라이브 미리보기용 스냅숏. 세그먼트를 겹쳐 그리면
   // 이음마다 알파가 중첩돼 커밋 결과보다 훨씬 진해 보이므로, 매 이동마다 복원 후 전체를 한 번에 그린다.
-  const strokeSnapshotRef = useRef<ImageData | null>(null);
+  // 반투명 획을 얇은 층에 그리는 중인지. 예전에는 여기에 캔버스 전체 ImageData를 들고 있었다.
+  const liveStrokeRef = useRef(false);
+  // 획 중에는 도화지가 움직이지 않는다. 이벤트마다 getBoundingClientRect를 부르지 않도록 시작 때 한 번 잡는다.
+  const strokeRectRef = useRef<DOMRect | null>(null);
   const revisionRef = useRef(0);
   const initialized = useRef(false);
   const saveTimer = useRef<number | undefined>(undefined);
@@ -1387,13 +1412,28 @@ export function DrawingStudio() {
     return () => window.removeEventListener("online", flushCurrentArtwork);
   }, [artworkId, flushCurrentArtwork]);
 
-  function canvasPoint(event: ReactPointerEvent<HTMLCanvasElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
+  function pointFromRect(rect: DOMRect, clientX: number, clientY: number, pressure: number) {
     return {
-      x: roundUnit(Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width))),
-      y: roundUnit(Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height))),
-      pressure: roundUnit(event.pressure || 0.5),
+      x: roundUnit(Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))),
+      y: roundUnit(Math.max(0, Math.min(1, (clientY - rect.top) / rect.height))),
+      pressure: roundUnit(pressure || 0.5),
     };
+  }
+  function canvasPoint(event: ReactPointerEvent<HTMLCanvasElement>) {
+    // 획 중에는 도화지가 움직이지 않는다. 시작 때 잡아 둔 사각형을 쓰면 이벤트마다 레이아웃을 읽지 않는다.
+    const rect = strokeRectRef.current ?? event.currentTarget.getBoundingClientRect();
+    return pointFromRect(rect, event.clientX, event.clientY, event.pressure);
+  }
+  /* 애플 펜슬은 초당 240번 좌표를 보내는데 pointermove는 화면 주사율(60Hz)로만 온다.
+   * 나머지 표본은 getCoalescedEvents에 담겨 오므로, 이것을 읽지 않으면 점을 버리게 되고
+   * 빠르게 그을수록 선이 펜 뒤에 처지고 모서리가 잘린다. 사파리도 지원한다.
+   * 예측 점(getPredictedEvents)은 사파리에 없어 쓰지 않는다. */
+  function movePoints(event: ReactPointerEvent<HTMLCanvasElement>) {
+    const rect = strokeRectRef.current ?? event.currentTarget.getBoundingClientRect();
+    const native = event.nativeEvent;
+    const coalesced = typeof native.getCoalescedEvents === "function" ? native.getCoalescedEvents() : [];
+    const samples = coalesced.length ? coalesced : [native];
+    return samples.map((sample) => pointFromRect(rect, sample.clientX, sample.clientY, sample.pressure));
   }
   function canvasPointFromClient(clientX: number, clientY: number) {
     const canvas = canvasRef.current;
@@ -1851,10 +1891,11 @@ export function DrawingStudio() {
     }
     return true;
   }
+  /* 도형도 끄는 동안 모양이 계속 바뀐다. 획과 같은 얇은 층에 그려 도화지 픽셀을 건드리지 않는다.
+   * 예전에는 move마다 도화지 전체를 ImageData로 되돌렸다(아이패드 미니에서 34MB·약 15ms). */
   function previewShape(canvas: HTMLCanvasElement, start: { x: number; y: number }, end: { x: number; y: number }) {
-    const context = canvas.getContext("2d");
+    const context = liveStrokeContext(liveCanvasRef.current, canvas);
     if (!context) return;
-    if (shapeSnapshotRef.current) context.putImageData(shapeSnapshotRef.current, 0, 0);
     const preview: DrawOp = {
       opId: "preview_op",
       clientOpId: "preview_client",
@@ -1869,6 +1910,10 @@ export function DrawingStudio() {
     const size = { width: canvas.width, height: canvas.height };
     renderDrawOperation(context, preview, size);
     if (mirror) renderDrawOperation(context, mirrorOp(preview), size);
+  }
+  /** 도형 미리보기를 걷어낸다. 커밋되면 도화지에 다시 그려지고, 취소되면 그냥 사라진다. */
+  function clearShapePreview() {
+    clearLiveStroke(liveCanvasRef.current);
   }
   function startGestureTouch(event: ReactPointerEvent<HTMLCanvasElement>) {
     event.preventDefault();
@@ -1905,9 +1950,11 @@ export function DrawingStudio() {
     activePoints.current.clear();
     guideTraceLocksRef.current.clear();
     strokeMetaRef.current.clear();
-    strokeSnapshotRef.current = null;
+    liveStrokeRef.current = false;
+    strokeRectRef.current = null;
+    clearLiveStroke(liveCanvasRef.current);
     shapeDragRef.current = null;
-    shapeSnapshotRef.current = null;
+    clearShapePreview();
     pendingFillRef.current = null;
     renderDocument(canvas, documentStateRef.current, rasterWidthRef.current);
   }
@@ -1916,7 +1963,9 @@ export function DrawingStudio() {
     guideTraceLocksRef.current.delete(event.pointerId);
     strokeMetaRef.current.delete(event.pointerId);
     lastClientRef.current.delete(event.pointerId);
-    strokeSnapshotRef.current = null;
+    liveStrokeRef.current = false;
+    strokeRectRef.current = null;
+    clearLiveStroke(liveCanvasRef.current);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     renderDocument(event.currentTarget, documentStateRef.current, rasterWidthRef.current);
   }
@@ -1995,8 +2044,8 @@ export function DrawingStudio() {
         origin: first,
         moved: false,
       };
-      const context = event.currentTarget.getContext("2d");
-      shapeSnapshotRef.current = context ? context.getImageData(0, 0, event.currentTarget.width, event.currentTarget.height) : null;
+      strokeRectRef.current = event.currentTarget.getBoundingClientRect();
+      clearShapePreview();
       if (shapeStartRef.current) previewShape(event.currentTarget, shapeStartRef.current, first);
       return;
     }
@@ -2010,15 +2059,16 @@ export function DrawingStudio() {
       }
     }
     strokeMetaRef.current.set(event.pointerId, meta);
+    strokeRectRef.current = event.currentTarget.getBoundingClientRect();
     event.currentTarget.setPointerCapture(event.pointerId);
     activePoints.current.set(event.pointerId, [strokeStart]);
-    // 반투명 브러시는 미리보기를 스냅숏 복원 방식으로 그린다 (세그먼트 알파 중첩 방지).
-    if (meta.tool === "crayon" || meta.tool === "watercolor") {
-      const context = event.currentTarget.getContext("2d");
-      strokeSnapshotRef.current = context ? context.getImageData(0, 0, event.currentTarget.width, event.currentTarget.height) : null;
-    } else strokeSnapshotRef.current = null;
-    renderLiveStroke(event.currentTarget, meta.tool, meta.color, meta.width, [strokeStart]);
-    if (mirror) renderLiveStroke(event.currentTarget, meta.tool, meta.color, meta.width, [{ ...strokeStart, x: 1 - strokeStart.x }]);
+    // 반투명 브러시(크레용·수채붓)는 얇은 층에 그린다. 층을 지우고 획 전체를 다시 그리므로
+    // 세그먼트 알파가 겹치지 않고, 도화지 픽셀은 손을 뗄 때까지 그대로 둔다.
+    // 지우개는 도화지 픽셀을 파내는 도구라(destination-out) 층에 올릴 수 없다 — 지금처럼 도화지에 그린다.
+    liveStrokeRef.current = (meta.tool === "crayon" || meta.tool === "watercolor") && Boolean(liveStrokeContext(liveCanvasRef.current, event.currentTarget));
+    const startTarget = liveStrokeRef.current ? liveCanvasRef.current! : event.currentTarget;
+    renderLiveStroke(startTarget, meta.tool, meta.color, meta.width, [strokeStart]);
+    if (mirror) renderLiveStroke(startTarget, meta.tool, meta.color, meta.width, [{ ...strokeStart, x: 1 - strokeStart.x }]);
   }
   function pointerMove(event: ReactPointerEvent<HTMLCanvasElement>) {
     if (studioTool === "eraser") updateEraserFootprint(event, event.currentTarget.hasPointerCapture(event.pointerId));
@@ -2067,11 +2117,16 @@ export function DrawingStudio() {
     if (!points) return;
     const meta = strokeMetaRef.current.get(event.pointerId);
     if (!meta) return;
-    const rawNext = canvasPoint(event);
-    const guideLock = guideTraceLocksRef.current.get(event.pointerId);
-    const guidedMove = guideLock ? snapGuideTrace(currentGuideTraces, guideLock, rawNext) : null;
-    if (guidedMove) guideTraceLocksRef.current.set(event.pointerId, guidedMove.lock);
-    const incoming = guidedMove ? guidedMove.points : [rawNext];
+    const incoming: Array<{ x: number; y: number; pressure: number }> = [];
+    for (const rawNext of movePoints(event)) {
+      const guideLock = guideTraceLocksRef.current.get(event.pointerId);
+      const guidedMove = guideLock ? snapGuideTrace(currentGuideTraces, guideLock, rawNext) : null;
+      if (guidedMove) {
+        guideTraceLocksRef.current.set(event.pointerId, guidedMove.lock);
+        // 자석 점선이 만든 안내점에는 필압이 없다 — 마지막 실제 필압을 그대로 쓴다.
+        for (const point of guidedMove.points) incoming.push({ ...point, pressure: rawNext.pressure });
+      } else incoming.push(rawNext);
+    }
     let addedPoint = false;
     for (const next of incoming) {
       const last = points.at(-1);
@@ -2082,14 +2137,14 @@ export function DrawingStudio() {
     }
     if (addedPoint) {
       event.preventDefault();
-      if (strokeSnapshotRef.current) {
-        // 반투명 브러시: 스냅숏 복원 후 누적 획 전체를 한 번에 그려 커밋 결과와 같은 알파로 보인다.
-        const context = event.currentTarget.getContext("2d");
-        if (context) context.putImageData(strokeSnapshotRef.current, 0, 0);
-        renderLiveStroke(event.currentTarget, meta.tool, meta.color, meta.width, points);
+      const live = liveStrokeRef.current ? liveCanvasRef.current : null;
+      if (live) {
+        // 반투명 브러시: 층을 비우고 누적 획 전체를 한 번에 그려 커밋 결과와 같은 알파로 보인다.
+        liveStrokeContext(live, event.currentTarget);
+        renderLiveStroke(live, meta.tool, meta.color, meta.width, points);
         if (mirror)
           renderLiveStroke(
-            event.currentTarget,
+            live,
             meta.tool,
             meta.color,
             meta.width,
@@ -2123,11 +2178,10 @@ export function DrawingStudio() {
           return;
         }
         activePoints.current.set(event.pointerId, [points.at(-1)!]);
-        if (strokeSnapshotRef.current) {
-          // 분할 커밋 뒤에는 방금 커밋된 획이 포함된 문서로 스냅숏을 새로 뜬다.
+        if (liveStrokeRef.current) {
+          // 분할 커밋 뒤에는 방금 커밋된 획이 도화지에 들어갔다. 층은 비우고 이어서 그린다.
           renderDocument(event.currentTarget, documentStateRef.current, rasterWidthRef.current);
-          const context = event.currentTarget.getContext("2d");
-          strokeSnapshotRef.current = context ? context.getImageData(0, 0, event.currentTarget.width, event.currentTarget.height) : null;
+          clearLiveStroke(liveCanvasRef.current);
         }
       }
     }
@@ -2175,7 +2229,7 @@ export function DrawingStudio() {
     const drag = shapeDragRef.current;
     if (drag && drag.pointerId === event.pointerId) {
       shapeDragRef.current = null;
-      shapeSnapshotRef.current = null;
+      clearShapePreview();
       lastClientRef.current.delete(event.pointerId);
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
       if (conflictDraftRef.current) {
@@ -2226,7 +2280,9 @@ export function DrawingStudio() {
     activePoints.current.delete(event.pointerId);
     guideTraceLocksRef.current.delete(event.pointerId);
     strokeMetaRef.current.delete(event.pointerId);
-    strokeSnapshotRef.current = null;
+    liveStrokeRef.current = false;
+    strokeRectRef.current = null;
+    clearLiveStroke(liveCanvasRef.current);
     lastClientRef.current.delete(event.pointerId);
     // 한도에 막혀 커밋되지 않으면 미리보기 픽셀을 문서 상태로 되돌린다.
     if (!commitStroke(points, meta)) {
@@ -2255,7 +2311,7 @@ export function DrawingStudio() {
     }
     if (shapeDragRef.current?.pointerId === event.pointerId) {
       shapeDragRef.current = null;
-      shapeSnapshotRef.current = null;
+      clearShapePreview();
       lastClientRef.current.delete(event.pointerId);
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
       renderDocument(event.currentTarget, documentStateRef.current, rasterWidthRef.current);
@@ -3009,6 +3065,9 @@ export function DrawingStudio() {
                 aria-disabled={Boolean(conflictDraft)}
                 aria-label="그림 그리는 도화지"
               />
+              {/* 그리는 중인 반투명 획만 올리는 얇은 층. 도화지 픽셀을 건드리지 않으므로
+                  획마다 34MB짜리 스냅숏을 뜨고 되돌릴 일이 없다(2026-09-21 애플 펜슬 지연). */}
+              <canvas ref={liveCanvasRef} className="live-canvas" aria-hidden="true" />
               {studioTool === "text" && selectedText && (
                 <button
                   type="button"

@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useId, useRef, useState } from "react";
-import { ArrowLeft, ArrowRightLeft, FileText, Hand, QrCode, Send, X } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, FileText, Hand, Lock, QrCode, Send, X } from "lucide-react";
 import { Logo } from "./Logo";
 import { useModalDialog } from "./useModalDialog";
 import type { ClassroomData, Student, WorkspaceArtwork } from "./TeacherApp";
@@ -32,9 +32,12 @@ function waitedLabel(ms: number) {
   return `${Math.floor(ms / 60_000)}분째`;
 }
 
-function HandRaiseStrip({ students, serverNow, onOpenArtwork, onAction }: {
+function HandRaiseStrip({ students, serverNow, entryLocks = 0, onOpenArtwork, onAction }: {
   students: Student[];
   serverNow?: string;
+  /* 지금 입장이 잠긴 기기 수. 잠금은 기기 단위라 누구인지는 알 수 없다 —
+   * 손들기처럼 "막힌 아이가 있다"는 것만 선생님이 알아차리게 한다(2026-09-22 사용자 결정). */
+  entryLocks?: number;
   onOpenArtwork: (studentId: string) => void;
   onAction: (action: string, rest?: Record<string, unknown>) => Promise<Record<string, unknown> | null>;
 }) {
@@ -56,7 +59,7 @@ function HandRaiseStrip({ students, serverNow, onOpenArtwork, onAction }: {
     const stillRaised = new Set(students.filter((student) => student.handRaisedAt).map((student) => student.id));
     setLowered((value) => value.filter((id) => stillRaised.has(id)));
   }, [students]);
-  if (!raised.length) return null;
+  if (!raised.length && entryLocks <= 0) return null;
   // 교사 기기 시계가 틀어져 있어도 어긋나지 않게 서버 시각과의 차이를 뺀다.
   const skew = serverNow && clock ? clock - Date.parse(serverNow) : 0;
   const waitedMs = (at: string) => (clock ? Math.max(0, clock - skew - Date.parse(at)) : 0);
@@ -65,8 +68,8 @@ function HandRaiseStrip({ students, serverNow, onOpenArtwork, onAction }: {
   return (
     <section className="tcw-hand-strip" aria-label="선생님을 부른 학생">
       {/* 인원이 바뀔 때만 읽힌다. 경과 시간은 10초마다 바뀌므로 여기에 넣지 않는다. */}
-      <span className="sr-only" aria-live="polite">{raised.length}명이 선생님을 불렀어요</span>
-      <p className="tcw-hand-strip-title"><Hand size={18} aria-hidden="true" /><span>손 든 학생</span></p>
+      <span className="sr-only" aria-live="polite">{raised.length}명이 선생님을 불렀어요{entryLocks > 0 ? `, 입장이 잠긴 기기 ${entryLocks}대` : ""}</span>
+      {raised.length > 0 && <p className="tcw-hand-strip-title"><Hand size={18} aria-hidden="true" /><span>손 든 학생</span></p>}
       <ul className="tcw-hand-list">
         {raised.map((student) => (
           <li key={student.id}>
@@ -83,6 +86,12 @@ function HandRaiseStrip({ students, serverNow, onOpenArtwork, onAction }: {
       {/* 넓은 화면: 앞의 넷만 보이고 나머지는 수로 접는다. 좁은 화면: 첫 한 명만 보이고 나머지를 접는다. */}
       {raised.length > HAND_CHIPS_WIDE && <span className="tcw-hand-more">+{raised.length - HAND_CHIPS_WIDE}명 더</span>}
       {raised.length > 1 && <span className="tcw-hand-rest">외 {raised.length - 1}명</span>}
+      {/* 코드를 여러 번 틀려 잠긴 기기. 선생님이 바로 풀어 줄 수 있어야 아이가 수업에서 빠지지 않는다. */}
+      {entryLocks > 0 && <span className="tcw-entry-lock">
+        <Lock size={16} aria-hidden="true" />
+        <b>입장이 잠긴 기기 {entryLocks}대</b>
+        <button type="button" onClick={() => void onAction("clearEntryLocks")}>잠금 풀기</button>
+      </span>}
     </section>
   );
 }
@@ -114,7 +123,7 @@ export function TeacherWorkspace(props: WorkspaceProps) {
   return <>
     <header className="tcw-header"><Logo /><a className="tcw-back" href="/teacher"><ArrowLeft size={20} /><span>학급 목록</span></a><h1>{room.displayName}</h1><div className="tcw-header-actions"><button type="button" onClick={(event) => onQr(event.currentTarget)}><QrCode size={19} />입장 안내</button><button type="button" className="tcw-primary" onClick={onMessage}><Send size={18} />전체 메시지</button></div></header>
     <nav className="tcw-tabs" aria-label="학급 메뉴">{tabs.map(([key, label]) => <a key={key} href={key === "today" ? `?` : `?view=${key}`} aria-current={tab === key ? "page" : undefined} onClick={(event) => { if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return; event.preventDefault(); selectTab(key); }}>{label}{key === "today" && raisedCount > 0 && <span className="tcw-tab-badge" aria-label={`${raisedCount}명이 선생님을 불렀어요`}>{raisedCount}</span>}</a>)}</nav>
-    <HandRaiseStrip students={students} serverNow={data.serverNow} onOpenArtwork={onOpenArtwork} onAction={props.onAction} />
+    <HandRaiseStrip students={students} serverNow={data.serverNow} entryLocks={data.entryLocks} onOpenArtwork={onOpenArtwork} onAction={props.onAction} />
     {loadError && <div className="tcw-error" role="alert">새로 확인하지 못했어요. 마지막으로 받은 내용을 표시하고 있어요. <span>{loadError}</span><button onClick={onRetry}>다시 확인</button></div>}
     {tab === "today" && <section className="tcw-today" aria-label="오늘 수업">
       <div className="tcw-session"><div><h2>오늘 수업</h2><p>아이들은 빈 도화지로 들어와요. 수업은 선생님이 이끌고, 여기서는 그리는 모습을 함께 봐요.</p></div></div>

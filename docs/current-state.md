@@ -7,6 +7,7 @@
 
 - 사용자 요청 “싹 다 push 하고 pr 날려”에 따라 기능 커밋 `46bd780`과 평가 기준 하단 이동 `6c4d2a0`을 개인 fork `qudcks1940/wiggle_web`의 `codex/storybook-editor-fixes-20260923`에 push하고 운영 저장소 main 대상 [PR #16](https://github.com/yonghwan86/wiggle_web/pull/16)을 생성했다.
 - 최신 운영 main을 fetch하여 `e7da180`으로 변동이 없고 현재 브랜치의 조상임을 확인했다. 코드 변경 없이 기존 production build·392/392 테스트·typecheck·lint·브라우저/PDF 검증 결과를 유지하며 diff check를 다시 확인했다.
+- GitHub에서 PR OPEN·충돌 없음(MERGEABLE), 변경 파일 31개와 push한 HEAD 반영을 확인했다. Vercel 체크는 `Authorization required to deploy.`로 실패 표시되며, 미리보기 배포에 프로젝트 관리자의 승인이 필요한 상태다.
 - 이 작업에 속한 모든 기능 변경을 포함한다. 기존 학교 제안서 산출물·의존성 폴더와 다른 작업의 인수인계 파일은 그대로 보존했다. main push·PR 병합·운영 배포 없음. 배포 후 실제 수업 코드로 운영 저장/이미지 경로 실측이 필요하다.
 
 ## 2026-09-23 피드백 평가 기준 위치 조정 (로컬 검증 완료, 사용자 미리보기)

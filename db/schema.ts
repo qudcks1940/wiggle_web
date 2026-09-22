@@ -161,6 +161,24 @@ export const storybookAssets = sqliteTable("storybook_assets", {
   index("storybook_assets_student_idx").on(table.studentId, table.createdAt),
 ]);
 
+export const storybookPresence = sqliteTable("storybook_presence", {
+  studentId: text("student_id").primaryKey().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  storybookId: text("storybook_id").notNull().references(() => storybooks.id, { onDelete: "cascade" }),
+  pageId: text("page_id").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const storybookAdvice = sqliteTable("storybook_advice", {
+  id: text("id").primaryKey(),
+  storybookId: text("storybook_id").notNull().references(() => storybooks.id, { onDelete: "cascade" }),
+  teacherId: text("teacher_id").notNull().references(() => teachers.id, { onDelete: "cascade" }),
+  pageId: text("page_id").notNull(),
+  pageNumber: integer("page_number").notNull(),
+  body: text("body").notNull(),
+  createdAt: text("created_at").notNull(),
+  seenAt: text("seen_at"),
+}, table => [index("storybook_advice_book_idx").on(table.storybookId, table.createdAt)]);
+
 export const storybookMutations = sqliteTable("storybook_mutations", {
   requestId: text("request_id").notNull(),
   storybookId: text("storybook_id").notNull().references(() => storybooks.id, { onDelete: "cascade" }),

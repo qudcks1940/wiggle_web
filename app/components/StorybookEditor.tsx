@@ -21,6 +21,7 @@ import {
 } from "@/lib/storybook-model";
 import { AuthenticatedImage, AuthenticatedImageCache } from "./AuthenticatedImage";
 import { StorybookTextInput } from "./StorybookTextInput";
+import { StorybookPresence } from "./StorybookPresence";
 import { ImageCutoutModal } from "./ImageCutoutModal";
 import { Logo } from "./Logo";
 import "./storybook-editing.css";
@@ -211,6 +212,17 @@ function StorybookEditorContent({ teacherBookId, classroomId }: { teacherBookId?
   const savingRef = useRef(false);
   const completionPending = useRef(false);
   const saveTimer = useRef<number | undefined>(undefined);
+  const maxSaveTimer = useRef<number | undefined>(undefined);
+  const teacherWatching = useRef(false);
+  const persistLatest = useRef<() => void>(() => {});
+  const onWatching = useCallback((watching: boolean) => {
+    if (watching && !teacherWatching.current && maxSaveTimer.current) {
+      window.clearTimeout(maxSaveTimer.current);
+      maxSaveTimer.current = window.setTimeout(() => persistLatest.current(), 2000);
+    }
+    teacherWatching.current = watching;
+  }, []);
+  useEffect(() => { persistLatest.current = () => void persist(false); });
   const undoRef = useRef<StorybookDocument[]>([]);
   const redoRef = useRef<StorybookDocument[]>([]);
   const [historyState, setHistoryState] = useState({ undo: 0, redo: 0 });
@@ -235,7 +247,7 @@ function StorybookEditorContent({ teacherBookId, classroomId }: { teacherBookId?
 
   useEffect(() => { bookRef.current = book; }, [book]);
   useEffect(() => { documentRef.current = document; }, [document]);
-  useEffect(() => () => { if (saveTimer.current) window.clearTimeout(saveTimer.current); }, []);
+  useEffect(() => () => { if (saveTimer.current) window.clearTimeout(saveTimer.current); if (maxSaveTimer.current) window.clearTimeout(maxSaveTimer.current); }, []);
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -263,7 +275,9 @@ function StorybookEditorContent({ teacherBookId, classroomId }: { teacherBookId?
     editGeneration.current += 1;
     setSaveState("unsaved");
     if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => void persist(false), 900);
+    saveTimer.current = window.setTimeout(() => void persist(false), teacherWatching.current ? 500 : 900);
+    // Continuous typing cannot postpone autosave forever. Watching uses the same 2s cap as drawing.
+    if (!maxSaveTimer.current) maxSaveTimer.current = window.setTimeout(() => void persist(false), teacherWatching.current ? 2000 : 10_000);
   }
 
   function remember(current: StorybookDocument) {
@@ -307,6 +321,7 @@ function StorybookEditorContent({ teacherBookId, classroomId }: { teacherBookId?
     }
     // Invalid completion must leave the scheduled draft save intact.
     if (saveTimer.current) { window.clearTimeout(saveTimer.current); saveTimer.current = undefined; }
+    if (maxSaveTimer.current) { window.clearTimeout(maxSaveTimer.current); maxSaveTimer.current = undefined; }
     if (savingRef.current) {
       return;
     }
@@ -618,6 +633,7 @@ function StorybookEditorContent({ teacherBookId, classroomId }: { teacherBookId?
   if (!book || !document || !page) return <main className="app-shell"><header className="app-header"><Logo /></header>{error ? <p className="error-box">{error}</p> : <div className="loading-card">그림책 작업실을 여는 중…</div>}</main>;
 
   return <main className="storybook-editor-shell">
+    {!teacherBookId && <StorybookPresence bookId={book.id} pageId={document.pages[previewOpen ? previewPage : pageIndex].id} onWatching={onWatching} />}
     <header className="storybook-editor-header"><a className="small-button" href={teacherBookId ? `/teacher/class/${classroomId}/books` : "/student/books"}>← 그림책</a><input aria-label="그림책 제목" maxLength={60} value={book.title} onChange={(event) => changeTitle(event.target.value)} placeholder="그림책 제목을 지어 주세요" /><span className={`storybook-save-state ${saveState}`}>{saveState === "saving" ? "저장 중…" : saveState === "unsaved" ? "변경됨" : saveState === "error" ? "저장 확인 필요" : "✓ 저장됨"}</span><button type="button" className="button secondary" disabled={saveState === "saving"} onClick={() => void persist(false)}>저장</button><button type="button" className="button secondary" onClick={() => { setPreviewPage(pageIndex); setPreviewOpen(true); }}>미리보기</button><button type="button" className="button primary" disabled={saveState === "saving"} onClick={() => void persist(true)}>완성하기</button></header>
     {textNotice && <p className="storybook-editor-error" role="status">{textNotice}</p>}
     {error && <p className="error-box storybook-editor-error" role="alert">{error}<button type="button" onClick={() => setError("")}>닫기</button></p>}

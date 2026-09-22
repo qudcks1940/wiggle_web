@@ -53,7 +53,7 @@ test("한국어 피드백 PDF는 긴 문단을 여러 쪽으로 나누고 렌더
   assert.ok(pixel[0] > 210 && pixel[1] < 80);
   const print = await printPdfs(images, { bookSpecUid: "SQUAREBOOK_HC", name: "테스트", pageMin: 24, pageMax: 130, pageIncrement: 2, bindingType: "PUR", innerTrimWidthMm: 243, innerTrimHeightMm: 248, hingeGapMm: 10 }, { coverWidthMm: 544, coverHeightMm: 288, innerWidthMm: 249, innerHeightMm: 254, spineWidthMm: 10 }, "기다리는 마음");
   assert.equal((await PDFDocument.load(print.inner)).getPageCount(), 24);
-  assert.equal(print.addedPages, 24 - images.length);
+  assert.equal(print.addedPages, 24 - (images.length - 1));
   const cover = await PDFDocument.load(print.cover); assert.equal(cover.getPageCount(), 1);
   assert.ok(Math.abs(cover.getPages()[0].getWidth() * 25.4 / 72 - 544) < .01);
   await mkdir("work/book-qa", { recursive: true });

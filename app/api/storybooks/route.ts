@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       rotation: 0, zIndex: 1, opacity: 1, locked: false,
     });
   }
-  const title = cleanText(payload.title, 60) || (artwork ? `${artwork.title} 그림책` : "나의 새 그림책");
+  const title = cleanText(payload.title, 60) || (artwork ? `${artwork.title} 그림책` : "");
   const db = bindings().DB;
   const statements = [
     db.prepare(`INSERT INTO storybooks(id, student_id, classroom_id, title, document_json, schema_version) VALUES (?, ?, ?, ?, ?, 1)`).bind(storybookId, student.id, student.classroomId, title, JSON.stringify(document)),

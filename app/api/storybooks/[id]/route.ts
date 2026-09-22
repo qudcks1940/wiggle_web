@@ -1,6 +1,6 @@
 import { storybookEditorActor } from "@/lib/storybook-editor-auth";
 import { bindings } from "@/db/runtime";
-import { MAX_STORYBOOK_PAGES, validateStorybookDocument } from "@/lib/storybook-model";
+import { MAX_STORYBOOK_PAGES, storybookCompletionError, validateStorybookDocument } from "@/lib/storybook-model";
 import { cleanText, jsonError, noStoreJson, rateLimit, sameOrigin } from "@/lib/security";
 import { ownedStorybook, priorStorybookMutation, storybookAssets, storybookResponse } from "@/lib/storybook-store";
 
@@ -39,8 +39,10 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     const ownedAssets = await storybookAssets(storybookId, student.id);
     if ([...referencedAssets].some((assetId) => !ownedAssets.some((asset) => asset.id === assetId))) return jsonError("다른 그림책의 이미지는 사용할 수 없어요.", 403);
   }
-  const title = cleanText(payload.title, 60) || book.title;
+  const title = typeof payload.title === "string" ? cleanText(payload.title, 60) : book.title;
   const complete = payload.complete === true;
+  const completionError = complete && storybookCompletionError(title, document.pages.length, !new URL(request.url).pathname.startsWith("/api/teacher/"));
+  if (completionError) return jsonError(completionError);
   const newRevision = book.revision + 1;
   const db = bindings().DB;
   const results = await db.batch([

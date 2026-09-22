@@ -62,9 +62,12 @@ test("교사 완성 그림책 화면은 소유권·완성 상태·개별 및 일
   assert.doesNotMatch(collection, /object_key AS/);
   assert.match(asset, /c\.teacher_id = \?/);
   assert.match(asset, /private, no-store/);
-  assert.match(library, /전체 선택/);
-  assert.match(library, /선택한 책 피드백 만들기/);
-  assert.match(library, /피드백 만들기/);
+  assert.match(library, /피드백 관리 열기/);
+  assert.doesNotMatch(library, /선택한 책 피드백 만들기/);
+  const generation = await read("../app/components/TeacherFeedbackGeneration.tsx");
+  assert.match(generation, /전체 선택/);
+  assert.match(generation, /선택한 책 피드백 만들기/);
+  assert.match(await read("../app/components/TeacherFeedbackManager.tsx"), /<TeacherFeedbackGeneration/);
   assert.match(preview, /window\.print\(\)/);
   assert.match(preview, /PDF로 저장 · 인쇄/);
   assert.match(teacherApp, /TeacherWorkspace/);

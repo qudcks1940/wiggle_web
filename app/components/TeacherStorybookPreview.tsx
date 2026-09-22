@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { StorybookCrop, StorybookDocument, StorybookElement, StorybookPage } from "@/lib/storybook-model";
 import { Logo } from "./Logo";
+import { StorybookTextInput } from "./StorybookTextInput";
+import "./storybook-editing.css";
 
 type TeacherBook = { id: string; classroomId: string; classroomName: string; studentId: string; nickname: string; animal: string; title: string; completedAt: string; document: StorybookDocument };
 type TeacherAsset = { id: string; sourceType: string; contentType: string };
@@ -14,8 +16,8 @@ function imageCropStyle(crop?: StorybookCrop): CSSProperties {
 
 function BookPage({ bookId, format, page, assetIds }: { bookId: string; format: StorybookDocument["format"]; page: StorybookPage; assetIds: Set<string> }) {
   const assetUrl = (assetId: string) => `/api/teacher/storybooks/${bookId}/assets/${assetId}`;
-  const renderElement = (element: StorybookElement) => <div className={`teacher-story-element ${element.type}`} key={element.id} style={{ left: `${element.x * 100}%`, top: `${element.y * 100}%`, width: `${element.width * 100}%`, height: `${element.height * 100}%`, transform: `rotate(${element.rotation}deg)`, zIndex: element.type === "text" ? 10_002 : element.zIndex + 1, opacity: element.opacity, color: element.color, textAlign: element.align }}>
-    {element.type === "image" && element.assetId && assetIds.has(element.assetId) ? <img src={assetUrl(element.assetId)} alt="" style={imageCropStyle(element.crop)} /> : element.type === "text" ? <span style={{ fontSize: `${(element.fontSize ?? 0.045) * 100}cqi` }}>{element.text}</span> : null}
+  const renderElement = (element: StorybookElement) => <div className={`teacher-story-element ${element.type} ${element.type === "text" ? "storybook-stage-element" : ""}`} key={element.id} style={{ left: `${element.x * 100}%`, top: `${element.y * 100}%`, width: `${element.width * 100}%`, height: `${element.height * 100}%`, transform: `rotate(${element.rotation}deg)`, zIndex: element.type === "text" ? 10_002 : element.zIndex + 1, opacity: element.opacity, color: element.color, textAlign: element.align }}>
+    {element.type === "image" && element.assetId && assetIds.has(element.assetId) ? <img src={assetUrl(element.assetId)} alt="" style={imageCropStyle(element.crop)} /> : element.type === "text" ? <StorybookTextInput element={element} format={format} interactive={false} /> : null}
   </div>;
   return <div className={`teacher-story-page format-${format}`} style={{ background: page.background }}>
     {page.backgroundAssetId && assetIds.has(page.backgroundAssetId) && <img className="teacher-story-background" src={assetUrl(page.backgroundAssetId)} alt="" />}

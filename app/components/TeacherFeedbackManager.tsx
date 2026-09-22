@@ -6,6 +6,7 @@ import type { Rubric, BookFeedback } from "@/lib/book-rubric";
 import { defaultFeedbackExport, feedbackExportContent, type FeedbackExportOptions } from "@/lib/feedback-export";
 import { teacherRequest, downloadFeedback, saveBlob, jobLabel, type CompletedBook } from "./book-workflow-client";
 import { Logo } from "./Logo";
+import { TeacherFeedbackGeneration } from "./TeacherFeedbackGeneration";
 import "./book-workflow.css";
 import "./feedback-manager.css";
 
@@ -101,6 +102,7 @@ export function TeacherFeedbackManager({ classroomId }: { classroomId: string })
   return <main className="book-desk feedback-manager">
     <header className="book-desk-header"><Logo /><a className="small-button" href={`/teacher/class/${classroomId}/books`}>← 완성 그림책</a><button className="small-button" disabled={busy} onClick={() => { setResults({}); setRetry(n => n + 1); void load(); }}>새로 확인</button></header>
     <div className="fm-heading"><div><p className="eyebrow">{data?.name ?? "우리 반"} · 선생님의 책상</p><h1>피드백 관리</h1><p>학생마다 필요한 피드백만 골라, 한 번에 PDF로 모아 보세요.</p></div><span className="fm-count"><FileText size={20} /> {data?.books.filter(b => jobFor(b)).length ?? 0}권 준비 완료</span></div>
+    <TeacherFeedbackGeneration classroomId={classroomId} onChanged={load} />
     {error && <div className="error-box" role="alert" style={{ whiteSpace: "pre-wrap" }}>{error}<button className="small-button" disabled={busy} onClick={() => { setRetry(n => n + 1); void load(); }}>다시 시도</button></div>}
     {notice && <p className="book-notice" role="status">{notice}</p>}
     <div className="fm-batch"><div><b>{selected.length}권 선택</b><span>한 권은 PDF, 여러 권은 ZIP으로 받아요.</span></div><div><button className="fm-clear" disabled={busy || !selected.length} onClick={() => setSelected([])}>선택 해제</button><button className="button primary" disabled={busy || !selected.length} onClick={() => void download((data?.books ?? []).filter(b => selected.includes(b.id)))}><Download size={18} />{busy ? "PDF 준비 중…" : "선택한 PDF 받기"}</button></div></div>
@@ -117,7 +119,7 @@ export function TeacherFeedbackManager({ classroomId }: { classroomId: string })
       <section className="fm-detail" aria-label="피드백 구성과 미리보기">
         {!book ? <div className="book-panel book-empty">그림책을 완성하면 여기서 피드백을 관리할 수 있어요.</div> : <>
           <div className="book-panel fm-config"><div className="book-section-heading"><div><p className="eyebrow">{studentName(book)}</p><h2>{book.title}</h2><p className="book-muted">책 {book.pageCount}쪽 · 이 책에 담을 피드백을 선택하세요.</p></div><a className="small-button" href={`/teacher/class/${classroomId}/books/${book.id}`}>그림책 보기</a></div>
-            {!job ? <div className="book-empty"><p>아직 완성된 피드백이 없어요.</p><a className="button secondary" href={`/teacher/class/${classroomId}/books`}>그림책 목록에서 피드백 만들기</a></div> : !result || !choice ? <p role="status">{error ? "피드백을 열지 못했어요." : "피드백 내용을 불러오는 중…"}</p> : <fieldset disabled={busy} className="fm-fieldset">
+            {!job ? <div className="book-empty"><p>아직 완성된 피드백이 없어요.</p><a className="button secondary" href="#feedback-generation" onClick={() => { const panel = document.getElementById("feedback-generation") as HTMLDetailsElement | null; if (panel) panel.open = true; }}>위에서 피드백 만들기</a></div> : !result || !choice ? <p role="status">{error ? "피드백을 열지 못했어요." : "피드백 내용을 불러오는 중…"}</p> : <fieldset disabled={busy} className="fm-fieldset">
               {jobsFor(book).length > 1 && <label className="book-field">평가 결과 버전<select value={job.id} onChange={e => setVersions(current => ({ ...current, [book.id]: e.target.value }))}>{jobsFor(book).map((j, i) => <option key={j.id} value={j.id}>{i === 0 ? "최근 결과" : "이전 결과"} · 기준 {j.rubricVersion.slice(0, 8)} · {j.createdAt?.slice(0, 10)}</option>)}</select></label>}
               <div className="fm-option-title"><h3><SlidersHorizontal size={17} />PDF에 넣을 평가 영역</h3><div><button className="fm-text-button" onClick={() => update({ criteria: result.rubric.criteria.map(c => c.id) })}>모두 선택</button><button className="fm-text-button" onClick={() => update({ criteria: [] })}>모두 해제</button></div></div>
               <div className="fm-criteria">{result.rubric.criteria.map(c => <label className={choice.criteria.includes(c.id) ? "checked" : ""} key={c.id}><input type="checkbox" checked={choice.criteria.includes(c.id)} onChange={e => update({ criteria: e.target.checked ? [...choice.criteria, c.id] : choice.criteria.filter(id => id !== c.id) })} />{c.name}</label>)}</div>

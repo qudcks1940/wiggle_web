@@ -17,11 +17,11 @@ export async function enqueuePrint(teacherId: string, classroomId: string, ids: 
   for (const id of ids) {
     const book = await workflowBook(teacherId, id);
     if (!book || book.classroomId !== classroomId) throw new Error("다른 학급 또는 미완성 그림책이 포함되어 있어요.");
-    printPageCount(JSON.parse(book.documentJson).pages.length, spec);
+    printPageCount(JSON.parse(book.documentJson).pages.length - 1, spec);
     books.push(book);
   }
   const db = bindings().DB;
-  await db.batch(books.map((book) => db.prepare(`INSERT INTO book_print_jobs(id, storybook_id, classroom_id, teacher_id, revision, environment, spec_uid) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(storybook_id, teacher_id, revision, environment, spec_uid) DO UPDATE SET status = CASE WHEN book_print_jobs.status = 'failed' THEN 'queued' ELSE book_print_jobs.status END, error = NULL`).bind(randomUUID(), book.id, classroomId, teacherId, book.revision, printEnvironment(), specUid)));
+  await db.batch(books.map((book) => db.prepare(`INSERT INTO book_print_jobs(id, storybook_id, classroom_id, teacher_id, revision, environment, spec_uid) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(storybook_id, teacher_id, revision, environment, spec_uid) DO UPDATE SET status = CASE WHEN (book_print_jobs.status = 'failed' OR (book_print_jobs.status = 'ready' AND json_extract(COALESCE(book_print_jobs.layout_json, '{}'), '$.sourceLayoutVersion') IS NOT 2)) THEN 'queued' ELSE book_print_jobs.status END, error = NULL`).bind(randomUUID(), book.id, classroomId, teacherId, book.revision, printEnvironment(), specUid)));
 }
 export async function processPrint(teacherId: string, classroomId: string) {
   if (!await bookClassroom(teacherId, classroomId)) throw new Error("학급 권한이 없어요.");
@@ -33,7 +33,7 @@ export async function processPrint(teacherId: string, classroomId: string) {
     if (!book || book.revision !== job.revision) throw new Error("완성본이 변경되었어요. 최신 책으로 다시 준비해 주세요.");
     const spec = await sweetbook<PrintSpec>(`/book-specs/${encodeURIComponent(job.spec_uid)}`);
     const originalCount = JSON.parse(book.documentJson).pages.length;
-    const count = printPageCount(originalCount, spec);
+    const count = printPageCount(originalCount - 1, spec);
     const size = await sweetbook<PrintSize>(`/book-specs/${encodeURIComponent(job.spec_uid)}/calculated-size?pages=${count}`);
     const { images } = await loadBookImages(book, 2600);
     const pdfs = await printPdfs(images, spec, size, book.title);
@@ -41,7 +41,7 @@ export async function processPrint(teacherId: string, classroomId: string) {
     await validatePrintPdf(pdfs.inner, "inner", { spec, size, pageCount: pdfs.pageCount });
     await bindings().ARTWORKS.put(printObjectKey(job.id, "cover"), pdfs.cover, { httpMetadata: { contentType: "application/pdf" } });
     await bindings().ARTWORKS.put(printObjectKey(job.id, "inner"), pdfs.inner, { httpMetadata: { contentType: "application/pdf" } });
-    const layout = { spec, size, pageCount: pdfs.pageCount, addedPages: pdfs.addedPages, originalPages: originalCount };
+    const layout = { spec, size, pageCount: pdfs.pageCount, addedPages: pdfs.addedPages, originalPages: originalCount, coverPages: 1, innerSourcePages: originalCount - 1, sourceLayoutVersion: 2 };
     await db.prepare(`UPDATE book_print_jobs SET layout_json = ? WHERE id = ? AND lease = ?`).bind(JSON.stringify(layout), job.id, lease).run();
     const latest = await workflowBook(teacherId, book.id);
     if (!latest || latest.revision !== job.revision) throw new Error("준비 중 원본이 바뀌었어요. 최신 책으로 다시 준비해 주세요.");

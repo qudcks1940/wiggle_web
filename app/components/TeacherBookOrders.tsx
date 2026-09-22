@@ -28,7 +28,7 @@ export function TeacherBookOrders({ classroomId }: { classroomId: string }) {
     if (!initialized.current) { initialized.current = true; setSchool(r.profile?.school_name ?? ""); setGrade(String(r.room.grade ?? "")); setClassNumber(String(r.room.classNumber ?? "")); }
   }, [classroomId]);
   useEffect(() => { void load().catch((e) => setError(e.message)); }, [load]);
-  const currentJob = (book: CompletedBook) => state?.jobs.find((j) => j.storybookId === book.id && j.revision === book.revision && j.specUid === specUid);
+  const currentJob = (book: CompletedBook) => state?.jobs.find((j) => j.storybookId === book.id && j.revision === book.revision && j.specUid === specUid && (j.status !== "ready" || (j.layoutJson && JSON.parse(j.layoutJson).sourceLayoutVersion === 2)));
   const selectedBooks = books.filter((b) => selected.includes(b.id));
   const ready = selected.length + selectedUploads.length > 0 && selected.length + selectedUploads.length <= 50 && selectedBooks.every((b) => currentJob(b)?.status === "ready");
   function changed() { setConfirmed(false); requestId.current = null; }
@@ -57,7 +57,7 @@ export function TeacherBookOrders({ classroomId }: { classroomId: string }) {
     {state?.configError && <p className="error-box">제작 규격을 불러오지 못했어요. 잠시 뒤 다시 확인해 주세요.</p>}
     <fieldset disabled={busy} className="print-form-fieldset"><div className="book-order-layout"><div>
       <section className="book-panel"><p className="eyebrow">01 · 원고 준비</p><h2>제작할 책을 선택해요</h2><p className="book-field">고화질 스퀘어북 (하드커버) · 243 × 248mm · 24~130쪽 (2쪽 단위)</p>
-      <p className="book-muted">완성 그림책은 모든 쪽을 내지에 담고, 첫 쪽·마지막 쪽을 표지에 재사용합니다. 최소 쪽 수까지 빈 쪽이 추가될 수 있어요. 준비한 PDF를 꼭 열어 확인해 주세요.</p>
+      <p className="book-muted">첫 번째 쪽은 앞표지 PDF, 2쪽부터 마지막 쪽까지는 내지 PDF로 자동 분리합니다. 뒤표지는 무지로 두며, 내지의 제작 규격(최소 24쪽·짝수)에 맞춰 끝에 빈 쪽이 추가될 수 있어요. 준비한 PDF를 꼭 열어 확인해 주세요.</p>
       <label className="book-check"><input type="checkbox" checked={books.length > 0 && selected.length === books.length} onChange={(e) => { setSelected(e.target.checked ? books.map((b) => b.id) : []); changed(); }} />우리 반 전체 선택</label>
       <div className="book-order-list">{books.map((b) => { const job = currentJob(b); return <article key={b.id}><label className="book-check"><input type="checkbox" checked={selected.includes(b.id)} onChange={(e) => { setSelected((s) => e.target.checked ? [...s, b.id] : s.filter((v) => v !== b.id)); changed(); }} /><span><b>{b.title}</b><small>{b.seatNumber}번 {b.realName ?? b.nickname} · 원본 {b.pageCount}쪽</small></span></label><label className="book-quantity">수량<input aria-label={`${b.title} 수량`} type="number" min="1" max="200" value={quantities[b.id] ?? 1} onChange={(e) => { setQuantities((q) => ({ ...q, [b.id]: Number(e.target.value) })); changed(); }} /></label><div className="book-order-item-status"><span className={`book-status status-${job?.status}`}>{jobLabel(job?.status)}</span>{job?.layoutJson && <><PrintDimensions layout={JSON.parse(job.layoutJson)} /><a className="small-button" href={`/api/teacher/book-print/${job.id}?kind=cover`}>표지 PDF</a><a className="small-button" href={`/api/teacher/book-print/${job.id}?kind=inner`}>내지 PDF</a></>}{job?.error && <p className="book-job-error">{job.error}</p>}</div></article>; })}</div>
       {!books.length && <p>완성 그림책이 아직 없어요. 아래에서 직접 준비한 PDF를 넣을 수도 있어요.</p>}

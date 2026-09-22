@@ -2089,3 +2089,160 @@ body {
 /* 전체 지우기(2026-09-20): 되돌리기·다시하기와 같은 동그란 단추. 위험한 동작이라 붉은 기운을 준다. */
 .dock-clear { color:#a2402b; }
 .dock-clear:not(:disabled):hover { background:#fdeee9; border-color:#e7c3b7; }
+
+/* ── 내 그림 보관함 = 펼친 스케치북 (2026-09-20 GPT 인계 archive-sketchbook-handoff v2) ──
+   책·낱장·종이결은 인계받은 그림 자산이고, 글자·단추·목록·아이 그림은 모두 실제 DOM이다.
+   시안 전체를 배경으로 깔고 투명 버튼을 얹지 않는다.
+
+   두 쪽의 좌표는 book-open-blank.webp(1810×869)를 실제로 재서 얻었다:
+     크림 왼쪽 쪽 x 4.86%~34.03%, 흰 오른쪽 쪽 x 34.48%~95.30%, 두 쪽 모두 y 6.10%~92.87%.
+   그래서 책은 그 비율(1810/869)을 지키고, 쪽 내용은 그 사각형 안에 얹는다. 쪽을 따로 늘리지 않는다.
+
+   반응형: 760px 미만에서는 양면 책을 억지로 줄이지 않고 한 장 레이아웃으로 갈아탄다(인계 지시). */
+.archive-book-page { min-height:100dvh; display:grid; grid-template-rows:auto auto minmax(0,1fr); background:#d9e7cf; }
+.archive-book-page>.app-header { margin:0; padding:12px clamp(16px,2.2vw,34px); background:#fcfaf3; border-bottom:1px solid #cbdcbf; }
+.archive-book-error { margin:12px clamp(16px,2.2vw,34px) 0; }
+.archive-finish { background:#ffd25c; border-color:#e8bf50; color:#6b4a00; font-weight:900; }
+.archive-stage { display:grid; place-items:center; min-height:0; padding:clamp(12px,2.2vh,28px) clamp(16px,3vw,64px) clamp(16px,3vh,40px); }
+
+/* ── 좁은 화면(기본): 한 장 레이아웃. 책 그림을 쓰지 않는다 ───────────────────── */
+.archive-book { width:min(1500px,100%); display:grid; gap:14px; }
+.archive-book-shell { display:none; }
+.archive-book-list>h1 { position:relative; margin:0 0 16px; font-size:clamp(20px,2.1vw,32px); letter-spacing:-.045em; color:#184b35; }
+.archive-book-list>h1:after { content:""; position:absolute; left:0; bottom:-9px; width:72px; height:5px; border-radius:999px; background:#ffd25c; }
+/* 좁은 화면의 목록은 가로로 밀어 고른다 — 세로로 쌓으면 그림이 한참 아래로 밀린다. */
+.archive-book-list>ul { display:flex; gap:10px; margin:0; padding:2px; list-style:none; overflow-x:auto; overscroll-behavior-x:contain; }
+.archive-book-list li { flex:0 0 auto; }
+.archive-book-list li>button { display:flex; align-items:center; gap:10px; min-height:60px; padding:7px 12px 7px 7px; border:2px solid transparent; border-radius:16px; background:#fcfaf3; text-align:left; cursor:pointer; }
+.archive-book-list li>button[aria-current="true"] { background:#e5edda; border-color:#bcd2ae; }
+.archive-book-list li>button:disabled { cursor:default; }
+.archive-book-thumb { flex:0 0 auto; display:grid; place-items:center; width:58px; aspect-ratio:4/3; overflow:hidden; border-radius:10px; background:#fff; box-shadow:0 1px 3px rgba(24,75,53,.16); font-size:20px; }
+.archive-book-thumb img { width:100%; height:100%; object-fit:contain; }
+.archive-book-meta { display:grid; gap:2px; min-width:0; }
+.archive-book-meta b { font-size:15px; font-weight:800; color:#184b35; white-space:nowrap; }
+.archive-book-meta time { color:#5d6f5b; font-size:13px; font-weight:700; }
+.archive-book-empty { margin:0; color:#5d6f5b; font-size:16px; font-weight:700; line-height:1.6; }
+.archive-more-button { justify-self:start; margin-top:10px; }
+
+.archive-book-view { display:grid; gap:12px; padding:16px; border-radius:18px; background:#fff; box-shadow:0 2px 10px rgba(24,75,53,.1); }
+.archive-book-head { display:grid; gap:8px; justify-items:start; }
+.archive-book-head h2 { margin:0; font-size:clamp(21px,2.4vw,36px); letter-spacing:-.045em; color:#184b35; }
+.archive-book-status { display:inline-flex; align-items:center; gap:9px; margin:0; font-size:clamp(12px,1vw,15px); font-weight:800; }
+.archive-book-status-icon { font-size:1.35em; }
+.archive-book-status>span:last-child { padding:5px 14px; border-radius:999px; background:#eef0ec; color:#4a5645; }
+/* 그림은 남는 자리를 채우되 자리를 넓히지 않는다 — 흐름에 두면 이미지 크기가 쪽 높이를 밀어낸다. */
+.archive-book-paper { position:relative; display:grid; place-items:center; min-height:clamp(170px,30vh,260px); overflow:hidden; border-radius:12px; }
+.archive-book-paper>img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+.archive-book-paper>span { font-size:clamp(36px,5vw,58px); }
+.archive-book-paper:focus-visible { outline:3px solid #20583d; outline-offset:3px; }
+.archive-book-pager { display:flex; align-items:center; justify-content:center; gap:14px; }
+.archive-pager-button { display:grid; place-items:center; width:48px; height:48px; border:2px solid #cfdcc6; border-radius:999px; background:#fff; color:#20583d; font-size:26px; line-height:1; cursor:pointer; }
+.archive-pager-button:disabled { opacity:.35; cursor:default; }
+.archive-pager-count { color:#4a5645; font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; }
+.archive-book .archive-book-open { justify-self:stretch; min-height:56px; border:0; border-radius:999px; background:#20583d; color:#fff; font-size:17px; box-shadow:none; }
+
+/* 도는 낱장. 원본 그림 데이터는 건드리지 않고 복제 레이어만 돈다. */
+.archive-leaf { position:absolute; inset:0; pointer-events:none; perspective:1600px; }
+.archive-leaf-face { position:absolute; inset:0; backface-visibility:hidden; opacity:0; }
+.archive-leaf-paper { position:absolute; inset:0; width:100%; height:100%; object-fit:fill; }
+.archive-leaf-art { position:absolute; inset:6% 4%; width:92%; height:88%; object-fit:contain; }
+.is-turning .archive-leaf-face.is-out { opacity:1; animation:archive-leaf-out 200ms cubic-bezier(.22,.61,.36,1) forwards; }
+.is-turning .archive-leaf-face.is-in { opacity:0; animation:archive-leaf-in 200ms cubic-bezier(.22,.61,.36,1) 200ms forwards; }
+.is-next .archive-leaf-face { transform-origin:left center; }
+.is-prev .archive-leaf-face { transform-origin:right center; }
+@keyframes archive-leaf-out { from { opacity:1; transform:rotateY(0deg); } to { opacity:1; transform:rotateY(-85deg); } }
+@keyframes archive-leaf-in { from { opacity:1; transform:rotateY(85deg); } to { opacity:1; transform:rotateY(0deg); } }
+.is-prev.archive-book .archive-leaf-face.is-out { animation-name:archive-leaf-out-prev; }
+.is-prev.archive-book .archive-leaf-face.is-in { animation-name:archive-leaf-in-prev; }
+@keyframes archive-leaf-out-prev { from { opacity:1; transform:rotateY(0deg); } to { opacity:1; transform:rotateY(85deg); } }
+@keyframes archive-leaf-in-prev { from { opacity:1; transform:rotateY(-85deg); } to { opacity:1; transform:rotateY(0deg); } }
+
+/* ── 펼침: 760px 이상, 또는 눕혀서 세로가 귀할 때 ────────────────────────────── */
+@media (min-width:760px), (orientation:landscape) and (max-height:560px) and (min-width:660px) {
+  .archive-book {
+    position:relative; display:block;
+    width:min(1500px,100%); max-height:100%; aspect-ratio:1810/869;
+    margin-inline:auto;
+  }
+  .archive-book-shell { display:block; position:absolute; inset:0; width:100%; height:100%; object-fit:fill; pointer-events:none; }
+  /* 재어 둔 쪽 사각형 위에 내용만 얹는다. */
+  .archive-book>section { position:absolute; top:6.1%; height:86.77%; display:grid; padding:clamp(14px,2.4%,40px) clamp(12px,2%,34px); background:none; box-shadow:none; border-radius:0; }
+  .archive-book-list { left:4.86%; width:29.17%; grid-template-rows:auto minmax(0,1fr) auto; gap:10px; }
+  .archive-book-list>ul { display:grid; gap:6px; align-content:start; overflow-x:visible; overflow-y:auto; min-height:0; padding:0 2px 0 0; }
+  .archive-book-list li { flex:initial; }
+  .archive-book-list li>button { width:100%; min-height:66px; border-color:transparent; background:none; }
+  .archive-book-list li>button[aria-current="true"] { background:#e5edda; border-color:transparent; }
+  .archive-book-thumb { width:clamp(52px,4.2vw,72px); }
+  .archive-book-meta b { white-space:normal; overflow-wrap:anywhere; font-size:clamp(14px,1.1vw,18px); }
+  .archive-book-view { left:34.48%; width:60.82%; grid-template-rows:auto minmax(0,1fr) auto auto; gap:clamp(6px,1vh,14px); }
+  .archive-book-paper { min-height:0; border-radius:0; }
+  .archive-book .archive-book-open { justify-self:end; min-height:clamp(52px,6.4vh,72px); padding:0 clamp(22px,2.4vw,40px); font-size:clamp(16px,1.25vw,21px); }
+}
+/* 눕힌 기기는 세로가 귀하다 — 여백과 글자를 더 줄여 한 화면에 넣는다. */
+@media (orientation:landscape) and (max-height:560px) {
+  .archive-book-page { min-height:0; height:100dvh; }
+  .archive-stage { padding:6px 10px 8px; }
+  .archive-book-list>h1 { font-size:18px; margin-bottom:12px; }
+  .archive-book-list li>button { min-height:50px; }
+  .archive-book-head h2 { font-size:19px; }
+  .archive-pager-button { width:44px; height:44px; }
+  .archive-book .archive-book-open { min-height:46px; }
+}
+/* 움직임 줄이기: 3D 회전과 접힘을 없앤다. 전환은 곧바로 일어난다. */
+@media (prefers-reduced-motion: reduce) {
+  .archive-leaf { display:none; }
+}
+
+/* 입장 코드 잠금 안내(2026-09-21). 남은 횟수는 오류 상자 안의 둘째 줄로 붙인다 —
+   따로 띄우면 화면이 갑자기 늘어나 아래 단추가 밀린다. */
+.entry-attempts-left { display:block; margin-top:3px; color:#8a5a00; font-size:14px; font-weight:700; line-height:1.45; }
+
+/* 잠긴 동안 옆에 서는 안내 카드(2026-09-22 사용자 시안).
+   숫자판은 남기되 잠근다 — 치우면 아이가 무엇을 기다리는지 잃고,
+   아래에 안내를 덧붙이면 화면이 갑자기 늘어나 단추가 밀린다. 그래서 옆으로 세운다. */
+.entry-code-layout { display:contents; }
+/* 인계 권장: 가운데 묶음 최대 1000px, 왼쪽 숫자판과 오른쪽 안내를 약 54:46, 간격 16~24px. */
+.entry-code-layout.is-waiting { display:flex; flex-wrap:wrap; gap:clamp(16px,2vw,24px); align-items:stretch; justify-content:center; width:min(1000px,100%); margin:0 auto; }
+.entry-code-layout.is-waiting>.code-card { flex:54 1 300px; margin:0; }
+.entry-wait-panel { flex:46 1 280px; display:grid; align-content:start; justify-items:center; gap:0; padding:20px 20px 22px; border-radius:26px; background:#fffdf7; box-shadow:0 10px 26px rgba(70,84,67,.16); }
+.entry-wait-bubble { position:relative; margin:0 0 16px; padding:16px 20px; border-radius:20px; background:#fdf3d8; color:#4a4331; font-size:clamp(15px,1.3vw,18px); font-weight:800; line-height:1.55; text-align:center; }
+.entry-wait-bubble:after { content:""; position:absolute; bottom:-11px; left:50%; width:22px; height:14px; transform:translateX(-50%); background:#fdf3d8; clip-path:polygon(0 0,100% 0,42% 100%); }
+/* 인계 권장 폭: 데스크톱 300~380px(기본 360), 좁은 화면 140~180px. 비율은 유지한다. */
+.entry-wait-mongri { width:min(360px,100%); height:auto; object-fit:contain; }
+.entry-wait-panel .entry-wait-after { margin:12px 0 10px; color:#20583d; font-size:clamp(15px,1.3vw,18px); font-weight:900; text-align:center; }
+.entry-wait-bar { display:flex; align-items:center; gap:10px; width:100%; margin-bottom:16px; }
+.entry-wait-bar-track { flex:1 1 auto; height:12px; border-radius:999px; background:#e8efe3; overflow:hidden; }
+/* 막대 전환은 짧게(≤200ms). 움직임 줄이기에서는 즉시 바뀐다. */
+.entry-wait-bar-track>span { display:block; height:100%; border-radius:999px; background:#2f6b3a; transition:width 200ms linear; }
+.entry-wait-bar small { color:#4a5645; font-size:14px; font-weight:800; font-variant-numeric:tabular-nums; }
+.entry-wait-panel .teacher-call-button { width:100%; }
+@media (prefers-reduced-motion: reduce) { .entry-wait-bar-track>span { transition:none; } }
+.entry-wait-ready { margin:12px 0 0; text-align:center; color:#20583d; font-size:16px; font-weight:800; }
+@media (max-width:720px) {
+  /* 좁으면 옆에 세울 자리가 없다 — 위아래로 쌓고 안내를 먼저 보여 준다. */
+  .entry-code-layout.is-waiting { flex-direction:column; align-items:stretch; }
+  .entry-code-layout.is-waiting>.code-card,.entry-wait-panel { max-width:none; }
+  .entry-wait-panel { order:-1; }
+  .entry-wait-mongri { width:min(180px,55%); }
+}
+
+/* 시안 1(GPT 인계 participation-cooldown-option1, 2026-09-22): 숫자판 아래 한 줄 안내.
+   넓은 화면은 옆 카드(시안 3)가 맡으므로 여기서는 숨긴다 — 같은 말을 두 번 하지 않는다.
+   토큰: 바탕 #E8EFDA, 테두리 #D3DFC1, 글자 #184B35, 시간 칩 #FFF2BC/#F0D775. */
+/* 틀림이 쌓이는 동안 쓰는 안내(모든 화면 폭). 잠기면 시간 칩이 더 붙는다. */
+.entry-wait-inline { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:12px 0 0; padding:14px; border:1px solid #D3DFC1; border-radius:16px; background:#E8EFDA; }
+.entry-wait-inline>img { flex:0 0 auto; width:44px; height:44px; object-fit:contain; }
+.entry-wait-inline-copy { display:grid; gap:2px; min-width:0; }
+.entry-wait-inline-copy b { color:#184B35; font-size:15px; font-weight:900; }
+.entry-wait-inline-copy span { color:#3f5340; font-size:13px; font-weight:700; line-height:1.45; }
+.entry-wait-chip { display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border:1px solid #F0D775; border-radius:999px; background:#FFF2BC; color:#184B35; font-size:13px; font-weight:800; white-space:nowrap; }
+/* 넓은 화면에서 잠기면 옆 카드(시안 3)가 같은 말을 하므로 줄 안내는 접는다. */
+@media (min-width:760px) { .entry-wait-inline.is-locked { display:none; } }
+@media (max-width:759px) {
+  /* 좁은 화면: 얼굴과 글은 첫 줄, 시간 칩은 둘째 줄. 높이는 내용에 따라 늘어난다. */
+  .entry-wait-chip { flex:1 1 100%; justify-content:center; }
+  .entry-wait-inline>img { width:44px; height:44px; }
+  /* 좁은 화면에서는 옆 카드를 쓰지 않는다. */
+  .entry-code-layout.is-waiting>.entry-wait-panel { display:none; }
+}
+@media (min-width:760px) { .entry-wait-inline>img { width:56px; height:56px; } }

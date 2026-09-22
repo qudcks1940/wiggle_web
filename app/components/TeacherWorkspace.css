@@ -80,3 +80,40 @@ body:has(.teacher-workspace){background:#fff}
 
 /* 복사 성공(2026-09-17): 아이콘 단추는 복사 아이콘이 체크로 바뀐다. */
 .trs-copied { color:#2e9e5b; }
+
+/* 손든 아이 호출 줄 (2026-09-20). 탭 내용 바깥에 있어 세 탭에서 모두 보인다.
+   넓은 화면은 칩 나열, 좁은 화면은 한 명 + "외 N명"으로 접는다. 접는 기준은 여기 미디어 쿼리다. */
+.tcw-hand-strip{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:0 0 4px;padding:10px 14px;border-radius:12px;background:#fdf3d8;border:1px solid #ecd79a}
+.tcw-hand-strip-title{display:flex;align-items:center;gap:6px;margin:0;color:#7a5200;font-weight:900;font-size:14px;flex-shrink:0}
+.tcw-hand-list{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none;min-width:0}
+.tcw-hand-list>li{display:flex;align-items:center;gap:4px;background:#fff;border:1px solid #e6d9ae;border-radius:999px;padding:2px 4px 2px 2px}
+.teacher-workspace .tcw-hand-chip{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 10px;border:0;background:none;border-radius:999px;cursor:pointer;color:#1d2a1f}
+.tcw-hand-chip b{font-size:15px;font-weight:700;white-space:nowrap}
+.tcw-hand-chip small{color:#7a5200;font-size:13px;font-weight:700;white-space:nowrap}
+.teacher-workspace .tcw-hand-lower{min-height:44px;min-width:44px;padding:0 12px;border:1px solid #e0c98a;border-radius:999px;background:#fff8e4;color:#6b4a00;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap}
+.tcw-hand-more,.tcw-hand-rest{color:#7a5200;font-weight:900;font-size:14px;white-space:nowrap}
+.tcw-hand-rest{display:none}
+.tcw-tab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;margin-left:6px;padding:0 6px;border-radius:999px;background:#c8860d;color:#fff;font-size:12px;font-weight:900;vertical-align:middle}
+@media(max-width:760px){
+  /* 좁은 화면: 가장 오래 기다린 한 명만 남기고 접는다. 손 내리기는 그 한 명에게만 크게 준다. */
+  .tcw-hand-list>li:nth-child(n+2){display:none}
+  .tcw-hand-more{display:none}
+  /* 제목과 "외 N명"을 한 줄에 두고 칩을 아랫줄로 — 세 줄이면 도화지 목록이 화면 밖으로 밀린다. */
+  .tcw-hand-rest{display:inline;order:1;margin-left:auto}
+  .tcw-hand-strip{gap:8px;padding:8px 12px}
+  .tcw-hand-strip-title{order:0}
+  .tcw-hand-list{order:2;flex:1 1 100%}
+  .tcw-hand-list>li{width:100%;justify-content:space-between}
+  /* 호출 줄이 차지한 만큼은 읽을 일이 없는 안내 문단에서 돌려받는다(320px에서 162px). */
+  .teacher-workspace .tcw-session p{display:none}
+}
+@media(min-width:761px){
+  .tcw-hand-list>li:nth-child(n+5){display:none}
+}
+
+/* 입장이 잠긴 기기 알림(2026-09-22). 손들기와 같은 줄에 서서 세 탭 어디서나 보인다.
+   잠금은 기기 단위라 누구인지는 모른다 — 몇 대가 막혔는지와 푸는 길만 준다. */
+.tcw-entry-lock{display:inline-flex;align-items:center;gap:8px;margin-left:auto;padding:6px 8px 6px 12px;border:1px solid #e2c6bd;border-radius:999px;background:#fdf1ed;color:#8c4230}
+.tcw-entry-lock b{font-size:14px;font-weight:900;white-space:nowrap}
+.teacher-workspace .tcw-entry-lock button{min-height:36px;padding:0 12px;border:1px solid #dfb6a8;border-radius:999px;background:#fff;color:#8c4230;font-size:13px;font-weight:800;cursor:pointer}
+@media(max-width:760px){.tcw-entry-lock{margin-left:0;flex:1 1 100%;justify-content:space-between}}

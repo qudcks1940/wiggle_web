@@ -2470,7 +2470,9 @@ export function DrawingStudio() {
     const now = Date.now();
     if (!artwork || artwork.status === "complete") return false;
     if (grimiLoading || grimiOpen || reflectionOpen || interpretLoading) return false;
-    if (conflictDraftRef.current || teacherViewing) return false;
+    // 손을 들고 선생님을 기다리는 아이에게 AI가 끼어들지 않는다(2026-09-20).
+    // 손든 상태는 "손이 멈춘 상태"라 idleMs 조건에 그대로 걸린다 — 막지 않으면 부른 직후 몽그리가 뜬다.
+    if (conflictDraftRef.current || teacherViewing || handRaised) return false;
     if (documentStateRef.current.ops.length < AUTO_GRIMI.minOps) return false;
     if (autoGrimiCountRef.current >= AUTO_GRIMI.maxPerArtwork) return false;
     if (now - openedAtRef.current < AUTO_GRIMI.settleMs) return false;
@@ -2478,7 +2480,7 @@ export function DrawingStudio() {
     if (now - lastManualGrimiAtRef.current < AUTO_GRIMI.afterManualMs) return false;
     if (lastAutoGrimiAtRef.current && now - lastAutoGrimiAtRef.current < AUTO_GRIMI.gapMs) return false;
     return true;
-  }, [AUTO_GRIMI.afterManualMs, AUTO_GRIMI.gapMs, AUTO_GRIMI.idleMs, AUTO_GRIMI.maxPerArtwork, AUTO_GRIMI.minOps, AUTO_GRIMI.settleMs, artwork, grimiLoading, grimiOpen, interpretLoading, reflectionOpen, teacherViewing]);
+  }, [AUTO_GRIMI.afterManualMs, AUTO_GRIMI.gapMs, AUTO_GRIMI.idleMs, AUTO_GRIMI.maxPerArtwork, AUTO_GRIMI.minOps, AUTO_GRIMI.settleMs, artwork, grimiLoading, grimiOpen, handRaised, interpretLoading, reflectionOpen, teacherViewing]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {

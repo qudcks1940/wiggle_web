@@ -290,6 +290,11 @@ export function JoinClient({ initialEntry = "" }: { initialEntry?: string }) {
               </div>
               {waiting && <span className="entry-wait-chip"><ClockIcon size={16} />{lockText} 뒤 다시 입력할 수 있어요.</span>}
             </div>}
+            {/* 코드가 틀렸을 때 선생님을 부를 길은 그대로 남긴다 — 연초록 안내로 바꾸면서 잃을 뻔했다
+                (브라우저 실측이 잡음, 2026-09-22). 잠긴 동안에는 옆 카드/줄 안내가 같은 단추를 준다. */}
+            {codeErrorNotice && !waiting && (teacherCallOpen
+              ? <div className="teacher-call-note" role="status"><span className="teacher-call-emoji" aria-hidden="true">🙋</span><p>손을 들고 선생님을 불러요.<br />참여 코드를 다시 알려 주실 거예요.</p></div>
+              : <button type="button" className={`${check.help} teacher-call-button`} onClick={() => setTeacherCallOpen(true)}><span aria-hidden="true">🙋</span>선생님 불러요</button>)}
             {/* 코드가 틀린 것 말고(연결 끊김 등)는 기존 오류 상자를 그대로 쓴다. */}
             {!waiting && !codeErrorNotice && errorNotice()}
             <button className={`${check.enter} child-primary-action`} disabled={waiting || busy || codeInput.length !== ENTRY_CODE_LENGTH}>{waiting ? "잠시 기다리는 중" : busy ? "확인 중…" : "들어가기"}</button>

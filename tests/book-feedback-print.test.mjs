@@ -34,8 +34,8 @@ test("AI의 임의 점수·영역 누락·없는 쪽 근거는 거절한다", as
   assert.throws(() => validateFeedback({ ...feedback, criteria: [] }, rubric, 2));
 });
 test("파일명과 일괄 선택·배송지 검증", () => {
-  assert.equal(feedbackFilename({ grade: 4, classNumber: 7, seatNumber: 1, realName: "테스트학생", title: "친구/이야기" }), "4_7_1_테스트학생_친구_이야기.pdf");
-  assert.throws(() => feedbackFilename({ grade: null }), /학년/);
+  assert.equal(feedbackFilename({ grade: 4, classNumber: 7, seatNumber: 1, realName: "테스트학생", title: "친구/이야기" }), "1_테스트학생_친구_이야기_피드백.pdf");
+  assert.equal(feedbackFilename({ grade: null, classNumber: null, seatNumber: null, realName: null, title: "새 책" }), "학생_새 책_피드백.pdf");
   assert.throws(() => selectedBookIds(["storybook_12345678", "storybook_12345678"]));
   assert.throws(() => selectedBookIds(Array.from({ length: 51 }, (_, i) => `storybook_12345678${i}`)));
   assert.throws(() => validateShipping({ recipientName: "test" }));
@@ -86,10 +86,17 @@ test("실제 HTTP: 타 학급 차단, 일괄 접수 중복 방지, 키 대기, �
   assert.doesNotMatch(job.prompt, /테스트학생/);
   const rubric = JSON.parse(job.rubric_json), feedback = { summary: "마지막 쪽을 더 다듬어 보세요.", criteria: rubric.criteria.map((c) => ({ id: c.id, score: 8, feedback: "첫 쪽에서 등장인물의 마음이 나타남. 마지막 쪽의 대화를 더 자세하게 적으면 주제를 전달하는 데 도움이 됨.", pages: [1] })) };
   await server.DB.prepare("UPDATE book_feedback_jobs SET status='complete',feedback_json=? WHERE id=?").bind(JSON.stringify(feedback), job.id).run();
-  assert.equal((await server.fetch(`/api/teacher/book-feedback/${job.id}?format=pdf`, { headers })).status, 400);
+  assert.equal((await server.fetch(`/api/teacher/book-feedback/${job.id}?format=pdf`, { headers })).status, 200);
   assert.equal((await post("/api/teacher/book-feedback", { action: "identity", classroomId, grade: 4, classNumber: 7 })).status, 200);
   const download = await server.fetch(`/api/teacher/book-feedback/${job.id}?format=pdf`, { headers }); assert.equal(download.status, 200);
-  assert.match(decodeURIComponent(download.headers.get("content-disposition")), /4_7_1_테스트학생_테스트 책.pdf/);
+  assert.match(decodeURIComponent(download.headers.get("content-disposition")), /1_테스트학생_테스트 책_피드백.pdf/);
+  assert.equal((await server.fetch(`/api/teacher/book-feedback/${job.id}?format=pdf&criteria=unknown`, { headers })).status, 400);
+  assert.equal((await server.fetch(`/api/teacher/book-feedback/${job.id}?format=pdf&criteria=&summary=0`, { headers })).status, 400);
+  assert.equal((await server.fetch(`/api/teacher/book-feedback/${job.id}?format=pdf&criteria=criterion_2&summary=0&scores=0`, { headers })).status, 200);
+  assert.equal((await server.fetch(`/api/teacher/book-feedback?classroomId=other&format=xlsx`, { headers })).status, 403);
+  const template = await server.fetch(`/api/teacher/book-feedback?classroomId=${classroomId}&format=xlsx`, { headers });
+  assert.equal(template.status, 200);
+  assert.deepEqual(await parseRubric(new Uint8Array(await template.arrayBuffer())), rubric);
   assert.ok((await PDFDocument.load(await download.arrayBuffer())).getPageCount() > 0);
   const form = new FormData(); form.append("classroomId", classroomId); form.append("file", new Blob([await readFile("config/rubrics/storybook.xlsx")]), "다시올린루브릭.xlsx");
   assert.equal((await server.fetch("/api/teacher/book-feedback", { method: "POST", headers: { cookie: headers.cookie }, body: form })).status, 200);

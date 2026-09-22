@@ -1,8 +1,20 @@
 # Wiggle Web 현재 상태
 
-> 마지막 갱신: 2026-09-21
-> 마지막 갱신: 2026-09-18
+> 마지막 갱신: 2026-09-22
 > 목적: 긴 대화가 압축되거나 담당 AI가 바뀌어도 실제 구현·검증·배포 상태를 잃지 않기 위한 기준 문서
+
+## 2026-09-20 피드백 구성 선택·엑셀 안내 (로컬 검증, 사용자 미리보기)
+
+- 2026-09-22 사용자 요청으로 현재 변경을 기능 브랜치에 커밋하고 최신 운영 main `da246fb` 위로 옮겨 PR을 준비한다. 최신 main의 입장 잠금·그림 보관함·넓은 도화지 변경을 보존하며 합친 결과를 다시 검증한다.
+- 실제 운영 원본 `legacy-origin/main` (`yonghwan86/wiggle_web`, `7f9c7e2`)에서 `codex/feedback-workspace-20260920` 분기. `origin/main`에는 이 기능이 없어 운영 main 기준으로 작업했다.
+- 그림책 목록의 학년·반 저장 UI와 PDF 필수 입력 조건을 제거했다. 파일명은 `번호_이름_책제목_피드백.pdf`, 번호/이름이 없으면 제공된 정보와 ‘학생’으로 생성한다. 인쇄 주문의 학급 정보는 변경하지 않았다.
+- 현재 루브릭의 XLSX 수정 양식 다운로드(담당 학급 권한 확인), 실제 A·B·C열 미리보기, B/C열 수정·영역 추가/삭제·점수 합계 안내를 추가했다. 생성 파일의 ‘수정 안내’ 시트에도 사용법을 포함한다. 다운로드→수정→재업로드를 실제 파서로 확인했다.
+- `/teacher/class/[id]/books/feedback`에서 학생 ID별 책 목록·이름/번호/제목 검색·완료 상태 필터·현재 책 버전의 평가 결과 선택, 평가 영역·점수·종합 의견·근거 쪽 번호 선택과 내용 미리보기를 제공한다. 개별 PDF, 선택한 여러 책 ZIP, 같은 기준의 책에 구성 일괄 적용, 다운로드 진행/부분 실패 안내를 제공한다. 구성 선택은 화면에 머무는 동안 유지하며 원본 평가를 변경하지 않는다.
+- production build + 전체 테스트 **353/353**, typecheck, lint 오류 0(기존 경고 13). 기존 테스트의 LF 전용 줄바꿈 정규식 한 곳을 CRLF도 허용하도록 고쳤다. Next/webpack 증분 캐시가 WasmHash 오류를 내어 생성 캐시를 별도 보관한 뒤 재빌드했고 전체 테스트가 통과했다.
+- `scripts/check-feedback-library-browser.mjs` 통과: 생성/중단/재개/재접속 진행, 학생 ID 분리, 같은 제목 파일 보존, XLSX 다운로드, 실제 PDF 텍스트에서 미선택 내용·점수 제외, 빈 선택 방지, 동일 기준 일괄 적용, 3권 ZIP, 검색·키보드, 320/390/768/844/1440 폭 검증. 다운로드한 한국어 PDF를 이미지로 렌더링하여 배치·줄바꿈을 육안 확인했다.
+- 일반 `npm.cmd run check:browser -- http://localhost:57247`도 320×568·390×844·844×390 전 항목 통과했다. 샌드박스 안 Chrome DevTools 연결 실패 후 승인된 실행으로 재검증했다.
+- 변경분 `git diff --check` 및 실제 기준 `git diff --check legacy-origin/main` 통과. 요구된 `git diff --check main...HEAD`는 로컬의 오래된 main과 운영 main 간 기존 이력인 `docs/design-assets/studio-tool-dock/notes.md:107` EOF 빈 줄을 보고한다(이번 변경 아님).
+- 예시 학생만 있는 격리 test DB의 미리보기: `http://localhost:57247/teacher/class/class_feedbackpreview/books/feedback`. 실행/캡처 스크립트와 PDF·화면 이미지는 Git 제외 `work/feedback-preview.mjs`, `work/feedback-qa/`에 있다. 실제 운영 데이터/AI 제공자 호출 없음. 커밋·push·PR·main 병합·배포 없음. 사용자에게 먼저 보여주는 단계다.
 
 ## 2026-09-18 관리자 진입 버튼 (로컬 검증 완료)
 

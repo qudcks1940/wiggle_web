@@ -5,6 +5,8 @@ import {createRequire} from 'node:module';
 import {readFile, mkdir} from 'node:fs/promises';
 import {unzipSync} from 'fflate';
 import {PDFDocument} from 'pdf-lib';
+import {getDocument} from 'pdfjs-dist/legacy/build/pdf.mjs';
+import {parseRubric} from '../lib/book-rubric.ts';
 import {startTestServer} from '../tests/harness/server.mjs';
 import {sha256} from '../lib/token-crypto.ts';
 import {emptyStorybookDocument} from '../lib/storybook-model.ts';
@@ -26,7 +28,7 @@ try {
  await page.goto(server.origin+'/teacher/class/'+room+'/books');
  const group1=page.getByRole('region',{name:'1번 테스트실명 그림책',exact:true}),group2=page.getByRole('region',{name:'2번 테스트실명 그림책',exact:true});
  await group1.waitFor();
- await page.getByLabel('학년',{exact:true}).fill('4');await page.getByLabel('반',{exact:true}).fill('7');await page.getByRole('button',{name:'학년·반 저장',exact:true}).click();await page.getByText('학년·반을 저장했어요.',{exact:true}).first().waitFor();assert.equal(await group1.locator('.book-library-card').count(),2);assert.equal(await group2.locator('.book-library-card').count(),1);
+ assert.equal(await page.getByRole('button',{name:'학년·반 저장',exact:true}).count(),0);assert.equal(await group1.locator('.book-library-card').count(),2);assert.equal(await group2.locator('.book-library-card').count(),1);
  await page.getByLabel('전체 선택',{exact:true}).check();
  assert.equal(await page.getByRole('button',{name:'선택한 피드백 PDF 받기',exact:true}).isDisabled(),true);
  await page.getByRole('button',{name:'선택한 책 피드백 만들기',exact:true}).click();
@@ -59,5 +61,45 @@ try {
  await page.locator('.feedback-progress').waitFor({state:'detached'});
  await mkdir('work/feedback-qa',{recursive:true});
  for(const [width,height] of [[320,568],[390,844],[844,390],[1440,1000]]) {await page.setViewportSize({width,height});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:`work/feedback-qa/${width}.png`,fullPage:true});}
+ await page.getByText('엑셀 양식 미리보기 · 어느 칸을 수정하나요?',{exact:true}).click();
+ await page.locator('.rubric-sheet').waitFor();
+ event=page.waitForEvent('download');await page.getByRole('link',{name:'현재 기준 엑셀 양식 받기',exact:true}).click();
+ const template=await event;assert.equal((await parseRubric(new Uint8Array(await readFile(await template.path())))).criteria.length,10);
+ await page.locator('.rubric-guide').screenshot({path:'work/feedback-qa/rubric-guide.png'});
+ await page.getByRole('link',{name:'피드백 관리 열기 →',exact:true}).click();
+ await page.locator('.fm-criteria').waitFor();
+ assert.equal(await page.locator('.fm-student').count(),2);
+ const checks=page.locator('.fm-criteria input');assert.equal(await checks.count(),10);
+ await page.getByRole('button',{name:'모두 해제',exact:true}).click();
+ await checks.nth(1).check();
+ await page.getByLabel('영역별 점수 · 합계',{exact:true}).uncheck();
+ await page.getByLabel('종합 의견 · 다음에 해 볼 일',{exact:true}).uncheck();
+ await page.getByLabel('근거 쪽 번호',{exact:true}).check();
+ assert.equal(await page.locator('.fm-preview article').count(),1);
+ assert.equal(await page.locator('.fm-total').count(),0);
+ event=page.waitForEvent('download');await page.getByRole('button',{name:'이 책 PDF 받기',exact:true}).click();
+ const subset=await event;await subset.saveAs('work/feedback-qa/selected-feedback.pdf');
+ const task=getDocument({data:new Uint8Array(await readFile(await subset.path()))});const pdf=await task.promise;
+ let pdfText='';for(let n=1;n<=pdf.numPages;n++)pdfText+=(await(await pdf.getPage(n)).getTextContent()).items.map(x=>x.str).join(' ');
+ assert.match(pdfText,/독자 고려/);assert.doesNotMatch(pdfText,/총점|그림책의 목적과 주제 설정|종합 의견|학년|null/);await task.destroy();
+ await page.getByText(/1권 다운로드를 시작했어요/).waitFor();
+ await checks.nth(1).uncheck();assert.equal(await page.getByRole('button',{name:'이 책 PDF 받기',exact:true}).isDisabled(),true);
+ await checks.nth(1).check();
+ await page.getByLabel('검색 결과의 완료 책 선택',{exact:true}).check();
+ await page.getByRole('button',{name:'이 구성을 선택한 책에 적용',exact:true}).click();
+ await page.getByText('3권에 현재 구성을 적용했어요.',{exact:true}).waitFor();
+ await page.locator('.fm-book-button').last().click();assert.equal(await checks.nth(1).isChecked(),true);assert.equal(await checks.nth(0).isChecked(),false);
+ event=page.waitForEvent('download');await page.getByRole('button',{name:'선택한 PDF 받기',exact:true}).click();
+ const subsetZip=await event;const subsetEntries=unzipSync(await readFile(await subsetZip.path()));assert.equal(Object.keys(subsetEntries).length,3);
+ await page.getByText(/3권 다운로드를 시작했어요/).waitFor();
+ await page.getByLabel('학생 이름·번호·책 제목 검색',{exact:true}).fill('2번');assert.equal(await page.locator('.fm-student').count(),1);
+ await page.getByLabel('학생 이름·번호·책 제목 검색',{exact:true}).fill('없는학생');assert.equal(await page.locator('.fm-student').count(),0);
+ await page.getByLabel('학생 이름·번호·책 제목 검색',{exact:true}).fill('');
+ for(const [width,height] of [[320,568],[390,844],[768,1024],[844,390],[1440,1000]]) {
+   await page.setViewportSize({width,height});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+   await page.screenshot({path:`work/feedback-qa/manager-${width}.png`,fullPage:true});
+   await page.locator('.fm-book-button').first().focus();await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement!==document.body));
+ }
+ console.log('PASS rubric template/guide, individual criteria + PDF text exclusion, empty selection guard, bulk apply, distinct ZIP names, student search, keyboard and five responsive widths');
  assert.deepEqual(errors,[]);console.log('PASS student identity grouping, live generation progress, stop/resume, persistent PDF collections, same-title ZIP contains two valid PDFs, single PDF, download progress/error recovery, four widths');
 } finally {await browser.close();await server.dispose();}

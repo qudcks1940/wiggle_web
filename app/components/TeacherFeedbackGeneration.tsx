@@ -1,14 +1,15 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Rubric } from "@/lib/book-rubric";
 import { teacherRequest, postJson, jobLabel, type CompletedBook } from "./book-workflow-client";
 import { RubricGuide } from "./RubricGuide";
 type Job = { id: string; storybookId: string; title: string; revision: number; rubricVersion: string; status: string; error: string | null };
 type Settings = { rubric: Rubric; version: string; prompt: string; filename: string; configured: boolean; jobs: Job[] };
-export function TeacherFeedbackGeneration({ classroomId, onChanged }: { classroomId: string; onChanged: () => Promise<void> }) {
+export function TeacherFeedbackGeneration({ classroomId, onChanged, children }: { classroomId: string; onChanged: () => Promise<void>; children: ReactNode }) {
   const [books, setBooks] = useState<CompletedBook[]>([]), [settings, setSettings] = useState<Settings | null>(null);
   const [selected, setSelected] = useState<string[]>([]), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [notice, setNotice] = useState(""), [progress, setProgress] = useState(""), [stopRequested, setStopRequested] = useState(false);
+  const [rubricError, setRubricError] = useState(""), [rubricNotice, setRubricNotice] = useState("");
   const stop = useRef(false), working = useRef(false);
   const load = useCallback(async () => {
     const [library, config] = await Promise.all([teacherRequest<{ storybooks: CompletedBook[] }>(`/api/teacher/storybooks?classroomId=${classroomId}`), teacherRequest<Settings>(`/api/teacher/book-feedback?classroomId=${classroomId}`)]);
@@ -44,22 +45,27 @@ export function TeacherFeedbackGeneration({ classroomId, onChanged }: { classroo
   }
   async function replaceRubric(file: File) {
     if (working.current) return;
-    working.current = true; setBusy(true); setError("");
+    working.current = true; setBusy(true); setRubricError(""); setRubricNotice("");
     try {
       const form = new FormData(); form.append("classroomId", classroomId); form.append("file", file);
       await teacherRequest("/api/teacher/book-feedback", { method: "POST", body: form });
-      await load(); await onChanged(); setNotice("새 평가 기준을 적용했어요. 기존 결과는 그대로 보관됩니다.");
-    } catch (e) { setError(e instanceof Error ? e.message : "엑셀을 확인해 주세요."); }
+      await load(); await onChanged(); setRubricNotice("새 평가 기준을 적용했어요. 기존 결과는 그대로 보관됩니다.");
+    } catch (e) { setRubricError(e instanceof Error ? e.message : "엑셀을 확인해 주세요."); }
     finally { working.current = false; setBusy(false); }
   }
-  return <details id="feedback-generation" className="book-panel fm-generation" open><summary>피드백 만들기 · 평가 기준</summary>
+  return <><details id="feedback-generation" className="book-panel fm-generation" open><summary>피드백 만들기</summary>
     {error && <p className="error-box" role="alert">{error}</p>}{notice && <p className="book-notice" role="status">{notice}</p>}
     {!settings && !error && <p role="status">평가 기준과 그림책을 불러오고 있어요…</p>}
-    {settings && <><div className="book-section-heading"><h2>{settings.rubric.title}</h2><label className="button secondary">엑셀 파일 교체<input className="sr-only" type="file" accept=".xlsx" disabled={busy} onChange={e => { const file = e.target.files?.[0]; if (file) void replaceRubric(file); e.target.value = ""; }} /></label></div><RubricGuide rubric={settings.rubric} classroomId={classroomId} /><details><summary>전체 배점 기준과 AI 프롬프트 확인</summary><pre className="rubric-prompt">{settings.prompt}</pre></details></>}
     <p>한 번에 최대 50권. 요청한 결과는 아래 학생별 목록에 모입니다.</p>
     <label className="book-check"><input type="checkbox" disabled={busy || !books.length} checked={!!books.length && selected.length === books.length} onChange={e => setSelected(e.target.checked ? books.map(b => b.id) : [])} />전체 선택</label>
     <div className="fm-generation-books">{books.map(b => { const job = settings?.jobs.find(j => j.storybookId === b.id && j.revision === b.revision && j.rubricVersion === settings.version); return <label className="book-check" key={b.id}><input aria-label={`${b.seatNumber ?? ""}번 ${b.realName ?? b.nickname} ${b.title} 피드백 만들기 선택`} type="checkbox" disabled={busy} checked={selected.includes(b.id)} onChange={e => setSelected(current => e.target.checked ? [...current, b.id] : current.filter(id => id !== b.id))} /><span><b>{b.seatNumber ? `${b.seatNumber}번 ` : ""}{b.realName || b.nickname} · {b.title}</b><small>{jobLabel(job?.status)}{job?.error ? ` · ${job.error}` : ""}</small></span></label>; })}</div>
     <div className="book-bulk-bar"><button className="button primary" disabled={busy || !selected.length || selected.length > 50} onClick={() => void run(selected)}>{busy ? "피드백 만드는 중…" : "선택한 책 피드백 만들기"}</button>{busy ? <button className="small-button" disabled={stopRequested} onClick={() => { stop.current = true; setStopRequested(true); }}>현재 책까지 처리</button> : <button className="small-button" onClick={() => void run()}>대기 작업 이어서 처리</button>}</div>
     {(progress || processing) && <div className="feedback-progress" role="status"><span className="feedback-spinner" /><div><strong>{progress || "서버에서 피드백 작성 중"}</strong><p>{processing?.title}{stopRequested ? " · 이 책을 마친 뒤 멈춰요." : " · 이 화면을 열어 두세요."}</p></div></div>}
-  </details>;
+  </details>
+  {children}
+  <section className="book-panel fm-rubric" aria-label="평가 기준">
+    <h2>평가 기준</h2>
+    {rubricError && <p className="error-box" role="alert">{rubricError}</p>}{rubricNotice && <p className="book-notice" role="status">{rubricNotice}</p>}
+    {settings && <><div className="book-section-heading"><h3>{settings.rubric.title}</h3><label className="button secondary">엑셀 파일 교체<input className="sr-only" type="file" accept=".xlsx" disabled={busy} onChange={e => { const file = e.target.files?.[0]; if (file) void replaceRubric(file); e.target.value = ""; }} /></label></div><RubricGuide rubric={settings.rubric} classroomId={classroomId} /><details><summary>전체 배점 기준과 AI 프롬프트 확인</summary><pre className="rubric-prompt">{settings.prompt}</pre></details></>}
+  </section></>;
 }

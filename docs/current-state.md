@@ -3,6 +3,21 @@
 > 마지막 갱신: 2026-09-23
 > 목적: 긴 대화가 압축되거나 담당 AI가 바뀌어도 실제 구현·검증·배포 상태를 잃지 않기 위한 기준 문서
 
+## 2026-09-23 이야기 쓰기 버튼 제거·직접 입력 (검증 완료, PR 제출 준비)
+
+- PR #16 병합 main `af95a2f`에서 `codex/storybook-direct-text-20260923` 분기. 글 영역 부모의 과거 `pointer-events:none` 규칙이 직접 클릭을 막고 있음을 확인했다.
+- 편집용 textarea에 pointer-events를 명시적으로 복원하고 ‘이야기 쓰기’ 버튼과 버튼용 ref를 제거했다. 직접 초점을 받으면 그림 선택을 해제한다. 읽기 전용 미리보기는 유지한다.
+- 이전 `.fill()` 검사는 마우스 hit testing을 거치지 않아 이 문제를 발견하지 못했다. 실제 브라우저에서 클릭→포커스→키보드 입력, 1440/320/390/844px 너비에서 그림 선택 후 터치→초점·선택 해제를 확인했다. 자동 줄바꿈·한글 조합·저장·제목 경합·완성 조건 회귀 검증도 통과했다.
+- `typecheck`, `lint`(오류 0, 기존 경고 14), production build 포함 `npm test` 393/393, 변경분 `git diff --check` 통과. 일반 브라우저 검증은 320×568/390×844/844×390에서 통과(390px 핀치만 기존 CDP 환경 문제로 제외).
+- 최신 운영 기준 `legacy-origin/main` 대비 공백 검사는 통과했다. 오래된 로컬 `main...HEAD` 검사는 기존 `docs/design-assets/studio-tool-dock/notes.md:107`의 EOF 빈 줄을 보고하며 이번 변경과 무관하다.
+- 로컬 미리보기: http://localhost:59625/teacher/class/class_feedbackpreview/books/storybook_livepreview0/edit — 브라우저에서 글 영역을 실제 클릭하고 “책 위를 눌러 바로 이야기를 써요.” 입력까지 확인했다. 운영 데이터는 사용하지 않았다. 이 추가 수정은 아직 병합·배포하지 않았다.
+
+## 2026-09-23 PR #16 병합·운영 배포 완료 확인
+
+- 사용자 상태 확인 요청으로 GitHub API를 조회했다. [PR #16](https://github.com/yonghwan86/wiggle_web/pull/16)은 한국시간 2026-09-23 03:34:39에 병합됐으며 main은 `af95a2f`이다. 최종 기능 커밋 `1bc9491`(실시간 보기·조언·버튼 배치 포함)을 모두 포함한다.
+- 병합 커밋의 Vercel 체크와 Production deployment `6597991823`은 한국시간 03:36:01에 success / Deployment has completed로 확인됐다. [운영 배포 기록](https://vercel.com/yonghwan86s-projects/wiggle-web/3KQX9SqiyS4ydQbTnStTEVcRGmDe). PR 브랜치의 과거 승인 필요 실패는 운영 배포 성공과 별개다.
+- 이 확인에서는 코드 변경·병합·추가 배포를 실행하지 않았다. 실제 수업 코드로 운영 저장·이미지·실시간 조언을 재현하는 배포 후 실측은 아직 수행하지 않았다.
+
 ## 2026-09-23 그림책 실시간 보기·조언 및 수정 버튼 배치 (검증 완료, PR #16에 추가)
 
 - 열린 PR #16의 기존 기능 브랜치에서 이어서 구현. 운영 main은 여전히 `e7da180`이다. 초안 목록을 flex 행·간격·44px 버튼으로 바꿔 긴 제목과 작은 화면에서 ‘이어서 수정’이 겹치지 않는다.

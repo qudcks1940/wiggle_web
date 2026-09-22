@@ -102,7 +102,7 @@ test("학생 화면에 실제 그림책 진입·편집·가져오기·미리보�
   assert.match(demo, /"content-type": "image\/png"/);
   assert.match(demo, /artworkId: artwork\.id/);
   assert.doesNotMatch(editor, /T 글 넣기/);
-  assert.match(editor, /✏️ 이야기 쓰기/);
+  assert.doesNotMatch(editor, /✏️ 이야기 쓰기/);
   assert.match(editor, /🎨 내 그림/);
   assert.match(editor, /🖼️ 새 그림/);
   assert.match(editor, /🌄 배경 넣기/);

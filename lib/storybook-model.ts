@@ -1,6 +1,12 @@
 export const STORYBOOK_SCHEMA_VERSION = 1;
 // Student authoring limit only; imported PDFs have no page-count ceiling.
-export const MAX_STORYBOOK_PAGES = 24;
+export const MAX_STORYBOOK_PAGES = 131; // One cover and up to 130 inner pages.
+export const MIN_STORYBOOK_PAGES = 24;
+export function storybookCompletionError(title: string, pageCount: number, student = true) {
+  if (!title.trim() || ["나의 새 그림책", "나의 그림책"].includes(title.trim())) return "그림책 제목을 직접 지어 주세요. 제목을 정해야 완성할 수 있어요.";
+  if (student && pageCount < MIN_STORYBOOK_PAGES) return `표지를 포함해 최소 ${MIN_STORYBOOK_PAGES}페이지가 필요해요. 지금은 ${pageCount}페이지예요.`;
+  return "";
+}
 export const MAX_STORYBOOK_ELEMENTS_PER_PAGE = 50;
 // Keep metadata below the hosting request-body limit, independently of print page counts.
 export const MAX_STORYBOOK_DOCUMENT_BYTES = 3_500_000;
@@ -131,7 +137,7 @@ function validateElement(value: unknown): StorybookElement | null {
   const text = cleanStoryText(element.text);
   if (text !== element.text || graphemes(text) > MAX_STORYBOOK_TEXT_GRAPHEMES) return null;
   if (!finiteBetween(element.fontSize, 0.018, 0.12) || !element.color || !COLOR_PATTERN.test(element.color)) return null;
-  if (element.align !== "center" || element.rotation !== 0 || element.opacity !== 1 || element.locked !== true) return null;
+  if (!["left", "center", "right"].includes(element.align ?? "") || element.rotation !== 0 || element.opacity !== 1 || element.locked !== true) return null;
   if (!nearly(element.x, STORYBOOK_TEXT_BOX.x) || !nearly(element.y, STORYBOOK_TEXT_BOX.y) || !nearly(element.width, STORYBOOK_TEXT_BOX.width) || !nearly(element.height, STORYBOOK_TEXT_BOX.height)) return null;
   normalized.text = text;
   normalized.fontSize = round(element.fontSize);
@@ -176,7 +182,7 @@ export function createStorybookTextElement(id = "element_startertext0001"): Stor
   return {
     id,
     type: "text",
-    text: DEFAULT_STORYBOOK_TEXT,
+    text: "",
     ...STORYBOOK_TEXT_BOX,
     rotation: 0,
     zIndex: 0,
@@ -184,7 +190,7 @@ export function createStorybookTextElement(id = "element_startertext0001"): Stor
     locked: true,
     fontSize: 0.045,
     color: "#24324A",
-    align: "center",
+    align: "left",
   };
 }
 

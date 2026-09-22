@@ -9,6 +9,7 @@ import {
   createStorybookTextElement,
   DEFAULT_STORYBOOK_TEXT,
   MAX_STORYBOOK_PAGES,
+  storybookCompletionError,
   storybookAspectRatio,
   STORYBOOK_IMAGE_AREA,
   STORYBOOK_TEXT_BOX,
@@ -18,9 +19,12 @@ import {
   type StorybookFormat,
   type StorybookPage,
 } from "@/lib/storybook-model";
-import { AuthenticatedImage } from "./AuthenticatedImage";
+import { AuthenticatedImage, AuthenticatedImageCache } from "./AuthenticatedImage";
+import { StorybookTextInput } from "./StorybookTextInput";
+import { StorybookPresence } from "./StorybookPresence";
 import { ImageCutoutModal } from "./ImageCutoutModal";
 import { Logo } from "./Logo";
+import "./storybook-editing.css";
 
 type Asset = { id: string; storybookId: string; sourceType: "artwork" | "upload"; sourceArtworkId: string | null; contentType: string; byteSize: number; createdAt: string };
 type Book = { id: string; title: string; document: StorybookDocument; revision: number; status: "draft" | "complete"; updatedAt: string };
@@ -121,16 +125,16 @@ function normalizeLoadedDocument(document: StorybookDocument): StorybookDocument
     pages: document.pages.map((page) => {
       const textElements = page.elements.filter((element) => element.type === "text");
       const firstText = textElements[0];
-      const combinedText = textElements.map((element) => element.text?.trim()).filter(Boolean).join("\n").slice(0, 800);
+      const combinedText = textElements.map((element) => element.text === DEFAULT_STORYBOOK_TEXT ? "" : element.text ?? "").filter(Boolean).join("\n").slice(0, 800);
       const text = firstText ? {
         ...firstText,
         ...STORYBOOK_TEXT_BOX,
-        text: combinedText || (page.backgroundAssetId ? "" : DEFAULT_STORYBOOK_TEXT),
+        text: combinedText === DEFAULT_STORYBOOK_TEXT ? "" : combinedText,
         rotation: 0,
         zIndex: 0,
         opacity: 1,
         locked: true,
-        align: "center" as const,
+        align: "left" as const,
       } : createStorybookTextElement(clientId("element"));
       const images = page.elements.filter((element) => element.type === "image").map((element, index) => ({
         ...element,
@@ -170,6 +174,9 @@ async function dataUrlToPngBlob(dataUrl: string) {
 }
 
 export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?: string; classroomId?: string } = {}) {
+  return <AuthenticatedImageCache><StorybookEditorContent teacherBookId={teacherBookId} classroomId={classroomId} /></AuthenticatedImageCache>;
+}
+function StorybookEditorContent({ teacherBookId, classroomId }: { teacherBookId?: string; classroomId?: string }) {
   const routeParams = useParams<{ id: string }>();
   const params = { id: teacherBookId ?? routeParams.id };
   const apiBase = teacherBookId ? "/api/teacher/book-editor" : "/api/storybooks";
@@ -183,6 +190,9 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
   const [pickerOpen, setPickerOpen] = useState(false);
   const [artworks, setArtworks] = useState<ArtworkChoice[] | null>(null);
   const [addingAsset, setAddingAsset] = useState(false);
+  const [assetNotice, setAssetNotice] = useState("");
+  const [textNotice, setTextNotice] = useState("");
+  const [keepImageRatio, setKeepImageRatio] = useState(true);
   const [cutoutTarget, setCutoutTarget] = useState<CutoutTarget | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewPage, setPreviewPage] = useState(0);
@@ -200,7 +210,19 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
   const documentRef = useRef<StorybookDocument | null>(null);
   const editGeneration = useRef(0);
   const savingRef = useRef(false);
+  const completionPending = useRef(false);
   const saveTimer = useRef<number | undefined>(undefined);
+  const maxSaveTimer = useRef<number | undefined>(undefined);
+  const teacherWatching = useRef(false);
+  const persistLatest = useRef<() => void>(() => {});
+  const onWatching = useCallback((watching: boolean) => {
+    if (watching && !teacherWatching.current && maxSaveTimer.current) {
+      window.clearTimeout(maxSaveTimer.current);
+      maxSaveTimer.current = window.setTimeout(() => persistLatest.current(), 2000);
+    }
+    teacherWatching.current = watching;
+  }, []);
+  useEffect(() => { persistLatest.current = () => void persist(false); });
   const undoRef = useRef<StorybookDocument[]>([]);
   const redoRef = useRef<StorybookDocument[]>([]);
   const [historyState, setHistoryState] = useState({ undo: 0, redo: 0 });
@@ -225,7 +247,7 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
 
   useEffect(() => { bookRef.current = book; }, [book]);
   useEffect(() => { documentRef.current = document; }, [document]);
-  useEffect(() => () => { if (saveTimer.current) window.clearTimeout(saveTimer.current); }, []);
+  useEffect(() => () => { if (saveTimer.current) window.clearTimeout(saveTimer.current); if (maxSaveTimer.current) window.clearTimeout(maxSaveTimer.current); }, []);
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -253,7 +275,9 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
     editGeneration.current += 1;
     setSaveState("unsaved");
     if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => void persist(false), 900);
+    saveTimer.current = window.setTimeout(() => void persist(false), teacherWatching.current ? 500 : 900);
+    // Continuous typing cannot postpone autosave forever. Watching uses the same 2s cap as drawing.
+    if (!maxSaveTimer.current) maxSaveTimer.current = window.setTimeout(() => void persist(false), teacherWatching.current ? 2000 : 10_000);
   }
 
   function remember(current: StorybookDocument) {
@@ -288,15 +312,20 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
   }
 
   async function persist(complete: boolean) {
-    // A queued draft save must not undo a successful explicit completion.
-    if (saveTimer.current) { window.clearTimeout(saveTimer.current); saveTimer.current = undefined; }
     const currentBook = bookRef.current; const currentDocument = documentRef.current;
     if (!currentBook || !currentDocument) return;
+    if (complete) {
+      const message = storybookCompletionError(currentBook.title, currentDocument.pages.length, !teacherBookId);
+      if (message) { completionPending.current = false; setError(message); window.alert(message); return; }
+      completionPending.current = true;
+    }
+    // Invalid completion must leave the scheduled draft save intact.
+    if (saveTimer.current) { window.clearTimeout(saveTimer.current); saveTimer.current = undefined; }
+    if (maxSaveTimer.current) { window.clearTimeout(maxSaveTimer.current); maxSaveTimer.current = undefined; }
     if (savingRef.current) {
-      if (complete) saveTimer.current = window.setTimeout(() => void persist(true), 400);
       return;
     }
-    savingRef.current = true; setSaveState("saving");
+    savingRef.current = true; setSaveState("saving"); setError("");
     const generation = editGeneration.current;
     try {
       const response = await storybookEditorFetch(`${apiBase}/${encodeURIComponent(currentBook.id)}`, { method: "PUT", body: JSON.stringify({
@@ -305,15 +334,17 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
       }) });
       const data = await response.json() as { revision?: number; status?: "draft" | "complete"; error?: string; code?: string };
       if (!response.ok || typeof data.revision !== "number") throw new Error(data.error ?? "그림책을 저장하지 못했어요.");
-      const nextBook = { ...currentBook, revision: data.revision, status: data.status ?? currentBook.status };
+      // Only server metadata belongs to the completed request. Keep edits made while it was in flight.
+      const nextBook = { ...bookRef.current!, revision: data.revision, status: data.status ?? currentBook.status };
       setBook(nextBook); bookRef.current = nextBook;
       setSaveState(generation === editGeneration.current ? "saved" : "unsaved");
-      if (complete) { setPreviewPage(0); setPreviewOpen(true); }
+      if (complete && generation === editGeneration.current) { completionPending.current = false; setPreviewPage(0); setPreviewOpen(true); }
     } catch (cause) {
+      completionPending.current = false;
       setError(cause instanceof Error ? cause.message : "그림책을 저장하지 못했어요."); setSaveState("error");
     } finally {
       savingRef.current = false;
-      if (generation !== editGeneration.current) saveTimer.current = window.setTimeout(() => void persist(false), 350);
+      if (generation !== editGeneration.current || completionPending.current) saveTimer.current = window.setTimeout(() => void persist(completionPending.current), 350);
     }
   }
 
@@ -341,7 +372,7 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
 
   function updatePageText(patch: Partial<StorybookElement>) {
     if (!pageText) return;
-    updateElement(pageText.id, { ...patch, ...STORYBOOK_TEXT_BOX, rotation: 0, opacity: 1, locked: true, align: "center" });
+    updateElement(pageText.id, { ...patch, ...STORYBOOK_TEXT_BOX, rotation: 0, opacity: 1, locked: true, align: "left" });
   }
 
   function addImageElement(asset: Asset, aspectRatio?: number) {
@@ -370,7 +401,7 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
 
   async function importArtwork(artwork: ArtworkChoice) {
     if (addingAsset) return;
-    setAddingAsset(true); setError("");
+    setAddingAsset(true); setError(""); setAssetNotice(`${artwork.title} 그림을 가져오고 있어요…`);
     try {
       const existing = assets.find((asset) => asset.sourceArtworkId === artwork.id);
       if (existing) { addImageElement(existing); return; }
@@ -379,7 +410,7 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
       if (!response.ok || !data.asset) throw new Error(data.error ?? "그림을 가져오지 못했어요.");
       setAssets((current) => [...current, data.asset!]); addImageElement(data.asset);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "그림을 가져오지 못했어요."); }
-    finally { setAddingAsset(false); }
+    finally { setAddingAsset(false); setAssetNotice(""); }
   }
 
   async function uploadPngAsset(dataUrl: string, fallbackMessage: string) {
@@ -468,6 +499,8 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
     const key = `${page?.id ?? pageIndex}:${element.id}:${element.assetId}`;
     if (!force && aspectSyncedRef.current.has(key)) return;
     aspectSyncedRef.current.add(key);
+    // A saved crop/ratio is authoritative; do not undo a deliberate one-axis resize on reload.
+    if (!force && element.aspectRatio) return;
     const sourceAspectRatio = clamp(image.naturalWidth / image.naturalHeight, 0.1, 10);
     const crop = detectVisibleCrop(image, force ? 52 : 36);
     const appliedCrop = crop ?? FULL_IMAGE_CROP;
@@ -550,7 +583,7 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
     event.target.style.top = `${y * 100}%`;
     event.target.style.width = `${width * 100}%`;
     event.target.style.height = `${height * 100}%`;
-    updateElement(elementId, { x, y, width, height }, false);
+    updateElement(elementId, { x, y, width, height, aspectRatio: width * formatAspectRatio(documentRef.current!.format) / height, crop: gestureElement(elementId)?.crop ?? FULL_IMAGE_CROP }, false);
   }
 
   function applyMoveableRotate(event: OnRotate) {
@@ -587,7 +620,7 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
     const canSelect = interactive && element.type === "image";
     const className = `storybook-stage-element ${element.type} ${canSelect && selectedId === element.id ? "selected" : ""} ${element.locked ? "locked" : ""}`;
     return <div key={element.id} ref={canSelect ? (node) => { if (node) elementRefs.current.set(element.id, node); else elementRefs.current.delete(element.id); } : undefined} data-storybook-element-id={canSelect ? element.id : undefined} className={className} onPointerDown={canSelect ? (event) => { event.stopPropagation(); setSelectedId(element.id); } : undefined} style={{ left: `${element.x * 100}%`, top: `${element.y * 100}%`, width: `${element.width * 100}%`, height: `${element.height * 100}%`, transform: `rotate(${element.rotation}deg)`, zIndex: element.type === "text" ? 10_002 : element.zIndex + 1, opacity: element.opacity, color: element.color, textAlign: element.align }}>
-      {imageAsset ? <AuthenticatedImage src={`${apiBase}/${params.id}/assets/${imageAsset.id}`} alt="그림책에 넣은 그림" style={imageCropStyle(element.crop)} onLoad={canSelect ? (event) => syncImageContentBounds(element, event.currentTarget) : undefined} /> : element.type === "text" ? <span style={{ fontSize: `${(element.fontSize ?? 0.045) * 100}cqi` }}>{element.text}</span> : <span>이미지 없음</span>}
+      {imageAsset ? <AuthenticatedImage src={`${apiBase}/${params.id}/assets/${imageAsset.id}`} alt="그림책에 넣은 그림" style={imageCropStyle(element.crop)} onLoad={canSelect ? (event) => syncImageContentBounds(element, event.currentTarget) : undefined} /> : element.type === "text" ? <StorybookTextInput element={element} format={document!.format} interactive={interactive} inputRef={interactive ? storyTextRef : undefined} onChange={text => { setTextNotice(""); updatePageText({ text }); }} onFull={() => setTextNotice("이야기 칸이 가득 찼어요. 글자 크기를 줄이거나 다음 쪽에 이어 써 주세요.")} /> : <span>이미지 없음</span>}
     </div>;
   }
 
@@ -600,7 +633,9 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
   if (!book || !document || !page) return <main className="app-shell"><header className="app-header"><Logo /></header>{error ? <p className="error-box">{error}</p> : <div className="loading-card">그림책 작업실을 여는 중…</div>}</main>;
 
   return <main className="storybook-editor-shell">
-    <header className="storybook-editor-header"><a className="small-button" href={teacherBookId ? `/teacher/class/${classroomId}/books` : "/student/books"}>← 그림책</a><input aria-label="그림책 제목" maxLength={60} value={book.title} onChange={(event) => changeTitle(event.target.value)} onBlur={() => { if (!book.title.trim()) changeTitle("나의 그림책"); }} /><span className={`storybook-save-state ${saveState}`}>{saveState === "saving" ? "저장 중…" : saveState === "unsaved" ? "변경됨" : saveState === "error" ? "저장 확인 필요" : "✓ 저장됨"}</span><button type="button" className="button secondary" disabled={saveState === "saving"} onClick={() => void persist(false)}>저장</button><button type="button" className="button secondary" onClick={() => { setPreviewPage(pageIndex); setPreviewOpen(true); }}>미리보기</button><button type="button" className="button primary" disabled={saveState === "saving"} onClick={() => void persist(true)}>완성하기</button></header>
+    {!teacherBookId && <StorybookPresence bookId={book.id} pageId={document.pages[previewOpen ? previewPage : pageIndex].id} onWatching={onWatching} />}
+    <header className="storybook-editor-header"><a className="small-button" href={teacherBookId ? `/teacher/class/${classroomId}/books` : "/student/books"}>← 그림책</a><input aria-label="그림책 제목" maxLength={60} value={book.title} onChange={(event) => changeTitle(event.target.value)} placeholder="그림책 제목을 지어 주세요" /><span className={`storybook-save-state ${saveState}`}>{saveState === "saving" ? "저장 중…" : saveState === "unsaved" ? "변경됨" : saveState === "error" ? "저장 확인 필요" : "✓ 저장됨"}</span><button type="button" className="button secondary" disabled={saveState === "saving"} onClick={() => void persist(false)}>저장</button><button type="button" className="button secondary" onClick={() => { setPreviewPage(pageIndex); setPreviewOpen(true); }}>미리보기</button><button type="button" className="button primary" disabled={saveState === "saving"} onClick={() => void persist(true)}>완성하기</button></header>
+    {textNotice && <p className="storybook-editor-error" role="status">{textNotice}</p>}
     {error && <p className="error-box storybook-editor-error" role="alert">{error}<button type="button" onClick={() => setError("")}>닫기</button></p>}
     {teacherBookId && <p className="storybook-editor-error">PDF 원본은 쪽 배경입니다. 원본 글자 개별 수정은 지원하지 않으며, 이야기·그림 추가, 배경 교체, 쪽 순서 변경이 가능합니다. 수정 후 완성하기를 눌러야 새 피드백과 주문에 반영됩니다.</p>}
     <div className="storybook-editor-body">
@@ -623,7 +658,7 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
             useResizeObserver
             useMutationObserver
             origin={false}
-            keepRatio
+            keepRatio={keepImageRatio}
             renderDirections={["nw", "n", "ne", "w", "e", "sw", "s", "se"]}
             rotationPosition="top"
             displayAroundControls
@@ -658,19 +693,19 @@ export function StorybookEditor({ teacherBookId, classroomId }: { teacherBookId?
             onRotateEnd={endGesture}
           />}
         </div></div>
-        <p className="storybook-stage-help"><b>파란 점선 아래</b>에서만 그림을 움직일 수 있어요. 손잡이를 잡으면 그림과 선택 박스가 같은 비율로 커져요.</p>
+        <p className="storybook-stage-help">{pageIndex === 0 ? "1쪽은 표지예요. " : `${pageIndex + 1}쪽 · 내지예요. `}{document.pages.length}쪽{!teacherBookId && " / 최소 24쪽"} · <b>점선 안</b>에서 그림을 움직일 수 있어요. 비율 유지를 끄면 옆 손잡이로 가로나 세로만 늘릴 수 있어요.</p>
       </section>
       <aside className="storybook-inspector"><h2>{selected ? "그림 꾸미기" : "쪽 꾸미기"}</h2>
-        {pageText && <section className="storybook-story-control"><h3>이야기 글 <small>위쪽 가운데 고정</small></h3><label>이 쪽의 이야기<textarea ref={storyTextRef} maxLength={800} value={pageText.text ?? ""} onChange={(event) => updatePageText({ text: event.target.value })} /></label><label>글자 크기<input type="range" min="0.026" max="0.075" step="0.002" value={pageText.fontSize} onChange={(event) => updatePageText({ fontSize: Number(event.target.value) })} /></label><label>글자 색<input type="color" value={pageText.color} onChange={(event) => updatePageText({ color: event.target.value.toUpperCase() })} /></label><p>글은 한 쪽에 하나만 들어가며 항상 위쪽 가운데에 보여요.</p></section>}
-        {selected && <><section className="storybook-image-controls"><label>그림 크기 <b>{Math.round(selected.width * 100)}%</b><input aria-label="그림 크기" type="range" min="0.08" max={STORYBOOK_IMAGE_AREA.width} step="0.01" value={selected.width} onInput={(event) => { const width = Number(event.currentTarget.value); updateSelected(fitImageToArea({ ...selected, x: selected.x + (selected.width - width) / 2, width }, document.format, selected.aspectRatio)); }} /></label><button type="button" className="button secondary full" onClick={tightenSelectedImage}>✨ 빈 여백 없이 맞추기</button><button type="button" className="button secondary full" onClick={() => updateSelected(fitImageToArea(STORYBOOK_IMAGE_AREA, document.format, selected.aspectRatio))}>그림 영역에 크게 맞추기</button><button type="button" className="button primary full cutout-open-button" disabled={!selectedImageAsset || addingAsset} onClick={() => { if (selectedImageAsset) setCutoutTarget({ asset: selectedImageAsset, elementId: selected.id, pageIndex }); }}>✂️ 캐릭터만 오리기</button><p>흰색이나 투명한 빈 여백은 자동으로 빼고, 보이는 그림과 선택 박스를 같은 크기로 맞춰요.</p></section><label>투명도<input type="range" min="0.05" max="1" step="0.05" value={selected.opacity} onChange={(event) => updateSelected({ opacity: Number(event.target.value) })} /></label><label>기울기<input type="range" min="-180" max="180" step="1" value={selected.rotation} onChange={(event) => updateSelected({ rotation: Number(event.target.value) })} /></label><div className="storybook-layer-buttons"><button type="button" onClick={() => updateSelected({ zIndex: nextZ(page) })}>맨 앞으로</button><button type="button" onClick={sendSelectedToBack}>맨 뒤로</button><button type="button" onClick={duplicateSelected}>복제</button><button type="button" onClick={() => updateSelected({ locked: !selected.locked })}>{selected.locked ? "🔓 잠금 풀기" : "🔒 잠그기"}</button><button type="button" className="danger" onClick={deleteSelected}>삭제</button></div></>}
+        {pageText && <section className="storybook-story-control"><h3>이야기 글</h3><label>글자 크기<input type="range" min="0.026" max="0.075" step="0.002" value={pageText.fontSize} onChange={(event) => updatePageText({ fontSize: Number(event.target.value) })} /></label><label>글자 색<input type="color" value={pageText.color} onChange={(event) => updatePageText({ color: event.target.value.toUpperCase() })} /></label><p>책 위 이야기 칸을 눌러 직접 써 보세요. 줄이 차면 자동으로 다음 줄로 넘어가요.</p></section>}
+        {selected && <><section className="storybook-image-controls"><label className="book-check"><input type="checkbox" checked={keepImageRatio} onChange={e => setKeepImageRatio(e.target.checked)} />비율 유지</label><p>끄면 좌우 손잡이로 가로만, 위아래 손잡이로 세로만 늘릴 수 있어요.</p><label>그림 크기 <b>{Math.round(selected.width * 100)}%</b><input aria-label="그림 크기" type="range" min="0.08" max={STORYBOOK_IMAGE_AREA.width} step="0.01" value={selected.width} onInput={(event) => { const width = Number(event.currentTarget.value); updateSelected(fitImageToArea({ ...selected, x: selected.x + (selected.width - width) / 2, width }, document.format, selected.aspectRatio)); }} /></label><button type="button" className="button secondary full" onClick={tightenSelectedImage}>✨ 빈 여백 없이 맞추기</button><button type="button" className="button secondary full" onClick={() => updateSelected(fitImageToArea(STORYBOOK_IMAGE_AREA, document.format, selected.aspectRatio))}>그림 영역에 크게 맞추기</button><button type="button" className="button primary full cutout-open-button" disabled={!selectedImageAsset || addingAsset} onClick={() => { if (selectedImageAsset) setCutoutTarget({ asset: selectedImageAsset, elementId: selected.id, pageIndex }); }}>✂️ 캐릭터만 오리기</button><p>흰색이나 투명한 빈 여백은 자동으로 빼고, 보이는 그림과 선택 박스를 같은 크기로 맞춰요.</p></section><label>투명도<input type="range" min="0.05" max="1" step="0.05" value={selected.opacity} onChange={(event) => updateSelected({ opacity: Number(event.target.value) })} /></label><label>기울기<input type="range" min="-180" max="180" step="1" value={selected.rotation} onChange={(event) => updateSelected({ rotation: Number(event.target.value) })} /></label><div className="storybook-layer-buttons"><button type="button" onClick={() => updateSelected({ zIndex: nextZ(page) })}>맨 앞으로</button><button type="button" onClick={sendSelectedToBack}>맨 뒤로</button><button type="button" onClick={duplicateSelected}>복제</button><button type="button" onClick={() => updateSelected({ locked: !selected.locked })}>{selected.locked ? "🔓 잠금 풀기" : "🔒 잠그기"}</button><button type="button" className="danger" onClick={deleteSelected}>삭제</button></div></>}
         <section className="storybook-page-controls"><h3>페이지 배경</h3><label>배경색<input type="color" value={page.background} onChange={(event) => changeDocument((current) => ({ ...current, pages: current.pages.map((value, index) => index === pageIndex ? { ...value, background: event.target.value.toUpperCase() } : value) }))} /></label><button type="button" className="button secondary full" onClick={() => backgroundFileRef.current?.click()}>🌄 페이지 전체 배경 넣기</button>{page.backgroundAssetId && <button type="button" className="text-button full" onClick={() => changeDocument((current) => ({ ...current, pages: current.pages.map((value, index) => index === pageIndex ? { ...value, backgroundAssetId: undefined } : value) }))}>배경 그림 지우기</button>}<p>배경 그림은 페이지 전체를 채우고, 그 위에 이야기 글과 그림이 올라가요.</p></section>
       </aside>
     </div>
 
-    {pickerOpen && <div className="storybook-modal-backdrop" role="presentation" onMouseDown={() => setPickerOpen(false)}><section className="storybook-picker-modal" role="dialog" aria-modal="true" aria-labelledby="artwork-picker-title" onMouseDown={(event) => event.stopPropagation()}><header><div><p className="eyebrow">그대로 가져오기</p><h2 id="artwork-picker-title">완성한 내 그림</h2></div><button type="button" className="small-button" onClick={() => setPickerOpen(false)}>닫기</button></header>{artworks === null ? <div className="loading-card">내 그림을 찾는 중…</div> : artworks.length ? <div className="storybook-artwork-picker-grid">{artworks.map((artwork) => <button type="button" key={artwork.id} disabled={addingAsset} onClick={() => void importArtwork(artwork)}><AuthenticatedImage src={`/api/artworks/${artwork.id}/image`} alt={artwork.title} /><b>{artwork.title}</b><small>이 그림 넣기</small></button>)}</div> : <div className="empty-state">완성한 그림이 아직 없어요.<br /><a href="/student/activities" className="button secondary">그림 그리러 가기</a></div>}</section></div>}
+    {pickerOpen && <div className="storybook-modal-backdrop" role="presentation" onMouseDown={() => setPickerOpen(false)}><section className="storybook-picker-modal" role="dialog" aria-modal="true" aria-labelledby="artwork-picker-title" onMouseDown={(event) => event.stopPropagation()}><header><div><p className="eyebrow">그대로 가져오기</p><h2 id="artwork-picker-title">완성한 내 그림</h2></div><button type="button" className="small-button" onClick={() => setPickerOpen(false)}>닫기</button></header>{assetNotice && <p role="status" className="book-notice">{assetNotice}</p>}{artworks === null ? <div className="loading-card">내 그림을 찾는 중…</div> : artworks.length ? <div className="storybook-artwork-picker-grid">{artworks.map((artwork) => <button type="button" key={artwork.id} disabled={addingAsset} onClick={() => void importArtwork(artwork)}><AuthenticatedImage lazy src={`/api/artworks/${artwork.id}/image`} alt={artwork.title} /><b>{artwork.title}</b><small>이 그림 넣기</small></button>)}</div> : <div className="empty-state">완성한 그림이 아직 없어요.<br /><a href="/student/activities" className="button secondary">그림 그리러 가기</a></div>}</section></div>}
 
     {cutoutTarget && <ImageCutoutModal sourceUrl={`${apiBase}/${params.id}/assets/${cutoutTarget.asset.id}`} onClose={() => setCutoutTarget(null)} onSave={saveCutout} />}
 
-    {previewOpen && <div className="storybook-preview" role="dialog" aria-modal="true" aria-label="그림책 미리보기"><header><b>{book.title}</b><button type="button" className="small-button" onClick={() => setPreviewOpen(false)}>편집으로 돌아가기</button></header><div className="storybook-preview-stage-wrap"><button type="button" aria-label="이전 쪽" disabled={previewPage === 0} onClick={() => setPreviewPage((value) => value - 1)}>‹</button><div key={document.pages[previewPage].id} className={`storybook-stage preview format-${document.format}`} style={{ background: document.pages[previewPage].background }}><div className="storybook-stage-content">{renderBackground(document.pages[previewPage])}{document.pages[previewPage].elements.slice().sort((a, b) => a.zIndex - b.zIndex).map((element) => renderElement(element, false))}</div></div><button type="button" aria-label="다음 쪽" disabled={previewPage === document.pages.length - 1} onClick={() => setPreviewPage((value) => value + 1)}>›</button></div><footer>{previewPage + 1} / {document.pages.length}</footer></div>}
+    {previewOpen && <div className="storybook-preview" role="dialog" aria-modal="true" aria-label="그림책 미리보기"><header><b>{book.title || "제목을 지어 주세요"}</b><div><a className="small-button" href={teacherBookId ? `/teacher/class/${classroomId}/books` : "/student"}>첫 화면으로</a><button type="button" className="small-button" onClick={() => setPreviewOpen(false)}>편집으로 돌아가기</button></div></header><div className="storybook-preview-stage-wrap"><button type="button" aria-label="이전 쪽" disabled={previewPage === 0} onClick={() => setPreviewPage((value) => value - 1)}>‹</button><div key={document.pages[previewPage].id} className={`storybook-stage preview format-${document.format}`} style={{ background: document.pages[previewPage].background }}><div className="storybook-stage-content">{renderBackground(document.pages[previewPage])}{document.pages[previewPage].elements.slice().sort((a, b) => a.zIndex - b.zIndex).map((element) => renderElement(element, false))}</div></div><button type="button" aria-label="다음 쪽" disabled={previewPage === document.pages.length - 1} onClick={() => setPreviewPage((value) => value + 1)}>›</button></div><footer>{previewPage + 1} / {document.pages.length}</footer></div>}
   </main>;
 }

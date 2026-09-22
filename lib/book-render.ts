@@ -8,6 +8,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { storybookAspectRatio, type StorybookDocument } from "@/lib/storybook-model";
 import type { BookFeedback, Rubric } from "@/lib/book-rubric";
 import { defaultFeedbackExport, feedbackExportContent, type FeedbackExportOptions } from "@/lib/feedback-export";
+import { fittedStoryText, STORY_TEXT_LINE_HEIGHT } from "@/lib/storybook-text";
 
 export const FONT_PATH = `${process.cwd()}/public/fonts/NanumGothic-Regular.ttf`;
 const escape = (text: string) => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
@@ -43,9 +44,8 @@ export async function renderBookPages(document: StorybookDocument, assets: Map<s
         const crop = el.crop;
         svg += `<g opacity="${el.opacity}" transform="rotate(${el.rotation} ${x + w / 2} ${y + h / 2})"><svg x="${x}" y="${y}" width="${w}" height="${h}" overflow="hidden"><image href="${image(el.assetId)}" x="${crop ? -crop.x / crop.width * w : 0}" y="${crop ? -crop.y / crop.height * h : 0}" width="${crop ? w / crop.width : w}" height="${crop ? h / crop.height : h}" preserveAspectRatio="${crop ? "none" : "xMidYMid meet"}"/></svg></g>`;
       } else if (el.type === "text") {
-        const size = (el.fontSize ?? 0.045) * width;
-        const lines = wrapText(el.text ?? "", w, (s) => font.widthOfTextAtSize(s, size));
-        svg += `<svg x="${x}" y="${y}" width="${w}" height="${h}" overflow="hidden"><text font-family="NanumGothic" font-size="${size}" fill="${el.color}" text-anchor="middle">${lines.map((s, i) => `<tspan x="${w / 2}" y="${size + i * size * 1.35}">${escape(s)}</tspan>`).join("")}</text></svg>`;
+        const { size, lines } = fittedStoryText(el.text === "여기에 이야기를 써 보세요" ? "" : el.text ?? "", (el.fontSize ?? 0.045) * width, w - width * 4 / 1024, h - width * 4 / 1024, (s, fontSize) => font.widthOfTextAtSize(s, fontSize));
+        svg += `<svg x="${x}" y="${y}" width="${w}" height="${h}"><text font-family="NanumGothic" font-size="${size}" fill="${el.color}" text-anchor="start">${lines.map((s, i) => `<tspan x="${width * 2 / 1024}" y="${size + i * size * STORY_TEXT_LINE_HEIGHT}">${escape(s)}</tspan>`).join("")}</text></svg>`;
       }
     }
     svg += "</svg>";
@@ -110,7 +110,8 @@ export function printPageCount(original: number, spec: PrintSpec) {
 }
 export async function printPdfs(images: Buffer[], spec: PrintSpec, size: PrintSize, title: string) {
   assertBookPrintSpec(spec);
-  const count = printPageCount(images.length, spec);
+  const innerImages = images.slice(1);
+  const count = printPageCount(innerImages.length, spec);
   assertBookPrintSize(size, count);
   const pt = (mm: number) => mm * 72 / 25.4;
   if (![size.coverWidthMm, size.coverHeightMm, size.innerWidthMm, size.innerHeightMm, spec.innerTrimWidthMm, spec.innerTrimHeightMm].every((n) => Number.isFinite(n) && n > 0 && n < 2000)) throw new Error("인쇄 크기 응답이 올바르지 않아요.");
@@ -120,7 +121,10 @@ export async function printPdfs(images: Buffer[], spec: PrintSpec, size: PrintSi
   for (let i = 0; i < count; i += spread ? 2 : 1) {
     const p = inner.addPage([pt(size.innerWidthMm), pt(size.innerHeightMm)]);
     for (let j = 0; j < (spread ? 2 : 1); j++) {
-      const src = images[i + j]; if (!src) continue;
+      const src = innerImages[i + j];
+      p.setTrimBox(pt(3), pt(3), pt(243), pt(248));
+      p.setBleedBox(0, 0, p.getWidth(), p.getHeight());
+      if (!src) continue;
       // Fit the saved page inside the trim without distortion. Extend its edge pixels
       // through the 3mm bleed, so trimming cannot expose an accidental white border.
       const trimW = 2430, trimH = 2480, bleed = 30;
@@ -137,11 +141,11 @@ export async function printPdfs(images: Buffer[], spec: PrintSpec, size: PrintSi
   // Center panels around the spine; artwork remains within trim and a 10mm safety margin.
   const panelW = pt(spec.innerTrimWidthMm), panelH = pt(spec.innerTrimHeightMm);
   const center = p.getWidth() / 2, spineHalf = pt(size.spineWidthMm / 2 + hinge);
-  for (const [src, x] of [[images.at(-1), center - spineHalf - panelW], [images[0], center + spineHalf]] as const) {
+  for (const [src, x] of [[images[0], center + spineHalf]] as const) {
     if (!src) continue;
     const img = await cover.embedJpg(src), margin = pt(10);
     const scale = Math.min((panelW - margin * 2) / img.width, (panelH - margin * 2) / img.height);
     p.drawImage(img, { x: x + (panelW - img.width * scale) / 2, y: (p.getHeight() - img.height * scale) / 2, width: img.width * scale, height: img.height * scale });
   }
-  return { cover: await cover.save(), inner: await inner.save(), pageCount: count, addedPages: count - images.length };
+  return { cover: await cover.save(), inner: await inner.save(), pageCount: count, addedPages: count - innerImages.length };
 }

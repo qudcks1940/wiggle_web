@@ -36,6 +36,13 @@ test("모의 제공자 + 실제 HTTP: 전체 쪽 평가·부분 실패·재시�
   await post("/api/teacher/book-print/process",{}); await post("/api/teacher/book-print/process",{});
   const prints = (await server.DB.prepare("SELECT * FROM book_print_jobs").all()).results;
   assert.equal(prints.length,2); assert.ok(prints.every((j) => j.status === "ready"), JSON.stringify(prints.map((j) => j.error)));
+  assert.ok(prints.every(j=>JSON.parse(j.layout_json).innerSourcePages===1 && JSON.parse(j.layout_json).sourceLayoutVersion===2));
+  const oldLayout=JSON.parse(prints[0].layout_json);delete oldLayout.sourceLayoutVersion;
+  await server.DB.prepare('UPDATE book_print_jobs SET layout_json=? WHERE id=?').bind(JSON.stringify(oldLayout),prints[0].id).run();
+  assert.equal((await server.fetch(`/api/teacher/book-print/${prints[0].id}?kind=inner`,{headers})).status,409);
+  await post('/api/teacher/book-print',{action:'prepare',storybookIds:[prints[0].storybook_id],specUid:'SQUAREBOOK_HC'},202);
+  assert.equal((await server.DB.prepare('SELECT status FROM book_print_jobs WHERE id=?').bind(prints[0].id).first()).status,'queued');
+  await post('/api/teacher/book-print/process',{});
   const shipping={recipientName:"테스트교사",recipientPhone:"010-0000-0000",postalCode:"12345",address1:"테스트시 테스트로 123",address2:"4층",memo:"응답유실테스트"};
 
   await post("/api/teacher/book-print",{action:"estimate",items:prints.map((p)=>({jobId:p.id,quantity:1})),shipping},403);

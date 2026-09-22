@@ -30,10 +30,13 @@ const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chr
 try {
 const context=await browser.newContext(); await context.addCookies([{name:'wiggle_teacher',value:session,url:server.origin}]);
 const page=await context.newPage(); const errors=[];page.on('pageerror',e=>errors.push(e.message));
-await page.goto(server.origin+'/teacher/class/'+classroomId+'/books'); await page.getByText('2권 선택',{exact:true}).count(); await page.getByText('다른 책 0',{exact:true}).waitFor();
+await page.goto(server.origin+'/teacher/class/'+classroomId+'/books/feedback');
 await page.getByLabel('전체 선택',{exact:true}).check();await page.getByRole('button',{name:'선택한 책 피드백 만들기',exact:true}).click();
-await page.getByRole('button',{name:'다시 시도',exact:true}).waitFor();await page.getByRole('button',{name:'다시 시도',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.status-complete').length===2);
-const download=page.waitForEvent('download');await page.getByRole('button',{name:'선택한 피드백 PDF 받기'}).click(); assert.equal((await download).suggestedFilename(),'그림책_피드백.zip');
+await page.getByText(/피드백 처리 완료/).waitFor();
+await page.getByRole('button',{name:'선택한 책 피드백 만들기',exact:true}).click();await page.getByText(/피드백 처리 완료/).waitFor();
+await page.waitForFunction(()=>[...document.querySelectorAll('.fm-book-button')].filter(e=>e.textContent.includes('준비 완료')).length===2);
+await page.getByLabel('검색 결과의 완료 책 선택',{exact:true}).check();
+const download=page.waitForEvent('download');await page.getByRole('button',{name:'선택한 PDF 받기',exact:true}).click(); assert.equal((await download).suggestedFilename(),'학생별_선택피드백.zip');
 for(const route of ['books','books/orders']) {await page.goto(server.origin+'/teacher/class/'+classroomId+'/'+route); await page.getByText('다른 책 0',{exact:true}).waitFor();for(const [w,h] of [[320,568],[390,844],[844,390],[1440,1000]]) {await page.setViewportSize({width:w,height:h});await page.waitForTimeout(150);await page.screenshot({path:"work/book-qa/debug-"+w+".png",fullPage:true}); assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll("*")].filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>({tag:e.tagName,class:e.className,w:e.getBoundingClientRect().width})).slice(0,12))));await page.screenshot({path:'work/book-qa/'+route.replace('/','-')+'-'+w+'.png',fullPage:true});await page.locator('a[href]').first().focus(); await page.keyboard.press('Tab'); assert.ok(await page.evaluate(()=>document.activeElement!==document.body));}}
 await page.setViewportSize({width:1440,height:1000});
 await page.getByLabel('우리 반 전체 선택',{exact:true}).check();
@@ -41,6 +44,7 @@ await page.getByRole('button',{name:'선택한 책 인쇄 준비 · 재시도'})
 await page.waitForFunction(()=>document.querySelectorAll('.status-ready').length===2);
 for(const [label,value] of [['수령인','검증교사'],['연락처','010-0000-0000'],['우편번호','12345'],['주소','테스트시 테스트로 123'],['상세주소','4층'],['배송 메모','']])await page.getByLabel(label,{exact:true}).fill(value);
 await page.getByLabel('학교',{exact:true}).fill('위글검증초등학교');
+await page.getByLabel('학년',{exact:true}).fill('4');await page.getByLabel('반',{exact:true}).fill('2');
 await page.getByLabel('모든 PDF의 페이지 크기·글·그림·빈 쪽, 수량과 배송지를 확인했습니다.').check();
 await page.getByRole('button',{name:'운영자에게 제작 요청 보내기'}).click();
 await page.getByText('운영자에게 제작 요청서를 보냈어요. 아래에서 접수 상태를 확인하세요.').waitFor();

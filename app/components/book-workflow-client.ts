@@ -12,8 +12,9 @@ export const postJson = (data: unknown, method = "POST"): RequestInit => ({ meth
 export function saveBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
-export async function downloadFeedback(id: string) {
-  const response = await fetch(`/api/teacher/book-feedback/${id}?format=pdf`, { cache: "no-store" });
+export async function downloadFeedback(id: string, options?: import("@/lib/feedback-export").FeedbackExportOptions) {
+  const { feedbackExportQuery } = await import("@/lib/feedback-export");
+  const response = await fetch(`/api/teacher/book-feedback/${id}?format=pdf${options ? "&" + feedbackExportQuery(options) : ""}`, { cache: "no-store" });
   if (!response.ok) { const body = await response.json() as { error: string }; throw new Error(body.error); }
   const disposition = response.headers.get("content-disposition") ?? "";
   const filename = decodeURIComponent(disposition.split("filename*=UTF-8''")[1] ?? "피드백.pdf");

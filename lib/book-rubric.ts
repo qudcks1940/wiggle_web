@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { unzipSync } from "fflate";
+import { rubricTemplateRows } from "@/lib/rubric-template";
 
 export type Rubric = { title: string; achievement: string[]; criteria: { id: string; name: string; levels: { score: number; description: string }[] }[]; maximum: number; minimum: number; absent: number; unsubmitted: number };
 export const rubricVersion = (rubric: Rubric) => createHash("sha256").update(JSON.stringify(rubric)).digest("hex");
@@ -50,6 +51,35 @@ export async function parseRubric(bytes: Uint8Array): Promise<Rubric> {
 
 export async function defaultRubric() {
   return parseRubric(await readFile(`${process.cwd()}/config/rubrics/storybook.xlsx`));
+}
+
+export async function rubricWorkbook(rubric: Rubric) {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("평가", { views: [{ state: "frozen", ySplit: 1 }] });
+  sheet.columns = [{ width: 20 }, { width: 48 }, { width: 100 }];
+  for (const values of rubricTemplateRows(rubric)) {
+    const row = sheet.addRow(values);
+    row.height = Math.max(32, Math.ceil(String(values[2]).length / 65) * 18 + 12);
+    row.eachCell({ includeEmpty: true }, (cell, column) => {
+      cell.font = { name: "맑은 고딕", size: 11, color: { argb: column === 1 ? "FF536359" : "FF244D39" } };
+      cell.alignment = { vertical: "middle", wrapText: true };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: column === 1 ? "FFF0F2EF" : "FFFFFFE5" } };
+    });
+    if (String(values[0]).startsWith("채점기준") || values[0] === "평가명") row.font = { name: "맑은 고딕", size: 12, bold: true };
+  }
+  const guide = workbook.addWorksheet("수정 안내");
+  guide.columns = [{ width: 26 }, { width: 110 }];
+  [
+    ["현재 평가 기준 수정 양식", "‘평가’ 시트의 연노랑 B·C열을 수정한 뒤 .xlsx로 저장해 올려 주세요."],
+    ["평가 이름", "평가명 행 B열을 수정합니다."],
+    ["영역 이름", "채점기준 N 행 B열을 수정합니다. A열의 채점기준 N 표시는 유지합니다."],
+    ["점수와 판단 기준", "영역 바로 아래 행 B열은 점수, C열은 그 점수를 주는 기준입니다. 단계 행의 A열은 비워 둡니다."],
+    ["영역 추가·삭제", "채점기준 행과 그 아래 단계 행들을 한 묶음으로 복사하거나 삭제합니다. 영역은 1~20개, 단계는 영역당 1~10개입니다."],
+    ["점수를 바꿨다면", "맨 아래 영역만점(B열)은 각 영역 최고점의 합, 최소점수(B열)는 각 영역 최저점의 합으로 수정합니다."],
+    ["유지할 것", "‘평가’ 시트 이름, A열 항목명, A·B·C열 순서를 유지합니다. 같은 영역 안에서 점수는 중복할 수 없습니다."],
+    ["적용 범위", "업로드 후 새로 요청하는 피드백에 적용합니다. 이미 만들어진 피드백은 당시 기준을 유지합니다."],
+  ].forEach(values => { const row = guide.addRow(values); row.height = 48; row.alignment = { wrapText: true, vertical: "middle" }; row.font = { name: "맑은 고딕", size: 11 }; });
+  return new Uint8Array(await workbook.xlsx.writeBuffer());
 }
 
 export async function feedbackPrompt(rubric: Rubric) {

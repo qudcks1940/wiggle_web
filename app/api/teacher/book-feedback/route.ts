@@ -1,13 +1,14 @@
 import { bindings } from "@/db/runtime";
 import { cleanText, jsonError, noStoreJson, requireTeacher, sameOrigin, rateLimit } from "@/lib/security";
 import { activeRubric, enqueueFeedback, feedbackConfigured, selectedBookIds } from "@/lib/book-workflow";
-import { parseRubric, rubricVersion } from "@/lib/book-rubric";
+import { parseRubric, rubricVersion, rubricWorkbook } from "@/lib/book-rubric";
 
 export async function GET(request: Request) {
   const teacher = await requireTeacher(); if (!teacher) return jsonError("교사 로그인이 필요해요.", 401);
   const classroomId = cleanText(new URL(request.url).searchParams.get("classroomId"), 40);
   try {
     const { room, rubric, prompt, version } = await activeRubric(teacher.id, classroomId);
+    if (new URL(request.url).searchParams.get("format") === "xlsx") return new Response(await rubricWorkbook(rubric), { headers: { "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent("평가기준_수정양식.xlsx")}`, "cache-control": "private, no-store" } });
     const jobs = await bindings().DB.prepare(`SELECT id, storybook_id AS storybookId, revision, rubric_version AS rubricVersion, status, error, title, created_at AS createdAt FROM book_feedback_jobs WHERE teacher_id = ? AND classroom_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1000`).bind(teacher.id, classroomId).all();
     return noStoreJson({ rubric, prompt, version, grade: room.grade, classNumber: room.classNumber, filename: room.rubricFilename ?? "storybook.xlsx", configured: feedbackConfigured(), jobs: jobs.results });
   } catch { return jsonError("이 학급의 평가 설정을 불러올 수 없어요.", 403); }

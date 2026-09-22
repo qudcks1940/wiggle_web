@@ -31,7 +31,6 @@ try {
 const context=await browser.newContext(); await context.addCookies([{name:'wiggle_teacher',value:session,url:server.origin}]);
 const page=await context.newPage(); const errors=[];page.on('pageerror',e=>errors.push(e.message));
 await page.goto(server.origin+'/teacher/class/'+classroomId+'/books'); await page.getByText('2권 선택',{exact:true}).count(); await page.getByText('다른 책 0',{exact:true}).waitFor();
-await page.getByLabel('학년',{exact:true}).fill('4');await page.getByLabel('반',{exact:true}).fill('7'); await page.getByRole('button',{name:'학년·반 저장'}).click();
 await page.getByLabel('전체 선택',{exact:true}).check();await page.getByRole('button',{name:'선택한 책 피드백 만들기',exact:true}).click();
 await page.getByRole('button',{name:'다시 시도',exact:true}).waitFor();await page.getByRole('button',{name:'다시 시도',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.status-complete').length===2);
 const download=page.waitForEvent('download');await page.getByRole('button',{name:'선택한 피드백 PDF 받기'}).click(); assert.equal((await download).suggestedFilename(),'그림책_피드백.zip');

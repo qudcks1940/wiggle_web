@@ -7,6 +7,7 @@ import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { storybookAspectRatio, type StorybookDocument } from "@/lib/storybook-model";
 import type { BookFeedback, Rubric } from "@/lib/book-rubric";
+import { defaultFeedbackExport, feedbackExportContent, type FeedbackExportOptions } from "@/lib/feedback-export";
 
 export const FONT_PATH = `${process.cwd()}/public/fonts/NanumGothic-Regular.ttf`;
 const escape = (text: string) => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
@@ -56,15 +57,14 @@ export async function renderBookPages(document: StorybookDocument, assets: Map<s
 
 export type BookIdentity = { grade: number | null; classNumber: number | null; seatNumber: number | null; realName: string | null; title: string };
 export function feedbackFilename(identity: BookIdentity) {
-  if (!identity.grade || !identity.classNumber || !identity.seatNumber || !identity.realName) throw new Error("학년·반·번호·이름을 먼저 저장해 주세요.");
   const safe = (s: string) => s.normalize("NFC").replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").replace(/[. ]+$/g, "").slice(0, 65) || "제목없음";
-  return `${identity.grade}_${identity.classNumber}_${identity.seatNumber}_${safe(identity.realName)}_${safe(identity.title)}.pdf`;
+  return `${identity.seatNumber ? identity.seatNumber + "_" : ""}${safe(identity.realName || "학생")}_${safe(identity.title)}_피드백.pdf`;
 }
 export function downloadResponse(bytes: Uint8Array, filename: string, contentType = "application/pdf") {
   return new Response(new Uint8Array(bytes), { headers: { "content-type": contentType, "cache-control": "private, no-store", "content-disposition": `attachment; filename="download.pdf"; filename*=UTF-8''${encodeURIComponent(filename)}`, "x-content-type-options": "nosniff" } });
 }
 
-export async function feedbackPdf(identity: BookIdentity, rubric: Rubric, feedback: BookFeedback, version: string) {
+export async function feedbackPdf(identity: BookIdentity, rubric: Rubric, feedback: BookFeedback, version: string, options: FeedbackExportOptions = defaultFeedbackExport(rubric)) {
   feedbackFilename(identity);
   const pdf = await PDFDocument.create(); pdf.registerFontkit(fontkit);
   const font = await pdf.embedFont(await readFile(FONT_PATH), { subset: false });
@@ -74,8 +74,8 @@ export async function feedbackPdf(identity: BookIdentity, rubric: Rubric, feedba
   function header() {
     page.drawRectangle({ x: 36, y: 724, width: 523, height: 81, color: pale });
     page.drawRectangle({ x: 36, y: 803, width: 523, height: 3, color: purple });
-    page.drawText(`${identity.grade}학년 ${identity.classNumber}반 ${identity.seatNumber}번 ${identity.realName}`, { x: 48, y: 780, font, size: 10, color: ink });
-    page.drawText(`${rubric.title} 채점 결과`, { x: 48, y: 751, font, size: 19, color: purple });
+    page.drawText(`${identity.seatNumber ? identity.seatNumber + "번 " : ""}${identity.realName || "학생"}`, { x: 48, y: 780, font, size: 10, color: ink });
+    page.drawText("그림책 피드백", { x: 48, y: 751, font, size: 19, color: purple });
     y = 699;
   }
   function textBlock(text: string, size: number, color = ink, gap = 8) {
@@ -85,14 +85,17 @@ export async function feedbackPdf(identity: BookIdentity, rubric: Rubric, feedba
     }
     y -= gap;
   }
-  header(); textBlock(identity.title, 13); textBlock("선생님 피드백 · AI 초안 (교사 검토용)", 9);
-  feedback.criteria.forEach((item, index) => {
+  const content = feedbackExportContent(rubric, feedback, options);
+  header(); textBlock(identity.title, 13); textBlock(rubric.title, 10); textBlock("선생님 피드백 · AI 초안 (교사 검토용)", 9);
+  content.criteria.forEach((criterion, index) => {
+    const item = criterion.result;
     if (y < 135) { page = pdf.addPage([595.28, 841.89]); header(); }
-    textBlock(`${index + 1}. ${rubric.criteria[index].name}   ${item.score} / ${Math.max(...rubric.criteria[index].levels.map((l) => l.score))}점`, 10, purple, 3);
+    textBlock(`${index + 1}. ${criterion.name}${options.scores ? `   ${item.score} / ${Math.max(...criterion.levels.map(l => l.score))}점` : ""}`, 10, purple, 3);
     textBlock(item.feedback, 10, ink, 7);
+    if (options.pages) textBlock(`근거: ${item.pages.join(", ")}쪽`, 9);
   });
-  textBlock(`총점 ${feedback.criteria.reduce((s, c) => s + c.score, 0)} / ${rubric.maximum}점`, 12, purple);
-  textBlock(feedback.summary, 10);
+  if (options.scores && content.criteria.length) textBlock(`${content.partial ? "선택 영역 합계" : "총점"} ${content.total} / ${content.maximum}점`, 12, purple);
+  if (options.summary) { textBlock("종합 의견 · 다음에 해 볼 일", 12, purple); textBlock(feedback.summary, 10); }
   pdf.getPages().forEach((p, i) => p.drawText(`루브릭 ${version.slice(0, 12)}   ·   ${i + 1} / ${pdf.getPageCount()}`, { x: 40, y: 32, font, size: 8, color: rgb(.5, .5, .55) }));
   return pdf.save();
 }

@@ -7,6 +7,7 @@
 
 - 2026-09-22 사용자 요청으로 변경을 커밋하고 최신 운영 main `da246fb` 위로 rebase 완료(`157074a`). 코드 충돌 없이 상태 문서의 갱신 날짜만 해결했다. 최신 main의 입장 잠금·그림 보관함·넓은 도화지 변경을 보존했다.
 - 재검증: production build + 전체 테스트 **389/389**, typecheck, lint 오류 0(기준선 경고 14), 실제 PR 기준 `git diff --check legacy-origin/main...HEAD` 통과. 보관함 테스트에도 LF 전용 정규식이 있어 CRLF를 허용하도록 수정했다(제품 코드 변경 없음). 일반 브라우저 320×568·390×844·844×390 및 피드백 관리 320/390/768/844/1440 폭·PDF·ZIP·엑셀 시나리오 재검증 통과. 운영 안내 문서도 새 UI와 파일명으로 갱신했다. 로그: `work/feedback-pr-*.log`.
+- 기능 브랜치를 개인 fork `qudcks1940/wiggle_web`에 push하고 운영 저장소 main 대상 [PR #15](https://github.com/yonghwan86/wiggle_web/pull/15)를 생성했다. 구현 `157074a`, 최신 main 검증·안내 갱신 `cae6b5b`. main push·병합·배포 없음.
 - 실제 운영 원본 `legacy-origin/main` (`yonghwan86/wiggle_web`, `7f9c7e2`)에서 `codex/feedback-workspace-20260920` 분기. `origin/main`에는 이 기능이 없어 운영 main 기준으로 작업했다.
 - 그림책 목록의 학년·반 저장 UI와 PDF 필수 입력 조건을 제거했다. 파일명은 `번호_이름_책제목_피드백.pdf`, 번호/이름이 없으면 제공된 정보와 ‘학생’으로 생성한다. 인쇄 주문의 학급 정보는 변경하지 않았다.
 - 현재 루브릭의 XLSX 수정 양식 다운로드(담당 학급 권한 확인), 실제 A·B·C열 미리보기, B/C열 수정·영역 추가/삭제·점수 합계 안내를 추가했다. 생성 파일의 ‘수정 안내’ 시트에도 사용법을 포함한다. 다운로드→수정→재업로드를 실제 파서로 확인했다.

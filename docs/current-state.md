@@ -5,7 +5,8 @@
 
 ## 2026-09-20 피드백 구성 선택·엑셀 안내 (로컬 검증, 사용자 미리보기)
 
-- 2026-09-22 사용자 요청으로 현재 변경을 기능 브랜치에 커밋하고 최신 운영 main `da246fb` 위로 옮겨 PR을 준비한다. 최신 main의 입장 잠금·그림 보관함·넓은 도화지 변경을 보존하며 합친 결과를 다시 검증한다.
+- 2026-09-22 사용자 요청으로 변경을 커밋하고 최신 운영 main `da246fb` 위로 rebase 완료(`157074a`). 코드 충돌 없이 상태 문서의 갱신 날짜만 해결했다. 최신 main의 입장 잠금·그림 보관함·넓은 도화지 변경을 보존했다.
+- 재검증: production build + 전체 테스트 **389/389**, typecheck, lint 오류 0(기준선 경고 14), 실제 PR 기준 `git diff --check legacy-origin/main...HEAD` 통과. 보관함 테스트에도 LF 전용 정규식이 있어 CRLF를 허용하도록 수정했다(제품 코드 변경 없음). 일반 브라우저 320×568·390×844·844×390 및 피드백 관리 320/390/768/844/1440 폭·PDF·ZIP·엑셀 시나리오 재검증 통과. 운영 안내 문서도 새 UI와 파일명으로 갱신했다. 로그: `work/feedback-pr-*.log`.
 - 실제 운영 원본 `legacy-origin/main` (`yonghwan86/wiggle_web`, `7f9c7e2`)에서 `codex/feedback-workspace-20260920` 분기. `origin/main`에는 이 기능이 없어 운영 main 기준으로 작업했다.
 - 그림책 목록의 학년·반 저장 UI와 PDF 필수 입력 조건을 제거했다. 파일명은 `번호_이름_책제목_피드백.pdf`, 번호/이름이 없으면 제공된 정보와 ‘학생’으로 생성한다. 인쇄 주문의 학급 정보는 변경하지 않았다.
 - 현재 루브릭의 XLSX 수정 양식 다운로드(담당 학급 권한 확인), 실제 A·B·C열 미리보기, B/C열 수정·영역 추가/삭제·점수 합계 안내를 추가했다. 생성 파일의 ‘수정 안내’ 시트에도 사용법을 포함한다. 다운로드→수정→재업로드를 실제 파서로 확인했다.
@@ -14,7 +15,7 @@
 - `scripts/check-feedback-library-browser.mjs` 통과: 생성/중단/재개/재접속 진행, 학생 ID 분리, 같은 제목 파일 보존, XLSX 다운로드, 실제 PDF 텍스트에서 미선택 내용·점수 제외, 빈 선택 방지, 동일 기준 일괄 적용, 3권 ZIP, 검색·키보드, 320/390/768/844/1440 폭 검증. 다운로드한 한국어 PDF를 이미지로 렌더링하여 배치·줄바꿈을 육안 확인했다.
 - 일반 `npm.cmd run check:browser -- http://localhost:57247`도 320×568·390×844·844×390 전 항목 통과했다. 샌드박스 안 Chrome DevTools 연결 실패 후 승인된 실행으로 재검증했다.
 - 변경분 `git diff --check` 및 실제 기준 `git diff --check legacy-origin/main` 통과. 요구된 `git diff --check main...HEAD`는 로컬의 오래된 main과 운영 main 간 기존 이력인 `docs/design-assets/studio-tool-dock/notes.md:107` EOF 빈 줄을 보고한다(이번 변경 아님).
-- 예시 학생만 있는 격리 test DB의 미리보기: `http://localhost:57247/teacher/class/class_feedbackpreview/books/feedback`. 실행/캡처 스크립트와 PDF·화면 이미지는 Git 제외 `work/feedback-preview.mjs`, `work/feedback-qa/`에 있다. 실제 운영 데이터/AI 제공자 호출 없음. 커밋·push·PR·main 병합·배포 없음. 사용자에게 먼저 보여주는 단계다.
+- 예시 학생만 있는 격리 test DB의 미리보기는 2026-09-22에 `http://localhost:51388/teacher/class/class_feedbackpreview/books/feedback`로 다시 띄웠다(종전 57247). 실행/캡처 스크립트와 PDF·화면 이미지는 Git 제외 `work/feedback-preview.mjs`, `work/feedback-qa/`에 있다. 실제 운영 데이터/AI 제공자 호출 없음. 사용자가 미리보기 후 PR 제출을 요청했으며 main 병합·배포는 하지 않는다.
 
 ## 2026-09-18 관리자 진입 버튼 (로컬 검증 완료)
 

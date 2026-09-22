@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ImgHTMLAttributes } from "react";
-import { studentFetch } from "@/lib/client-session";
+import { storybookEditorFetch } from "@/lib/storybook-editor-fetch";
 
 export function AuthenticatedImage({ src, alt, className, onLoad, style }: { src: string; alt: string; className?: string; onLoad?: ImgHTMLAttributes<HTMLImageElement>["onLoad"]; style?: ImgHTMLAttributes<HTMLImageElement>["style"] }) {
   const [url, setUrl] = useState("");
@@ -10,7 +10,7 @@ export function AuthenticatedImage({ src, alt, className, onLoad, style }: { src
     const controller = new AbortController();
     let objectUrl = "";
     setUrl(""); setFailed(false);
-    void studentFetch(src, { signal: controller.signal }).then(async (response) => {
+    void storybookEditorFetch(src, { signal: controller.signal }).then(async (response) => {
       if (!response.ok) throw new Error("image unavailable");
       const blob = await response.blob();
       if (!blob.type.startsWith("image/")) throw new Error("invalid image");

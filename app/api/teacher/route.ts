@@ -1,3 +1,4 @@
+import { isAdmin } from "@/lib/admin";
 import { cookies } from "next/headers";
 import { bindings, randomEntryCode } from "@/db/runtime";
 import { bytesToDataUrl } from "@/lib/image-data";
@@ -140,7 +141,7 @@ export async function GET(request: Request) {
   const db = bindings().DB;
   if (!classroomId) {
     const result = await db.prepare(`SELECT c.id, c.display_name AS displayName, c.class_code AS classCode, c.join_token AS joinToken, c.admission_open AS admissionOpen, c.current_activity AS currentActivity, c.updated_at AS updatedAt, COUNT(s.id) AS studentCount FROM classrooms c LEFT JOIN student_profiles s ON s.classroom_id = c.id AND s.archived_at IS NULL WHERE c.teacher_id = ? AND c.active = 1 GROUP BY c.id ORDER BY c.created_at DESC`).bind(teacher.id).all<ClassroomRow>();
-    return noStoreJson({ teacher, classrooms: result.results.map(presentClassroom) });
+    return noStoreJson({ teacher: { ...teacher, isAdmin: isAdmin(teacher) }, classrooms: result.results.map(presentClassroom) });
   }
 
   const classroom = await ownedClassroom(teacher.id, classroomId);
@@ -186,7 +187,7 @@ export async function GET(request: Request) {
   const lockedRow = await db.prepare(`SELECT COUNT(*) AS n FROM entry_lockouts WHERE classroom_id = ? AND locked_until > ?`).bind(classroomId, new Date().toISOString()).first<{ n: number }>();
   // serverNow: 손든 뒤 얼마나 기다렸는지를 교사 화면이 서버 시계 기준으로 계산하게 한다.
   // 교사 기기 시계가 틀어져 있어도 "3분째"가 어긋나지 않는다.
-  return noStoreJson({ teacher, classroom, students: hydrated, archivedStudents: archivedStudents.results, messages: messages.results, familyLinks: familyLinks.results, entryLocks: lockedRow?.n ?? 0, serverNow: new Date().toISOString() });
+  return noStoreJson({ teacher: { ...teacher, isAdmin: isAdmin(teacher) }, classroom, students: hydrated, archivedStudents: archivedStudents.results, messages: messages.results, familyLinks: familyLinks.results, entryLocks: lockedRow?.n ?? 0, serverNow: new Date().toISOString() });
 }
 
 /* 교사가 입력하는 학급 명단. 번호는 학급 안에서 고유하고, 실명은 담임에게만 보인다.

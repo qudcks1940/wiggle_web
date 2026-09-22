@@ -3,7 +3,7 @@
 > 마지막 갱신: 2026-09-23
 > 목적: 긴 대화가 압축되거나 담당 AI가 바뀌어도 실제 구현·검증·배포 상태를 잃지 않기 위한 기준 문서
 
-## 2026-09-23 이야기 쓰기 버튼 제거·직접 입력 (검증 완료, PR 제출 준비)
+## 2026-09-23 이야기 쓰기 버튼 제거·직접 입력 (검증 완료, PR #17 제출)
 
 - PR #16 병합 main `af95a2f`에서 `codex/storybook-direct-text-20260923` 분기. 글 영역 부모의 과거 `pointer-events:none` 규칙이 직접 클릭을 막고 있음을 확인했다.
 - 편집용 textarea에 pointer-events를 명시적으로 복원하고 ‘이야기 쓰기’ 버튼과 버튼용 ref를 제거했다. 직접 초점을 받으면 그림 선택을 해제한다. 읽기 전용 미리보기는 유지한다.
@@ -11,6 +11,7 @@
 - `typecheck`, `lint`(오류 0, 기존 경고 14), production build 포함 `npm test` 393/393, 변경분 `git diff --check` 통과. 일반 브라우저 검증은 320×568/390×844/844×390에서 통과(390px 핀치만 기존 CDP 환경 문제로 제외).
 - 최신 운영 기준 `legacy-origin/main` 대비 공백 검사는 통과했다. 오래된 로컬 `main...HEAD` 검사는 기존 `docs/design-assets/studio-tool-dock/notes.md:107`의 EOF 빈 줄을 보고하며 이번 변경과 무관하다.
 - 로컬 미리보기: http://localhost:59625/teacher/class/class_feedbackpreview/books/storybook_livepreview0/edit — 브라우저에서 글 영역을 실제 클릭하고 “책 위를 눌러 바로 이야기를 써요.” 입력까지 확인했다. 운영 데이터는 사용하지 않았다. 이 추가 수정은 아직 병합·배포하지 않았다.
+- 기능 커밋 `90f359b`를 개인 포크의 전용 브랜치에 push하고 [PR #17](https://github.com/yonghwan86/wiggle_web/pull/17)을 운영 저장소 main 대상으로 제출했다.
 
 ## 2026-09-23 PR #16 병합·운영 배포 완료 확인
 

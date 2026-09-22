@@ -28,7 +28,7 @@ test("enforces ownership, hashing, expiry, rate limits and idempotent revisions"
   assert.doesNotMatch(rateLimitModule, /SELECT count[\s\S]*prepare\(`UPDATE rate_limits SET count = count \+ 1/);
   assert.match(artwork, /student_id = \?/); assert.match(artwork, /REVISION_CONFLICT/); assert.match(artwork, /artwork_mutations/); assert.match(artwork, /ARTWORKS\.put/); assert.match(artwork, /last_mutation_id/);
   assert.match(artworkImage, /studentFromRequest/); assert.match(artworkImage, /WHERE id = \? AND student_id = \?/); assert.match(artworkImage, /ARTWORKS\.get/); assert.match(artworkImage, /private, no-store/);
-  assert.match(student, /AS hasImage/); assert.match(archive, /studentFetch\(`\/api\/artworks\/\$\{encodeURIComponent\(artwork\.id\)\}\/image`/); assert.match(archive, /URL\.revokeObjectURL/);
+  assert.match(student, /AS hasImage/); assert.match(archive, /studentFetch\(`\/api\/artworks\/\$\{encodeURIComponent\(artwork\.id\)\}\/image\$\{full \? "\?variant=final" : ""\}`/); assert.match(archive, /URL\.revokeObjectURL/);
   assert.match(teacher, /teacher_id = \?/); assert.match(teacher, /student_profiles WHERE id = \? AND classroom_id = \?/); assert.match(student, /entry_code = \?/); assert.match(student, /token_hash/);
 });
 
@@ -42,6 +42,8 @@ test("keeps canvas contracts and guide data separate", async () => {
   assert.match(studio, /item\.step === lessonStep \+ 1/); assert.doesNotMatch(studio, /item\.step <= lessonStep \+ 1/);
   assert.match(studio, /<canvas\s+ref=\{guideRef\}[\s\S]*<canvas\s+ref=\{canvasRef\}/);
   assert.match(css, /\.draw-canvas \{ z-index:2; touch-action:none; \}\.guide-canvas \{ z-index:3; pointer-events:none; \}/);
+  // 그리는 중인 획을 올리는 층은 도화지와 같은 층(z-index 2)에 겹치고 입력은 받지 않는다 — 점선 층(3) 아래다.
+  assert.match(css, /\.live-canvas \{ z-index:2; pointer-events:none; \}/);
   // 레슨 카탈로그는 은퇴했다(Story 2.3) — 다시 채워지면 이 단언이 그 사실을 크게 알린다.
   assert.equal(catalog.LESSONS.length, 0, "레슨 카탈로그는 비어 있어야 한다 — 커리큘럼 정본은 lib/arc-content.ts다");
   assert.equal(catalog.normalizeActivityKey("자유롭게 그리기"), "free");

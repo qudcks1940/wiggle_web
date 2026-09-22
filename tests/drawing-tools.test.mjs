@@ -71,11 +71,14 @@ test("all tools have recognizable visual icons and child-readable size labels", 
 test("palette shows every basic color without scrolling and the rainbow button opens a detailed picker", async () => {
   assert.doesNotMatch(studio, /colorsExpanded|MORE_PALETTE/);
   assert.match(studio, /import \{ ColorPickerDialog \} from "\.\/ColorPickerDialog"/);
-  // 막대에는 자주 쓰는 8색 + 무지개. 무지개는 12색 창(스크롤 없음)을 열고, 거기서 색 더보기가 상세 고르기 대화상자를 연다.
+  // 막대에는 단색 점 + 자주 쓰는 8색 + 무지개. 단색 점은 12색 창(스크롤 없음)을, 무지개는 색 섞는 대화상자를 연다(2026-09-20).
   assert.match(studio, /const DOCK_QUICK_COLORS = 8;/);
-  assert.match(studio, /className="dock-more-colors"[^>]*aria-haspopup="true"/);
-  assert.match(studio, /<div className="dock-palette" role="group" aria-label="모든 색">\s*\{PALETTE\.map/);
-  assert.match(studio, /className="dock-palette-wheel" aria-haspopup="dialog"[\s\S]*?setColorPickerOpen\(true\)/);
+  assert.match(studio, /className="dock-current-color"[^>]*aria-haspopup="true"[\s\S]*?setPaletteOpen\(\(value\) => !value\)/);
+  assert.match(studio, /className="dock-more-colors"[^>]*aria-haspopup="dialog"[\s\S]*?setColorPickerOpen\(true\)/);
+  assert.match(studio, /<div className="dock-palette" role="group" aria-label="단색 고르기">\s*\{PALETTE\.map/);
+  // 단색 창에는 단색만 둔다 — 섞는 색으로 가는 단추를 그 안에 두면 두 단추가 같은 일을 한다.
+  assert.doesNotMatch(studio, /dock-palette-wheel/);
+  assert.doesNotMatch(css, /dock-palette-wheel/);
   assert.match(studio, /<ColorPickerDialog color=\{selectedColor\} names=\{COLOR_NAMES\}/);
   assert.match(css, /\.dock-color,\.dock-current-color,\.dock-more-colors \{[^}]*min-width:44px; min-height:44px;/);
   assert.match(css, /\.dock-palette \{[^}]*grid-template-columns:repeat\(4,48px\)/);
@@ -89,12 +92,24 @@ test("strokes render during pointer input instead of waiting for pointer up", ()
   assert.match(studio, /function renderLiveStroke\(/);
   // 획 도중 다른 손이 도구를 바꿔도 그리던 획은 시작 시점(meta)의 도구·색·굵기를 유지한다.
   // 일반 그리기는 first, 점선 연습은 자석으로 맞춘 strokeStart를 즉시 미리보기 한다.
-  assert.match(studio, /function pointerDown[\s\S]*let strokeStart = first;[\s\S]*renderLiveStroke\(event\.currentTarget, meta\.tool, meta\.color, meta\.width, \[strokeStart\]\)/);
+  assert.match(studio, /function pointerDown[\s\S]*let strokeStart = first;[\s\S]*renderLiveStroke\(startTarget, meta\.tool, meta\.color, meta\.width, \[strokeStart\]\)/);
   assert.match(studio, /function pointerMove[\s\S]*points\.push\(next\);[\s\S]*const livePoints = points\.slice\(-3\);[\s\S]*renderLiveStroke\(event\.currentTarget, meta\.tool, meta\.color, meta\.width, livePoints\)/);
   assert.ok(studio.indexOf("renderLiveStroke(event.currentTarget, meta.tool, meta.color, meta.width, livePoints)") < studio.indexOf("function pointerUp"));
-  // 반투명 브러시(크레용·수채)는 스냅숏 복원 후 전체를 한 번에 그린다 — 세그먼트 알파 중첩 방지.
+  // 반투명 브러시(크레용·수채)는 얇은 층에 획 전체를 다시 그린다 — 세그먼트 알파 중첩 방지.
+  // 2026-09-21: 예전에는 같은 일을 도화지 위에서 하느라 move마다 캔버스 전체 ImageData를 뜨고 되돌렸다.
+  // 아이패드 미니에서 34MB·약 38ms였고 그만큼 선이 펜 뒤로 처졌다. 그 경로가 돌아오면 안 된다.
   assert.match(studio, /meta\.tool === "crayon" \|\| meta\.tool === "watercolor"/);
-  assert.match(studio, /context\.putImageData\(strokeSnapshotRef\.current, 0, 0\)/);
+  assert.doesNotMatch(studio, /getImageData\(0, 0, event\.currentTarget\.width/);
+  assert.doesNotMatch(studio, /strokeSnapshotRef/);
+  assert.match(studio, /const live = liveStrokeRef\.current \? liveCanvasRef\.current : null;[\s\S]{0,260}renderLiveStroke\(live, meta\.tool, meta\.color, meta\.width, points\)/);
+  // 지우개는 도화지 픽셀을 파내는 도구라 층에 올릴 수 없다 — 얇은 층은 반투명 브러시만 쓴다.
+  assert.match(studio, /liveStrokeRef\.current = \(meta\.tool === "crayon" \|\| meta\.tool === "watercolor"\)/);
+
+  // 애플 펜슬은 초당 240번 좌표를 보낸다. pointermove 하나에 묶여 온 표본을 모두 읽지 않으면
+  // 점을 버려 선이 펜 뒤로 처진다(2026-09-21 사용자 보고). 예측 점은 사파리에 없어 쓰지 않는다.
+  assert.match(studio, /getCoalescedEvents\(\)/);
+  assert.match(studio, /function movePoints[\s\S]{0,400}samples\.map/);
+  assert.doesNotMatch(studio, /getPredictedEvents\(\)/, "사파리에 없는 예측 점을 호출하면 안 된다(주석 언급은 괜찮다)");
 });
 
 test("mirror mode commits the pair together and undo removes it together", () => {

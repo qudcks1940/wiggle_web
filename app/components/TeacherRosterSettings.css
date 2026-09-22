@@ -7,3 +7,16 @@
 .trs-intro{padding:28px 0 25px;border-bottom:1px solid var(--tw-line)}
 .teacher-workspace .trs-intro h2{font-size:26px}
 .teacher-workspace .trs-intro p{margin-top:8px;color:var(--tw-muted);font-size:17px}
+/* 명단 입력은 번호 칸과 이름 칸을 나눈다(2026-09-20). 한 칸에 몰아 적던 때와 달리
+ * 어디까지가 번호인지 확인할 일이 없다. 25명이 들어가도 다이얼로그가 늘어나지 않게 스크롤한다. */
+.trs-rows{max-height:min(46vh,380px);overflow-y:auto;border:1px solid var(--tw-line);border-radius:6px;padding:8px}
+.trs-rows-head,.trs-row{display:grid;grid-template-columns:88px minmax(0,1fr) 44px;gap:8px;align-items:center}
+.trs-rows-head{padding:0 4px 6px;font-size:13px;color:var(--tw-muted)}
+.trs-row+.trs-row{margin-top:6px}
+.teacher-workspace .trs-row input{min-height:44px;width:100%}
+.teacher-workspace .trs-row-seat{font-variant-numeric:tabular-nums;text-align:center}
+.teacher-workspace .trs-row-remove{display:flex;align-items:center;justify-content:center;min-height:44px;padding:0;border:0;background:none;color:var(--tw-muted)}
+.teacher-workspace .trs-row-remove:disabled{opacity:.3}
+.trs-rows-foot{display:flex;align-items:center;gap:12px;margin:10px 0 4px}
+.trs-rows-foot small{color:var(--tw-muted);font-size:13px}
+.teacher-workspace .trs-row-add{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 12px;font-size:14px}

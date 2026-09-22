@@ -137,6 +137,54 @@
       "approvedFor": [
         "join entry-check screen wide-layout background (green classroom with Mongri holding the palette); text and buttons stay HTML"
       ]
+    },
+    {
+      "path": "/archive-book/book-open-blank.webp",
+      "source": "~/.codex/visualizations/2026/09/07/01a07a79-7597-7d53-add9-5dd05dcaa1bd/archive-sketchbook-handoff/assets/book-open-blank.png",
+      "sourceRole": "GPT(Codex) 인계 자산 — archive-sketchbook-handoff v2, 2026-09-20 사용자 전달",
+      "sha256": "AC7B669CBA4F70FECD7DCE687C4B2EE73F3751B7CF2358577303935854743AA8",
+      "approvedFor": [
+        "내 그림 보관함 정지 상태의 펼친 책 장식. 글자·버튼·아이 그림은 넣지 않는다(DOM으로 올린다).",
+        "PNG 원본(1.4~3.3MB)을 webp로 줄여 들였다. 원본은 인계 폴더에 있다."
+      ]
+    },
+    {
+      "path": "/archive-book/book-page-right.webp",
+      "source": "~/.codex/visualizations/2026/09/07/01a07a79-7597-7d53-add9-5dd05dcaa1bd/archive-sketchbook-handoff/assets/book-page-right.png",
+      "sourceRole": "GPT(Codex) 인계 자산 — archive-sketchbook-handoff v2, 2026-09-20 사용자 전달",
+      "sha256": "CF2E678512DB83A94F1756DA9F1BC0A286FE1FF198FE806DF8979A49BA8BBE3C",
+      "approvedFor": [
+        "페이지 넘김 중 도는 오른쪽 낱장.",
+        "PNG 원본(1.4~3.3MB)을 webp로 줄여 들였다. 원본은 인계 폴더에 있다."
+      ]
+    },
+    {
+      "path": "/archive-book/paper-grain.webp",
+      "source": "~/.codex/visualizations/2026/09/07/01a07a79-7597-7d53-add9-5dd05dcaa1bd/archive-sketchbook-handoff/assets/paper-grain.png",
+      "sourceRole": "GPT(Codex) 인계 자산 — archive-sketchbook-handoff v2, 2026-09-20 사용자 전달",
+      "sha256": "D07DE5B2E2C252B07F165A1CB24A76AA06CCC3850BB7E65E50767C8D053FF421",
+      "approvedFor": [
+        "종이 표면 질감. 아주 약하게(0.06~0.10)만 쓰고 아이 그림 위에는 올리지 않는다.",
+        "PNG 원본(1.4~3.3MB)을 webp로 줄여 들였다. 원본은 인계 폴더에 있다."
+      ]
+    },
+    {
+      "path": "/entry-green/mongri-waiting-desk.webp",
+      "source": "~/.codex/visualizations/2026/09/07/01a07a79-.../participation-cooldown-option3-handoff/assets/mongri-waiting-desk.png",
+      "sourceRole": "GPT(Codex) 인계 자산 — participation-cooldown-option3-handoff, 2026-09-22 사용자 전달",
+      "sha256": "EF9F4BBC3B38044BA49DD76E90ADCABE2B821615250CB7AEBCFCD18CD7752053",
+      "approvedFor": [
+        "참여 코드 대기(잠금) 화면의 몽그리 그림. 투명 배경이라 카드 위에 바로 얹는다. 글자·말풍선·타이머는 넣지 않는다(DOM으로 만든다). 원본 PNG를 webp로 줄여 들였다."
+      ]
+    },
+    {
+      "path": "/entry-green/mongri-waiting-face.webp",
+      "source": "~/.codex/visualizations/2026/09/07/01a07a79-.../participation-cooldown-option1-handoff/assets/mongri-waiting-face.png",
+      "sourceRole": "GPT(Codex) 인계 자산 — participation-cooldown-option1-handoff, 2026-09-22 사용자 전달",
+      "sha256": "182AA04EBA23557F067A1D80D4F624196635DAC5D4C20D56EA60BE09A4AD87C5",
+      "approvedFor": [
+        "좁은 화면 대기 안내 상자의 작은 몽그리 얼굴(장식, alt=\"\"). 표시 폭 48~56px, 좁은 화면 44px."
+      ]
     }
   ],
   "notApproved": "All other wiggle_draw assets remain outside wiggle_web until provenance and service-use permission are reviewed."

@@ -198,7 +198,8 @@ test("the UI source keeps completion, archive, palette, help-choice and touch pr
   assert.match(studio, /작품을 안전하게 저장 중/);
   assert.match(studio, /갈색/);
   assert.match(studio, /민트/);
-  assert.match(studio, /색 더보기/);
+  // 2026-09-20: `색 더보기` 단추는 사라지고 무지개 단추가 그 화면을 직접 연다.
+  assert.match(studio, /className="dock-more-colors"[^>]*aria-label="색 섞어 고르기"/);
   assert.match(studio, /펜 모드/);
   assert.match(studio, /손가락 모드/);
   assert.match(globalCss, /-webkit-touch-callout:\s*none/);
@@ -214,8 +215,11 @@ test("the UI source keeps completion, archive, palette, help-choice and touch pr
   assert.match(artworkRoute, /settleUploadsBeforeCleanup/);
   assert.match(uploads, /Promise\.allSettled/);
   assert.match(artworkImageRoute, /variant === "final"[\s\S]*finalImageKey[\s\S]*thumbnailKey/);
-  assert.match(archive, /\/image`/);
-  assert.doesNotMatch(archive, /variant=final/);
+  assert.match(archive, /\/image\$\{full \? "\?variant=final" : ""\}`/);
+  // 원본은 펼친 쪽의 한 장에만 쓴다. 목록 전부가 원본을 받으면 교실 회선이 그만큼 더 든다
+  // (2026-09-20 보관함 재설계 전에는 원본을 아예 쓰지 않았고, 규칙의 뜻은 "목록은 썸네일"이다).
+  assert.match(archive, /load\(artwork, false\)/, "목록은 썸네일");
+  assert.match(archive, /images\.load\(selected, true\)/, "펼친 쪽 한 장만 원본");
   assert.match(teacherRoute, /COALESCE\(a\.thumbnail_key, a\.final_image_key\)/);
   assert.doesNotMatch(teacherRoute, /Math\.min\(500/);
   assert.match(teacher, /studentHistoryRequestRef/);

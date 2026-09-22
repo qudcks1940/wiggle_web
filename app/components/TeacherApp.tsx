@@ -27,7 +27,7 @@ function RosterField({ value, onChange, label }: { value: string; onChange: (nex
 
 type FamilyLink = { id: string; studentId: string; scope: "artwork" | "bundle"; expiresAt: string; revokedAt: string | null; createdAt: string; artworkCount: number };
 type TeacherArtworkHistory = { id: string; title: string; topic: string; learningMode: string; lessonSlug: string | null; status: string; currentStep: number; updatedAt: string; completedAt: string | null; thumbnail: string | null };
-export type ClassroomData = { classroom: Classroom; students: Student[]; archivedStudents: ArchivedStudent[]; messages: Array<{ id: string; studentId: string | null; body: string; createdAt: string; nickname?: string; seenCount?: number }>; familyLinks: FamilyLink[]; teacher: { displayName: string; isAdmin?: boolean; source?: "siwc" | "local" } };
+export type ClassroomData = { serverNow?: string; entryLocks?: number; classroom: Classroom; students: Student[]; archivedStudents: ArchivedStudent[]; messages: Array<{ id: string; studentId: string | null; body: string; createdAt: string; nickname?: string; seenCount?: number }>; familyLinks: FamilyLink[]; teacher: { displayName: string; isAdmin?: boolean; source?: "siwc" | "local" } };
 type TeacherPayload = Partial<ClassroomData> & { error?: string; localDemo?: boolean; teacher?: { displayName: string; isAdmin?: boolean; source?: "siwc" | "local" }; classrooms?: Classroom[] };
 
 function profileDate(value: string) {

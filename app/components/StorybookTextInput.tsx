@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DEFAULT_STORYBOOK_TEXT, storybookAspectRatio, type StorybookElement, type StorybookFormat } from "@/lib/storybook-model";
 import { fittedStoryText, storyTextLines, STORY_TEXT_LINE_HEIGHT } from "@/lib/storybook-text";
 
@@ -12,7 +12,7 @@ function createMeasure(): Measure {
     return context.measureText(value).width;
   };
 }
-export function StorybookTextInput({ element, format, interactive, inputRef, onChange, onFull }: { element: StorybookElement; format: StorybookFormat; interactive: boolean; inputRef?: RefObject<HTMLTextAreaElement | null>; onChange?: (text: string) => void; onFull?: () => void }) {
+export function StorybookTextInput({ element, format, interactive, onFocus, onChange, onFull }: { element: StorybookElement; format: StorybookFormat; interactive: boolean; onFocus?: () => void; onChange?: (text: string) => void; onFull?: () => void }) {
   const text = element.text === DEFAULT_STORYBOOK_TEXT ? "" : element.text ?? "";
   const [draft, setDraft] = useState(text), [measureText, setMeasureText] = useState<Measure | null>(null);
   const ready = !!measureText;
@@ -34,5 +34,5 @@ export function StorybookTextInput({ element, format, interactive, inputRef, onC
   }
   const style = { fontSize: `${layout.size / 1024 * 100}cqi`, lineHeight: STORY_TEXT_LINE_HEIGHT };
   if (!interactive) return <span className="storybook-inline-text" style={style}>{text}</span>;
-  return <textarea ref={inputRef} aria-label="이 쪽의 이야기" className="storybook-inline-text" style={style} value={draft} placeholder={DEFAULT_STORYBOOK_TEXT} spellCheck={false} disabled={!ready} onPointerDown={e => e.stopPropagation()} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={e => { composing.current = false; accept(e.currentTarget.value, e.currentTarget); }} onChange={e => { if (composing.current || (e.nativeEvent as InputEvent).isComposing) setDraft(e.target.value); else accept(e.target.value, e.target); }} />;
+  return <textarea aria-label="이 쪽의 이야기" className="storybook-inline-text" style={style} value={draft} placeholder={DEFAULT_STORYBOOK_TEXT} spellCheck={false} disabled={!ready} onFocus={onFocus} onPointerDown={e => e.stopPropagation()} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={e => { composing.current = false; accept(e.currentTarget.value, e.currentTarget); }} onChange={e => { if (composing.current || (e.nativeEvent as InputEvent).isComposing) setDraft(e.target.value); else accept(e.target.value, e.target); }} />;
 }

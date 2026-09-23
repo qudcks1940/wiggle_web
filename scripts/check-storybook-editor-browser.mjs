@@ -27,13 +27,18 @@ doc.pages[0].elements.push(illustration);
 await server.DB.prepare('UPDATE storybooks SET title=?,document_json=? WHERE id=?').bind('처음 제목',JSON.stringify(doc),id).run();
 const browser=await chromium.launch({executablePath:process.env.BOOK_CHROME_PATH || undefined,headless:true});
 try {
- const context=await browser.newContext({viewport:{width:1440,height:1000}});
+ const context=await browser.newContext({viewport:{width:1440,height:1000},hasTouch:true});
  await context.addInitScript(({student,token,expiresAt})=>{localStorage.setItem('wiggle.deviceProfiles.v2',JSON.stringify([{studentId:student,nickname:'별',animal:'cat',classroomName:'편집 검증반'}]));sessionStorage.setItem('wiggle.activeSession.v2',JSON.stringify({studentId:student,deviceToken:token,expiresAt}));},{student,token,expiresAt});
  const page=await context.newPage();page.setDefaultTimeout(20000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
  let imageGets=0;page.on('request',r=>{if(r.url().includes(`/api/storybooks/${id}/assets/`)&&r.method()==='GET')imageGets++;});
  await page.goto(server.origin+'/student/books/'+id);
  const title=page.getByRole('textbox',{name:'그림책 제목',exact:true}),text=page.getByRole('textbox',{name:'이 쪽의 이야기',exact:true});
  await text.waitFor();await page.waitForFunction(()=>!document.querySelector('.storybook-inline-text').disabled);
+ assert.equal(await page.getByRole('button',{name:/이야기 쓰기/}).count(),0);
+ await text.click();assert.ok(await text.evaluate(e=>document.activeElement===e));
+ await page.keyboard.insertText('책 위를 눌러 바로 쓰는 이야기');
+ assert.equal(await text.inputValue(),'책 위를 눌러 바로 쓰는 이야기');
+ console.log('PASS clicking the visible story area focuses it and accepts typing without a toolbar button');
  assert.equal(await page.locator('.storybook-inspector textarea').count(),0);
  assert.equal(await text.evaluate(e=>getComputedStyle(e).textAlign),'left');
  await text.fill('가나다라마바사아자차카타파하가나다라마바사아자차카타파하');
@@ -64,7 +69,7 @@ try {
  const after=await image.boundingBox();assert.ok(after.width>before.width+15,JSON.stringify({before,after}));assert.ok(Math.abs(after.height-before.height)<2);
  await saved();await page.reload();await image.locator('img').waitFor();const reopened=await image.boundingBox();assert.ok(Math.abs(reopened.width-after.width)<2);assert.ok(Math.abs(reopened.height-after.height)<2);
  console.log('PASS image cache on revisit/preview and one-axis resizing persists');
- async function rejected(pattern){let message='';page.once('dialog',async dialog=>{message=dialog.message();await dialog.accept();});await page.getByRole('button',{name:'완성하기',exact:true}).click();assert.match(message,pattern);assert.equal(await page.getByRole('dialog',{name:'그림책 미리보기'}).count(),0);}
+ async function rejected(pattern){let message='';page.once('dialog',async dialog=>{message=dialog.message();await dialog.accept();});await page.getByRole('button',{name:'완성하기',exact:true}).click();assert.match(message,pattern);assert.equal(await page.getByRole('dialog',{name:'그림책 미리보기'}).count(),0);await page.locator('.storybook-editor-error[role=alert]').getByRole('button',{name:'닫기',exact:true}).click();}
  await saved();await rejected(/최소 24/);await page.getByRole('button',{name:'쪽 복제',exact:true}).click();await saved();
  await title.fill('');await rejected(/제목/);await saved();await page.reload();assert.equal(await title.inputValue(),'');
  await title.fill('나의 새 그림책');await rejected(/제목/);
@@ -77,7 +82,10 @@ try {
   await page.setViewportSize({width,height});await text.scrollIntoViewIfNeeded();
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow at ${width}`);
   assert.ok(await text.evaluate(e=>e.scrollHeight<=e.clientHeight+1),`text hidden at ${width}`);
-  await text.focus();await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement!==document.body));
+  await page.locator('.storybook-stage:not(.preview) .image').click();
+  await text.tap();assert.ok(await text.evaluate(e=>document.activeElement===e),`tap focus at ${width}`);
+  assert.equal(await page.locator('.storybook-stage-element.selected').count(),0);
+  await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement!==document.body));
   await page.screenshot({path:`work/storybook-0923/editor-${width}.png`,fullPage:true});
  }
  console.log('PASS 23-page/title completion guards, 24-page completion, home link and four responsive widths');

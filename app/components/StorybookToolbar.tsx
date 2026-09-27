@@ -36,11 +36,16 @@ export function StorybookToolbar({ children, viewportRef }: { children: ReactNod
     const travel = track.width - thumb.getBoundingClientRect().width;
     if (travel > 0) viewport.scrollLeft = Math.max(0, Math.min(1, (event.clientX - track.left - drag.offset) / travel)) * max;
   }
+  function scrollTools(direction: number) {
+    viewportRef.current?.scrollBy({ left: direction * Math.max(120, scroll.width * 0.75), behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
 
   return <div className="storybook-toolbar-shell">
     <div ref={viewportRef} id="storybook-toolbar" className="storybook-toolbar" role="group" tabIndex={0} aria-label="그림책 도구 · 좌우로 스크롤" onScroll={sync}>
       <div ref={contentRef} className="storybook-toolbar-content">{children}</div>
     </div>
+    <div className="storybook-toolbar-scroll-controls">
+    <button type="button" className="storybook-toolbar-scroll-arrow" aria-label="도구 모음 왼쪽으로" aria-controls="storybook-toolbar" disabled={scroll.left <= 1} onClick={() => scrollTools(-1)}><svg aria-hidden="true" viewBox="0 0 20 20"><path d="m12 5-5 5 5 5" /></svg></button>
     <div className="storybook-toolbar-scrollbar" role="scrollbar" tabIndex={max ? 0 : -1}
       aria-label="그림책 도구 가로 스크롤" aria-controls="storybook-toolbar" aria-orientation="horizontal"
       aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.round(Math.max(0, Math.min(max, scroll.left)))} aria-disabled={!max}
@@ -66,6 +71,8 @@ export function StorybookToolbar({ children, viewportRef }: { children: ReactNod
       }}>
       <span className="storybook-toolbar-scroll-track" aria-hidden="true" />
       <span ref={thumbRef} className="storybook-toolbar-scroll-thumb" aria-hidden="true" style={{ width: `${thumbWidth}%`, left: `${thumbLeft}%` }} />
+    </div>
+    <button type="button" className="storybook-toolbar-scroll-arrow" aria-label="도구 모음 오른쪽으로" aria-controls="storybook-toolbar" disabled={scroll.left >= max - 1} onClick={() => scrollTools(1)}><svg aria-hidden="true" viewBox="0 0 20 20"><path d="m8 5 5 5-5 5" /></svg></button>
     </div>
   </div>;
 }

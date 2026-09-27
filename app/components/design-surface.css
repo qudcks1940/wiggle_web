@@ -277,10 +277,16 @@
 }
 .design-surface .storybook-toolbar::-webkit-scrollbar { display: none; }
 .design-surface .storybook-toolbar-content { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; width: max-content; }
-.design-surface .storybook-toolbar-scrollbar { position: relative; height: 44px; margin: 0 12px; cursor: pointer; touch-action: none; user-select: none; }
-.design-surface .storybook-toolbar-scroll-track, .design-surface .storybook-toolbar-scroll-thumb { position: absolute; top: 14px; height: 14px; border-radius: 7px; }
-.design-surface .storybook-toolbar-scroll-track { inset-inline: 0; background: #d6dfd0; border: 1px solid #a8b69f; }
-.design-surface .storybook-toolbar-scroll-thumb { background: var(--primary-dark); border: 1px solid var(--ink); cursor: grab; }
+.design-surface .storybook-toolbar-scroll-controls { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 4px; align-items: center; padding: 0 6px; }
+.design-surface .storybook-toolbar-scroll-arrow { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #596653; cursor: pointer; }
+.design-surface .storybook-toolbar-scroll-arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.design-surface .storybook-toolbar-scroll-arrow:hover:not(:disabled) { background: #edf1e9; color: var(--primary-dark); }
+.design-surface .storybook-toolbar-scroll-arrow:disabled { opacity: .3; cursor: default; }
+.design-surface .storybook-toolbar-scrollbar { position: relative; height: 44px; cursor: pointer; touch-action: none; user-select: none; }
+.design-surface .storybook-toolbar-scroll-track { position: absolute; inset-inline: 0; top: 11px; height: 22px; border-radius: 6px; background: #edf0ea; border: 1px solid #d5dccf; box-shadow: inset 0 1px 3px #2635220d; }
+.design-surface .storybook-toolbar-scroll-thumb { position: absolute; top: 14px; height: 16px; border-radius: 4px; background: linear-gradient(#fcfdfa, #dce2d7); border: 1px solid #94a18a; box-shadow: 0 1px 2px #2635221a; cursor: grab; }
+.design-surface .storybook-toolbar-scroll-thumb::after { content: ""; position: absolute; top: 3px; left: calc(50% - 6px); width: 12px; height: 8px; background: repeating-linear-gradient(90deg, #7a8870 0 2px, transparent 2px 5px); }
+.design-surface .storybook-toolbar-scroll-thumb:hover { border-color: #6e7f62; }
 .design-surface .storybook-toolbar-scrollbar:active .storybook-toolbar-scroll-thumb { cursor: grabbing; }
 .design-surface .storybook-toolbar-scrollbar:focus-visible { outline: 2px solid var(--primary-dark); outline-offset: -2px; border-radius: 8px; }
 .design-surface .storybook-toolbar-scrollbar[aria-disabled=true] { cursor: default; opacity: .5; }

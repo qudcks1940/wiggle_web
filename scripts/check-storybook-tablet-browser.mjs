@@ -22,7 +22,7 @@ await server.DB.batch([
  server.DB.prepare("INSERT INTO artworks(id,student_id,classroom_id,title,topic,learning_mode,ops_json) VALUES('artwork_tabletcheck',?,?,'우리 동네','집','free',?)").bind(student,room,JSON.stringify(emptyDocument())),
 ]);
 const browser=await chromium.launch({executablePath:process.env.BOOK_CHROME_PATH || undefined,headless:true});
-const output='work/storybook-scrollbar';await mkdir(output,{recursive:true});
+const output='work/storybook-scrollbar-polish';await mkdir(output,{recursive:true});
 try {
  let context=await browser.newContext({viewport:{width:768,height:1024},hasTouch:true});
  let page=await context.newPage();page.setDefaultTimeout(20000);
@@ -109,6 +109,16 @@ try {
   await page.keyboard.press('Home');
   await page.waitForFunction(()=>document.querySelector('.storybook-toolbar').scrollLeft===0);
   await page.waitForFunction(()=>Number(document.querySelector('.storybook-toolbar-scrollbar').getAttribute('aria-valuenow'))===0);
+  if(width===768){
+   const leftArrow=page.getByRole('button',{name:'도구 모음 왼쪽으로',exact:true}),rightArrow=page.getByRole('button',{name:'도구 모음 오른쪽으로',exact:true});
+   assert.ok(await leftArrow.isDisabled());
+   await rightArrow.click();await page.waitForFunction(()=>document.querySelector('.storybook-toolbar').scrollLeft>100);
+   await scrollbar.focus();await page.keyboard.press('End');
+   await page.waitForFunction(()=>document.querySelector('[aria-label="도구 모음 오른쪽으로"]').disabled);
+   await leftArrow.click();await page.waitForFunction(()=>{const e=document.querySelector('.storybook-toolbar');return e.scrollLeft<e.scrollWidth-e.clientWidth-50;});
+   await scrollbar.focus();await page.keyboard.press('Home');
+   await page.waitForFunction(()=>document.querySelector('.storybook-toolbar').scrollLeft===0&&Number(document.querySelector('.storybook-toolbar-scrollbar').getAttribute('aria-valuenow'))===0);
+  }
   const startThumb=await page.locator('.storybook-toolbar-scroll-thumb').boundingBox();
   await page.mouse.move(startThumb.x+startThumb.width/2,startThumb.y+startThumb.height/2);await page.mouse.down();
   await page.mouse.move(track.x+track.width-1,track.y+track.height/2,{steps:8});await page.mouse.up();
@@ -130,6 +140,7 @@ try {
   if(width===768)await page.waitForTimeout(1200); // The scrollbar must remain visible after touch/browser indicators fade.
   await page.screenshot({animations:'disabled',path:`${output}/editor-${width}.png`,fullPage:true});
   if(width===768){
+   await page.locator('.storybook-toolbar-shell').screenshot({animations:'disabled',path:`${output}/toolbar-detail-768.png`});
    await toolbar.evaluate(e=>e.scrollLeft=e.scrollWidth);
    await page.screenshot({animations:'disabled',path:`${output}/toolbar-scrolled-768.png`});
    await page.getByRole('button',{name:'꾸미기 닫기',exact:true}).click();await toolbar.evaluate(e=>e.scrollLeft=0);
@@ -141,12 +152,18 @@ try {
  await page.setViewportSize({width:768,height:1024});
  await page.getByRole('button',{name:'꾸미기 닫기',exact:true}).click();
  const toolbar=page.locator('.storybook-toolbar');await toolbar.evaluate(e=>e.scrollLeft=0);
- const toolbarBox=await toolbar.boundingBox();const touchY=toolbarBox.y+toolbarBox.height/2;
+ const toolbarBox=await toolbar.boundingBox(),imageButton=await toolbar.getByRole('button',{name:'🖼️ 새 그림',exact:true}).boundingBox();
+ const touchY=imageButton.y+imageButton.height/2,swipeStart=imageButton.x+imageButton.width/2;
+ await toolbar.evaluate(e=>{window.__toolbarSwipeClicks=0;e.addEventListener('click',()=>window.__toolbarSwipeClicks++);});
+ let fileChoosers=0;const onFileChooser=()=>fileChoosers++;page.on('filechooser',onFileChooser);
  const cdp=await context.newCDPSession(page);
- await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:700,y:touchY}]});
- for(let x=660;x>=230;x-=40)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:touchY}]});
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:swipeStart,y:touchY}]});
+ for(let i=1;i<=10;i++)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:swipeStart+(toolbarBox.x+24-swipeStart)*i/10,y:touchY}]});
  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
  await page.waitForFunction(()=>document.querySelector('.storybook-toolbar').scrollLeft>100);await cdp.detach();
+ await page.waitForTimeout(400); // Include any delayed synthetic click after the touch ends.
+ assert.equal(await page.evaluate(()=>window.__toolbarSwipeClicks),0,'swiping over tool buttons must not activate them');
+ assert.equal(fileChoosers,0,'swiping over New image must not open the file chooser');page.off('filechooser',onFileChooser);
  await page.waitForFunction(()=>Number(document.querySelector('.storybook-toolbar-scrollbar').getAttribute('aria-valuenow'))>100);
  // Drag the visible thumb with a touch pointer, independently of swiping the tool buttons.
  const scrollbar=page.getByRole('scrollbar',{name:'그림책 도구 가로 스크롤',exact:true});

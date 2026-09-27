@@ -248,6 +248,10 @@ test("도화지 비율은 문서가 정하고, 화면·래스터·저장 이미�
   assert.match(studio, /disabled=\{view\.scale <= minScaleFor\(span\) \+ 0\.001\}/);
   // 종이가 틀보다 작아지므로 바탕이 종이와 같은 흰색이면 종이 끝이 보이지 않는다.
   assert.match(css, /\.studio \{ --paper-backdrop:#e4e9e3; \}/);
+  /* 그리고 **종이는 흰색이어야 한다**. 지우개는 destination-out이라 캔버스에 진짜 구멍을 뚫는다
+     (실측: 지운 자리 rgba 0,0,0,0). 종이에 바탕색이 없으면 그 구멍으로 위의 틀 바탕이 비쳐
+     "지우개가 회색을 그린다"로 보인다(2026-09-27 사용자 지적). 두 색은 한 쌍이다. */
+  assert.match(css, /\.studio \.canvas-stack \{[^}]*background:#fff;/);
   assert.match(studio, /clampDocumentHeight\(DOCUMENT_SIZE \* height \/ width\)/);
 });
 

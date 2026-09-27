@@ -240,8 +240,24 @@ export function renderDrawOperation(context: CanvasRenderingContext2D, op: DrawO
   context.stroke(); context.restore();
 }
 
+/* 지우개는 `destination-out`이라 캔버스에 진짜 구멍을 뚫는다 — `resetDrawingCanvas`가 미리 칠해 둔
+ * 흰 종이까지 함께 지운다. 그래서 다 그린 뒤 종이를 **밑에** 한 번 더 깔아 구멍을 메운다.
+ * 이것이 없으면 지운 자리가 알파 0으로 저장돼, 흰색이 아닌 바탕 위에 얹힐 때 그 색이 비친다.
+ * 특히 그림책 인쇄(`lib/book-render.ts`)는 지면색 위에 얹고 JPEG로 구워 **되돌릴 수 없다**
+ * (2026-09-27 사용자 지적 "지우개로 지우면 왜 회색이 그려져?"에서 드러난 같은 뿌리). */
+function paintPaperUnder(context: CanvasRenderingContext2D, size: RenderSize) {
+  const { w, h } = dimensions(size);
+  context.save();
+  context.globalCompositeOperation = "destination-over"; context.globalAlpha = 1;
+  context.fillStyle = "#ffffff"; context.fillRect(0, 0, w, h);
+  context.restore();
+}
+
 export function renderDrawDocument(context: CanvasRenderingContext2D, ops: readonly DrawOp[], size: RenderSize, limit = ops.length) {
   for (const op of visibleDrawOperations(ops, limit)) renderDrawOperation(context, op, size);
+  // ponytail: 종이를 마지막에 깐다. 이 뒤에 renderDrawOperation으로 지우개 획을 낱개로 덧대면
+  // 다시 뚫린다(타임랩스 재생이 그렇게 쓴다) — 필요해지면 그쪽에서도 한 번 더 깔면 된다.
+  paintPaperUnder(context, size);
 }
 
 export function resetDrawingCanvas(context: CanvasRenderingContext2D, size: RenderSize) {

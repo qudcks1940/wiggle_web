@@ -252,6 +252,13 @@ test("도화지 비율은 문서가 정하고, 화면·래스터·저장 이미�
      (실측: 지운 자리 rgba 0,0,0,0). 종이에 바탕색이 없으면 그 구멍으로 위의 틀 바탕이 비쳐
      "지우개가 회색을 그린다"로 보인다(2026-09-27 사용자 지적). 두 색은 한 쌍이다. */
   assert.match(css, /\.studio \.canvas-stack \{[^}]*background:#fff;/);
+  /* 저장되는 이미지에도 같은 구멍이 남았다. 다 그린 뒤 종이를 **밑에** 깔아 메운다.
+     실측(썸네일 256px): 켜기 전 투명 2450px·가운데 rgba(0,0,0,0) → 켠 뒤 투명 0px·가운데 흰색.
+     이게 없으면 그림책 인쇄(lib/book-render.ts)가 지면색 위에 얹고 JPEG로 구워 되돌릴 수 없다. */
+  assert.match(renderer, /globalCompositeOperation = "destination-over"[\s\S]{0,80}fillStyle = "#ffffff"; context\.fillRect\(0, 0, w, h\)/);
+  // 마지막에 깔아야 한다 — 먼저 깔면 그 위의 지우개가 다시 뚫는다.
+  const body = renderer.slice(renderer.indexOf("export function renderDrawDocument"));
+  assert.ok(body.indexOf("renderDrawOperation(context, op, size)") < body.indexOf("paintPaperUnder(context, size)"), "종이는 획을 모두 그린 뒤에 깔아야 한다");
   assert.match(studio, /clampDocumentHeight\(DOCUMENT_SIZE \* height \/ width\)/);
 });
 

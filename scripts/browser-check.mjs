@@ -609,16 +609,28 @@ async function main() {
             const box = mark.getBoundingClientRect();
             return { width: box.width, height: box.height };
           })()`);
+          /* 지워진 칸은 **바뀐 픽셀**로 잰다. 종전에는 알파 0인 칸을 셌는데, 2026-09-27에 저장 이미지의
+             구멍을 메우려고 종이를 밑에 깔면서(`paintPaperUnder`) 지운 자리가 불투명한 흰색이 됐다.
+             알파로 재면 0px이 나와 거짓 실패가 난다. 지우기 전후 같은 줄을 비교하면 종이가 투명하든
+             불투명하든, 지운 자리에 잉크가 있었든 없었든 실제로 지워진 폭이 나온다. */
+          const rowOf = `(() => {
+            const canvas = document.querySelector('.draw-canvas');
+            const row = Math.min(canvas.height - 1, Math.max(0, Math.round(${bandY(eraseY)} * canvas.height)));
+            return Array.from(canvas.getContext('2d').getImageData(0, row, canvas.width, 1).data);
+          })()`;
+          const rowBefore = await evaluate(cdp, session, rowOf);
           await tapOn(erasePoint); await sleep(400);
-          // 도화지는 불투명한 흰 바탕이라, destination-out으로 파인 자리만 알파 0이 된다.
           const erasedRun = await evaluate(cdp, session, `(() => {
             const canvas = document.querySelector('.draw-canvas');
             const box = canvas.getBoundingClientRect();
+            const before = ${JSON.stringify(rowBefore)};
             const row = Math.min(canvas.height - 1, Math.max(0, Math.round(${bandY(eraseY)} * canvas.height)));
             const data = canvas.getContext('2d').getImageData(0, row, canvas.width, 1).data;
             let run = 0; let longest = 0;
             for (let x = 0; x < canvas.width; x += 1) {
-              if (data[x * 4 + 3] === 0) { run += 1; if (run > longest) longest = run; } else run = 0;
+              const i = x * 4;
+              const changed = before[i] !== data[i] || before[i + 1] !== data[i + 1] || before[i + 2] !== data[i + 2] || before[i + 3] !== data[i + 3];
+              if (changed) { run += 1; if (run > longest) longest = run; } else run = 0;
             }
             return { cssWidth: longest * box.width / canvas.width, backingWidth: canvas.width };
           })()`);

@@ -86,7 +86,7 @@ try {
   if(width<=680)await page.getByRole('button',{name:'꾸미기 닫기',exact:true}).click();
   await text.tap();assert.ok(await text.evaluate(e=>document.activeElement===e),`tap focus at ${width}`);
   assert.equal(await page.locator('.storybook-stage-element.selected').count(),0);
-  await page.keyboard.press('Shift+Tab');assert.ok(await page.evaluate(()=>document.querySelector('.storybook-toolbar').contains(document.activeElement)));
+  await page.keyboard.press('Shift+Tab');assert.ok(await page.evaluate(()=>document.querySelector('.storybook-toolbar-shell').contains(document.activeElement)));
   await page.screenshot({path:`work/storybook-0923/editor-${width}.png`,fullPage:true});
  }
  console.log('PASS 23-page/title completion guards, 24-page completion, home link and four responsive widths');

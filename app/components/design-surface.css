@@ -270,14 +270,20 @@
 .design-surface .storybook-editor-body { position: relative; flex: 1; height: auto; min-height: 0; grid-template-columns: 112px minmax(0, 1fr); }
 .design-surface .storybook-editor-body.has-inspector { grid-template-columns: 112px minmax(0, 1fr) 278px; }
 .design-surface :is(.storybook-page-rail, .storybook-workspace, .storybook-inspector) { min-width: 0; min-height: 0; }
-.design-surface .storybook-workspace > .storybook-toolbar {
-  flex: 0 0 auto; flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; overflow-y: hidden;
-  touch-action: pan-x; overscroll-behavior-x: contain; scrollbar-width: thin;
-  scrollbar-color: var(--primary-dark) var(--pale-field);
+.design-surface .storybook-toolbar-shell { position: sticky; top: 0; z-index: 20; flex: 0 0 104px; min-width: 0; background: var(--paper); border-bottom: 1px solid var(--soft-border); }
+.design-surface .storybook-toolbar-shell .storybook-toolbar {
+  position: static; height: 60px; min-height: 60px; flex-wrap: nowrap; justify-content: flex-start;
+  overflow-x: auto; overflow-y: hidden; border-bottom: 0; touch-action: pan-x; overscroll-behavior-x: contain; scrollbar-width: none;
 }
-.design-surface .storybook-toolbar::-webkit-scrollbar { height: 8px; }
-.design-surface .storybook-toolbar::-webkit-scrollbar-track { background: var(--pale-field); }
-.design-surface .storybook-toolbar::-webkit-scrollbar-thumb { background: var(--primary-dark); border-radius: 4px; }
+.design-surface .storybook-toolbar::-webkit-scrollbar { display: none; }
+.design-surface .storybook-toolbar-content { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; width: max-content; }
+.design-surface .storybook-toolbar-scrollbar { position: relative; height: 44px; margin: 0 12px; cursor: pointer; touch-action: none; user-select: none; }
+.design-surface .storybook-toolbar-scroll-track, .design-surface .storybook-toolbar-scroll-thumb { position: absolute; top: 14px; height: 14px; border-radius: 7px; }
+.design-surface .storybook-toolbar-scroll-track { inset-inline: 0; background: #d6dfd0; border: 1px solid #a8b69f; }
+.design-surface .storybook-toolbar-scroll-thumb { background: var(--primary-dark); border: 1px solid var(--ink); cursor: grab; }
+.design-surface .storybook-toolbar-scrollbar:active .storybook-toolbar-scroll-thumb { cursor: grabbing; }
+.design-surface .storybook-toolbar-scrollbar:focus-visible { outline: 2px solid var(--primary-dark); outline-offset: -2px; border-radius: 8px; }
+.design-surface .storybook-toolbar-scrollbar[aria-disabled=true] { cursor: default; opacity: .5; }
 .design-surface .storybook-inspector { overflow-y: auto; overscroll-behavior-y: contain; }
 .design-surface .storybook-inspector-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
 .design-surface .storybook-inspector-heading h2 { margin: 0; font-size: 20px; }
@@ -295,7 +301,7 @@
   .design-surface .storybook-page-rail { flex: 0 0 104px; }
   .design-surface .storybook-workspace { flex: 1; overflow: auto; }
   /* A selected image's tools stay on the right on phones too, instead of below the book. */
-  .design-surface .storybook-inspector { position: absolute; z-index: 25; right: 0; top: 166px; bottom: 0; width: min(260px, 80%); border-top: 0; border-left: 1px solid var(--border); box-shadow: -4px 0 12px #16220f14; }
+  .design-surface .storybook-inspector { position: absolute; z-index: 25; right: 0; top: 209px; bottom: 0; width: min(260px, 80%); border-top: 0; border-left: 1px solid var(--border); box-shadow: -4px 0 12px #16220f14; }
 }
 .design-surface .storybook-preview > header { padding-bottom: 12px; min-width: 0; }
 .design-surface .storybook-preview > header > b { min-width: 0; }

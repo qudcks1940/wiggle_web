@@ -22,7 +22,7 @@ await server.DB.batch([
  server.DB.prepare("INSERT INTO artworks(id,student_id,classroom_id,title,topic,learning_mode,ops_json) VALUES('artwork_tabletcheck',?,?,'우리 동네','집','free',?)").bind(student,room,JSON.stringify(emptyDocument())),
 ]);
 const browser=await chromium.launch({executablePath:process.env.BOOK_CHROME_PATH || undefined,headless:true});
-const output='work/storybook-toolbar';await mkdir(output,{recursive:true});
+const output='work/storybook-scrollbar';await mkdir(output,{recursive:true});
 try {
  let context=await browser.newContext({viewport:{width:768,height:1024},hasTouch:true});
  let page=await context.newPage();page.setDefaultTimeout(20000);
@@ -97,6 +97,22 @@ try {
   if(width>680)assert.ok(Math.abs(layout.panelTop-layout.workspaceTop)<2&&layout.panelLeft>=layout.workspaceRight-1,`side-by-side layout ${width}`);
   const toolbar=page.locator('.storybook-toolbar');
   assert.ok(await toolbar.evaluate(e=>getComputedStyle(e).flexWrap==='nowrap'&&e.scrollWidth>e.clientWidth),`one-line scrolling toolbar ${width}`);
+  const scrollbar=page.getByRole('scrollbar',{name:'그림책 도구 가로 스크롤',exact:true});
+  await scrollbar.waitFor();
+  await page.waitForFunction(()=>Number(document.querySelector('.storybook-toolbar-scrollbar').getAttribute('aria-valuemax'))===document.querySelector('.storybook-toolbar').scrollWidth-document.querySelector('.storybook-toolbar').clientWidth);
+  assert.ok(await scrollbar.evaluate(e=>{const r=e.getBoundingClientRect(),thumb=e.querySelector('.storybook-toolbar-scroll-thumb'),s=getComputedStyle(thumb);return r.top>=0&&r.bottom<=innerHeight&&r.height>=44&&s.visibility==='visible'&&Number(s.opacity)===1&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),`persistent scrollbar is visible and reachable ${width}`);
+  await scrollbar.focus();await page.keyboard.press('End');
+  await page.waitForFunction(()=>{const e=document.querySelector('.storybook-toolbar');return e.scrollLeft>=e.scrollWidth-e.clientWidth-1;});
+  await page.waitForFunction(()=>{const track=document.querySelector('.storybook-toolbar-scrollbar').getBoundingClientRect(),thumb=document.querySelector('.storybook-toolbar-scroll-thumb').getBoundingClientRect();return Math.abs(track.right-thumb.right)<2;});
+  const track=await scrollbar.boundingBox(),endThumb=await page.locator('.storybook-toolbar-scroll-thumb').boundingBox();
+  assert.ok(Math.abs(endThumb.x+endThumb.width-track.x-track.width)<2,`thumb follows keyboard scroll ${width}`);
+  await page.keyboard.press('Home');
+  await page.waitForFunction(()=>document.querySelector('.storybook-toolbar').scrollLeft===0);
+  await page.waitForFunction(()=>Number(document.querySelector('.storybook-toolbar-scrollbar').getAttribute('aria-valuenow'))===0);
+  const startThumb=await page.locator('.storybook-toolbar-scroll-thumb').boundingBox();
+  await page.mouse.move(startThumb.x+startThumb.width/2,startThumb.y+startThumb.height/2);await page.mouse.down();
+  await page.mouse.move(track.x+track.width-1,track.y+track.height/2,{steps:8});await page.mouse.up();
+  await page.waitForFunction(()=>{const e=document.querySelector('.storybook-toolbar');return e.scrollLeft>=e.scrollWidth-e.clientWidth-1;});
   const last=inspector.getByRole('button',{name:'삭제',exact:true});await last.scrollIntoViewIfNeeded();
   assert.ok(await last.evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),`last inspector action unreachable ${width}`);
   await page.getByRole('button',{name:'꾸미기 닫기',exact:true}).click();
@@ -111,6 +127,7 @@ try {
   await page.screenshot({animations:'disabled',path:`${output}/preview-${width}.png`});
   await page.getByRole('button',{name:'편집으로 돌아가기',exact:true}).click();
   await illustration.click();await toolbar.evaluate(e=>e.scrollLeft=0);
+  if(width===768)await page.waitForTimeout(1200); // The scrollbar must remain visible after touch/browser indicators fade.
   await page.screenshot({animations:'disabled',path:`${output}/editor-${width}.png`,fullPage:true});
   if(width===768){
    await toolbar.evaluate(e=>e.scrollLeft=e.scrollWidth);
@@ -130,6 +147,18 @@ try {
  for(let x=660;x>=230;x-=40)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:touchY}]});
  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
  await page.waitForFunction(()=>document.querySelector('.storybook-toolbar').scrollLeft>100);await cdp.detach();
+ await page.waitForFunction(()=>Number(document.querySelector('.storybook-toolbar-scrollbar').getAttribute('aria-valuenow'))>100);
+ // Drag the visible thumb with a touch pointer, independently of swiping the tool buttons.
+ const scrollbar=page.getByRole('scrollbar',{name:'그림책 도구 가로 스크롤',exact:true});
+ await scrollbar.focus();await page.keyboard.press('Home');
+ await page.waitForFunction(()=>document.querySelector('.storybook-toolbar').scrollLeft===0);
+ await page.waitForFunction(()=>Number(document.querySelector('.storybook-toolbar-scrollbar').getAttribute('aria-valuenow'))===0);
+ const thumb=await page.locator('.storybook-toolbar-scroll-thumb').boundingBox(),track=await scrollbar.boundingBox();
+ const touch=await context.newCDPSession(page),startX=thumb.x+thumb.width/2,y=thumb.y+thumb.height/2;
+ await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:startX,y}]});
+ for(let i=1;i<=8;i++)await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:startX+(track.x+track.width-startX-1)*i/8,y}]});
+ await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await touch.detach();
+ await page.waitForFunction(()=>{const e=document.querySelector('.storybook-toolbar');return e.scrollLeft>=e.scrollWidth-e.clientWidth-1;});
  // Reach and use the last tool after horizontal scrolling.
  await page.getByRole('button',{name:'쪽 복제',exact:true}).click();await saved();
  await page.getByRole('button',{name:'쪽 삭제',exact:true}).click();await saved();
@@ -153,7 +182,7 @@ try {
  await page.getByRole('button',{name:'꾸미기 닫기',exact:true}).click();
  await page.getByRole('button',{name:'그림책 완성하기',exact:true}).click();await page.getByRole('dialog',{name:'그림책 미리보기'}).waitFor();
  assert.equal((await server.DB.prepare('SELECT status FROM storybooks WHERE id=?').bind(id).first()).status,'complete');
- console.log('PASS horizontal touch scrolling, contextual image tools, upload, deselection, page settings and completion');
+ console.log('PASS visible scrollbar mouse/touch dragging, keyboard and swipe sync, contextual image tools, upload, deselection, page settings and completion');
 
  await context.addCookies([{name:'wiggle_teacher',value:teacherToken,url:server.origin}]);
  await page.goto(server.origin+`/teacher/class/${room}?view=archive`);await page.locator('.twa-heading select').waitFor();

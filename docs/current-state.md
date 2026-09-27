@@ -1,6 +1,6 @@
 # Wiggle Web 현재 상태
 
-## 2026-09-28 그림책 태블릿 화면·수량 수정 (로컬 검증 완료, PR 준비)
+## 2026-09-28 그림책 태블릿 화면·수량 수정 (로컬 검증 완료, PR #26 제출)
 
 - 최신 운영 main `4145cbc`를 fetch하고 `codex/storybook-tablet-polish-20260928`에서 작업한다. GitHub 활성 계정은 `qudcks1940`으로 확인했다. 기존 사용자 산출물은 보존했다.
 - 홈의 그림책 2권 제한을 제거해 수량과 카드 목록을 맞췄다. 편집기의 높이 계산과 스크롤, 태블릿·휴대전화의 세로 배치, 분리된 꾸미기 도구 카드, 임시 저장/그림책 완성하기 문구를 적용했다. 교사 보관함·미리보기 버튼 글꼴/정렬과 PDF 안내를 수정했다.
@@ -9,7 +9,8 @@
 - 최종 production build 포함 `npm test` **415/415**, typecheck, lint 오류 0(기존 경고 14), 작업 diff check와 `main...HEAD` 검사 통과. 오래된 로컬 main도 `4145cbc`로 fast-forward 동기화해 기존 EOF 경고가 이번 변경에 섞이지 않게 했다.
 - `scripts/check-storybook-tablet-browser.mjs`: 3권 수량/카드/마지막 책 열기, 새 로그인 임시 저장, 1440×1000·768×1024·820×1180·1024×768·1180×820·1280×800·320×568·390×844·844×390의 실제 DOM·도구 잘림·헤더 겹침·꾸미기 마지막 버튼 접근·미리보기 버튼 글꼴/정렬, 터치 스크롤과 완성 동작, 교사 컨트롤 글꼴 일치, 완성책 0권에서도 PDF 가져오기 가능을 통과했다.
 - 기존 그림책 편집 검증(직접 입력·한글·저장 응답 경합·그림 크기 보존·완성 조건), 그림책/관리자 검증(PDF 편집·모의 주문·5화면×4크기), 기본 `check:browser` 3크기를 통과했다. 기본 브라우저는 샌드박스 DevTools 연결 실패 후 승인된 로컬 실행으로 확인했다. 주문 검증 스크립트는 DB 시드 전 폴링 화면을 떠나도록 해 SQLite 잠금 경합을 없앴다. 실제 외부 제작사 주문은 하지 않았다.
-- 화면과 로그는 Git 제외 `work/storybook-tablet/`, `work/tablet-*.log`. 검증은 Chrome 기기 크기/터치 에뮬레이션이며 실제 iPad Safari·Galaxy Tab 하드웨어 검증 및 운영 배포는 아직 아니다. 기능 브랜치 push/PR 준비 완료, main push는 하지 않는다.
+- 화면과 로그는 Git 제외 `work/storybook-tablet/`, `work/tablet-*.log`. 검증은 Chrome 기기 크기/터치 에뮬레이션이며 실제 iPad Safari·Galaxy Tab 하드웨어 검증 및 운영 배포는 아직 아니다.
+- 구현 커밋 `ecd03ea`를 `qudcks1940/wiggle_web`의 기능 브랜치에 push하고 [PR #26](https://github.com/yonghwan86/wiggle_web/pull/26)을 제출했다. PR은 OPEN이며 병합 충돌이 없다. Vercel 미리보기 검사는 FAILURE이고 연결 대상은 외부 포크 배포 승인 페이지다. main push·PR 병합·운영 배포는 수행하지 않았다.
 
 > 마지막 갱신: 2026-09-28
 > 목적: 긴 대화가 압축되거나 담당 AI가 바뀌어도 실제 구현·검증·배포 상태를 잃지 않기 위한 기준 문서

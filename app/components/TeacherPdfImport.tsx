@@ -31,7 +31,7 @@ export function TeacherPdfImport({ classroomId, onImported }: { classroomId: str
     finally { setBusy(false); }
   }
   return <section className="book-panel pdf-import-panel">
-    <div className="book-section-heading"><div><p className="eyebrow">PDF로 만든 그림책도 함께</p><h2>PDF 그림책 가져오기</h2><p>학생과 제목을 지정하면 피드백·인쇄 주문·그림책 편집에 사용할 수 있어요.</p></div><label className="button secondary">PDF 파일 선택<input className="sr-only" type="file" accept="application/pdf,.pdf" multiple disabled={busy || !students.length} onChange={(e) => {
+    <div className="book-section-heading"><div><p className="eyebrow">PDF로 만든 그림책도 함께</p><h2>PDF 그림책 가져오기</h2><p>학생이 그림책을 완성하지 않아도, 선생님이 준비한 PDF를 가져와 그림책 제작을 요청할 수 있어요.</p><p>학생과 제목을 지정하면 피드백·인쇄 주문·그림책 편집에 사용할 수 있어요.</p></div><label className="button secondary">PDF 파일 선택<input className="sr-only" type="file" accept="application/pdf,.pdf" multiple disabled={busy || !students.length} onChange={(e) => {
       const files = Array.from(e.target.files ?? []); e.target.value = "";
       if (files.length + uploads.length > 50) { setMessage("한 번에 최대 50권을 선택해 주세요."); return; }
       setUploads((list) => [...list, ...files.map((file) => ({ key: crypto.randomUUID(), file, studentId: "", title: file.name.replace(/\.pdf$/i, "").slice(0, 60), status: "pending" }))]);

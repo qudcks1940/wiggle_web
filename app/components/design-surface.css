@@ -263,3 +263,62 @@
 @media print {
   .design-surface .teacher-story-page { outline: none; border-radius: 0; box-shadow: none; }
 }
+
+/* Book chrome uses its actual available height; the inspector must remain scrollable. */
+.design-surface .storybook-editor-shell { height: 100dvh; min-height: 0; display: flex; flex-direction: column; }
+.design-surface .storybook-editor-header { flex: 0 0 auto; height: auto; min-height: 68px; }
+.design-surface .storybook-editor-body { flex: 1; height: auto; min-height: 0; grid-template-columns: 120px minmax(0, 1fr) 300px; }
+.design-surface .storybook-page-rail > button > span { width: 64px; }
+.design-surface :is(.storybook-page-rail, .storybook-workspace, .storybook-inspector) { min-width: 0; min-height: 0; }
+.design-surface .storybook-workspace > .storybook-toolbar { flex: 0 0 auto; flex-wrap: wrap; overflow: visible; position: relative; }
+.design-surface .storybook-stage { touch-action: pan-y pinch-zoom; }
+.design-surface .storybook-inspector {
+  margin: 12px; padding: 20px 16px; border: 1px solid var(--border); border-radius: 16px;
+  background: var(--paper); box-shadow: 0 4px 16px #16220f14; overflow-y: auto; scrollbar-gutter: stable;
+}
+.design-surface .storybook-inspector-heading { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--soft-border); }
+.design-surface .storybook-inspector-heading > span { color: var(--primary-dark); font-size: 13px; font-weight: 800; }
+.design-surface .storybook-inspector-heading h2 { margin: 4px 0 8px; font-size: 22px; line-height: 1.3; }
+.design-surface .storybook-inspector-heading p { margin: 0; color: var(--secondary); font-size: 14px; line-height: 1.5; }
+.design-surface .storybook-preview > header { padding-bottom: 12px; min-width: 0; }
+.design-surface .storybook-preview > header > b { min-width: 0; }
+.design-surface .storybook-preview > header > div { display: flex; align-items: stretch; gap: 8px; flex-shrink: 0; }
+.design-surface .storybook-preview > header .small-button {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 16px;
+  font-family: var(--design-font); font-size: 16px; font-weight: 800; line-height: 1.4; text-decoration: none;
+}
+.design-surface.design-adult .teacher-workspace .twa :is(.twa-heading select, .twa-section-heading button, .twa-text-link) {
+  font-family: var(--design-font); font-size: 16px; font-weight: 700; line-height: 1.5; letter-spacing: -.01em;
+  min-height: 46px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--paper); color: var(--primary-dark);
+}
+.design-surface.design-adult .teacher-workspace .twa :is(.twa-section-heading button, .twa-text-link) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+
+/* Tablets and short landscape screens get a full-width book and a separate tool card below it.
+   Normal document scrolling keeps every control reachable, including with the on-screen keyboard. */
+@media (max-width: 1100px), (max-height: 600px) {
+  .design-surface .storybook-editor-shell { height: auto; min-height: 100dvh; overflow: visible; }
+  .design-surface .storybook-editor-header { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; gap: 8px; }
+  .design-surface .storybook-editor-header > input { grid-row: 2; grid-column: 1 / -1; width: 100%; max-width: none; }
+  .design-surface .storybook-save-state { margin: 0; min-width: 0; }
+  .design-surface .storybook-editor-header .button { min-height: 48px; padding: 8px 12px; font-size: 16px; }
+  .design-surface .storybook-editor-body { display: flex; flex-direction: column; height: auto; min-height: 0; overflow: visible; }
+  .design-surface .storybook-page-rail { flex-direction: row; padding: 8px; min-height: 104px; overflow-x: auto; overflow-y: hidden; border-right: 0; border-bottom: 1px solid var(--soft-border); }
+  .design-surface .storybook-page-rail > button { min-width: 78px; min-height: 88px; }
+  .design-surface .storybook-page-rail > button > span { width: 64px; }
+  .design-surface .storybook-workspace { overflow: visible; }
+  .design-surface .storybook-stage-wrap { flex: none; min-height: 0; padding: 24px 16px; }
+  .design-surface .storybook-stage:not(.preview) { width: 100%; min-width: 0; height: auto; max-width: 680px; }
+  .design-surface .storybook-stage-help { display: block; margin: 0 16px 20px; }
+  .design-surface .storybook-inspector { width: calc(100% - 32px); max-width: 760px; margin: 20px auto; padding: 24px; overflow: visible; }
+}
+@media (max-width: 680px) {
+  .design-surface .storybook-editor-header { grid-template-columns: 1fr 1fr 1.5fr; }
+  .design-surface .storybook-editor-header > a { grid-row: 1; grid-column: 1; }
+  .design-surface .storybook-editor-header > .storybook-save-state { grid-row: 1; grid-column: 2 / -1; }
+  .design-surface .storybook-editor-header > button { grid-row: 3; padding-inline: 6px; }
+  .design-surface .storybook-inspector { width: calc(100% - 24px); padding: 20px 16px; }
+  .design-surface .storybook-preview > header { flex-direction: column; align-items: stretch; gap: 8px; }
+  .design-surface .storybook-preview > header > div { flex-shrink: 1; }
+  .design-surface .storybook-preview > header .small-button { flex: 1; min-width: 0; padding-inline: 10px; font-size: 15px; }
+}

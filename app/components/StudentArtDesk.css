@@ -77,7 +77,8 @@
 /* 넓으면 한 줄에 펴고, 좁으면 가로로 민다. 390px에서 네 장을 억지로 줄이지 않는다(인계 지시). */
 .desk-art-row, .desk-book-row { display: flex; gap: clamp(10px, 1.4vw, 18px); margin: 0; padding: 2px; list-style: none; overflow-x: auto; overscroll-behavior-x: contain; }
 .desk-art-row > li { flex: 0 0 clamp(200px, 22vw, 260px); }
-.desk-book-row > li { flex: 0 0 clamp(250px, 30vw, 340px); }
+.desk-book-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); overflow: visible; }
+.desk-book-row > li { min-width: 0; }
 @media (min-width: 1100px) {
   .desk-art-row { overflow-x: visible; }
   .desk-art-row > li { flex: 1 1 0; }

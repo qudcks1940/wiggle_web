@@ -1,6 +1,6 @@
 # Wiggle Web 현재 상태
 
-## 2026-09-28 PR #26 그림책 편집 수정 요청 (로컬 검증 완료)
+## 2026-09-28 PR #26 그림책 편집 수정 요청 (검증·PR 업데이트 완료)
 
 - 사용자가 태블릿의 세로 재배치를 거부했다. 요청은 기존 배치를 유지한 상단 도구 모음의 가로 스크롤, 그림을 첨부하거나 선택할 때만 오른쪽 `그림 꾸미기` 표시다. 아래 최초 구현의 세로 배치·카드 변경은 취소한다.
 - 기존 PR #26은 OPEN임을 확인했다. 같은 `codex/storybook-tablet-polish-20260928` 브랜치에서 이 부분만 고치고, 수량·저장 문구·교사 글꼴·PDF 안내·미리보기 버튼 수정은 유지한다.
@@ -8,7 +8,8 @@
 - 그림 도구를 숨겨도 기존 글자 크기·색·페이지 배경 기능은 사라지지 않도록 `글·배경 꾸미기` 버튼으로 필요할 때 연다. 자동으로 열린 이미지 패널에는 그림 기능만 표시한다.
 - production build 포함 전체 테스트 **415/415**, typecheck, lint 오류 0(기존 경고 14), `git diff --check`, `git diff --check main...HEAD` 통과. 기존 Webpack 캐시 WasmHash 오류를 다시 만나 `.next/cache`를 `work/next-cache-before-toolbar-correction`에 보존한 뒤 빌드했다.
 - 그림책 편집 회귀(직접 입력·한글·저장 경합·크기 변경 재로그인·완성 조건), 기본 `check:browser` 3크기 통과. 9크기의 오른쪽 패널 위치·한 줄 도구 모음·끝 도구 접근·미리보기 정렬과 실제 CDP 가로 스와이프, 업로드/선택/해제/쪽 이동, 글·배경 설정, 임시 저장 재로그인을 확인했다.
-- 새 화면은 `work/storybook-toolbar/`, 로그는 `work/storybook-correction-*.log`에 남겼다. 실제 iPad Safari/Galaxy Tab 하드웨어 검증과 운영 배포는 수행하지 않았다. 같은 PR #26에 후속 커밋을 올린다.
+- 새 화면은 `work/storybook-toolbar/`, 로그는 `work/storybook-correction-*.log`에 남겼다. 실제 iPad Safari/Galaxy Tab 하드웨어 검증과 운영 배포는 수행하지 않았다.
+- 후속 구현 `4f7723f`를 `qudcks1940` 포크의 같은 브랜치에 push해 기존 [PR #26](https://github.com/yonghwan86/wiggle_web/pull/26)을 업데이트했다. PR 제목·설명도 최종 구현으로 교체했다. PR 취소·main push·병합은 하지 않았다.
 
 ## 2026-09-28 그림책 태블릿 화면·수량 수정 (로컬 검증 완료, PR #26 제출)
 

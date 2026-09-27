@@ -2150,6 +2150,13 @@ export function DrawingStudio() {
       } else incoming.push(rawNext);
     }
     let addedPoint = false;
+    /* 이 이벤트 **전에** 어디까지 그려져 있었는지 기억한다. 아래 미리보기가 거기서부터 이어 그린다.
+     * 고정 창(points.slice(-3))을 쓰면 한 이벤트에 점이 3개 이상 들어올 때 앞쪽 새 점들이
+     * 한 번도 그려지지 않아 선이 점선으로 보였다(2026-09-27 사용자 영상). 진짜 펜은
+     * getCoalescedEvents로 한 번에 여러 점을 몰아 준다 — 마우스로는 1개씩 와서 드러나지 않았다.
+     * 실측(이동 6번): 한 번에 4개 → 5군데 217px, 8개 → 5군데 365px이 빠졌다. 떼면 전체가 다시
+     * 그려져 메워지므로 "떼는 순간 그려진다"로 보인다. */
+    const drawnUpTo = points.length;
     // 굵은 붓은 점을 촘촘히 담을 이유가 없다 — 렌더러가 점을 이어 그리므로 간격을 굵기에 맞춘다.
     const gap = strokePointGap(meta.tool, meta.width);
     for (const next of incoming) {
@@ -2175,7 +2182,8 @@ export function DrawingStudio() {
             points.map((point) => ({ ...point, x: 1 - point.x })),
           );
       } else {
-        const livePoints = points.slice(-3);
+        // 이미 그린 마지막 점부터 이어 그린다. 한 점만 늘어도 종전과 같은 3점 창이 되도록 하나 더 겹친다.
+        const livePoints = points.slice(Math.max(0, drawnUpTo - 2));
         renderLiveStroke(event.currentTarget, meta.tool, meta.color, meta.width, livePoints);
         if (mirror)
           renderLiveStroke(

@@ -543,11 +543,62 @@ async function main() {
           // 2026-09-15부터 도화지가 화면 끝까지 차고 도구 막대가 그 위에 뜬다 — 아래쪽은 막대에 가리므로 위쪽 절반에 긋는다.
           const mirrorY = 0.45 - rowShift;
 
+          /* 빠른 펜 획이 점선으로 보이던 것(2026-09-27 사용자 영상). 미리보기가 고정 창 `slice(-3)`을 그려
+             한 이벤트에 점이 3개 이상 들어오면 앞쪽 새 점들이 한 번도 그려지지 않았다. **진짜 펜만**
+             getCoalescedEvents로 점을 몰아 주므로 CDP 마우스로는 절대 드러나지 않는다 — 그 조건을 만들어 검사한다.
+             떼면 전체가 다시 그려져 메워지므로, 반드시 **긋는 도중**에 재야 한다. */
+          await evaluate(cdp, session, `(() => {
+            let last = null; const N = 16;
+            PointerEvent.prototype.getCoalescedEvents = function () {
+              const cur = { clientX: this.clientX, clientY: this.clientY, pressure: this.pressure || 0.5 };
+              if (this.type !== 'pointermove' || !last) { last = cur; return [cur]; }
+              const out = [];
+              for (let i = 1; i <= N; i += 1) out.push({ clientX: last.clientX + (cur.clientX - last.clientX) * i / N, clientY: last.clientY + (cur.clientY - last.clientY) * i / N, pressure: cur.pressure });
+              last = cur; return out;
+            };
+          })()`);
+          let rect = await probeCanvas();
+          // 아래쪽은 도구 막대에 가린다. 도화지가 넘치지 않는 화면(320×568)에서는 visibleBand가 [0,1]이라
+          // 낮은 비율을 고르면 막대 밑에 깔려 아무것도 그려지지 않는다 — 위쪽 줄에 긋는다.
+          const dashFrom = at(rect, 0.12, 0.18); const dashTo = at(rect, 0.88, 0.18);
+          const dashRow = await evaluate(cdp, session, `(() => {
+            const canvas = document.querySelector('.draw-canvas');
+            return Math.round((${dashFrom.y} - canvas.getBoundingClientRect().top) / canvas.getBoundingClientRect().height * canvas.height);
+          })()`);
+          const inkRun = `(() => {
+            const canvas = document.querySelector('.draw-canvas');
+            const row0 = Math.max(0, ${dashRow} - 9);
+            const data = canvas.getContext('2d').getImageData(0, row0, canvas.width, 19).data;
+            let first = -1, last = -1; const ink = [];
+            for (let x = 0; x < canvas.width; x += 1) {
+              let has = false;
+              for (let k = 0; k < 19; k += 1) { const i = (k * canvas.width + x) * 4; if (data[i] < 200 || data[i + 1] < 200 || data[i + 2] < 200) { has = true; break; } }
+              ink.push(has); if (has) { if (first < 0) first = x; last = x; }
+            }
+            if (first < 0) return { width: 0, gaps: 0, widest: 0 };
+            let gaps = 0, run = 0, widest = 0;
+            for (let x = first; x <= last; x += 1) { if (!ink[x]) run += 1; else { if (run > 0) { gaps += 1; if (run > widest) widest = run; } run = 0; } }
+            return { width: last - first + 1, gaps, widest };
+          })()`;
+          // 이동을 크게 띄엄띄엄 보내 한 이벤트에 여러 점이 들어오게 한다 — 빠르게 긋는 아이와 같다.
+          await mouse("mousePressed", dashFrom.x, dashFrom.y, 1);
+          for (let step = 1; step <= 4; step += 1) { await mouse("mouseMoved", dashFrom.x + (dashTo.x - dashFrom.x) * step / 4, dashFrom.y, 1); await sleep(30); }
+          /* 세 화면 중 **320×568에서 가장 잘 드러난다** — 도화지가 넘치지 않아 같은 CSS 거리가
+             문서 단위로 가장 길고, 그만큼 한 이벤트에 점이 많이 들어온다. 회귀 게이트로는 충분하다:
+             한 화면이라도 끊기면 전체가 실패한다(고치기 전 실측 320×568 gaps 3, 최대 167px). */
+          const dashMid = await evaluate(cdp, session, inkRun);
+          await mouse("mouseReleased", dashTo.x, dashFrom.y, 0); await sleep(300);
+          const dashDone = await evaluate(cdp, session, inkRun);
+          check(dashMid.width > 0 && dashMid.gaps === 0, `${viewport.name} 빠르게 그어도 긋는 도중에 선이 끊기지 않음`, { dashMid, dashDone });
+          check(dashDone.gaps === 0, `${viewport.name} 떼고 나서도 선이 이어져 있음`, dashDone);
+          await clickPanelButton("되돌리기"); await sleep(300);
+
+
           // 대칭: 남색을 고르고 왼쪽에 그은 획이 오른쪽 반사 지점에도 나타난다.
           await pickSwatch('남색');
           const mirrorClicked = await clickPanelButton("대칭"); await sleep(150);
           const beforeLeft = await pixel(0.25, mirrorY); const beforeRight = await pixel(0.75, mirrorY);
-          let rect = await probeCanvas();
+          rect = await probeCanvas();
           await dragOn(at(rect, 0.2, mirrorY), at(rect, 0.3, mirrorY)); await sleep(300);
           const mirrorLeft = await pixel(0.25, mirrorY); const mirrorRight = await pixel(0.75, mirrorY);
           check(mirrorClicked && differs(beforeLeft, mirrorLeft) && differs(beforeRight, mirrorRight), `${viewport.name} 대칭이 반대쪽에도 그려짐`, { beforeLeft, mirrorLeft, mirrorRight });

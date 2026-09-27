@@ -94,7 +94,9 @@ test("strokes render during pointer input instead of waiting for pointer up", ()
   // 획 도중 다른 손이 도구를 바꿔도 그리던 획은 시작 시점(meta)의 도구·색·굵기를 유지한다.
   // 일반 그리기는 first, 점선 연습은 자석으로 맞춘 strokeStart를 즉시 미리보기 한다.
   assert.match(studio, /function pointerDown[\s\S]*let strokeStart = first;[\s\S]*renderLiveStroke\(startTarget, meta\.tool, meta\.color, meta\.width, \[strokeStart\]\)/);
-  assert.match(studio, /function pointerMove[\s\S]*points\.push\(next\);[\s\S]*const livePoints = points\.slice\(-3\);[\s\S]*renderLiveStroke\(event\.currentTarget, meta\.tool, meta\.color, meta\.width, livePoints\)/);
+  // 창은 **이미 그린 마지막 점**에서 시작한다(2026-09-27). 고정 -3은 한 이벤트에 점이 3개 이상
+  // 들어올 때 앞쪽 새 점을 통째로 건너뛰어, 빠른 펜 획이 점선으로 보였다.
+  assert.match(studio, /function pointerMove[\s\S]*points\.push\(next\);[\s\S]*const livePoints = points\.slice\(Math\.max\(0, drawnUpTo - 2\)\);[\s\S]*renderLiveStroke\(event\.currentTarget, meta\.tool, meta\.color, meta\.width, livePoints\)/);
   assert.ok(studio.indexOf("renderLiveStroke(event.currentTarget, meta.tool, meta.color, meta.width, livePoints)") < studio.indexOf("function pointerUp"));
   // 반투명 브러시(크레용·수채)는 얇은 층에 획 전체를 다시 그린다 — 세그먼트 알파 중첩 방지.
   // 2026-09-21: 예전에는 같은 일을 도화지 위에서 하느라 move마다 캔버스 전체 ImageData를 뜨고 되돌렸다.
@@ -260,6 +262,18 @@ test("도화지 비율은 문서가 정하고, 화면·래스터·저장 이미�
   const body = renderer.slice(renderer.indexOf("export function renderDrawDocument"));
   assert.ok(body.indexOf("renderDrawOperation(context, op, size)") < body.indexOf("paintPaperUnder(context, size)"), "종이는 획을 모두 그린 뒤에 깔아야 한다");
   assert.match(studio, /clampDocumentHeight\(DOCUMENT_SIZE \* height \/ width\)/);
+});
+
+test("긋는 중 미리보기는 이미 그린 마지막 점부터 이어 그린다", () => {
+  /* 2026-09-27 사용자 영상: 빠르게 그으면 선이 점선으로 보이다가 떼는 순간 이어졌다.
+     미리보기가 고정 창 points.slice(-3)을 그려, 한 pointermove에 점이 3개 이상 들어오면
+     앞쪽 새 점들이 한 번도 그려지지 않았다. 진짜 펜만 getCoalescedEvents로 점을 몰아 주므로
+     마우스로는 드러나지 않는다(실측: 한 번에 4개 → 5군데 217px, 8개 → 5군데 365px이 빠졌다). */
+  assert.match(studio, /const drawnUpTo = points\.length;/);
+  assert.match(studio, /points\.slice\(Math\.max\(0, drawnUpTo - 2\)\)/);
+  assert.doesNotMatch(studio, /const livePoints = points\.slice\(-3\)/);
+  // 점을 몰아 받는 것이 이 버그의 전제다 — 코얼레스 수집을 잃으면 필압·매끄러움도 함께 잃는다.
+  assert.match(studio, /getCoalescedEvents/);
 });
 
 test("shape tool offers ten child-friendly shapes and outline or filled drawing", () => {

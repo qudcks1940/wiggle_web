@@ -22,7 +22,7 @@ await server.DB.batch([
  server.DB.prepare("INSERT INTO artworks(id,student_id,classroom_id,title,topic,learning_mode,ops_json) VALUES('artwork_tabletcheck',?,?,'우리 동네','집','free',?)").bind(student,room,JSON.stringify(emptyDocument())),
 ]);
 const browser=await chromium.launch({executablePath:process.env.BOOK_CHROME_PATH || undefined,headless:true});
-const output='work/storybook-tablet';await mkdir(output,{recursive:true});
+const output='work/storybook-toolbar';await mkdir(output,{recursive:true});
 try {
  let context=await browser.newContext({viewport:{width:768,height:1024},hasTouch:true});
  let page=await context.newPage();page.setDefaultTimeout(20000);
@@ -72,10 +72,12 @@ try {
  await login();await page.locator(`.desk-book-card[href="/student/books/${id}"]`).click();await text().waitFor();
  assert.equal(await title().inputValue(),before.title);assert.equal(await text().inputValue(),'내일도 고래와 함께 놀아요.');
  await page.locator('.storybook-stage:not(.preview) .image img').waitFor();
+ assert.equal(await page.locator('.storybook-inspector').count(),0,'no tools until an image is selected');
  const after=await server.DB.prepare('SELECT title,document_json,status FROM storybooks WHERE id=?').bind(id).first();assert.deepEqual(after,before);
  console.log('PASS manual draft save survives logout and a fresh browser login, including text and image document');
 
  for(const [width,height]of [[1440,1000],[768,1024],[820,1180],[1024,768],[1180,820],[1280,800],[320,568],[390,844],[844,390]]){
+  if(await page.locator('.storybook-inspector').count())await page.getByRole('button',{name:'꾸미기 닫기',exact:true}).click();
   await page.setViewportSize({width,height});await page.evaluate(()=>window.scrollTo(0,0));
   const illustration=page.locator('.storybook-stage:not(.preview) .image');await illustration.click();
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`horizontal overflow ${width}`);
@@ -85,9 +87,20 @@ try {
    return boxes.some((a,i)=>boxes.slice(i+1).some(b=>Math.min(a.right,b.right)-Math.max(a.left,b.left)>1&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>1));
   });assert.equal(overlap,false,`header overlap ${width}`);
   const inspector=page.locator('.storybook-inspector');
-  assert.equal(await inspector.evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 255, 255)');
-  const last=inspector.getByRole('button',{name:'페이지 전체 배경 넣기',exact:false});await last.scrollIntoViewIfNeeded();
+  assert.equal(await inspector.getAttribute('aria-label'),'그림 꾸미기');
+  assert.equal(await inspector.locator('.storybook-story-control').count(),0,'image tools contain only image controls');
+  const layout=await page.evaluate(()=>{
+   const workspace=document.querySelector('.storybook-workspace').getBoundingClientRect(),panel=document.querySelector('.storybook-inspector').getBoundingClientRect();
+   return {workspaceRight:workspace.right,panelLeft:panel.left,panelRight:panel.right,panelTop:panel.top,workspaceTop:workspace.top};
+  });
+  assert.ok(Math.abs(layout.panelRight-width)<2,`inspector is on the right ${width}`);
+  if(width>680)assert.ok(Math.abs(layout.panelTop-layout.workspaceTop)<2&&layout.panelLeft>=layout.workspaceRight-1,`side-by-side layout ${width}`);
+  const toolbar=page.locator('.storybook-toolbar');
+  assert.ok(await toolbar.evaluate(e=>getComputedStyle(e).flexWrap==='nowrap'&&e.scrollWidth>e.clientWidth),`one-line scrolling toolbar ${width}`);
+  const last=inspector.getByRole('button',{name:'삭제',exact:true});await last.scrollIntoViewIfNeeded();
   assert.ok(await last.evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),`last inspector action unreachable ${width}`);
+  await page.getByRole('button',{name:'꾸미기 닫기',exact:true}).click();
+  assert.equal(await inspector.count(),0,'close clears the image selection');
   await page.getByRole('button',{name:'쪽 복제',exact:true}).click();await saved();
   await page.getByRole('button',{name:'쪽 삭제',exact:true}).click();await saved();
   await page.getByRole('button',{name:'미리보기',exact:true}).click();
@@ -97,19 +110,50 @@ try {
   assert.ok(a.left>=0&&b.right<=width&&a.right<=b.left,`preview header clipped ${width}`);
   await page.screenshot({animations:'disabled',path:`${output}/preview-${width}.png`});
   await page.getByRole('button',{name:'편집으로 돌아가기',exact:true}).click();
-  await illustration.click();await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({animations:'disabled',path:`${output}/editor-${width}.png`,fullPage:true});
+  await illustration.click();await toolbar.evaluate(e=>e.scrollLeft=0);
+  await page.screenshot({animations:'disabled',path:`${output}/editor-${width}.png`,fullPage:true});
+  if(width===768){
+   await toolbar.evaluate(e=>e.scrollLeft=e.scrollWidth);
+   await page.screenshot({animations:'disabled',path:`${output}/toolbar-scrolled-768.png`});
+   await page.getByRole('button',{name:'꾸미기 닫기',exact:true}).click();await toolbar.evaluate(e=>e.scrollLeft=0);
+   await page.screenshot({animations:'disabled',path:`${output}/editor-unselected-768.png`});
+  }
   console.log(`PASS editor controls, scrolling, header and preview buttons ${width}x${height}`);
  }
- // Real browser touch pan on the workspace gutter, not scrollTop assignment.
- await page.setViewportSize({width:768,height:1024});await page.evaluate(()=>window.scrollTo(0,0));
+ // Real browser touch pan on the toolbar, not scrollLeft assignment.
+ await page.setViewportSize({width:768,height:1024});
+ await page.getByRole('button',{name:'꾸미기 닫기',exact:true}).click();
+ const toolbar=page.locator('.storybook-toolbar');await toolbar.evaluate(e=>e.scrollLeft=0);
+ const toolbarBox=await toolbar.boundingBox();const touchY=toolbarBox.y+toolbarBox.height/2;
  const cdp=await context.newCDPSession(page);
- await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:8,y:800}]});
- for(let y=760;y>=360;y-=40)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:8,y}]});
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:700,y:touchY}]});
+ for(let x=660;x>=230;x-=40)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:touchY}]});
  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
- await page.waitForFunction(()=>scrollY>100);await cdp.detach();
+ await page.waitForFunction(()=>document.querySelector('.storybook-toolbar').scrollLeft>100);await cdp.detach();
+ // Reach and use the last tool after horizontal scrolling.
+ await page.getByRole('button',{name:'쪽 복제',exact:true}).click();await saved();
+ await page.getByRole('button',{name:'쪽 삭제',exact:true}).click();await saved();
+ assert.equal(await page.locator('.storybook-inspector').count(),0);
+ // Upload selects the new image and opens its right-hand controls automatically.
+ await page.locator('.storybook-toolbar input[type=file]').first().setInputFiles({name:'whale.png',mimeType:'image/png',buffer:png});
+ await page.getByRole('complementary',{name:'그림 꾸미기',exact:true}).waitFor();await saved();
+ await page.locator('.storybook-inspector').getByRole('button',{name:'삭제',exact:true}).click();await saved();
+ assert.equal(await page.locator('.storybook-inspector').count(),0,'deleting the selected image closes its tools');
+ await page.locator('.storybook-stage:not(.preview) .image').click();
+ await page.locator('.storybook-page-rail button').nth(1).click();
+ assert.equal(await page.locator('.storybook-inspector').count(),0,'changing page clears its tools');
+ await page.locator('.storybook-page-rail button').nth(0).click();
+ await page.locator('.storybook-stage:not(.preview) .image').click();
+ await text().click();assert.equal(await page.locator('.storybook-inspector').count(),0,'writing deselects the image');
+ // Text/background settings remain available even on an empty page, without opening image tools.
+ await page.getByRole('button',{name:'글·배경 꾸미기',exact:true}).click();
+ const pageTools=page.getByRole('complementary',{name:'글·배경 꾸미기',exact:true});await pageTools.waitFor();
+ await pageTools.getByLabel('배경색',{exact:true}).fill('#FFF9E5');await saved();
+ assert.equal(await page.locator('.storybook-stage:not(.preview)').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 249, 229)');
+ await page.getByRole('button',{name:'꾸미기 닫기',exact:true}).click();
  await page.getByRole('button',{name:'그림책 완성하기',exact:true}).click();await page.getByRole('dialog',{name:'그림책 미리보기'}).waitFor();
  assert.equal((await server.DB.prepare('SELECT status FROM storybooks WHERE id=?').bind(id).first()).status,'complete');
- console.log('PASS touch scrolling and the renamed completion action');
+ console.log('PASS horizontal touch scrolling, contextual image tools, upload, deselection, page settings and completion');
 
  await context.addCookies([{name:'wiggle_teacher',value:teacherToken,url:server.origin}]);
  await page.goto(server.origin+`/teacher/class/${room}?view=archive`);await page.locator('.twa-heading select').waitFor();

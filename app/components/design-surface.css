@@ -263,3 +263,68 @@
 @media print {
   .design-surface .teacher-story-page { outline: none; border-radius: 0; box-shadow: none; }
 }
+
+/* Keep the original side-by-side editor. Only the one-line tool strip scrolls horizontally. */
+.design-surface .storybook-editor-shell { height: 100dvh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.design-surface .storybook-editor-header { flex: 0 0 auto; height: auto; min-height: 68px; }
+.design-surface .storybook-editor-body { position: relative; flex: 1; height: auto; min-height: 0; grid-template-columns: 112px minmax(0, 1fr); }
+.design-surface .storybook-editor-body.has-inspector { grid-template-columns: 112px minmax(0, 1fr) 278px; }
+.design-surface :is(.storybook-page-rail, .storybook-workspace, .storybook-inspector) { min-width: 0; min-height: 0; }
+.design-surface .storybook-toolbar-shell { position: sticky; top: 0; z-index: 20; flex: 0 0 104px; min-width: 0; background: var(--paper); border-bottom: 1px solid var(--soft-border); }
+.design-surface .storybook-toolbar-shell .storybook-toolbar {
+  position: static; height: 60px; min-height: 60px; flex-wrap: nowrap; justify-content: flex-start;
+  overflow-x: auto; overflow-y: hidden; border-bottom: 0; touch-action: pan-x; overscroll-behavior-x: contain; scrollbar-width: none;
+}
+.design-surface .storybook-toolbar::-webkit-scrollbar { display: none; }
+.design-surface .storybook-toolbar-content { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; width: max-content; }
+.design-surface .storybook-toolbar-scroll-controls { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 4px; align-items: center; padding: 0 6px; }
+.design-surface .storybook-toolbar-scroll-arrow { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #596653; cursor: pointer; }
+.design-surface .storybook-toolbar-scroll-arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.design-surface .storybook-toolbar-scroll-arrow:hover:not(:disabled) { background: #edf1e9; color: var(--primary-dark); }
+.design-surface .storybook-toolbar-scroll-arrow:disabled { opacity: .3; cursor: default; }
+.design-surface .storybook-toolbar-scrollbar { position: relative; height: 44px; cursor: pointer; touch-action: none; user-select: none; }
+.design-surface .storybook-toolbar-scroll-track { position: absolute; inset-inline: 0; top: 11px; height: 22px; border-radius: 6px; background: #edf0ea; border: 1px solid #d5dccf; box-shadow: inset 0 1px 3px #2635220d; }
+.design-surface .storybook-toolbar-scroll-thumb { position: absolute; top: 14px; height: 16px; border-radius: 4px; background: linear-gradient(#fcfdfa, #dce2d7); border: 1px solid #94a18a; box-shadow: 0 1px 2px #2635221a; cursor: grab; }
+.design-surface .storybook-toolbar-scroll-thumb::after { content: ""; position: absolute; top: 3px; left: calc(50% - 6px); width: 12px; height: 8px; background: repeating-linear-gradient(90deg, #7a8870 0 2px, transparent 2px 5px); }
+.design-surface .storybook-toolbar-scroll-thumb:hover { border-color: #6e7f62; }
+.design-surface .storybook-toolbar-scrollbar:active .storybook-toolbar-scroll-thumb { cursor: grabbing; }
+.design-surface .storybook-toolbar-scrollbar:focus-visible { outline: 2px solid var(--primary-dark); outline-offset: -2px; border-radius: 8px; }
+.design-surface .storybook-toolbar-scrollbar[aria-disabled=true] { cursor: default; opacity: .5; }
+.design-surface .storybook-inspector { overflow-y: auto; overscroll-behavior-y: contain; }
+.design-surface .storybook-inspector-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
+.design-surface .storybook-inspector-heading h2 { margin: 0; font-size: 20px; }
+.design-surface .storybook-inspector-heading .small-button { min-height: 44px; padding: 6px 10px; font-size: 14px; flex-shrink: 0; }
+@media (min-width: 681px) and (max-width: 1100px) {
+  .design-surface .storybook-editor-body { grid-template-columns: 90px minmax(0, 1fr); }
+  .design-surface .storybook-editor-body.has-inspector { grid-template-columns: 90px minmax(0, 1fr) 220px; }
+  .design-surface .storybook-page-rail { padding-inline: 5px; }
+  .design-surface .storybook-page-rail > button { min-width: 0; }
+}
+@media (max-width: 680px) {
+  .design-surface .storybook-editor-header { grid-template-columns: 1fr 1fr 1.5fr; }
+  .design-surface .storybook-editor-header > button { padding-inline: 6px; font-size: 16px; }
+  .design-surface .storybook-editor-body, .design-surface .storybook-editor-body.has-inspector { display: flex; flex-direction: column; overflow: hidden; }
+  .design-surface .storybook-page-rail { flex: 0 0 104px; }
+  .design-surface .storybook-workspace { flex: 1; overflow: auto; }
+  /* A selected image's tools stay on the right on phones too, instead of below the book. */
+  .design-surface .storybook-inspector { position: absolute; z-index: 25; right: 0; top: 209px; bottom: 0; width: min(260px, 80%); border-top: 0; border-left: 1px solid var(--border); box-shadow: -4px 0 12px #16220f14; }
+}
+.design-surface .storybook-preview > header { padding-bottom: 12px; min-width: 0; }
+.design-surface .storybook-preview > header > b { min-width: 0; }
+.design-surface .storybook-preview > header > div { display: flex; align-items: stretch; gap: 8px; flex-shrink: 0; }
+.design-surface .storybook-preview > header .small-button {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 16px;
+  font-family: var(--design-font); font-size: 16px; font-weight: 800; line-height: 1.4; text-decoration: none;
+}
+.design-surface.design-adult .teacher-workspace .twa :is(.twa-heading select, .twa-section-heading button, .twa-text-link) {
+  font-family: var(--design-font); font-size: 16px; font-weight: 700; line-height: 1.5; letter-spacing: -.01em;
+  min-height: 46px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--paper); color: var(--primary-dark);
+}
+.design-surface.design-adult .teacher-workspace .twa :is(.twa-section-heading button, .twa-text-link) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+
+@media (max-width: 680px) {
+  .design-surface .storybook-preview > header { flex-direction: column; align-items: stretch; gap: 8px; }
+  .design-surface .storybook-preview > header > div { flex-shrink: 1; }
+  .design-surface .storybook-preview > header .small-button { flex: 1; min-width: 0; padding-inline: 10px; font-size: 15px; }
+}

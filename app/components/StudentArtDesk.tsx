@@ -24,7 +24,6 @@ export type DeskStorybook = { id: string; title: string; pageCount: number; stat
 
 /** 목록에 몇 장까지 펴 놓을지. 나머지는 기존 보관함으로 보낸다 — 여기서 전부 받지 않는다. */
 export const DESK_ARTWORK_LIMIT = 3;
-export const DESK_BOOK_LIMIT = 2;
 
 const DRAWING = (artwork: DeskArtwork) => artwork.status !== "complete";
 
@@ -98,7 +97,7 @@ export function StudentArtDesk({ nickname, artworks, artworkTotal }: { nickname:
   }
 
   const shown = artworks.slice(0, DESK_ARTWORK_LIMIT);
-  const shownBooks = (books ?? []).slice(0, DESK_BOOK_LIMIT);
+  const shownBooks = books ?? [];
 
   return <AuthenticatedImageCache>
     <main className="student-art-desk">
@@ -150,7 +149,7 @@ export function StudentArtDesk({ nickname, artworks, artworkTotal }: { nickname:
         <section className="desk-section" aria-labelledby="desk-book-title">
           <div className="desk-section-head">
             <h2 id="desk-book-title"><img src="/student-desk/icon-my-books.svg" alt="" aria-hidden="true" width={28} height={28} />내 그림책</h2>
-            {(books?.length ?? 0) > shownBooks.length && <a className="desk-more" href="/student/books">내 그림책 모두 보기 ({books?.length}권)</a>}
+            {books !== null && !bookError && <a className="desk-more" href="/student/books">내 그림책 모두 보기 ({books.length}권)</a>}
           </div>
           {books === null
             ? <p className="desk-book-empty">그림책을 찾는 중…</p>

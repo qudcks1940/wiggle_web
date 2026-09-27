@@ -362,7 +362,7 @@ test("저장하는 동안 화면 전체를 덮어 아무것도 누르지 못하�
   assert.match(css, /\.saving-veil \{ position:fixed; inset:0; z-index:30;/);
   assert.match(css, /\.modal-backdrop \{ position:fixed; inset:0; z-index:20;/);
   // 움직임 줄이기에서는 튀지 않는다.
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n  \.saving-veil \{ backdrop-filter:none; \}/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\r?\n  \.saving-veil \{ backdrop-filter:none; \}/);
   // 저장 중에는 닫기와 두 단추가 모두 잠긴다 — 막이 뚫려도 뒤에서 눌리지 않는다.
   assert.match(studio, /className="modal-close" disabled=\{completionState === "saving"\}/);
 });

@@ -60,6 +60,8 @@ await page.getByRole('button',{name:'모든 페이지 검사하고 추가'}).cli
 await page.getByLabel('모든 PDF의 페이지 크기·글·그림·빈 쪽, 수량과 배송지를 확인했습니다.').check();
 await page.getByRole('button',{name:'운영자에게 제작 요청 보내기'}).click();
 await page.getByText('운영자에게 제작 요청서를 보냈어요. 아래에서 접수 상태를 확인하세요.').waitFor();
+// Stop order polling before seeding another session through the separate SQLite connection.
+await page.goto('about:blank');
 const adminToken=randomUUID();await server.DB.batch([
 server.DB.prepare("INSERT INTO teachers(id,email,display_name) VALUES('admin_browser','qudcks1940@gmail.com','운영검증관리자')"),
 server.DB.prepare("INSERT INTO teacher_sessions(token_hash,teacher_id,expires_at,last_used_at) VALUES(?,'admin_browser',?,CURRENT_TIMESTAMP)").bind(await sha256(adminToken),new Date(Date.now()+3600000).toISOString())]);
@@ -84,7 +86,7 @@ assert.equal(JSON.parse(imported.doc).pages.length,3);assert.ok(JSON.parse(impor
 await page.goto(server.origin+'/teacher/class/'+classroomId+'/books/'+imported.id+'/edit');
 await page.getByLabel('이 쪽의 이야기',{exact:true}).waitFor();assert.equal(await page.getByLabel('이 쪽의 이야기',{exact:true}).inputValue(),'');
 await page.getByLabel('이 쪽의 이야기',{exact:true}).fill('PDF 위에 덧붙인 새로운 이야기');
-await page.getByRole('button',{name:'완성하기',exact:true}).click();await page.getByRole('button',{name:'편집으로 돌아가기'}).waitFor();
+await page.getByRole('button',{name:'그림책 완성하기',exact:true}).click();await page.getByRole('button',{name:'편집으로 돌아가기'}).waitFor();
 await page.waitForTimeout(1300); await page.screenshot({path:'work/book-qa/imported-preview.png',fullPage:true});
 const saved=await server.DB.prepare('SELECT document_json AS doc,status FROM storybooks WHERE id=?').bind(imported.id).first();assert.equal(saved.status,'complete');assert.equal(JSON.parse(saved.doc).pages[0].elements[0].text,'PDF 위에 덧붙인 새로운 이야기');
 const requestHeaders={origin:server.origin};

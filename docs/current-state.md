@@ -2164,3 +2164,14 @@ typecheck·lint(오류 0), `npm test` 323/324(실패 1은 Node 22.13 환경 문�
 - **검증.** 실제 브라우저 3뷰포트(768×1024·320×568·1440×900): 관찰·질문·다음 행동이 모두 보이고 답 칩 0개, 머리 단추 겹침 없음, `그리러 가기` 글자 잘림 없음, 최소 터치 44px, 카드가 화면 안, 가로 넘침 0. typecheck 0, lint 오류 0, production build 통과, `npm test` 391/392(이 맥의 Node 22.13에서 `pbkdf2-runtime` 1건은 `registerHooks` 미지원 — 코드와 무관).
 - **계약 테스트.** `tests/auto-grimi.test.mjs`에 카드가 읽기 전용이라는 계약을 더했다 — 답을 보내는 길(`recordCoachingAnswer`·`action: "answer"`·칩·`그린 뒤 했어요`)이 되살아나면 실패한다.
 - **남은 것.** 서버의 `answer` 액션과 `recordCoachingAfter(question_answer)` 경로는 지우지 않았다. 가이드 완료(`finishGuide`)가 같은 분기를 쓰고 저장 계약 테스트가 이 경로를 검증한다. 화면에서 부르는 곳만 사라졌다.
+
+## 2026-09-28 새 학급 만들기에도 엑셀 불러오기 (`claude/create-class-excel`)
+
+사용자 요청: "새 학급 만들기에도 엑셀로 추가하기 기능을 넣어줄래? 학급의 명단에 학생추가쪽을 참고해봐".
+
+- **한 컴포넌트로 합쳤다.** 번호·이름 칸(`RosterRowsEditor`)은 이미 두 화면이 함께 썼지만, 엑셀·CSV 불러오기와 양식 내려받기는 `TeacherRosterSettings`에만 있었다. 그 둘을 묶은 `RosterEditor`를 만들고 두 화면이 그것을 쓴다. 불러오기 알림(`몇 명을 읽었어요`)도 편집기가 들고 있다가 교사가 칸을 건드리면 스스로 지운다.
+- **만들기 폼.** `<RosterEditor rows={newRows} setRows={setNewRows} firstSeat={1} onError={setError} />` 한 줄로 바뀌었다. 파일 읽기 실패는 폼의 기존 오류 자리(`.error-box`)에 뜬다.
+- **CSS.** `양식 내려받기` 단추 모양은 `.teacher-workspace` 안에서만 걸려 있었다. 대시보드(학급 만들기)는 그 밖이라 `.create-class-roster .trs-template-button`으로 같은 모양을 다시 준다.
+- **서버·파일 경로는 그대로.** `readRosterFile`·`buildRosterTemplate`·`parseRosterRows`와 저장 경로(`createClassroom`/`addStudents`)는 손대지 않았다. 파일은 교사 브라우저 안에서만 읽는다.
+- **검증.** 실제 브라우저에서 새 학급 만들기 폼에 `.xlsx`를 넣어 끝까지 갔다: "4명을 읽었어요. 첫 줄은 제목으로 보고 건너뛰었어요"가 뜨고 1~4번 칸이 채워지고 빈 줄 하나가 열렸다 → `엑셀 1반` 생성 → 명단 탭에 1 김민준·2 이서연·3 박지호·4 최하윤이 참여 코드와 함께 들어갔다. 기존 `학생 추가` 다이얼로그도 그대로 동작하고 번호는 5번부터 이어졌다. typecheck 0, lint 오류 0, production build 통과, `npm test` 412/413(이 맥의 Node 22.13에서 `pbkdf2-runtime` 1건은 `registerHooks` 미지원 — 코드와 무관).
+- **계약 테스트.** 불러오기가 한쪽에만 생기면 실패하도록 고쳤다 — 두 화면 모두 `<RosterEditor …>`를 쓰고, `TeacherApp`·`TeacherRosterSettings`가 `readRosterFile`·`buildRosterTemplate`을 직접 부르지 않는지 본다.

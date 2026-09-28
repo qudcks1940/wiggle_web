@@ -5,7 +5,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import { copyText } from "@/lib/copy-text";
 import { useCopyFeedback } from "./useCopyFeedback";
 import { parseRosterRows, RosterRow } from "@/lib/roster";
-import { blankRows, RosterRowsEditor } from "./RosterRowsEditor";
+import { blankRows, RosterEditor } from "./RosterRowsEditor";
 import { Logo } from "./Logo";
 import { QrCode } from "./QrCode";
 import { TeacherLiveView } from "./TeacherLiveView";
@@ -345,7 +345,7 @@ export function TeacherApp({ classroomId = "" }: { classroomId?: string }) {
     return <main className="teacher-shell teacher-dashboard">
       <header className="teacher-header"><Logo /><div><span>교사</span><b>{teacher?.displayName}</b></div>{teacher?.isAdmin && <a className="small-button" href="/admin">관리자 페이지</a>}<button className="small-button" onClick={async () => { await teacherPost({ action: "logout" }); location.href = "/teacher"; }}>로그아웃</button></header>
       <section className="dashboard-title"><div><h1>내 학급</h1><p>오늘도, 아이들의 생각이 자라는 수업을 만들어보세요.</p></div><button type="button" className="button primary" aria-expanded={creatingClass} onClick={() => setCreatingClass((value) => !value)}>＋ 새 학급</button></section>
-      {creatingClass && <form className="create-class" onSubmit={createClass}><label>새 학급 이름<input value={newClass} maxLength={30} autoFocus onChange={(event) => setNewClass(event.target.value)} placeholder="예: 별빛 1반" /></label><div className="create-class-roster"><span className="create-class-roster-label">우리 반 명단</span><RosterRowsEditor rows={newRows} setRows={setNewRows} firstSeat={1} /></div><p className="roster-privacy">학생은 자기 <b>번호</b>로 들어옵니다. 이름은 <b>선생님만</b> 봅니다 — 학생 화면·가족 공유·AI에는 보내지 않아요.</p><div className="create-class-actions"><button className="button primary" disabled={newClass.length < 2 || !newRosterParsed.entries.length || newRosterParsed.errors.length > 0}>학급 만들기</button><button type="button" className="button secondary" onClick={() => { setCreatingClass(false); setNewClass(""); setNewRows(blankRows(1)); }}>취소</button></div></form>}
+      {creatingClass && <form className="create-class" onSubmit={createClass}><label>새 학급 이름<input value={newClass} maxLength={30} autoFocus onChange={(event) => setNewClass(event.target.value)} placeholder="예: 별빛 1반" /></label><div className="create-class-roster"><span className="create-class-roster-label">우리 반 명단</span><RosterEditor rows={newRows} setRows={setNewRows} firstSeat={1} onError={setError} /></div><p className="roster-privacy">학생은 자기 <b>번호</b>로 들어옵니다. 이름은 <b>선생님만</b> 봅니다 — 학생 화면·가족 공유·AI에는 보내지 않아요.</p><div className="create-class-actions"><button className="button primary" disabled={newClass.length < 2 || !newRosterParsed.entries.length || newRosterParsed.errors.length > 0}>학급 만들기</button><button type="button" className="button secondary" onClick={() => { setCreatingClass(false); setNewClass(""); setNewRows(blankRows(1)); }}>취소</button></div></form>}
       {error && <p className="error-box" role="alert">{error}</p>}
       <p className="sr-only" role="status">{copiedLabel ? `${copiedLabel}를 복사했어요.` : ""}</p>
       {copyNotice && <p className="copy-notice" role="status">{copyNotice}<button type="button" onClick={() => setCopyNotice("")}>닫기</button></p>}

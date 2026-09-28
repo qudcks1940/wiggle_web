@@ -87,15 +87,23 @@ test("시트가 여럿이면 첫 시트를 읽고, 압축이 아닌 zip이 아�
 });
 
 test("교사 화면이 파일을 서버로 보내지 않고 그 자리에서 읽는다", async () => {
-  const settings = await readFile(new URL("../app/components/TeacherRosterSettings.tsx", import.meta.url), "utf8");
-  assert.match(settings, /import \{ readRosterFile \} from "@\/lib\/roster-file"/);
-  assert.match(settings, /type="file" accept="\.xlsx,\.csv,\.tsv,\.txt/);
-  assert.match(settings, /엑셀·CSV 파일 불러오기/);
+  const [editor, settings, app] = await Promise.all([
+    readFile(new URL("../app/components/RosterRowsEditor.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/TeacherRosterSettings.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/TeacherApp.tsx", import.meta.url), "utf8"),
+  ]);
+  // 2026-09-28: 불러오기는 편집기와 한 몸이다 — 학급을 만들 때와 만든 뒤 둘 다 같은 것을 쓴다.
+  assert.match(editor, /import \{ readRosterFile \} from "@\/lib\/roster-file"/);
+  assert.match(editor, /type="file" accept="\.xlsx,\.csv,\.tsv,\.txt/);
+  assert.match(editor, /엑셀·CSV 파일 불러오기/);
+  assert.match(settings, /<RosterEditor rows=\{rows\} setRows=\{setRows\}/);
+  assert.match(app, /<RosterEditor rows=\{newRows\} setRows=\{setNewRows\}/);
   // 파일을 업로드하는 경로가 생기면 안 된다 — 실명이 든 파일이다.
-  assert.doesNotMatch(settings, /FormData|fetch\([^)]*file/);
-  // 읽은 결과는 번호·이름 칸을 채울 뿐이고, 저장은 교사가 확인한 뒤 기존 addStudents로 간다.
-  assert.match(settings, /rosterTextToRows\(read\.text\)/);
+  for (const source of [editor, settings, app]) assert.doesNotMatch(source, /FormData|fetch\([^)]*file/);
+  // 읽은 결과는 번호·이름 칸을 채울 뿐이고, 저장은 교사가 확인한 뒤 기존 경로로 간다.
+  assert.match(editor, /rosterTextToRows\(read\.text\)/);
   assert.match(settings, /onAction\("addStudents", \{ roster: parsed\.entries \}\)/);
+  assert.match(app, /action: "createClassroom", displayName: newClass, roster: parsed\.entries/);
 });
 
 test("내려받는 엑셀 양식은 우리가 읽는 규칙과 정확히 맞물린다", async () => {
@@ -123,9 +131,12 @@ test("만든 xlsx는 zip 규격을 지키고 특수문자도 깨지지 않는다
 });
 
 test("교사 화면에 양식 내려받기가 있고 파일을 그 자리에서 만든다", async () => {
-  const settings = await readFile(new URL("../app/components/TeacherRosterSettings.tsx", import.meta.url), "utf8");
-  assert.match(settings, /엑셀 양식 내려받기/);
-  assert.match(settings, /buildRosterTemplate\(\)/);
-  assert.match(settings, /link\.download = "위글-명단-양식\.xlsx"/);
-  assert.match(settings, /URL\.revokeObjectURL\(url\)/);
+  const editor = await readFile(new URL("../app/components/RosterRowsEditor.tsx", import.meta.url), "utf8");
+  assert.match(editor, /엑셀 양식 내려받기/);
+  assert.match(editor, /buildRosterTemplate\(\)/);
+  assert.match(editor, /link\.download = "위글-명단-양식\.xlsx"/);
+  assert.match(editor, /URL\.revokeObjectURL\(url\)/);
+  // 대시보드(학급 만들기)는 `.teacher-workspace` 밖이라 양식 단추 모양을 따로 받아야 한다.
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(css, /\.create-class-roster \.trs-template-button \{/);
 });

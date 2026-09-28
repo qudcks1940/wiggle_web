@@ -149,6 +149,32 @@ type SaveOptions = {
 };
 type LessonStepPrompt = "step-action" | "unfinished-lesson" | null;
 
+/* 몽그리 요청에만 시간 제한을 둔다. 서버는 20초에 스스로 끊고 504를 주지만(lib/openai-coaching.ts),
+ * 그 답이 오는 길이 끊기면(교실 와이파이가 끊기는 흔한 일) 아이 화면의 표시가 영구히 돈다.
+ * 25초는 서버 상한보다 길어, 서버가 답할 수 있는 요청을 이쪽에서 먼저 끊어 버리지 않는 값이다.
+ * 저장에는 쓰지 않는다 — 느린 교실 와이파이에서 큰 PNG가 30초 넘게 올라가는 일은 정상이고,
+ * 거기서 끊으면 아이 그림을 잃는다. AbortSignal.timeout을 모르는 옛 브라우저는 제한 없이 보낸다
+ * (여기서 던지면 몽그리가 그 기기에서 아예 안 열린다). */
+const GRIMI_TIMEOUT_MS = 25_000;
+/* 짐작만 더 짧게 끊는다. 몽그리를 부른 답은 아이가 기다리는 목적 그 자체지만, 짐작은 없어도
+ * 완성에 지장이 없는 곁가지다(askInterpretation). 8살에게 25초 동안 점만 보여 주는 대신
+ * 12초에 「못 봤어」로 넘겨 자기 말로 쓰게 한다. */
+const INTERPRET_TIMEOUT_MS = 12_000;
+
+async function grimiFetch(body: Record<string, unknown>, timeoutMs = GRIMI_TIMEOUT_MS) {
+  try {
+    return await studentFetch("/api/ai/coaching", {
+      method: "POST",
+      body: JSON.stringify(body),
+      signal: typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(timeoutMs) : undefined,
+    });
+  } catch (cause) {
+    // 끊긴 것도 아이에게는 「늦었다」는 한 가지 일이다. DOMException의 영문 문구를 그대로 보여 주지 않는다.
+    if (cause instanceof DOMException && cause.name === "TimeoutError") throw new Error("몽그리가 지금 대답이 늦어. 조금 뒤에 다시 불러 줄래?");
+    throw cause;
+  }
+}
+
 function documentPixels(document: Pick<DrawDocument, "height">, width: number) {
   return { width, height: Math.round(width * documentHeight(document) / DOCUMENT_SIZE) };
 }
@@ -2550,18 +2576,15 @@ export function DrawingStudio() {
         setGrimiError("그림을 먼저 저장한 뒤 다시 불러 줘.");
         return;
       }
-      const response = await studentFetch("/api/ai/coaching", {
-        method: "POST",
-        body: JSON.stringify({
-          action: "ask",
-          requestId: coachingRequestId(),
-          artworkId: artwork.id,
-          expectedRevision: revisionRef.current,
-          document: documentStateRef.current,
-          imageDataUrl: documentImage(documentStateRef.current, 1024),
-          childChoice,
-          openedBy: auto ? "mongri" : "child",
-        }),
+      const response = await grimiFetch({
+        action: "ask",
+        requestId: coachingRequestId(),
+        artworkId: artwork.id,
+        expectedRevision: revisionRef.current,
+        document: documentStateRef.current,
+        imageDataUrl: documentImage(documentStateRef.current, 1024),
+        childChoice,
+        openedBy: auto ? "mongri" : "child",
       });
       const data = (await response.json()) as {
         error?: string;
@@ -2634,9 +2657,7 @@ export function DrawingStudio() {
     }
     completeCurrentLessonStep(skip);
     setLessonStepPrompt(null);
-    setCompletionState("idle");
-    setCompletionError("");
-    setReflectionOpen(true);
+    openReflection();
   }
 
   /**
@@ -2648,10 +2669,7 @@ export function DrawingStudio() {
     setInterpretLoading(true);
     setInterpretation(null);
     try {
-      const response = await studentFetch("/api/ai/coaching", {
-        method: "POST",
-        body: JSON.stringify({ action: "interpret", artworkId: artwork.id, imageDataUrl: documentImage(documentStateRef.current, 1024) }),
-      });
+      const response = await grimiFetch({ action: "interpret", artworkId: artwork.id, imageDataUrl: documentImage(documentStateRef.current, 1024) }, INTERPRET_TIMEOUT_MS);
       const data = (await response.json()) as { interpretation?: StoryInterpretation };
       if (response.ok && data.interpretation) setInterpretation(data.interpretation);
     } catch {
@@ -2661,12 +2679,19 @@ export function DrawingStudio() {
     }
   }
 
+  /* 소감 화면은 이 한 곳에서만 연다. 종전에는 자유 그리기 경로에만 askInterpretation()이 있어서
+   * 수업 중 완성은 「네 그림을 소개해 줘!」 제목과 단추만 남은 빈 화면이었다(2026-09-28 사용자 제보).
+   * 셋 중 어느 길로 와도 몽그리 짐작을 부르고, 지난 오류 표시도 함께 지운다. */
+  function openReflection() {
+    setCompletionState("idle");
+    setCompletionError("");
+    setReflectionOpen(true);
+    void askInterpretation();
+  }
+
   function requestArtworkCompletion() {
     if (!lesson) {
-      setCompletionState("idle");
-      setCompletionError("");
-      setReflectionOpen(true);
-      void askInterpretation();
+      openReflection();
       return;
     }
     if (artwork && artwork.currentStep < lesson.steps.length - 1) {
@@ -2684,10 +2709,7 @@ export function DrawingStudio() {
     replyingRef.current = true;
     setReplyState("sending"); setReplyError("");
     try {
-      const response = await studentFetch("/api/ai/coaching", {
-        method: "POST",
-        body: JSON.stringify({ action: "reply", artworkId: artwork.id, eventId: coaching.eventId, answer: replyText }),
-      });
+      const response = await grimiFetch({ action: "reply", artworkId: artwork.id, eventId: coaching.eventId, answer: replyText });
       const data = await response.json() as { error?: string; nextAction?: string };
       if (!response.ok) throw new Error(data.error ?? "답을 보내지 못했어요.");
       setReplyState("sent");
@@ -2769,6 +2791,11 @@ export function DrawingStudio() {
       : currentLessonStepStatus.remaining > 1
         ? "점이나 선을 조금 더 그려 볼까?"
         : "점이나 선을 한 번 더 그려 볼까?";
+  /* 두 aside는 같은 자리를 쓴다. 종전에는 grimiOpen만 보고 골라서, 몽그리 카드가 열린 채 「완성」을
+   * 누르면 단계 안내(남은 순서·조금 더 그리기)가 어디에도 그려지지 않아 단추가 죽은 것처럼 보였다
+   * (2026-09-28 사용자 제보). 안내가 있는 동안만 카드를 접어 두고, 닫으면 카드가 그대로 돌아온다 —
+   * grimiOpen·coaching은 건드리지 않는다. */
+  const showGrimiPanel = grimiOpen && !lessonStepPrompt;
   const selectedColor = studioTool === "text" && selectedText ? selectedText.color : pendingText?.color ?? color;
   // 색 적용은 팔레트 원과 색 고르기 대화상자(onPick)에 같은 네 줄이 인라인으로 있다. 헬퍼로 빼면
   // React Compiler가 이 컴포넌트 전체를 컴파일 대상으로 삼아 기존 performance.now() 호출을 오류로 잡는다.
@@ -2843,8 +2870,8 @@ export function DrawingStudio() {
           선생님이 내 도화지를 보고 있어요.
         </div>
       )}
-      <div className={`studio-body ${grimiOpen || lesson ? "" : "without-step-panel"}${grimiOpen ? " grimi-open" : ""}${grimiOpen && grimiCollapsed ? " grimi-collapsed" : ""}${studioTool === "shape" || studioTool === "text" ? " tool-options-open" : ""}`}>
-        {grimiOpen ? (
+      <div className={`studio-body ${showGrimiPanel || lesson ? "" : "without-step-panel"}${showGrimiPanel ? " grimi-open" : ""}${showGrimiPanel && grimiCollapsed ? " grimi-collapsed" : ""}${studioTool === "shape" || studioTool === "text" ? " tool-options-open" : ""}`}>
+        {showGrimiPanel ? (
           <aside className={`grimi-panel${grimiCollapsed ? " collapsed" : ""}`} aria-live="polite">
             <div className="grimi-head">
               <div>
@@ -3011,7 +3038,7 @@ export function DrawingStudio() {
                       ✏️ 더 그릴래
                     </button>
                     {lessonStepPrompt === "unfinished-lesson" ? (
-                      <button type="button" onClick={() => { setLessonStepPrompt(null); setReflectionOpen(true); }}>
+                      <button type="button" onClick={() => { setLessonStepPrompt(null); openReflection(); }}>
                         ⭐ 지금 완성
                       </button>
                     ) : (
@@ -3447,32 +3474,34 @@ export function DrawingStudio() {
               <h2 id="reflection-title">네 그림을 소개해 줘!</h2>
             </div>
             <p className="reflection-choice-note">정답이 아니에요. 네가 보고 직접 골라요.</p>
-            {(interpretLoading || interpretation) && (
-              <div className="reflection-question mongri-guess">
-                {/* 짐작을 기다릴 때는 생각 중, 짐작이 나오면 발견한 표정이다. */}
-                <p className="mongri-guess-head"><img className="grimi-face grimi-face-small" src={`/brand/mongri/${interpretation ? "delighted" : "thinking"}.png`} alt="" aria-hidden="true" width={224} height={224} /> 몽그리 생각</p>
-                {interpretLoading && !interpretation && <p className="mongri-guess-waiting">몽그리가 네 그림을 보고 있어…</p>}
-                {interpretation && (
-                  <>
-                    {/* AI가 만든 문장은 음성으로 내보내지 않는다 (product-decisions 20항).
-                        답 칩의 이모지가 글과 함께 읽기 부담을 덜어 준다. */}
-                    <p className="mongri-guess-text">{interpretation.guess}</p>
-                    <div className="reflection-choice-grid">
-                      {interpretation.choices.map((choice) => (
-                        <button type="button" aria-pressed={storyText === choice.answer} onClick={() => setStoryText(choice.answer)} key={choice.label}>
-                          <span>{choice.emoji}</span>
-                          {choice.label}
-                        </button>
-                      ))}
-                    </div>
-                    <label className="mongri-guess-own" htmlFor="story-text">
-                      내 말로 알려 줄래?
-                      <input id="story-text" maxLength={120} value={storyText} onChange={(event) => setStoryText(event.target.value)} placeholder="예: 아니야, 자전거 바퀴야" />
-                    </label>
-                  </>
-                )}
-              </div>
-            )}
+            {/* 이 칸은 **늘** 그린다. 종전에는 짐작이 오지 않으면(몽그리가 쉬거나 요청이 실패) 통째로
+                사라져, 「네 그림을 소개해 줘!」가 제목과 단추만 남은 빈 화면이 됐다(2026-09-28 사용자 제보).
+                짐작이 없어도 아이가 자기 말로 알려 줄 칸은 남는다. */}
+            <div className="reflection-question mongri-guess">
+              {/* 짐작을 기다릴 때는 생각 중, 짐작이 나오면 발견한 표정이다. */}
+              <p className="mongri-guess-head"><img className="grimi-face grimi-face-small" src={`/brand/mongri/${interpretation ? "delighted" : "thinking"}.png`} alt="" aria-hidden="true" width={224} height={224} /> 몽그리 생각</p>
+              {interpretLoading && !interpretation && <p className="mongri-guess-waiting">몽그리가 네 그림을 보고 있어…<span className="bounce-dots" aria-hidden="true"><i /><i /><i /></span></p>}
+              {!interpretLoading && !interpretation && <p className="mongri-guess-waiting">몽그리가 지금은 네 그림을 못 봤어. 네가 알려 줄래?</p>}
+              {interpretation && (
+                <>
+                  {/* AI가 만든 문장은 음성으로 내보내지 않는다 (product-decisions 20항).
+                      답 칩의 이모지가 글과 함께 읽기 부담을 덜어 준다. */}
+                  <p className="mongri-guess-text">{interpretation.guess}</p>
+                  <div className="reflection-choice-grid">
+                    {interpretation.choices.map((choice) => (
+                      <button type="button" aria-pressed={storyText === choice.answer} onClick={() => setStoryText(choice.answer)} key={choice.label}>
+                        <span>{choice.emoji}</span>
+                        {choice.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+              <label className="mongri-guess-own" htmlFor="story-text">
+                내 말로 알려 줄래?
+                <input id="story-text" maxLength={120} value={storyText} onChange={(event) => setStoryText(event.target.value)} placeholder="예: 아니야, 자전거 바퀴야" />
+              </label>
+            </div>
             <div className="modal-actions">
               <button className="button secondary" disabled={completionState === "saving"} onClick={closeReflection}>
                 🎨 더 그릴래
@@ -3492,8 +3521,8 @@ export function DrawingStudio() {
         <div className="saving-veil" role="status" aria-live="assertive">
           <div className="saving-veil-card">
             <img src="/brand/mongri/reassuring.png" alt="" aria-hidden="true" width={224} height={224} />
-            <b>그림을 저장하고 있어요</b>
-            <span className="saving-veil-dots" aria-hidden="true"><i /><i /><i /></span>
+            <b>몽그리가 그림을 옮기고 있어요</b>
+            <span className="bounce-dots" aria-hidden="true"><i /><i /><i /></span>
             <small>잠깐만 기다려 줘. 창을 닫지 않아도 돼요.</small>
           </div>
         </div>

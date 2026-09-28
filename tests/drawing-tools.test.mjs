@@ -298,7 +298,7 @@ test("an empty free canvas tells a first-time child what to do", () => {
   assert.match(css, /\.guide-notice,\.canvas-start-hint \{[^}]*pointer-events:none/);
   // tool-options-open: 도형·글씨 옵션이 열리면 태블릿 세로에서 패널이 커지고 캔버스가
   // 양보한다 — 빌드가 :has() 조합을 떨어뜨려 React가 클래스로 알린다 (2026-08-20).
-  assert.match(studio, /className=\{`studio-body \$\{grimiOpen \|\| lesson \? "" : "without-step-panel"\}\$\{grimiOpen \? " grimi-open" : ""\}\$\{grimiOpen && grimiCollapsed \? " grimi-collapsed" : ""\}\$\{studioTool === "shape" \|\| studioTool === "text" \? " tool-options-open" : ""\}`\}/);
+  assert.match(studio, /className=\{`studio-body \$\{showGrimiPanel \|\| lesson \? "" : "without-step-panel"\}\$\{showGrimiPanel \? " grimi-open" : ""\}\$\{showGrimiPanel && grimiCollapsed \? " grimi-collapsed" : ""\}\$\{studioTool === "shape" \|\| studioTool === "text" \? " tool-options-open" : ""\}`\}/);
   // 도구는 격자 칸이 아니라 아래 도구 막대라 오른쪽 도구 칸이 없다(2026-09-14).
   assert.match(css, /\.studio-body\.without-step-panel \{ grid-template-columns:minmax\(0,1fr\); \}/);
   assert.match(css, /@media \(max-width:720px\)[\s\S]*\.studio-body\.without-step-panel \{ display:flex; \}/);
@@ -356,8 +356,9 @@ test("저장하는 동안 화면 전체를 덮어 아무것도 누르지 못하�
   assert.match(studio, /\{completionState === "saving" && \([\s\S]{0,80}<div className="saving-veil" role="status" aria-live="assertive">/);
   // 글을 못 읽어도 무엇을 기다리는지 알도록 몽그리 얼굴과 움직이는 점이 함께 있다.
   assert.match(studio, /brand\/mongri\/reassuring\.png/);
-  assert.match(studio, /그림을 저장하고 있어요/);
-  assert.match(studio, /className="saving-veil-dots"/);
+  // 문구는 2026-09-28 사용자 지시로 몽그리 말이 됐다.
+  assert.match(studio, /몽그리가 그림을 옮기고 있어요/);
+  assert.match(studio, /className="bounce-dots"/);
   // 모달보다 위에 있어야 뒤쪽을 덮는다.
   assert.match(css, /\.saving-veil \{ position:fixed; inset:0; z-index:30;/);
   assert.match(css, /\.modal-backdrop \{ position:fixed; inset:0; z-index:20;/);
@@ -365,4 +366,48 @@ test("저장하는 동안 화면 전체를 덮어 아무것도 누르지 못하�
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\r?\n  \.saving-veil \{ backdrop-filter:none; \}/);
   // 저장 중에는 닫기와 두 단추가 모두 잠긴다 — 막이 뚫려도 뒤에서 눌리지 않는다.
   assert.match(studio, /className="modal-close" disabled=\{completionState === "saving"\}/);
+});
+
+test("완성은 어느 길로 와도 몽그리 짐작을 부르고, 기다리는 동안 점 세 개가 튄다", () => {
+  /* 2026-09-28 사용자 제보: 수업 중에 완성을 누르면 「네 그림을 소개해 줘!」가 제목과 단추만 남은
+     빈 화면이었다. askInterpretation()이 자유 그리기 분기에만 있었다. 소감을 여는 길을 하나로 모은다. */
+  assert.equal((studio.match(/setReflectionOpen\(true\)/g) ?? []).length, 1);
+  assert.match(studio, /function openReflection\(\) \{[\s\S]{0,220}void askInterpretation\(\);/);
+  assert.match(studio, /completeCurrentLessonStep\(skip\); setLessonStepPrompt\(null\); openReflection\(\);/);
+  assert.match(studio, /setLessonStepPrompt\(null\); openReflection\(\);/);
+  // 짐작을 기다리는 동안 몽그리 말과 통통 튀는 점이 함께 뜬다 — 저장 막과 같은 점이다.
+  assert.match(studio, /몽그리가 네 그림을 보고 있어…<span className="bounce-dots"/);
+  /* 짐작이 못 와도(몽그리가 쉬거나 요청 실패) 소개 칸은 남는다. 종전에는 이 칸이 통째로 사라져
+     소감 화면이 제목과 단추만 남았다 — 「완성을 눌러도 아무것도 안 뜬다」의 실제 경로다. */
+  assert.doesNotMatch(studio, /\{\(interpretLoading \|\| interpretation\) && \(/);
+  assert.match(studio, /몽그리가 지금은 네 그림을 못 봤어/);
+  assert.match(css, /\.bounce-dots>i \{[^}]*animation:bounce-dots-hop/);
+});
+
+test("몽그리 요청은 시간 제한을 두고, 저장은 두지 않는다", () => {
+  /* 서버는 20초에 스스로 끊고 504를 준다(lib/openai-coaching.ts). 그 답이 오는 길이 끊기면
+     아이 화면의 표시가 영구히 돌기 때문에 이쪽에도 상한이 필요하다. 저장에 같은 상한을 두면
+     느린 교실 와이파이에서 올라가던 그림을 끊어 잃는다 — 그래서 몽그리 요청에만 둔다. */
+  assert.match(studio, /const GRIMI_TIMEOUT_MS = 25_000;/);
+  assert.match(studio, /const INTERPRET_TIMEOUT_MS = 12_000;/);
+  assert.match(studio, /async function grimiFetch\(body: Record<string, unknown>, timeoutMs = GRIMI_TIMEOUT_MS\)/);
+  assert.match(studio, /signal: typeof AbortSignal\.timeout === "function" \? AbortSignal\.timeout\(timeoutMs\) : undefined/);
+  // 아이에게 DOMException 영문 문구를 보여 주지 않는다.
+  assert.match(studio, /cause instanceof DOMException && cause\.name === "TimeoutError"/);
+  assert.match(studio, /몽그리가 지금 대답이 늦어/);
+  // 짐작만 더 짧게 끊는다 — 없어도 완성에 지장이 없는 곁가지다.
+  assert.match(studio, /action: "interpret"[\s\S]{0,120}\}, INTERPRET_TIMEOUT_MS\)/);
+  // 저장은 그대로 studentFetch를 쓴다 — 큰 PNG가 30초 넘게 올라가는 일은 정상이다.
+  assert.match(studio, /const response = await studentFetch\(url, \{ method: "PUT", body \}\)/);
+  assert.doesNotMatch(studio, /method: "PUT"[\s\S]{0,80}AbortSignal/);
+});
+
+test("몽그리 카드가 열려 있어도 완성이 띄우는 단계 안내가 보인다", () => {
+  /* 두 aside는 같은 자리를 쓴다. grimiOpen만 보고 고르던 탓에 몽그리 카드가 열린 채 완성을 누르면
+     남은 순서 안내가 어디에도 그려지지 않아 단추가 죽은 것처럼 보였다(2026-09-28 사용자 제보). */
+  assert.match(studio, /const showGrimiPanel = grimiOpen && !lessonStepPrompt;/);
+  assert.match(studio, /\{showGrimiPanel \? \(/);
+  assert.doesNotMatch(studio, /\{grimiOpen \? \(/);
+  // 몸통 격자 클래스도 같은 값을 따라야 한쪽만 바뀌어 자리가 어긋나지 않는다.
+  assert.doesNotMatch(studio, /studio-body \$\{grimiOpen/);
 });

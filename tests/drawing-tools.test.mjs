@@ -384,6 +384,24 @@ test("완성은 어느 길로 와도 몽그리 짐작을 부르고, 기다리는
   assert.match(css, /\.bounce-dots>i \{[^}]*animation:bounce-dots-hop/);
 });
 
+test("몽그리 요청은 시간 제한을 두고, 저장은 두지 않는다", () => {
+  /* 서버는 20초에 스스로 끊고 504를 준다(lib/openai-coaching.ts). 그 답이 오는 길이 끊기면
+     아이 화면의 표시가 영구히 돌기 때문에 이쪽에도 상한이 필요하다. 저장에 같은 상한을 두면
+     느린 교실 와이파이에서 올라가던 그림을 끊어 잃는다 — 그래서 몽그리 요청에만 둔다. */
+  assert.match(studio, /const GRIMI_TIMEOUT_MS = 25_000;/);
+  assert.match(studio, /const INTERPRET_TIMEOUT_MS = 12_000;/);
+  assert.match(studio, /async function grimiFetch\(body: Record<string, unknown>, timeoutMs = GRIMI_TIMEOUT_MS\)/);
+  assert.match(studio, /signal: typeof AbortSignal\.timeout === "function" \? AbortSignal\.timeout\(timeoutMs\) : undefined/);
+  // 아이에게 DOMException 영문 문구를 보여 주지 않는다.
+  assert.match(studio, /cause instanceof DOMException && cause\.name === "TimeoutError"/);
+  assert.match(studio, /몽그리가 지금 대답이 늦어/);
+  // 짐작만 더 짧게 끊는다 — 없어도 완성에 지장이 없는 곁가지다.
+  assert.match(studio, /action: "interpret"[\s\S]{0,120}\}, INTERPRET_TIMEOUT_MS\)/);
+  // 저장은 그대로 studentFetch를 쓴다 — 큰 PNG가 30초 넘게 올라가는 일은 정상이다.
+  assert.match(studio, /const response = await studentFetch\(url, \{ method: "PUT", body \}\)/);
+  assert.doesNotMatch(studio, /method: "PUT"[\s\S]{0,80}AbortSignal/);
+});
+
 test("몽그리 카드가 열려 있어도 완성이 띄우는 단계 안내가 보인다", () => {
   /* 두 aside는 같은 자리를 쓴다. grimiOpen만 보고 고르던 탓에 몽그리 카드가 열린 채 완성을 누르면
      남은 순서 안내가 어디에도 그려지지 않아 단추가 죽은 것처럼 보였다(2026-09-28 사용자 제보). */

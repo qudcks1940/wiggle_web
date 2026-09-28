@@ -149,6 +149,32 @@ type SaveOptions = {
 };
 type LessonStepPrompt = "step-action" | "unfinished-lesson" | null;
 
+/* 몽그리 요청에만 시간 제한을 둔다. 서버는 20초에 스스로 끊고 504를 주지만(lib/openai-coaching.ts),
+ * 그 답이 오는 길이 끊기면(교실 와이파이가 끊기는 흔한 일) 아이 화면의 표시가 영구히 돈다.
+ * 25초는 서버 상한보다 길어, 서버가 답할 수 있는 요청을 이쪽에서 먼저 끊어 버리지 않는 값이다.
+ * 저장에는 쓰지 않는다 — 느린 교실 와이파이에서 큰 PNG가 30초 넘게 올라가는 일은 정상이고,
+ * 거기서 끊으면 아이 그림을 잃는다. AbortSignal.timeout을 모르는 옛 브라우저는 제한 없이 보낸다
+ * (여기서 던지면 몽그리가 그 기기에서 아예 안 열린다). */
+const GRIMI_TIMEOUT_MS = 25_000;
+/* 짐작만 더 짧게 끊는다. 몽그리를 부른 답은 아이가 기다리는 목적 그 자체지만, 짐작은 없어도
+ * 완성에 지장이 없는 곁가지다(askInterpretation). 8살에게 25초 동안 점만 보여 주는 대신
+ * 12초에 「못 봤어」로 넘겨 자기 말로 쓰게 한다. */
+const INTERPRET_TIMEOUT_MS = 12_000;
+
+async function grimiFetch(body: Record<string, unknown>, timeoutMs = GRIMI_TIMEOUT_MS) {
+  try {
+    return await studentFetch("/api/ai/coaching", {
+      method: "POST",
+      body: JSON.stringify(body),
+      signal: typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(timeoutMs) : undefined,
+    });
+  } catch (cause) {
+    // 끊긴 것도 아이에게는 「늦었다」는 한 가지 일이다. DOMException의 영문 문구를 그대로 보여 주지 않는다.
+    if (cause instanceof DOMException && cause.name === "TimeoutError") throw new Error("몽그리가 지금 대답이 늦어. 조금 뒤에 다시 불러 줄래?");
+    throw cause;
+  }
+}
+
 function documentPixels(document: Pick<DrawDocument, "height">, width: number) {
   return { width, height: Math.round(width * documentHeight(document) / DOCUMENT_SIZE) };
 }
@@ -2550,18 +2576,15 @@ export function DrawingStudio() {
         setGrimiError("그림을 먼저 저장한 뒤 다시 불러 줘.");
         return;
       }
-      const response = await studentFetch("/api/ai/coaching", {
-        method: "POST",
-        body: JSON.stringify({
-          action: "ask",
-          requestId: coachingRequestId(),
-          artworkId: artwork.id,
-          expectedRevision: revisionRef.current,
-          document: documentStateRef.current,
-          imageDataUrl: documentImage(documentStateRef.current, 1024),
-          childChoice,
-          openedBy: auto ? "mongri" : "child",
-        }),
+      const response = await grimiFetch({
+        action: "ask",
+        requestId: coachingRequestId(),
+        artworkId: artwork.id,
+        expectedRevision: revisionRef.current,
+        document: documentStateRef.current,
+        imageDataUrl: documentImage(documentStateRef.current, 1024),
+        childChoice,
+        openedBy: auto ? "mongri" : "child",
       });
       const data = (await response.json()) as {
         error?: string;
@@ -2646,10 +2669,7 @@ export function DrawingStudio() {
     setInterpretLoading(true);
     setInterpretation(null);
     try {
-      const response = await studentFetch("/api/ai/coaching", {
-        method: "POST",
-        body: JSON.stringify({ action: "interpret", artworkId: artwork.id, imageDataUrl: documentImage(documentStateRef.current, 1024) }),
-      });
+      const response = await grimiFetch({ action: "interpret", artworkId: artwork.id, imageDataUrl: documentImage(documentStateRef.current, 1024) }, INTERPRET_TIMEOUT_MS);
       const data = (await response.json()) as { interpretation?: StoryInterpretation };
       if (response.ok && data.interpretation) setInterpretation(data.interpretation);
     } catch {
@@ -2689,10 +2709,7 @@ export function DrawingStudio() {
     replyingRef.current = true;
     setReplyState("sending"); setReplyError("");
     try {
-      const response = await studentFetch("/api/ai/coaching", {
-        method: "POST",
-        body: JSON.stringify({ action: "reply", artworkId: artwork.id, eventId: coaching.eventId, answer: replyText }),
-      });
+      const response = await grimiFetch({ action: "reply", artworkId: artwork.id, eventId: coaching.eventId, answer: replyText });
       const data = await response.json() as { error?: string; nextAction?: string };
       if (!response.ok) throw new Error(data.error ?? "답을 보내지 못했어요.");
       setReplyState("sent");

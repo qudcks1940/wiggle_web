@@ -161,6 +161,8 @@ async function stubCoaching(cdp, session) {
         let action = "";
         try { action = JSON.parse(params.request.postData ?? "{}").action ?? ""; } catch { action = ""; }
         if (action === "interpret" && interpretMode !== "ok") {
+          // "hang"은 응답을 영원히 주지 않는다 — 아이 쪽 시간 제한만이 화면을 풀 수 있다.
+          if (interpretMode === "hang") return;
           if (interpretMode === "slow") await new Promise((done) => setTimeout(done, 1500));
           if (interpretMode === "fail") {
             await cdp.send("Fetch.fulfillRequest", { requestId: params.requestId, responseCode: 500, responseHeaders: [{ name: "content-type", value: "application/json" }], body: Buffer.from(JSON.stringify({ error: "stub-fail" })).toString("base64") }, target);
@@ -1068,7 +1070,50 @@ async function main() {
       });
     }
 
-    /* 8) 저장 막(2026-09-28 문구 변경: 「몽그리가 그림을 옮기고 있어요」). 작품을 정말 완성시키므로
+    /* 8) 답이 아예 오지 않는 경우(교실 와이파이 끊김). 서버는 20초에 스스로 끊지만 그 답이 오는
+          길이 끊기면 아이 쪽 시간 제한만 남는다 — 짐작은 12초에 포기하고 소개 칸으로 넘어간다.
+          12초를 기다리는 검사라 뷰포트마다 돌리지 않고 한 번만 돌린다. */
+    await withViewport(cdp, session, VIEWPORTS[0], async () => {
+      notes.push(`\n[멈춘 짐작 요청 ${VIEWPORTS[0].name}]`);
+      await installSession(cdp, session, seeded);
+      interpretMode = "hang";
+      await navigate(cdp, session, `${BASE}/student/draw/${seeded.artworkId}`);
+      await evaluate(cdp, session, MEASURE_HELPERS);
+      const hung = await evaluate(cdp, session, `(async () => {
+        const wait = (ms) => new Promise((done) => setTimeout(done, ms));
+        for (let attempt = 0; attempt < 60 && !document.querySelector('.draw-canvas'); attempt += 1) await wait(150);
+        const opener = [...document.querySelectorAll('.studio-header button')].find((button) => button.className.includes('primary'));
+        if (!opener) return { error: 'no-opener' };
+        const started = Date.now();
+        opener.click();
+        // 먼저 「보고 있어」가 뜨는 것을 본 뒤, 그 줄이 바뀔 때까지 기다린다. 순서를 뒤집으면
+        // 모달이 그려지기 전에 조건이 거짓이라 0.2초에 끝나 버린다.
+        for (let attempt = 0; attempt < 60 && !(document.querySelector('.mongri-guess-waiting')?.textContent ?? '').includes('보고 있어'); attempt += 1) await wait(100);
+        if (!(document.querySelector('.mongri-guess-waiting')?.textContent ?? '').includes('보고 있어')) return { error: 'no-waiting-line' };
+        for (let attempt = 0; attempt < 250 && (document.querySelector('.mongri-guess-waiting')?.textContent ?? '').includes('보고 있어'); attempt += 1) await wait(100);
+        const note = document.querySelector('.mongri-guess-waiting');
+        const input = document.querySelector('#story-text');
+        if (input) { input.scrollIntoView({ block: 'center' }); await wait(200); }
+        const finish = [...document.querySelectorAll('.reflection-modal .modal-actions button')].find((button) => button.className.includes('primary'));
+        return {
+          seconds: Number(((Date.now() - started) / 1000).toFixed(1)),
+          noteText: note ? note.textContent.trim() : null,
+          dotsGone: document.querySelectorAll('.mongri-guess .bounce-dots > i').length === 0,
+          inputReachable: input ? window.__wiggle.reachable(input) : null,
+          finishEnabled: finish ? !finish.disabled : false,
+        };
+      })()`);
+      interpretMode = "ok";
+      check(!hung.error, `멈춘 짐작 요청 재현`, hung.error);
+      if (!hung.error) {
+        check(hung.seconds >= 10 && hung.seconds <= 20, `짐작을 12초쯤에 포기함`, hung);
+        check(Boolean(hung.noteText) && !hung.noteText.includes("보고 있어"), `포기하면 아이에게 알려 줌`, hung.noteText);
+        check(hung.dotsGone, `포기하면 점이 멈추고 사라짐`, hung);
+        check(hung.inputReachable?.hitsSelf && hung.finishEnabled, `답이 안 와도 소개하고 완성할 수 있음`, hung);
+      }
+    });
+
+    /* 9) 저장 막(2026-09-28 문구 변경: 「몽그리가 그림을 옮기고 있어요」). 작품을 정말 완성시키므로
           던져 버릴 작품 하나로 한 번만 돌린다. 저장을 1.2초 늦춰 막을 눈으로 잰다. */
     await withViewport(cdp, session, VIEWPORTS[0], async () => {
       notes.push(`\n[저장 막 ${VIEWPORTS[0].name}]`);

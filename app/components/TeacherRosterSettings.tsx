@@ -2,11 +2,9 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useCopyFeedback } from "./useCopyFeedback";
-import { Check, Copy, Download, MoreHorizontal, Plus, Printer, QrCode, RefreshCw, Search, Upload } from "lucide-react";
-import { MAX_SEAT_NUMBER, parseRosterRows, RosterRow, rosterTextToRows } from "@/lib/roster";
-import { readRosterFile } from "@/lib/roster-file";
-import { buildRosterTemplate } from "@/lib/xlsx-write";
-import { blankRows, RosterRowsEditor, seatAfter, withSeats } from "./RosterRowsEditor";
+import { Check, Copy, MoreHorizontal, Plus, Printer, QrCode, RefreshCw, Search } from "lucide-react";
+import { MAX_SEAT_NUMBER, parseRosterRows, RosterRow } from "@/lib/roster";
+import { blankRows, RosterEditor } from "./RosterRowsEditor";
 import { WorkspaceDialog, WorkspaceProps } from "./TeacherWorkspace";
 import { TeacherRosterPrint } from "./TeacherRosterPrint";
 import "./TeacherRosterSettings.css";
@@ -28,44 +26,11 @@ export function TeacherRosterSettings({ data, onAction, onArchive, onRestore, on
   const parsed = parseRosterRows(rows);
   // 이어 붙이는 학급이면 마지막 번호 다음부터 시작한다. 선생님이 번호를 다시 세지 않는다.
   const firstSeat = Math.min(MAX_SEAT_NUMBER, students.reduce((max, student) => Math.max(max, student.seatNumber ?? 0), 0) + 1);
-  function openAddDialog() { setError(""); setFileNotice(""); setRows(blankRows(firstSeat)); setDialog("add"); }
+  function openAddDialog() { setError(""); setRows(blankRows(firstSeat)); setDialog("add"); }
   /* 인쇄는 팝업 대신 화면 안의 시트 + 브라우저 인쇄다. window.open에 noopener를 주면
    * 규격상 null이 돌아와, 팝업을 허용해 둔 브라우저에서도 종전 방식은 늘 실패했다. */
   const [printOpen, setPrintOpen] = useState(false);
   const joinUrl = typeof location === "undefined" ? "" : `${location.origin}/join/${room.joinToken}`;
-  /* 엑셀(.xlsx)·CSV 파일을 그 자리에서 읽어 입력칸을 채운다. 파일은 서버로 보내지 않는다 —
-   * 실명이 든 파일이라 교사 브라우저 안에서만 읽고, 교사가 확인한 뒤 저장한다. */
-  const [fileNotice, setFileNotice] = useState("");
-  async function importFile(file: File | undefined) {
-    if (!file) return;
-    setError(""); setFileNotice("");
-    try {
-      const read = await readRosterFile(file);
-      if (!read.rows) { setError(`${file.name}에서 읽을 줄을 찾지 못했어요. 번호와 이름이 있는 표인지 확인해 주세요.`); return; }
-      const imported = withSeats(rosterTextToRows(read.text), firstSeat);
-      setRows([...imported, ...blankRows(seatAfter(imported, firstSeat), 1)]);
-      const parts = [`${file.name}에서 ${read.rows}명을 읽었어요.`];
-      if (read.skippedHeader) parts.push("첫 줄은 제목으로 보고 건너뛰었어요.");
-      if (!read.numbered) parts.push("번호가 없어서 1번부터 차례로 붙였어요.");
-      parts.push("저장 전에 확인해 주세요.");
-      setFileNotice(parts.join(" "));
-    } catch (cause) {
-      const code = cause instanceof Error ? cause.message : "";
-      setError(code === "OLD_XLS"
-        ? "옛 엑셀(.xls)은 읽지 못해요. 엑셀에서 .xlsx나 CSV로 저장해 주세요."
-        : `${file.name}을(를) 읽지 못했어요. 엑셀(.xlsx)이나 CSV 파일인지 확인해 주세요.`);
-    }
-  }
-  /* 양식 내려받기: 파일도 브라우저 안에서 만든다. 서버에 정적 파일을 두면 양식과
-   * 읽기 규칙이 따로 놀 수 있어, 읽는 코드와 같은 자리에서 만든다. */
-  function downloadTemplate() {
-    const url = URL.createObjectURL(new Blob([buildRosterTemplate() as unknown as BlobPart], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
-    const link = document.createElement("a");
-    link.href = url; link.download = "위글-명단-양식.xlsx";
-    document.body.appendChild(link); link.click(); link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-    setFileNotice("양식을 내려받았어요. 번호와 이름을 채운 뒤 다시 불러오면 돼요.");
-  }
   // 복사는 lib/copy-text 한 경로만 쓴다. 화면마다 따로 만들면 비보안 맥락 폴백이 한쪽에만 남는다.
   // 성공하면 누른 단추가 체크로 바뀌고, 실패만 안내 줄로 알린다(useCopyFeedback).
   const { copiedKey, copiedLabel, copy } = useCopyFeedback(setNotice);
@@ -99,8 +64,6 @@ export function TeacherRosterSettings({ data, onAction, onArchive, onRestore, on
     </WorkspaceDialog>}
     <p className="sr-only" role="status">{copiedLabel ? `${copiedLabel}를 복사했어요.` : ""}</p>
     {notice && <div className="trs-notice" role="status">{notice}<button aria-label="알림 닫기" onClick={() => setNotice("")}>닫기</button></div>}
-    {dialog && <WorkspaceDialog title={dialog === "add" ? "명단에 학생 추가" : "번호·이름 수정"} onClose={() => { if (!busy) { setDialog(null); setFileNotice(""); } }}><form onSubmit={save}>{dialog === "add" ? <><div className="trs-import"><label className="trs-import-button"><Upload size={18} />엑셀·CSV 파일 불러오기<input type="file" accept=".xlsx,.csv,.tsv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void importFile(file); }} /></label><small>엑셀에서 표를 복사해 이름 칸에 붙여 넣어도 돼요.</small><button type="button" className="trs-template-button" onClick={downloadTemplate}><Download size={15} />엑셀 양식 내려받기</button></div>{fileNotice && <p className="trs-import-notice" role="status">{fileNotice}</p>}
-      <RosterRowsEditor rows={rows} setRows={setRows} firstSeat={firstSeat} onEdit={() => setFileNotice("")} />
-</> : <><label>번호<input type="number" min={1} max={99} required value={seat} onChange={(event) => setSeat(event.target.value)} /></label><label>이름<input required maxLength={20} value={name} onChange={(event) => setName(event.target.value)} /></label></>}<p className="trs-privacy">이름은 선생님만 볼 수 있어요. 학생 화면, 가족 공유, AI에는 전달되지 않아요.</p>{error && <p className="tcw-error" role="alert">{error}</p>}<div className="trs-form-actions"><button type="button" disabled={busy} onClick={() => setDialog(null)}>취소</button><button className="tcw-primary" disabled={busy || (dialog === "add" && (!parsed.entries.length || parsed.errors.length > 0))}>{busy ? "저장 중…" : "저장"}</button></div></form></WorkspaceDialog>}
+    {dialog && <WorkspaceDialog title={dialog === "add" ? "명단에 학생 추가" : "번호·이름 수정"} onClose={() => { if (!busy) setDialog(null); }}><form onSubmit={save}>{dialog === "add" ? <RosterEditor rows={rows} setRows={setRows} firstSeat={firstSeat} onError={setError} /> : <><label>번호<input type="number" min={1} max={99} required value={seat} onChange={(event) => setSeat(event.target.value)} /></label><label>이름<input required maxLength={20} value={name} onChange={(event) => setName(event.target.value)} /></label></>}<p className="trs-privacy">이름은 선생님만 볼 수 있어요. 학생 화면, 가족 공유, AI에는 전달되지 않아요.</p>{error && <p className="tcw-error" role="alert">{error}</p>}<div className="trs-form-actions"><button type="button" disabled={busy} onClick={() => setDialog(null)}>취소</button><button className="tcw-primary" disabled={busy || (dialog === "add" && (!parsed.entries.length || parsed.errors.length > 0))}>{busy ? "저장 중…" : "저장"}</button></div></form></WorkspaceDialog>}
   </section>;
 }

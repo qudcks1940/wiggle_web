@@ -2291,6 +2291,9 @@ body {
 .create-class-roster .trs-row-seat { font-variant-numeric:tabular-nums; text-align:center; }
 .create-class-roster .trs-row-remove { display:flex; align-items:center; justify-content:center; min-height:44px; padding:0; border:0; background:none; color:var(--tw-muted); }
 .create-class-roster .trs-row-remove:disabled { opacity:.3; }
+/* 양식 내려받기 단추는 `.teacher-workspace` 안에서만 꾸며져 있다. 대시보드의 학급 만들기 폼은
+   그 밖이라 여기서 같은 모양을 준다(2026-09-28 만들기 폼에도 엑셀 불러오기를 넣으며). */
+.create-class-roster .trs-template-button { margin-left:auto;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:5px 10px;border:0;border-radius:6px;background:none;color:var(--tw-muted);font-size:13px;font-weight:500;text-decoration:underline;text-underline-offset:3px;cursor:pointer;white-space:nowrap }
 .create-class-roster .trs-row-add { display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:8px 12px; border:1px solid var(--tw-line); border-radius:6px; background:#fff; font-size:14px; font-weight:600; cursor:pointer; }
 
 /* ── 몽그리 플로팅 카드 + 카드에서 바로 답하기 ────────────────────────────────

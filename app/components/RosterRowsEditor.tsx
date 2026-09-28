@@ -1,7 +1,10 @@
 "use client";
 
-import { Plus, X } from "lucide-react";
+import { useState } from "react";
+import { Download, Plus, Upload, X } from "lucide-react";
 import { MAX_REAL_NAME_LENGTH, MAX_SEAT_NUMBER, parseRosterRows, RosterRow, rosterTextToRows } from "@/lib/roster";
+import { readRosterFile } from "@/lib/roster-file";
+import { buildRosterTemplate } from "@/lib/xlsx-write";
 import "./TeacherRosterSettings.css";
 
 /* 번호 칸과 이름 칸으로 명단을 적는 편집기.
@@ -34,6 +37,68 @@ export function seatAfter(list: RosterRow[], fallback: number) {
     if (list[index].seat.trim() && Number.isInteger(value) && value > 0) return Math.min(MAX_SEAT_NUMBER, value + 1);
   }
   return fallback;
+}
+
+/* 파일 불러오기 + 번호·이름 칸을 함께 묶은 것. 학급을 만들 때와 만든 뒤에 학생을 더할 때가
+ * 같은 입력이어야 하므로 두 화면이 이것을 쓴다(2026-09-28 사용자 요청 — 만들기 쪽에 엑셀
+ * 불러오기가 없었다). 알림은 여기서 들고 있다가 교사가 칸을 건드리면 스스로 지운다.
+ *
+ * 파일은 서버로 보내지 않는다. 실명이 든 파일이라 교사 브라우저 안에서만 읽고,
+ * 교사가 칸에서 확인한 뒤 저장한다. */
+export function RosterEditor({ rows, setRows, firstSeat, onError, label }: {
+  rows: RosterRow[];
+  setRows: (update: (current: RosterRow[]) => RosterRow[]) => void;
+  firstSeat: number;
+  /** 파일을 읽지 못했을 때 바깥 화면의 오류 자리에 띄운다. */
+  onError: (message: string) => void;
+  label?: string;
+}) {
+  const [notice, setNotice] = useState("");
+
+  async function importFile(file: File | undefined) {
+    if (!file) return;
+    onError(""); setNotice("");
+    try {
+      const read = await readRosterFile(file);
+      if (!read.rows) { onError(`${file.name}에서 읽을 줄을 찾지 못했어요. 번호와 이름이 있는 표인지 확인해 주세요.`); return; }
+      const imported = withSeats(rosterTextToRows(read.text), firstSeat);
+      setRows(() => [...imported, ...blankRows(seatAfter(imported, firstSeat), 1)]);
+      const parts = [`${file.name}에서 ${read.rows}명을 읽었어요.`];
+      if (read.skippedHeader) parts.push("첫 줄은 제목으로 보고 건너뛰었어요.");
+      if (!read.numbered) parts.push("번호가 없어서 1번부터 차례로 붙였어요.");
+      parts.push("저장 전에 확인해 주세요.");
+      setNotice(parts.join(" "));
+    } catch (cause) {
+      const code = cause instanceof Error ? cause.message : "";
+      onError(code === "OLD_XLS"
+        ? "옛 엑셀(.xls)은 읽지 못해요. 엑셀에서 .xlsx나 CSV로 저장해 주세요."
+        : `${file.name}을(를) 읽지 못했어요. 엑셀(.xlsx)이나 CSV 파일인지 확인해 주세요.`);
+    }
+  }
+
+  /* 양식도 브라우저 안에서 만든다. 서버에 정적 파일을 두면 양식과 읽기 규칙이 따로 논다. */
+  function downloadTemplate() {
+    const url = URL.createObjectURL(new Blob([buildRosterTemplate() as unknown as BlobPart], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    const link = document.createElement("a");
+    link.href = url; link.download = "위글-명단-양식.xlsx";
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    setNotice("양식을 내려받았어요. 번호와 이름을 채운 뒤 다시 불러오면 돼요.");
+  }
+
+  return <>
+    <div className="trs-import">
+      <label className="trs-import-button">
+        <Upload size={18} />엑셀·CSV 파일 불러오기
+        <input type="file" accept=".xlsx,.csv,.tsv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void importFile(file); }} />
+      </label>
+      <small>엑셀에서 표를 복사해 이름 칸에 붙여 넣어도 돼요.</small>
+      <button type="button" className="trs-template-button" onClick={downloadTemplate}><Download size={15} />엑셀 양식 내려받기</button>
+    </div>
+    {notice && <p className="trs-import-notice" role="status">{notice}</p>}
+    <RosterRowsEditor rows={rows} setRows={setRows} firstSeat={firstSeat} onEdit={() => setNotice("")} label={label} />
+  </>;
 }
 
 export function RosterRowsEditor({ rows, setRows, firstSeat, onEdit, label = "학생 번호와 이름" }: {

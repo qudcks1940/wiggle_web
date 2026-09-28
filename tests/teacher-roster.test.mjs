@@ -180,8 +180,12 @@ test("학급을 만들 때와 만든 뒤가 같은 명단 편집기를 쓴다", 
   ]);
   // 2026-09-23 사용자 요청. 입력이 두 가지면 선생님이 같은 일을 두 번 배운다 —
   // 만들기 폼의 "한 줄에 번호 이름" 텍스트 상자를 없애고 두 화면이 한 컴포넌트를 쓴다.
-  assert.match(app, /<RosterRowsEditor rows=\{newRows\} setRows=\{setNewRows\} firstSeat=\{1\} \/>/);
-  assert.match(settings, /<RosterRowsEditor rows=\{rows\} setRows=\{setRows\}/);
+  // 2026-09-28: 엑셀 불러오기까지 한 몸인 RosterEditor를 두 화면이 함께 쓴다.
+  assert.match(app, /<RosterEditor rows=\{newRows\} setRows=\{setNewRows\} firstSeat=\{1\} onError=\{setError\} \/>/);
+  assert.match(settings, /<RosterEditor rows=\{rows\} setRows=\{setRows\}/);
+  assert.match(editor, /export function RosterEditor\(/);
+  // 불러오기가 한쪽에만 있으면 안 된다 — 두 화면 모두 편집기를 통해 같은 것을 받는다.
+  for (const source of [app, settings]) assert.doesNotMatch(source, /readRosterFile|buildRosterTemplate/);
   // 만들기 폼 안에 텍스트 상자가 되살아나면 안 된다(파일 다른 곳의 메시지 입력은 그대로 둔다).
   const form = app.slice(app.indexOf('<form className="create-class"'), app.indexOf("{error && <p className=\"error-box\""));
   assert.doesNotMatch(form, /<textarea/);

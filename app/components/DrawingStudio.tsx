@@ -2634,9 +2634,7 @@ export function DrawingStudio() {
     }
     completeCurrentLessonStep(skip);
     setLessonStepPrompt(null);
-    setCompletionState("idle");
-    setCompletionError("");
-    setReflectionOpen(true);
+    openReflection();
   }
 
   /**
@@ -2661,12 +2659,19 @@ export function DrawingStudio() {
     }
   }
 
+  /* 소감 화면은 이 한 곳에서만 연다. 종전에는 자유 그리기 경로에만 askInterpretation()이 있어서
+   * 수업 중 완성은 「네 그림을 소개해 줘!」 제목과 단추만 남은 빈 화면이었다(2026-09-28 사용자 제보).
+   * 셋 중 어느 길로 와도 몽그리 짐작을 부르고, 지난 오류 표시도 함께 지운다. */
+  function openReflection() {
+    setCompletionState("idle");
+    setCompletionError("");
+    setReflectionOpen(true);
+    void askInterpretation();
+  }
+
   function requestArtworkCompletion() {
     if (!lesson) {
-      setCompletionState("idle");
-      setCompletionError("");
-      setReflectionOpen(true);
-      void askInterpretation();
+      openReflection();
       return;
     }
     if (artwork && artwork.currentStep < lesson.steps.length - 1) {
@@ -2769,6 +2774,11 @@ export function DrawingStudio() {
       : currentLessonStepStatus.remaining > 1
         ? "점이나 선을 조금 더 그려 볼까?"
         : "점이나 선을 한 번 더 그려 볼까?";
+  /* 두 aside는 같은 자리를 쓴다. 종전에는 grimiOpen만 보고 골라서, 몽그리 카드가 열린 채 「완성」을
+   * 누르면 단계 안내(남은 순서·조금 더 그리기)가 어디에도 그려지지 않아 단추가 죽은 것처럼 보였다
+   * (2026-09-28 사용자 제보). 안내가 있는 동안만 카드를 접어 두고, 닫으면 카드가 그대로 돌아온다 —
+   * grimiOpen·coaching은 건드리지 않는다. */
+  const showGrimiPanel = grimiOpen && !lessonStepPrompt;
   const selectedColor = studioTool === "text" && selectedText ? selectedText.color : pendingText?.color ?? color;
   // 색 적용은 팔레트 원과 색 고르기 대화상자(onPick)에 같은 네 줄이 인라인으로 있다. 헬퍼로 빼면
   // React Compiler가 이 컴포넌트 전체를 컴파일 대상으로 삼아 기존 performance.now() 호출을 오류로 잡는다.
@@ -2843,8 +2853,8 @@ export function DrawingStudio() {
           선생님이 내 도화지를 보고 있어요.
         </div>
       )}
-      <div className={`studio-body ${grimiOpen || lesson ? "" : "without-step-panel"}${grimiOpen ? " grimi-open" : ""}${grimiOpen && grimiCollapsed ? " grimi-collapsed" : ""}${studioTool === "shape" || studioTool === "text" ? " tool-options-open" : ""}`}>
-        {grimiOpen ? (
+      <div className={`studio-body ${showGrimiPanel || lesson ? "" : "without-step-panel"}${showGrimiPanel ? " grimi-open" : ""}${showGrimiPanel && grimiCollapsed ? " grimi-collapsed" : ""}${studioTool === "shape" || studioTool === "text" ? " tool-options-open" : ""}`}>
+        {showGrimiPanel ? (
           <aside className={`grimi-panel${grimiCollapsed ? " collapsed" : ""}`} aria-live="polite">
             <div className="grimi-head">
               <div>
@@ -3011,7 +3021,7 @@ export function DrawingStudio() {
                       ✏️ 더 그릴래
                     </button>
                     {lessonStepPrompt === "unfinished-lesson" ? (
-                      <button type="button" onClick={() => { setLessonStepPrompt(null); setReflectionOpen(true); }}>
+                      <button type="button" onClick={() => { setLessonStepPrompt(null); openReflection(); }}>
                         ⭐ 지금 완성
                       </button>
                     ) : (
@@ -3447,32 +3457,34 @@ export function DrawingStudio() {
               <h2 id="reflection-title">네 그림을 소개해 줘!</h2>
             </div>
             <p className="reflection-choice-note">정답이 아니에요. 네가 보고 직접 골라요.</p>
-            {(interpretLoading || interpretation) && (
-              <div className="reflection-question mongri-guess">
-                {/* 짐작을 기다릴 때는 생각 중, 짐작이 나오면 발견한 표정이다. */}
-                <p className="mongri-guess-head"><img className="grimi-face grimi-face-small" src={`/brand/mongri/${interpretation ? "delighted" : "thinking"}.png`} alt="" aria-hidden="true" width={224} height={224} /> 몽그리 생각</p>
-                {interpretLoading && !interpretation && <p className="mongri-guess-waiting">몽그리가 네 그림을 보고 있어…</p>}
-                {interpretation && (
-                  <>
-                    {/* AI가 만든 문장은 음성으로 내보내지 않는다 (product-decisions 20항).
-                        답 칩의 이모지가 글과 함께 읽기 부담을 덜어 준다. */}
-                    <p className="mongri-guess-text">{interpretation.guess}</p>
-                    <div className="reflection-choice-grid">
-                      {interpretation.choices.map((choice) => (
-                        <button type="button" aria-pressed={storyText === choice.answer} onClick={() => setStoryText(choice.answer)} key={choice.label}>
-                          <span>{choice.emoji}</span>
-                          {choice.label}
-                        </button>
-                      ))}
-                    </div>
-                    <label className="mongri-guess-own" htmlFor="story-text">
-                      내 말로 알려 줄래?
-                      <input id="story-text" maxLength={120} value={storyText} onChange={(event) => setStoryText(event.target.value)} placeholder="예: 아니야, 자전거 바퀴야" />
-                    </label>
-                  </>
-                )}
-              </div>
-            )}
+            {/* 이 칸은 **늘** 그린다. 종전에는 짐작이 오지 않으면(몽그리가 쉬거나 요청이 실패) 통째로
+                사라져, 「네 그림을 소개해 줘!」가 제목과 단추만 남은 빈 화면이 됐다(2026-09-28 사용자 제보).
+                짐작이 없어도 아이가 자기 말로 알려 줄 칸은 남는다. */}
+            <div className="reflection-question mongri-guess">
+              {/* 짐작을 기다릴 때는 생각 중, 짐작이 나오면 발견한 표정이다. */}
+              <p className="mongri-guess-head"><img className="grimi-face grimi-face-small" src={`/brand/mongri/${interpretation ? "delighted" : "thinking"}.png`} alt="" aria-hidden="true" width={224} height={224} /> 몽그리 생각</p>
+              {interpretLoading && !interpretation && <p className="mongri-guess-waiting">몽그리가 네 그림을 보고 있어…<span className="bounce-dots" aria-hidden="true"><i /><i /><i /></span></p>}
+              {!interpretLoading && !interpretation && <p className="mongri-guess-waiting">몽그리가 지금은 네 그림을 못 봤어. 네가 알려 줄래?</p>}
+              {interpretation && (
+                <>
+                  {/* AI가 만든 문장은 음성으로 내보내지 않는다 (product-decisions 20항).
+                      답 칩의 이모지가 글과 함께 읽기 부담을 덜어 준다. */}
+                  <p className="mongri-guess-text">{interpretation.guess}</p>
+                  <div className="reflection-choice-grid">
+                    {interpretation.choices.map((choice) => (
+                      <button type="button" aria-pressed={storyText === choice.answer} onClick={() => setStoryText(choice.answer)} key={choice.label}>
+                        <span>{choice.emoji}</span>
+                        {choice.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+              <label className="mongri-guess-own" htmlFor="story-text">
+                내 말로 알려 줄래?
+                <input id="story-text" maxLength={120} value={storyText} onChange={(event) => setStoryText(event.target.value)} placeholder="예: 아니야, 자전거 바퀴야" />
+              </label>
+            </div>
             <div className="modal-actions">
               <button className="button secondary" disabled={completionState === "saving"} onClick={closeReflection}>
                 🎨 더 그릴래
@@ -3492,8 +3504,8 @@ export function DrawingStudio() {
         <div className="saving-veil" role="status" aria-live="assertive">
           <div className="saving-veil-card">
             <img src="/brand/mongri/reassuring.png" alt="" aria-hidden="true" width={224} height={224} />
-            <b>그림을 저장하고 있어요</b>
-            <span className="saving-veil-dots" aria-hidden="true"><i /><i /><i /></span>
+            <b>몽그리가 그림을 옮기고 있어요</b>
+            <span className="bounce-dots" aria-hidden="true"><i /><i /><i /></span>
             <small>잠깐만 기다려 줘. 창을 닫지 않아도 돼요.</small>
           </div>
         </div>

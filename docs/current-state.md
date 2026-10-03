@@ -1,6 +1,6 @@
 # Wiggle Web 현재 상태
 
-## 2026-10-03 그림책 편집과 수정본 보존 (구현·로컬 검증 완료)
+## 2026-10-03 그림책 편집과 수정본 보존 (로컬 검증 완료, PR #30 제출)
 
 - 원격 `legacy-origin/main` 최신 `5b86296`에서 `codex/storybook-revision-tools-20261003` 생성. 기존 미추적 사용자 산출물은 유지한다. main push·운영 데이터 수정은 하지 않는다.
 - 홈 첫 새 그림/새 그림책, 만드는 중·완성 목록, 전체 복제 API와 버튼, 이야기 칸 전용 도구·페이지별 경고, 선택 양식, 전체 화면 편집, 책장 미리보기를 구현했다. 그림이 없고 PDF 책만 있는 학생도 홈으로 들어갈 수 있다.
@@ -11,6 +11,7 @@
 - 공통 브라우저 검사는 PC의 reduced-motion 설정을 상속해 점의 이동량 검사 4건이 실패했다. 실제로 접근성용 fade 애니메이션이 실행됨을 확인하고 검사에 no-preference 조건을 명시했다. 최종 `npm.cmd run check:browser`의 320×568·390×844·844×390 검사 모두 통과했다. 캡처는 `work/storybook-revision/`, 로그는 `work/storybook-*-final.log`다.
 - 구현 커밋 `6c57ed7`, 최신 main 로고 변경 `247636e` 통합 커밋 `bcea2dc`. 통합 후 production build/421개 테스트, typecheck/lint, 그림책 전용·공통 브라우저 검사를 다시 통과했다. 기존 Webpack WasmHash 캐시는 `work/next-cache-before-revision-*`에 보존하고 다시 빌드했다.
 - 운영 검증은 사용자 배포와 수업 코드 조율 뒤 수행해야 한다. 실제 iPad Safari/Galaxy Tab 하드웨어 검증과 main push·PR 병합·배포는 하지 않았다.
+- `qudcks1940` 포크의 기능 브랜치에 push하고 [PR #30](https://github.com/yonghwan86/wiggle_web/pull/30)을 제출했다. PR은 OPEN/MERGEABLE이다. Vercel 미리보기 상태는 `Authorization required to deploy.`로 실패했으며 외부 포크 배포 승인 페이지로 연결된다. 로컬 빌드/검증 실패가 아니다.
 
 ## 2026-09-28 PR #26 스크롤바 모양·버튼 줄 스와이프 (검증·PR 업데이트 완료)
 

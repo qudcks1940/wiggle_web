@@ -8,7 +8,7 @@ type CompletedArtwork = { id: string; title: string; finalImageKey: string };
 export async function GET(request: Request) {
   const student = await studentFromRequest(request);
   if (!student) return jsonError("학생 로그인이 필요해요.", 401);
-  const rows = await bindings().DB.prepare(`SELECT id, title, document_json AS documentJson, revision, status, completed_at AS completedAt, created_at AS createdAt, updated_at AS updatedAt FROM storybooks WHERE student_id = ? ORDER BY updated_at DESC, id DESC LIMIT 50`).bind(student.id).all();
+  const rows = await bindings().DB.prepare(`SELECT id, title, document_json AS documentJson, revision, status, completed_at AS completedAt, created_at AS createdAt, updated_at AS updatedAt FROM storybooks WHERE student_id = ? ORDER BY updated_at DESC, id DESC`).bind(student.id).all();
   const storybooks = rows.results.map((row) => {
     const item = row as { documentJson: string } & Record<string, unknown>;
     let pageCount = 1;

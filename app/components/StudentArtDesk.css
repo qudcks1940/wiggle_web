@@ -82,8 +82,6 @@
 @media (min-width: 1100px) {
   .desk-art-row { overflow-x: visible; }
   .desk-art-row > li { flex: 1 1 0; }
-  /* 넓은 화면에서만 새 종이를 줄 끝으로 보낸다(시안 배치). 좁은 화면에서는 DOM 그대로 맨 앞이다. */
-  .desk-art-row > .desk-new-item { order: 1; }
 }
 
 /* ── 그림 카드 ───────────────────────────────────────────────────────────── */
@@ -135,6 +133,11 @@
 .desk-book-meta small { color: #5d6f5b; font-size: 12px; font-weight: 700; }
 .desk-book-empty { margin: 0; color: #5d6f5b; font-size: 15px; font-weight: 700; line-height: 1.7; }
 .desk-book-empty a { min-height: 44px; display: inline-flex; align-items: center; margin-left: 6px; color: var(--desk-green); font-weight: 800; }
+.desk-new-book { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:172px;padding:20px;border:2px dashed #b8c5a0;border-radius:14px;background:#fffdf7;color:var(--desk-green);text-decoration:none; }
+.desk-new-book span { font-size:13px; }
+.desk-book-row article { display:flex;flex-direction:column;height:100%; }
+.desk-book-row .storybook-copy-action { padding:0 10px 10px; }
+.desk-section>h3 { margin:24px 0 12px;font-size:17px;color:var(--desk-ink); }
 
 /* 눕힌 기기는 세로가 귀하다 — 여백과 큰 글자를 줄여 한 화면에 넣는다. */
 @media (orientation: landscape) and (max-height: 480px) {

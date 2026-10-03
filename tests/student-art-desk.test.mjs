@@ -12,10 +12,12 @@ const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
  *   2. 그리던 그림을 **자동으로 열지 않는다** — 아이가 목록에서 직접 고른다.
  *   3. 시안을 배경 한 장으로 깔지 않는다. 그림·책·글자는 실제 데이터와 DOM이다. */
 
-test("갈림길은 그림 총수 하나이고, 0장이면 중간 화면 없이 도화지로 간다", async () => {
+test("그림·그림책이 모두 없으면 도화지로 가고 PDF만 있는 아이도 책을 찾을 수 있다", async () => {
   const entry = await read("../app/components/StudentEntry.tsx");
   // 페이지 크기(artworks 40장)가 아니라 총수로 본다 — 41장째부터 0장으로 읽히면 안 된다.
-  assert.match(entry, /if \(!Number\(payload\.artworkTotal\)\) \{ location\.replace\("\/student\/draw\/new\?mode=free"\); return; \}/);
+  assert.match(entry, /if \(!Number\(payload\.artworkTotal\)\)/);
+  assert.match(entry, /studentFetch\("\/api\/storybooks"\)/);
+  assert.match(entry, /if \(!books\.storybooks\?\.length\) \{ location\.replace\("\/student\/draw\/new\?mode=free"\); return; \}/);
   assert.match(entry, /if \(data\) return <StudentArtDesk /);
 });
 

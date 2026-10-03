@@ -5,6 +5,8 @@ import { activeProfile, studentFetch } from "@/lib/client-session";
 import { DEFAULT_STORYBOOK_FORMAT } from "@/lib/storybook-model";
 import { Logo } from "./Logo";
 import { BookOpen } from "lucide-react";
+import { StorybookDuplicateButton } from "./StorybookDuplicateButton";
+import "./storybook-editing.css";
 
 type LibraryBook = { id: string; title: string; pageCount: number; status: "draft" | "complete"; updatedAt: string };
 
@@ -59,6 +61,6 @@ export function StorybookLibrary() {
     <section className="storybook-new-book"><h2>새 그림책</h2><div className="storybook-format-options storybook-fixed-format">
 <button type="button" disabled={creating} onClick={() => void create()}><i className="format-squarebook-hc" /><b>새 그림책 만들기</b><small>하드커버 · 243 × 248mm</small></button>
     </div>{creating && <p role="status">새 도화지를 준비하는 중…</p>}</section>
-    <section className="storybook-my-books"><h2>내 그림책</h2>{books === null ? <div className="loading-card">그림책을 펼치는 중…</div> : books.length ? <div className="storybook-book-grid">{books.map((book) => <a href={`/student/books/${book.id}`} key={book.id}><BookOpen aria-hidden="true" /><div><small>{book.pageCount}쪽 · {book.status === "complete" ? "완성" : "편집 중"}</small><h3>{book.title || "제목을 지어 주세요"}</h3><time dateTime={book.updatedAt}>{new Date(book.updatedAt).toLocaleDateString("ko-KR")}</time></div><b>열기 →</b></a>)}</div> : <div className="empty-state">아직 그림책이 없어요. 위에서 첫 그림책을 만들어 봐요.</div>}</section>
+    {books === null ? <div className="loading-card">그림책을 펼치는 중…</div> : (["draft", "complete"] as const).map(status => <section className="storybook-my-books" key={status}><h2>{status === "draft" ? "만드는 중인 그림책" : "완성된 그림책"} ({books.filter(book => book.status === status).length}권)</h2>{status === "complete" && <p>원본을 남겨 두고 고치려면 전체 복제를 눌러 주세요. 복사본의 제목을 1차·2차처럼 바꿔 기록할 수 있어요.</p>}<div className="storybook-book-grid">{books.filter(book => book.status === status).map(book => <article key={book.id}><a href={`/student/books/${book.id}`}><BookOpen aria-hidden="true" /><div><small>{book.pageCount}쪽 · {status === "complete" ? "완성" : "만드는 중"}</small><h3>{book.title || "제목을 지어 주세요"}</h3><time dateTime={book.updatedAt}>{new Date(book.updatedAt).toLocaleDateString("ko-KR")}</time></div><b>열기 →</b></a><StorybookDuplicateButton bookId={book.id} /></article>)}</div>{!books.some(book => book.status === status) && <p className="empty-state">{status === "draft" ? "새 그림책을 만들어 보세요." : "아직 완성한 그림책이 없어요."}</p>}</section>)}
   </main>;
 }

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createStorybookTextElement,
+  applyStorybookTemplate,
+  STORYBOOK_TEMPLATES,
   emptyStorybookDocument,
   MAX_STORYBOOK_ELEMENTS_PER_PAGE,
   MAX_STORYBOOK_TEXT_GRAPHEMES,
@@ -55,18 +57,43 @@ test("그림의 실제 내용 경계는 원본 안의 유효한 자르기 영역
   assert.equal(validateStorybookDocument(document), null);
 });
 
-test("각 쪽은 위쪽 가운데 고정 글 하나와 그 아래 그림 영역만 허용한다", () => {
+test("선택 양식은 여러 글상자·빈 쪽·페이지 전체 그림을 허용한다", () => {
   const missingText = emptyStorybookDocument();
   missingText.pages[0].elements = [imageElement()];
-  assert.equal(validateStorybookDocument(missingText), null);
+  assert.ok(validateStorybookDocument(missingText));
 
   const movingText = emptyStorybookDocument();
   movingText.pages[0].elements = [textElement({ y: STORYBOOK_TEXT_BOX.y + 0.1 })];
-  assert.equal(validateStorybookDocument(movingText), null);
+  assert.ok(validateStorybookDocument(movingText));
 
   const imageAboveText = emptyStorybookDocument();
   imageAboveText.pages[0].elements.push(imageElement({ y: STORYBOOK_IMAGE_AREA.y - 0.01 }));
-  assert.equal(validateStorybookDocument(imageAboveText), null);
+  assert.ok(validateStorybookDocument(imageAboveText));
+});
+
+test("모든 양식 전환은 기존 글·그림·PDF 배경을 보존하며 이름 칸도 저장한다", () => {
+  let next = 0;
+  const document = emptyStorybookDocument();
+  document.pages[0].backgroundAssetId = "asset_originalpdf01";
+  document.pages[0].elements = [textElement({ text: "학생이 이미 쓴 소중한 이야기" }), imageElement()];
+  const originalImage = structuredClone(document.pages[0].elements[1]);
+  for (const template of STORYBOOK_TEMPLATES) {
+    document.pages[0] = applyStorybookTemplate(document.pages[0], template, () => `element_template${String(next++).padStart(8, "0")}`);
+    const validated = validateStorybookDocument(document);
+    assert.ok(validated, template);
+    assert.equal(validated.pages[0].backgroundAssetId, "asset_originalpdf01");
+    assert.ok(validated.pages[0].elements.some(element => element.text === "학생이 이미 쓴 소중한 이야기"));
+    assert.deepEqual(validated.pages[0].elements.find(element => element.id === originalImage.id), originalImage);
+  }
+  const credit = document.pages[0].elements.find(element => element.textRole === "credit");
+  credit.text = "글 / 그림 봄이"; credit.verticalAlign = "middle";
+  assert.equal(validateStorybookDocument(document).pages[0].elements.find(element => element.id === credit.id).text, "글 / 그림 봄이");
+});
+
+test("기존 문서는 추가 필드 없이 동일한 좌표와 모든 텍스트를 왕복한다", () => {
+  const document = emptyStorybookDocument();
+  document.pages[0].elements = [textElement({ align: "right", x: .12, y: .32, width: .72, height: .4, color: "#24324A" }), textElement({ id: "element_secondtext1", text: "두 번째 칸", fontSize: .025, color: "#24324A" }), imageElement()];
+  assert.deepEqual(validateStorybookDocument(document), document);
 });
 
 test("요소는 페이지 밖으로 나가거나 다른 형식의 자산 ID를 참조할 수 없다", () => {

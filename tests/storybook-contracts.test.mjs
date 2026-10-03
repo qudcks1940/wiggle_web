@@ -120,10 +120,10 @@ test("학생 화면에 실제 그림책 진입·편집·가져오기·미리보�
   assert.match(editor, /imageCropStyle/);
   assert.match(editor, /STORYBOOK_IMAGE_AREA/);
   assert.match(editor, /STORYBOOK_TEXT_BOX/);
-  assert.match(editor, /캐릭터만 오리기/);
+  assert.match(editor, /배경 지우기/);
   assert.match(editor, /body: blob/);
   assert.match(editor, /"content-type": "image\/png"/);
-  assert.match(cutout, /모서리 배경 자동 지우기/);
+  assert.match(cutout, /배경 자동 지우기/);
   assert.match(cutout, /removeConnectedColor/);
   assert.match(cutout, /opaqueBounds/);
   assert.match(editor, /from "react-moveable"/);
@@ -135,7 +135,7 @@ test("학생 화면에 실제 그림책 진입·편집·가져오기·미리보�
   assert.match(editor, /snappable/);
   assert.match(editor, /useResizeObserver/);
   assert.match(editor, /useMutationObserver/);
-  assert.match(editor, /controlPadding=\{44\}/);
+  assert.match(editor, /controlPadding=\{8\}/);
   assert.match(editor, /canvas\.toDataURL\("image\/png"\)/);
   assert.match(css, /\.storybook-stage-element\.selected/);
   assert.match(css, /\.storybook-page-background/);

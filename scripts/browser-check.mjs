@@ -260,6 +260,9 @@ async function main() {
     const cdp = browser; const session = sessionId;
     await cdp.send("Page.enable", {}, session);
     await cdp.send("Runtime.enable", {}, session);
+    // These checks measure the normal bouncing animation. Do not inherit the host OS's
+    // reduced-motion setting, where the accessible alternative intentionally only fades.
+    await cdp.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] }, session);
 
     const seeded = await seed(cdp, session);
     notes.push(`  준비  학급 ${seeded.classCode} / 학생 ${seeded.nickname} / 작품 ${seeded.artworkId}`);

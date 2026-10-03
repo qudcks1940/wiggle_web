@@ -40,9 +40,9 @@ try{
  const before=await geometry();await btn('＋ 크게').click();const larger=await geometry();assert.ok(larger.width>before.width);assert.ok(Math.abs(larger.width/larger.height-before.width/before.height)<.01);
  await page.getByRole('checkbox',{name:'비율 유지',exact:true}).uncheck();await range('그림 크기',.45);await range('그림 세로 크기',.2);let g=await geometry();assert.ok(Math.abs(g.width-.45)<.01&&Math.abs(g.height-.2)<.01);
  // Actual mouse resize and drag above the former y=.24 image boundary.
- const handle=page.locator('.storybook-moveable .moveable-se').first();await handle.waitFor();let box=await handle.boundingBox();
+ const handle=page.locator('.storybook-moveable .moveable-se').first();await handle.waitFor();await handle.scrollIntoViewIfNeeded();let box=await handle.boundingBox();
  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+65,box.y+box.height/2+35,{steps:8});await page.mouse.up();
- const resized=await geometry();assert.ok(resized.width>g.width+.02&&resized.height>g.height+.02,'real corner resize changes both axes');
+ const resized=await geometry();assert.ok(resized.width>g.width+.02&&resized.height>g.height+.02,`real corner resize changes both axes: ${JSON.stringify({g,resized,box})}`);
  const stage=await page.locator('.storybook-stage:not(.preview)').boundingBox();box=await image().boundingBox();
  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2,stage.y+stage.height*.12+box.height/2,{steps:10});await page.mouse.up();
  g=await geometry();assert.ok(g.top<.2,`image can use upper page: ${g.top}`);await saved();

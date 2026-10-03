@@ -264,16 +264,19 @@
   .design-surface .teacher-story-page { outline: none; border-radius: 0; box-shadow: none; }
 }
 
-/* Keep the original side-by-side editor. Only the one-line tool strip scrolls horizontally. */
-.design-surface .storybook-editor-shell { height: 100dvh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-.design-surface .storybook-editor-header { flex: 0 0 auto; height: auto; min-height: 68px; }
-.design-surface .storybook-editor-body { position: relative; flex: 1; height: auto; min-height: 0; grid-template-columns: 112px minmax(0, 1fr); }
+/* The document scrolls vertically, taking the title and tools out of view together. */
+.design-surface .storybook-editor-shell { height: auto; min-height: 100dvh; display: flex; flex-direction: column; overflow-x: clip; overflow-y: visible; }
+.design-surface .storybook-editor-header { position: relative; flex: 0 0 auto; height: auto; min-height: 68px; }
+.design-surface .storybook-editor-body { position: relative; flex: none; height: auto; min-height: 0; align-items: start; overflow: visible; grid-template-columns: 112px minmax(0, 1fr); }
 .design-surface .storybook-editor-body.has-inspector { grid-template-columns: 112px minmax(0, 1fr) 278px; }
 .design-surface :is(.storybook-page-rail, .storybook-workspace, .storybook-inspector) { min-width: 0; min-height: 0; }
-.design-surface .storybook-toolbar-shell { position: sticky; top: 0; z-index: 20; flex: 0 0 104px; min-width: 0; background: var(--paper); border-bottom: 1px solid var(--soft-border); }
+.design-surface .storybook-page-rail { position: sticky; top: 0; max-height: 100dvh; }
+.design-surface .storybook-workspace { overflow: visible; }
+.design-surface .storybook-stage-wrap { flex: none; min-height: 100dvh; box-sizing: border-box; }
+.design-surface .storybook-toolbar-shell { position: relative; z-index: 20; flex: 0 0 104px; min-width: 0; background: var(--paper); border-bottom: 1px solid var(--soft-border); }
 .design-surface .storybook-toolbar-shell .storybook-toolbar {
   position: static; height: 60px; min-height: 60px; flex-wrap: nowrap; justify-content: flex-start;
-  overflow-x: auto; overflow-y: hidden; border-bottom: 0; touch-action: pan-x; overscroll-behavior-x: contain; scrollbar-width: none;
+  overflow-x: auto; overflow-y: hidden; border-bottom: 0; touch-action: auto; overscroll-behavior-x: contain; scrollbar-width: none;
 }
 .design-surface .storybook-toolbar::-webkit-scrollbar { display: none; }
 .design-surface .storybook-toolbar-content { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; width: max-content; }
@@ -290,7 +293,7 @@
 .design-surface .storybook-toolbar-scrollbar:active .storybook-toolbar-scroll-thumb { cursor: grabbing; }
 .design-surface .storybook-toolbar-scrollbar:focus-visible { outline: 2px solid var(--primary-dark); outline-offset: -2px; border-radius: 8px; }
 .design-surface .storybook-toolbar-scrollbar[aria-disabled=true] { cursor: default; opacity: .5; }
-.design-surface .storybook-inspector { overflow-y: auto; overscroll-behavior-y: contain; }
+.design-surface .storybook-inspector { position: sticky; top: 0; max-height: 100dvh; overflow-y: auto; overscroll-behavior-y: contain; }
 .design-surface .storybook-inspector-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
 .design-surface .storybook-inspector-heading h2 { margin: 0; font-size: 20px; }
 .design-surface .storybook-inspector-heading .small-button { min-height: 44px; padding: 6px 10px; font-size: 14px; flex-shrink: 0; }
@@ -303,11 +306,11 @@
 @media (max-width: 680px) {
   .design-surface .storybook-editor-header { grid-template-columns: 1fr 1fr 1.5fr; }
   .design-surface .storybook-editor-header > button { padding-inline: 6px; font-size: 16px; }
-  .design-surface .storybook-editor-body, .design-surface .storybook-editor-body.has-inspector { display: flex; flex-direction: column; overflow: hidden; }
-  .design-surface .storybook-page-rail { flex: 0 0 104px; }
-  .design-surface .storybook-workspace { flex: 1; overflow: auto; }
+  .design-surface .storybook-editor-body, .design-surface .storybook-editor-body.has-inspector { display: flex; flex-direction: column; align-items: stretch; overflow: visible; }
+  .design-surface .storybook-page-rail { position: relative; flex: 0 0 104px; max-height: 104px; }
+  .design-surface .storybook-workspace { flex: none; overflow: visible; }
   /* A selected image's tools stay on the right on phones too, instead of below the book. */
-  .design-surface .storybook-inspector { position: absolute; z-index: 25; right: 0; top: 209px; bottom: 0; width: min(260px, 80%); border-top: 0; border-left: 1px solid var(--border); box-shadow: -4px 0 12px #16220f14; }
+  .design-surface .storybook-inspector { position: fixed; z-index: 40; right: 0; top: 0; bottom: 0; width: min(260px, 80%); border-top: 0; border-left: 1px solid var(--border); box-shadow: -4px 0 12px #16220f14; }
 }
 .design-surface .storybook-preview > header { padding-bottom: 12px; min-width: 0; }
 .design-surface .storybook-preview > header > b { min-width: 0; }

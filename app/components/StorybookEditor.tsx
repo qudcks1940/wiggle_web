@@ -169,9 +169,6 @@ function StorybookEditorContent({ teacherBookId, classroomId }: { teacherBookId?
   const [imageToolsOpen, setImageToolsOpen] = useState(true);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [pageToolsOpen, setPageToolsOpen] = useState(false);
-  const [focusMode, setFocusMode] = useState(false);
-  const [focusTools, setFocusTools] = useState(false);
-  const shellRef = useRef<HTMLElement>(null);
   const [error, setError] = useState("");
   const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved" | "error">("saved");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -236,21 +233,6 @@ function StorybookEditorContent({ teacherBookId, classroomId }: { teacherBookId?
   useEffect(() => { bookRef.current = book; }, [book]);
   useEffect(() => { documentRef.current = document; }, [document]);
   useEffect(() => { setSelectedId(null); setSelectedTextId(null); setPageToolsOpen(false); setTextNotice(null); }, [pageIndex]);
-  useEffect(() => {
-    const changed = () => { if (!window.document.fullscreenElement) setFocusMode(false); };
-    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { setFocusMode(false); setFocusTools(false); } };
-    window.document.addEventListener("fullscreenchange", changed); window.addEventListener("keydown", escape);
-    return () => { window.document.removeEventListener("fullscreenchange", changed); window.removeEventListener("keydown", escape); };
-  }, []);
-  async function toggleFocusMode() {
-    if (focusMode) {
-      setFocusMode(false); setFocusTools(false);
-      if (window.document.fullscreenElement) await window.document.exitFullscreen().catch(() => {});
-    } else {
-      setSelectedId(null); setSelectedTextId(null); setPageToolsOpen(false); setFocusTools(false); setFocusMode(true);
-      await shellRef.current?.requestFullscreen?.().catch(() => {});
-    }
-  }
   useEffect(() => () => { if (saveTimer.current) window.clearTimeout(saveTimer.current); if (maxSaveTimer.current) window.clearTimeout(maxSaveTimer.current); }, []);
   useEffect(() => {
     const stage = stageRef.current;
@@ -706,7 +688,7 @@ function StorybookEditorContent({ teacherBookId, classroomId }: { teacherBookId?
     const imageAsset = element.type === "image" && element.assetId ? assetMap.get(element.assetId) : undefined;
     const canSelect = interactive && element.type === "image";
     const className = `storybook-stage-element ${element.type} ${canSelect && selectedId === element.id ? "selected" : ""} ${element.locked ? "locked" : ""}`;
-    return <div key={element.id} ref={canSelect ? (node) => { if (node) elementRefs.current.set(element.id, node); else elementRefs.current.delete(element.id); } : undefined} data-storybook-element-id={canSelect ? element.id : undefined} className={className} onPointerDown={canSelect ? (event) => { event.stopPropagation(); setPageToolsOpen(false); setSelectedTextId(null); if (selectedId !== element.id) setImageToolsOpen(true); setSelectedId(element.id); } : undefined} style={{ left: `${element.x * 100}%`, top: `${element.y * 100}%`, width: `${element.width * 100}%`, height: `${element.height * 100}%`, transform: `rotate(${element.rotation}deg)`, zIndex: element.type === "text" ? 10_002 : element.zIndex + 1, opacity: element.opacity, color: element.color, textAlign: element.align }}>
+    return <div key={element.id} ref={canSelect ? (node) => { if (node) elementRefs.current.set(element.id, node); else elementRefs.current.delete(element.id); } : undefined} data-storybook-element-id={canSelect ? element.id : undefined} className={className} onPointerDown={canSelect ? (event) => event.stopPropagation() : undefined} onClick={canSelect ? (event) => { event.stopPropagation(); setPageToolsOpen(false); setSelectedTextId(null); if (selectedId !== element.id) setImageToolsOpen(true); setSelectedId(element.id); } : undefined} style={{ left: `${element.x * 100}%`, top: `${element.y * 100}%`, width: `${element.width * 100}%`, height: `${element.height * 100}%`, transform: `rotate(${element.rotation}deg)`, zIndex: element.type === "text" ? 10_002 : element.zIndex + 1, opacity: element.opacity, color: element.color, textAlign: element.align }}>
       {imageAsset ? <AuthenticatedImage src={`${apiBase}/${params.id}/assets/${imageAsset.id}`} alt="그림책에 넣은 그림" style={imageCropStyle(element.crop)} onLoad={canSelect ? (event) => syncImageContentBounds(element, event.currentTarget) : undefined} /> : element.type === "text" ? <StorybookTextInput element={element} format={document!.format} interactive={interactive} onFocus={() => { setSelectedId(null); setSelectedTextId(element.id); setPageToolsOpen(false); }} onChange={text => { setTextNotice(null); updateElement(element.id, { text }); }} onFull={() => setTextNotice({ pageId: page!.id, elementId: element.id })} /> : <span>이미지 없음</span>}
     </div>;
   }
@@ -719,10 +701,9 @@ function StorybookEditorContent({ teacherBookId, classroomId }: { teacherBookId?
 
   if (!book || !document || !page) return <main className="app-shell"><header className="app-header"><Logo /></header>{error ? <p className="error-box">{error}</p> : <div className="loading-card">그림책 작업실을 여는 중…</div>}</main>;
 
-  return <main ref={shellRef} className={`storybook-editor-shell${focusMode ? " is-focus-mode" : ""}${focusTools ? " show-focus-tools" : ""}`}>
+  return <main className="storybook-editor-shell">
     {!teacherBookId && <StorybookPresence bookId={book.id} pageId={document.pages[previewOpen ? previewPage : pageIndex].id} onWatching={onWatching} />}
-    <header className="storybook-editor-header"><a className="small-button" href={teacherBookId ? `/teacher/class/${classroomId}/books` : "/student/books"}>← 그림책</a><input aria-label="그림책 제목" maxLength={60} value={book.title} onChange={(event) => changeTitle(event.target.value)} placeholder="그림책 제목을 지어 주세요" /><span className={`storybook-save-state ${saveState}`}>{saveState === "saving" ? "저장 중…" : saveState === "unsaved" ? "변경됨" : saveState === "error" ? "저장 확인 필요" : "✓ 저장됨"}</span><button type="button" className="button secondary" disabled={saveState === "saving"} onClick={() => void persist(false)}>임시 저장</button><button type="button" className="button secondary" onClick={() => void toggleFocusMode()}>전체 화면</button><button type="button" className="button secondary" onClick={() => { setPreviewPage(pageIndex); setPreviewOpen(true); }}>미리보기</button><button type="button" className="button primary" disabled={saveState === "saving"} onClick={() => void persist(true)}>그림책 완성하기</button><StorybookDuplicateButton bookId={book.id} classroomId={teacherBookId ? classroomId : undefined} disabled={saveState !== "saved"} /></header>
-    {focusMode && <nav className="storybook-focus-bar" aria-label="전체 화면 편집"><button type="button" onClick={() => void toggleFocusMode()}>전체 화면 나가기</button><button type="button" aria-expanded={focusTools} onClick={() => setFocusTools(!focusTools)}>편집 도구</button><button type="button" disabled={pageIndex === 0} onClick={() => setPageIndex(pageIndex - 1)}>이전 쪽</button><span>{pageIndex + 1} / {document.pages.length}</span><button type="button" disabled={pageIndex === document.pages.length - 1} onClick={() => setPageIndex(pageIndex + 1)}>다음 쪽</button><span className="focus-save-state" role="status">{saveState === "saved" ? "✓ 저장됨" : saveState === "saving" ? "저장 중…" : "변경됨"}</span></nav>}
+    <header className="storybook-editor-header"><a className="small-button" href={teacherBookId ? `/teacher/class/${classroomId}/books` : "/student/books"}>← 그림책</a><input aria-label="그림책 제목" maxLength={60} value={book.title} onChange={(event) => changeTitle(event.target.value)} placeholder="그림책 제목을 지어 주세요" /><span className={`storybook-save-state ${saveState}`}>{saveState === "saving" ? "저장 중…" : saveState === "unsaved" ? "변경됨" : saveState === "error" ? "저장 확인 필요" : "✓ 저장됨"}</span><button type="button" className="button secondary" disabled={saveState === "saving"} onClick={() => void persist(false)}>임시 저장</button><button type="button" className="button secondary" onClick={() => { setPreviewPage(pageIndex); setPreviewOpen(true); }}>미리보기</button><button type="button" className="button primary" disabled={saveState === "saving"} onClick={() => void persist(true)}>그림책 완성하기</button><StorybookDuplicateButton bookId={book.id} classroomId={teacherBookId ? classroomId : undefined} disabled={saveState !== "saved"} /></header>
     {error && <p className="error-box storybook-editor-error" role="alert">{error}<button type="button" onClick={() => setError("")}>닫기</button></p>}
     <div className={`storybook-editor-body${(selected && imageToolsOpen) || selectedText || pageToolsOpen ? " has-inspector" : ""}`}>
       <aside className="storybook-page-rail" aria-label="그림책 쪽 목록">{document.pages.map((item, index) => <button type="button" className={index === pageIndex ? "active" : ""} aria-current={index === pageIndex ? "page" : undefined} aria-label={`${index + 1}쪽${index === pageIndex ? " · 선택됨" : ""}`} key={item.id} onClick={() => { setPageIndex(index); setSelectedId(null); setPageToolsOpen(false); }}><span className={`format-${document.format} ${item.backgroundAssetId ? "has-background" : ""}`} style={{ background: item.background }}>{item.elements.slice().sort((a, b) => a.zIndex - b.zIndex).map((element) => <i key={element.id} className={element.type} style={{ left: `${element.x * 100}%`, top: `${element.y * 100}%`, width: `${element.width * 100}%`, height: `${element.height * 100}%` }} />)}</span><b>{index + 1}</b></button>)}<button type="button" className="add-page" disabled={(!teacherBookId && document.pages.length >= MAX_STORYBOOK_PAGES)} onClick={addPage}>＋<span>쪽 추가</span></button></aside>
@@ -786,7 +767,7 @@ function StorybookEditorContent({ teacherBookId, classroomId }: { teacherBookId?
         <p className="storybook-stage-help">{pageIndex === 0 ? "1쪽은 표지예요. " : `${pageIndex + 1}쪽 · 내지예요. `}{document.pages.length}쪽{!teacherBookId && " / 최소 24쪽"} · 그림을 끌어 옮기고 동그란 손잡이로 크기를 바꿔요. 복사한 그림은 Ctrl+V(⌘V)로 넣어요.</p>
       </section>
       {((selected && imageToolsOpen) || selectedText || pageToolsOpen) && <aside id="storybook-inspector" className="storybook-inspector" aria-label={selected ? "그림 꾸미기" : selectedText ? "이야기 꾸미기" : "쪽 양식·배경"}>
-        <header className="storybook-inspector-heading"><h2>{selected ? "그림 꾸미기" : selectedText ? "이야기 꾸미기" : "쪽 양식·배경"}</h2><button type="button" className="small-button" aria-label="꾸미기 닫기" onClick={() => { if (selected) setImageToolsOpen(false); setSelectedTextId(null); setPageToolsOpen(false); toolbarRef.current?.focus(); }}>닫기</button></header>
+        <header className="storybook-inspector-heading"><h2>{selected ? "그림 꾸미기" : selectedText ? "이야기 꾸미기" : "쪽 양식·배경"}</h2><button type="button" className="small-button" aria-label="꾸미기 닫기" onClick={() => { if (selected) setImageToolsOpen(false); setSelectedTextId(null); setPageToolsOpen(false); toolbarRef.current?.focus({ preventScroll: true }); }}>닫기</button></header>
         {selectedText && <section className="storybook-story-control"><h3>선택한 이야기 칸</h3>
           <label>글자 크기 <output>{Math.round((selectedText.fontSize ?? .045) * 1024)}</output><input aria-label="글자 크기" type="range" min="0.018" max="0.12" step="0.001" value={selectedText.fontSize} onChange={event => updatePageText({ fontSize: Number(event.target.value) })} /></label>
           <label>글자 색<input type="color" value={selectedText.color} onChange={event => updatePageText({ color: event.target.value.toUpperCase() })} /></label>

@@ -20,6 +20,10 @@ export function storybookAspectRatio(format: StorybookFormat) {
   return format === "squarebook-hc" ? 243 / 248 : format === "landscape" ? 4 / 3 : format === "portrait" ? 3 / 4 : 1;
 }
 export type StorybookTextAlign = "left" | "center" | "right";
+export type StorybookVerticalAlign = "top" | "middle" | "bottom";
+export const STORYBOOK_TEMPLATES = ["inner", "cover", "title", "author", "blank"] as const;
+export type StorybookTemplate = (typeof STORYBOOK_TEMPLATES)[number];
+export const STORYBOOK_TEMPLATE_LABELS: Record<StorybookTemplate, string> = { inner: "내지", cover: "겉표지", title: "속표지", author: "작가의 말", blank: "자유롭게" };
 export type StorybookCrop = { x: number; y: number; width: number; height: number };
 
 export const DEFAULT_STORYBOOK_TEXT = "여기에 이야기를 써 보세요";
@@ -44,12 +48,15 @@ export type StorybookElement = {
   fontSize?: number;
   color?: string;
   align?: StorybookTextAlign;
+  verticalAlign?: StorybookVerticalAlign;
+  textRole?: "story" | "title" | "credit" | "heading";
 };
 
 export type StorybookPage = {
   id: string;
   background: string;
   backgroundAssetId?: string;
+  template?: StorybookTemplate;
   elements: StorybookElement[];
 };
 
@@ -68,10 +75,6 @@ function finiteBetween(value: unknown, min: number, max: number): value is numbe
 
 function round(value: number) {
   return Number(value.toFixed(4));
-}
-
-function nearly(value: number, expected: number) {
-  return Math.abs(value - expected) <= 0.001;
 }
 
 function graphemes(value: string) {
@@ -115,10 +118,6 @@ function validateElement(value: unknown): StorybookElement | null {
 
   if (element.type === "image") {
     if (!element.assetId || !ID_PATTERN.test(element.assetId)) return null;
-    const areaRight = STORYBOOK_IMAGE_AREA.x + STORYBOOK_IMAGE_AREA.width;
-    const areaBottom = STORYBOOK_IMAGE_AREA.y + STORYBOOK_IMAGE_AREA.height;
-    if (element.x < STORYBOOK_IMAGE_AREA.x - 0.001 || element.y < STORYBOOK_IMAGE_AREA.y - 0.001) return null;
-    if (element.x + element.width > areaRight + 0.001 || element.y + element.height > areaBottom + 0.001) return null;
     if (element.aspectRatio !== undefined && !finiteBetween(element.aspectRatio, 0.1, 10)) return null;
     normalized.assetId = element.assetId;
     if (element.aspectRatio !== undefined) normalized.aspectRatio = round(element.aspectRatio);
@@ -138,11 +137,14 @@ function validateElement(value: unknown): StorybookElement | null {
   if (text !== element.text || graphemes(text) > MAX_STORYBOOK_TEXT_GRAPHEMES) return null;
   if (!finiteBetween(element.fontSize, 0.018, 0.12) || !element.color || !COLOR_PATTERN.test(element.color)) return null;
   if (!["left", "center", "right"].includes(element.align ?? "") || element.rotation !== 0 || element.opacity !== 1 || element.locked !== true) return null;
-  if (!nearly(element.x, STORYBOOK_TEXT_BOX.x) || !nearly(element.y, STORYBOOK_TEXT_BOX.y) || !nearly(element.width, STORYBOOK_TEXT_BOX.width) || !nearly(element.height, STORYBOOK_TEXT_BOX.height)) return null;
+  if (element.verticalAlign !== undefined && !["top", "middle", "bottom"].includes(element.verticalAlign)) return null;
+  if (element.textRole !== undefined && !["story", "title", "credit", "heading"].includes(element.textRole)) return null;
   normalized.text = text;
   normalized.fontSize = round(element.fontSize);
   normalized.color = element.color.toUpperCase();
   normalized.align = element.align;
+  if (element.verticalAlign !== undefined) normalized.verticalAlign = element.verticalAlign;
+  if (element.textRole !== undefined) normalized.textRole = element.textRole;
   return normalized;
 }
 
@@ -161,6 +163,7 @@ export function validateStorybookDocument(value: unknown): StorybookDocument | n
     if (!page.id || !ID_PATTERN.test(page.id) || pageIds.has(page.id)) return null;
     if (!page.background || !COLOR_PATTERN.test(page.background)) return null;
     if (page.backgroundAssetId !== undefined && (!page.backgroundAssetId || !ID_PATTERN.test(page.backgroundAssetId))) return null;
+    if (page.template !== undefined && !STORYBOOK_TEMPLATES.includes(page.template)) return null;
     if (!Array.isArray(page.elements) || page.elements.length > MAX_STORYBOOK_ELEMENTS_PER_PAGE) return null;
     pageIds.add(page.id);
     const elements: StorybookElement[] = [];
@@ -170,12 +173,39 @@ export function validateStorybookDocument(value: unknown): StorybookDocument | n
       elementIds.add(element.id);
       elements.push(element);
     }
-    if (elements.filter((element) => element.type === "text").length !== 1) return null;
-    pages.push({ id: page.id, background: page.background.toUpperCase(), ...(page.backgroundAssetId ? { backgroundAssetId: page.backgroundAssetId } : {}), elements });
+    pages.push({ id: page.id, background: page.background.toUpperCase(), ...(page.backgroundAssetId ? { backgroundAssetId: page.backgroundAssetId } : {}), ...(page.template ? { template: page.template } : {}), elements });
   }
 
   const normalized: StorybookDocument = { schemaVersion: 1, format: document.format as StorybookFormat, pages };
   return serializedBytes(normalized) <= MAX_STORYBOOK_DOCUMENT_BYTES ? normalized : null;
+}
+
+// Applying a layout is explicit. Loading a saved book must never merge, truncate or move its contents.
+// Extra text, illustrations and PDF backgrounds survive every template change.
+export function applyStorybookTemplate(page: StorybookPage, template: StorybookTemplate, makeId: () => string): StorybookPage {
+  if (template === "blank") return { ...page, template };
+  const fields: Partial<StorybookElement>[] = template === "cover" || template === "title" ? [
+    { textRole: "title", x: .08, y: template === "cover" ? .08 : .18, width: .84, height: .2, fontSize: .065, align: "center" },
+    { textRole: "credit", x: .12, y: .82, width: .76, height: .09, fontSize: .026, align: "center" },
+  ] : template === "author" ? [
+    { textRole: "story", x: .1, y: .43, width: .8, height: .45, fontSize: .026, verticalAlign: "top" },
+    { textRole: "heading", x: .1, y: .28, width: .8, height: .12, fontSize: .045, text: "작가의 말" },
+  ] : [{ textRole: "story", ...STORYBOOK_TEXT_BOX, fontSize: .035 }];
+  const elements = page.elements.map(element => ({ ...element }));
+  const used = new Set<string>();
+  for (const field of fields) {
+    let index = elements.findIndex(element => element.type === "text" && element.textRole === field.textRole && !used.has(element.id));
+    if (index < 0) index = elements.findIndex(element => element.type === "text" && !element.textRole && !used.has(element.id));
+    if (index >= 0) {
+      const original = elements[index];
+      elements[index] = { ...original, verticalAlign: "middle", ...field, text: original.text || field.text || "" };
+      used.add(original.id);
+    } else if (elements.length < MAX_STORYBOOK_ELEMENTS_PER_PAGE) {
+      const element = { ...createStorybookTextElement(makeId()), verticalAlign: "middle" as const, ...field };
+      elements.push(element); used.add(element.id);
+    }
+  }
+  return { ...page, template, elements };
 }
 
 export function createStorybookTextElement(id = "element_startertext0001"): StorybookElement {

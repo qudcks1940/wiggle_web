@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { deactivateProfile, studentFetch } from "@/lib/client-session";
 import { AuthenticatedImage, AuthenticatedImageCache } from "./AuthenticatedImage";
 import { Logo } from "./Logo";
+import { StorybookDuplicateButton } from "./StorybookDuplicateButton";
 import "./StudentArtDesk.css";
 
 /* 참여 코드 뒤에 아이가 서는 자리 (2026-09-25 사용자 결정 — 코덱스 인계
@@ -51,7 +52,7 @@ function ArtworkCard({ artwork }: { artwork: DeskArtwork }) {
 }
 
 function BookCard({ book, index }: { book: DeskStorybook; index: number }) {
-  return <a className="desk-book-card" href={`/student/books/${encodeURIComponent(book.id)}`}>
+  return <article><a className="desk-book-card" href={`/student/books/${encodeURIComponent(book.id)}`}>
     {/* 표지 썸네일은 목록 응답에 없다(인계 확인). 임의의 아이 그림을 만들어 넣지 않고 빈 책 틀만 쓴다.
         틀 색은 시안처럼 번갈아 쓴다 — 책을 구분하는 정보가 아니라 장식이라 제목이 따로 적혀 있다. */}
     <span className="desk-book-frame" aria-hidden="true">
@@ -62,7 +63,7 @@ function BookCard({ book, index }: { book: DeskStorybook; index: number }) {
       <small>{book.pageCount}쪽 · {book.status === "complete" ? "완성" : "만드는 중"}</small>
       <span className="desk-art-go">그림책 보기 <span aria-hidden="true">›</span></span>
     </span>
-  </a>;
+  </a><StorybookDuplicateButton bookId={book.id} /></article>;
 }
 
 function deskDate(value: string) {
@@ -133,9 +134,7 @@ export function StudentArtDesk({ nickname, artworks, artworkTotal }: { nickname:
             {artworkTotal > shown.length && <a className="desk-more" href="/student/archive">내 그림 모두 보기 ({artworkTotal}장)</a>}
           </div>
           <ul className="desk-art-row">
-            {/* 빈 도화지 모양의 주 행동. DOM에서 먼저 두는 이유: 좁은 화면은 「새 그림 그리기」가
-                내 그림보다 먼저 보여야 하는데(인계 지시), CSS order로만 옮기면 보이는 차례와
-                탭 차례가 어긋난다. 넓은 화면에서는 order로 줄 끝에 보내 시안 배치를 따른다. */}
+            {/* 모든 화면 크기에서 새 그림이 시각·탭 순서의 맨 앞이다. */}
             <li className="desk-new-item">
               <a className="desk-new-card" href="/student/draw/new?mode=free">
                 <img src="/student-desk/icon-new-drawing.svg" alt="" aria-hidden="true" width={72} height={72} />
@@ -151,11 +150,17 @@ export function StudentArtDesk({ nickname, artworks, artworkTotal }: { nickname:
             <h2 id="desk-book-title"><img src="/student-desk/icon-my-books.svg" alt="" aria-hidden="true" width={28} height={28} />내 그림책</h2>
             {books !== null && !bookError && <a className="desk-more" href="/student/books">내 그림책 모두 보기 ({books.length}권)</a>}
           </div>
-          {books === null
-            ? <p className="desk-book-empty">그림책을 찾는 중…</p>
-            : shownBooks.length
-              ? <ul className="desk-book-row">{shownBooks.map((book, index) => <li key={book.id}><BookCard book={book} index={index} /></li>)}</ul>
-              : <p className="desk-book-empty">{bookError || "아직 만든 그림책이 없어요."} <a href="/student/books">그림책 만들러 가기</a></p>}
+          {books === null && <p className="desk-book-empty">그림책을 찾는 중…</p>}
+          {bookError && <p role="alert">{bookError}</p>}
+          {books !== null && !bookError && !books.length && <p className="desk-book-empty">아직 만든 그림책이 없어요.</p>}
+          <h3>만드는 중인 그림책 ({shownBooks.filter(book => book.status !== "complete").length}권)</h3>
+          <ul className="desk-book-row">
+            <li><a className="desk-new-book" href="/student/books?create=1"><img src="/student-desk/icon-my-books.svg" alt="" width={48} height={48} /><b>새 그림책 만들기</b><span>새로운 이야기를 시작해요</span></a></li>
+            {shownBooks.filter(book => book.status !== "complete").map((book, index) => <li key={book.id}><BookCard book={book} index={index} /></li>)}
+          </ul>
+          <h3>완성된 그림책 ({shownBooks.filter(book => book.status === "complete").length}권)</h3>
+          <p className="desk-book-empty">전체 복제를 누르면 원본을 남겨 두고 새 책에서 고칠 수 있어요.</p>
+          <ul className="desk-book-row">{shownBooks.filter(book => book.status === "complete").map((book, index) => <li key={book.id}><BookCard book={book} index={index} /></li>)}</ul>
         </section>
       </div>
     </main>

@@ -45,7 +45,11 @@ export async function renderBookPages(document: StorybookDocument, assets: Map<s
         svg += `<g opacity="${el.opacity}" transform="rotate(${el.rotation} ${x + w / 2} ${y + h / 2})"><svg x="${x}" y="${y}" width="${w}" height="${h}" overflow="hidden"><image href="${image(el.assetId)}" x="${crop ? -crop.x / crop.width * w : 0}" y="${crop ? -crop.y / crop.height * h : 0}" width="${crop ? w / crop.width : w}" height="${crop ? h / crop.height : h}" preserveAspectRatio="${crop ? "none" : "xMidYMid meet"}"/></svg></g>`;
       } else if (el.type === "text") {
         const { size, lines } = fittedStoryText(el.text === "여기에 이야기를 써 보세요" ? "" : el.text ?? "", (el.fontSize ?? 0.045) * width, w - width * 4 / 1024, h - width * 4 / 1024, (s, fontSize) => font.widthOfTextAtSize(s, fontSize));
-        svg += `<svg x="${x}" y="${y}" width="${w}" height="${h}"><text font-family="NanumGothic" font-size="${size}" fill="${el.color}" text-anchor="start">${lines.map((s, i) => `<tspan x="${width * 2 / 1024}" y="${size + i * size * STORY_TEXT_LINE_HEIGHT}">${escape(s)}</tspan>`).join("")}</text></svg>`;
+        const spare = Math.max(0, h - width * 4 / 1024 - lines.length * size * STORY_TEXT_LINE_HEIGHT);
+        const offset = el.verticalAlign === "top" ? 0 : el.verticalAlign === "bottom" ? spare : spare / 2;
+        const anchor = el.align === "center" ? "middle" : el.align === "right" ? "end" : "start";
+        const textX = el.align === "center" ? w / 2 : el.align === "right" ? w - width * 2 / 1024 : width * 2 / 1024;
+        svg += `<svg x="${x}" y="${y}" width="${w}" height="${h}"><text font-family="NanumGothic" font-size="${size}" fill="${el.color}" text-anchor="${anchor}">${lines.map((s, i) => `<tspan x="${textX}" y="${offset + width * 2 / 1024 + size + i * size * STORY_TEXT_LINE_HEIGHT}">${escape(s)}</tspan>`).join("")}</text></svg>`;
       }
     }
     svg += "</svg>";

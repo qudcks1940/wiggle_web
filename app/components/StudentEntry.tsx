@@ -35,7 +35,13 @@ export function StudentEntry() {
       const response = await studentFetch("/api/student");
       const payload = await response.json() as EntryData & { error?: string };
       if (!response.ok) throw new Error(payload.error);
-      if (!Number(payload.artworkTotal)) { location.replace("/student/draw/new?mode=free"); return; }
+      if (!Number(payload.artworkTotal)) {
+        // A student may only have a teacher-imported PDF. Keep their book reachable from home.
+        const booksResponse = await studentFetch("/api/storybooks");
+        const books = await booksResponse.json() as { storybooks?: unknown[]; error?: string };
+        if (!booksResponse.ok) throw new Error(books.error ?? "그림책을 확인하지 못했어요.");
+        if (!books.storybooks?.length) { location.replace("/student/draw/new?mode=free"); return; }
+      }
       setData(payload);
       setBusy(false);
     } catch (cause) {

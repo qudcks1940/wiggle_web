@@ -345,12 +345,12 @@
     },
     {
       "path": "/brand/wiggle-mark-128.png",
-      "source": "사용자가 2026-10-03 채팅으로 전달한 WIGGLE 로고(295x144, 흰 바탕에 노란 손 마크 + 글자). 마크(66x68)만 잘라 흰 바탕을 투명으로 뺀 뒤 키웠다. 그림 자체는 바꾸지 않았다. 원본이 작아 큰 크기는 선이 부드럽게 보인다 — 더 큰 원본이나 SVG가 오면 다시 뽑는다. 화면 머리용은 바탕 없이 둔다 — CSS가 초록 타일을 그린다.",
+      "source": "사용자가 2026-10-03 채팅으로 전달한 WIGGLE 로고(295x144, 흰 바탕에 노란 손 마크 + 글자). 마크(66x68)만 잘라 흰 바탕을 투명으로 뺀 뒤 키웠다. 그림 자체는 바꾸지 않았다. 원본이 작아 큰 크기는 선이 부드럽게 보인다 — 더 큰 원본이나 SVG가 오면 다시 뽑는다. 화면 머리용은 바탕 없이 둔다(2026-10-03 사용자 지시로 초록 타일을 걷어 그림만 선다).",
       "sourceRole": "user-provided original",
       "approvedFor": [
         "화면 머리의 브랜드 마크(Logo 컴포넌트)"
       ],
-      "sha256": "800719FD65E80381EF1E76903030DAF89FE4EBFA2106B3DF1A0EB1F6C8CAA9DF"
+      "sha256": "60AF256FBCA0AAA698FEF779D2FCADD1C5E7F725720DB8FAFE9619D0A4D4C237"
     }
   ],
   "notApproved": "All other wiggle_draw assets remain outside wiggle_web until provenance and service-use permission are reviewed."

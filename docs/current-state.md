@@ -2217,3 +2217,13 @@ typecheck·lint(오류 0), `npm test` 323/324(실패 1은 Node 22.13 환경 문�
 - **서버·파일 경로는 그대로.** `readRosterFile`·`buildRosterTemplate`·`parseRosterRows`와 저장 경로(`createClassroom`/`addStudents`)는 손대지 않았다. 파일은 교사 브라우저 안에서만 읽는다.
 - **검증.** 실제 브라우저에서 새 학급 만들기 폼에 `.xlsx`를 넣어 끝까지 갔다: "4명을 읽었어요. 첫 줄은 제목으로 보고 건너뛰었어요"가 뜨고 1~4번 칸이 채워지고 빈 줄 하나가 열렸다 → `엑셀 1반` 생성 → 명단 탭에 1 김민준·2 이서연·3 박지호·4 최하윤이 참여 코드와 함께 들어갔다. 기존 `학생 추가` 다이얼로그도 그대로 동작하고 번호는 5번부터 이어졌다. typecheck 0, lint 오류 0, production build 통과, `npm test` 412/413(이 맥의 Node 22.13에서 `pbkdf2-runtime` 1건은 `registerHooks` 미지원 — 코드와 무관).
 - **계약 테스트.** 불러오기가 한쪽에만 생기면 실패하도록 고쳤다 — 두 화면 모두 `<RosterEditor …>`를 쓰고, `TeacherApp`·`TeacherRosterSettings`가 `readRosterFile`·`buildRosterTemplate`을 직접 부르지 않는지 본다.
+
+## 2026-10-03 웹 아이콘을 새 WIGGLE 손 마크로 (`claude/new-logo`)
+
+사용자가 새 로고(흰 바탕에 노란 손 마크 + `WIGGLE` 글자, 295×144 PNG)를 주며 "이걸로 웹 아이콘을 다 바꿔줘".
+
+- **바꾼 것.** 브라우저 탭 파비콘(32·512), iOS 홈 화면 아이콘(180), 화면 머리의 브랜드 마크. 로고가 가로형이라 **손 마크(66×68)만 잘라** 썼다. 흰 바탕은 투명으로 빼고(가장자리는 반투명으로 남겨 계단을 줄였다) 탭 아이콘은 흰 정사각 타일 가운데에, 머리 마크는 바탕 없이 올려 기존 초록 타일이 그대로 보이게 했다.
+- **파일.** `/brand/wiggle-icon-{32,180,512}.png`, `/brand/wiggle-mark-128.png`, 원본 보관용 `/brand/wiggle-logo.png`. 다섯 개 모두 출처·sha256·용도를 `public/brand/asset-manifest.json`에 등록했다. 옛 `crayon-*`은 지우지 않고 "2026-10-03부터 쓰지 않음"만 적었다.
+- **건드리지 않은 것.** `/brand/app_icon.png`(제품 앱 아이콘, README에서 참조), `/og.png`(링크 미리보기용 대문 사진 — 아이콘이 아니라 화면 갈무리다).
+- **검증.** 실제 브라우저에서 랜딩과 교사 화면의 머리 마크가 새 손 마크로 바뀐 것을 확대해 확인했고, 응답 HTML의 `<link rel="icon">` 네 줄이 모두 `wiggle-icon-*`을 가리키는 것을 확인했다. typecheck 0, `npm test` 415/416(이 맥의 Node 22.13에서 `pbkdf2-runtime` 1건은 `registerHooks` 미지원 — 코드와 무관).
+- **남은 위험 — 원본 해상도.** 받은 로고에서 마크는 **66×68픽셀**이다. 512px 아이콘은 약 7배로 늘린 것이라 선이 부드럽게(살짝 흐리게) 보인다. 종전 크레용 아이콘의 원본은 1254×1254였다. **SVG나 1024px 이상 원본을 받으면 같은 자리에서 다시 뽑는 것이 좋다.**

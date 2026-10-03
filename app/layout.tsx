@@ -21,14 +21,14 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: title, template: "%s | Wiggle" },
     description,
     icons: {
-      // 브라우저 탭 아이콘은 크레용 그림이다(2026-09-12 사용자 지정). 32px에서도 읽히도록
-      // 작은 크기는 크레용을 더 크게 잘라 따로 뽑았다. app_icon.png는 제품 앱 아이콘이라 그대로 둔다.
+      // 브라우저 탭 아이콘은 손 흔드는 WIGGLE 마크다(2026-10-03 사용자 지정, 종전 크레용 그림 대체).
+      // 원본 로고가 가로형이라 마크만 잘라 흰 바탕 정사각으로 올린다. app_icon.png는 제품 앱 아이콘이라 그대로 둔다.
       icon: [
-        { url: "/brand/crayon-icon-32.png", sizes: "32x32", type: "image/png" },
-        { url: "/brand/crayon-icon-512.png", sizes: "512x512", type: "image/png" },
+        { url: "/brand/wiggle-icon-32.png", sizes: "32x32", type: "image/png" },
+        { url: "/brand/wiggle-icon-512.png", sizes: "512x512", type: "image/png" },
       ],
-      shortcut: "/brand/crayon-icon-32.png",
-      apple: { url: "/brand/crayon-icon-180.png", sizes: "180x180", type: "image/png" },
+      shortcut: "/brand/wiggle-icon-32.png",
+      apple: { url: "/brand/wiggle-icon-180.png", sizes: "180x180", type: "image/png" },
     },
     openGraph: {
       title,

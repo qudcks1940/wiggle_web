@@ -17,7 +17,8 @@
       "sourceRole": "user-provided original",
       "sha256": "7C499A99C6F730A1F13961E73C92DF3ECB363E287A13E257DA136921AFECB0ED",
       "approvedFor": [
-        "화면 머리의 브랜드 마크(Logo 컴포넌트)"
+        "화면 머리의 브랜드 마크(Logo 컴포넌트)",
+        "(2026-10-03부터 쓰지 않음 — WIGGLE 손 마크로 교체)"
       ]
     },
     {
@@ -90,7 +91,8 @@
       "sourceRole": "user-provided original",
       "sha256": "CC75935109E6140D3132153FC79C8F6AD5389FCE16398E7C3FAD790A851ECF1C",
       "approvedFor": [
-        "설치 아이콘·큰 화면용 512px"
+        "설치 아이콘·큰 화면용 512px",
+        "(2026-10-03부터 쓰지 않음 — WIGGLE 손 마크로 교체)"
       ]
     },
     {
@@ -99,7 +101,8 @@
       "sourceRole": "user-provided original",
       "sha256": "7BF9E67D92F2BEE0FA7CB2D4CDEA41BB0140F619EE73FD69F67685045D7FD384",
       "approvedFor": [
-        "iOS 홈 화면 아이콘 180px"
+        "iOS 홈 화면 아이콘 180px",
+        "(2026-10-03부터 쓰지 않음 — WIGGLE 손 마크로 교체)"
       ]
     },
     {
@@ -108,7 +111,8 @@
       "sourceRole": "user-provided original",
       "sha256": "5D2E4AE631BAB8D2A50A4C50CF65F37717F86FD68D50449F59C92349A477A37A",
       "approvedFor": [
-        "브라우저 탭 파비콘 32px (작은 크기라 크레용을 더 크게 잘라 씀)"
+        "브라우저 탭 파비콘 32px (작은 크기라 크레용을 더 크게 잘라 씀)",
+        "(2026-10-03부터 쓰지 않음 — WIGGLE 손 마크로 교체)"
       ]
     },
     {
@@ -302,6 +306,51 @@
       "approvedFor": [
         "몽그리 플로팅 카드의 크레용 테두리·이름 칠·밑줄 장식. 글자와 아이 그림은 들어 있지 않다."
       ]
+    },
+    {
+      "path": "/brand/wiggle-logo.png",
+      "source": "사용자가 2026-10-03 채팅으로 전달한 WIGGLE 로고 원본(295x144). 그대로 보관한다.",
+      "sourceRole": "user-provided original",
+      "approvedFor": [
+        "브랜드 로고 원본 보관(화면에서 직접 쓰지 않음)"
+      ],
+      "sha256": "43AB4F3FF2AAB2C2F348989AB46DC91E9BAA7F203B7B6B566427B085BF024FC9"
+    },
+    {
+      "path": "/brand/wiggle-icon-32.png",
+      "source": "사용자가 2026-10-03 채팅으로 전달한 WIGGLE 로고(295x144, 흰 바탕에 노란 손 마크 + 글자). 마크(66x68)만 잘라 흰 바탕을 투명으로 뺀 뒤 키웠다. 그림 자체는 바꾸지 않았다. 원본이 작아 큰 크기는 선이 부드럽게 보인다 — 더 큰 원본이나 SVG가 오면 다시 뽑는다.",
+      "sourceRole": "user-provided original",
+      "approvedFor": [
+        "브라우저 탭 파비콘 32px"
+      ],
+      "sha256": "151F3E816E31F590F790CFE00CFF990933A4EBC1DDBBFC7C02F4784F6434AEB5"
+    },
+    {
+      "path": "/brand/wiggle-icon-180.png",
+      "source": "사용자가 2026-10-03 채팅으로 전달한 WIGGLE 로고(295x144, 흰 바탕에 노란 손 마크 + 글자). 마크(66x68)만 잘라 흰 바탕을 투명으로 뺀 뒤 키웠다. 그림 자체는 바꾸지 않았다. 원본이 작아 큰 크기는 선이 부드럽게 보인다 — 더 큰 원본이나 SVG가 오면 다시 뽑는다.",
+      "sourceRole": "user-provided original",
+      "approvedFor": [
+        "iOS 홈 화면 아이콘 180px (apple-touch-icon)"
+      ],
+      "sha256": "B05E72F18ADDC3070ABBB1EF58D002543E269BC79757253B8387F584794E10C7"
+    },
+    {
+      "path": "/brand/wiggle-icon-512.png",
+      "source": "사용자가 2026-10-03 채팅으로 전달한 WIGGLE 로고(295x144, 흰 바탕에 노란 손 마크 + 글자). 마크(66x68)만 잘라 흰 바탕을 투명으로 뺀 뒤 키웠다. 그림 자체는 바꾸지 않았다. 원본이 작아 큰 크기는 선이 부드럽게 보인다 — 더 큰 원본이나 SVG가 오면 다시 뽑는다.",
+      "sourceRole": "user-provided original",
+      "approvedFor": [
+        "큰 아이콘 512px (설치형 바로가기·탭 고해상도)"
+      ],
+      "sha256": "72097D15EF8509700A94BE0FBCAD9CB49267DD1FBB402127DF87D3FCD53E09C8"
+    },
+    {
+      "path": "/brand/wiggle-mark-128.png",
+      "source": "사용자가 2026-10-03 채팅으로 전달한 WIGGLE 로고(295x144, 흰 바탕에 노란 손 마크 + 글자). 마크(66x68)만 잘라 흰 바탕을 투명으로 뺀 뒤 키웠다. 그림 자체는 바꾸지 않았다. 원본이 작아 큰 크기는 선이 부드럽게 보인다 — 더 큰 원본이나 SVG가 오면 다시 뽑는다. 화면 머리용은 바탕 없이 둔다 — CSS가 초록 타일을 그린다.",
+      "sourceRole": "user-provided original",
+      "approvedFor": [
+        "화면 머리의 브랜드 마크(Logo 컴포넌트)"
+      ],
+      "sha256": "800719FD65E80381EF1E76903030DAF89FE4EBFA2106B3DF1A0EB1F6C8CAA9DF"
     }
   ],
   "notApproved": "All other wiggle_draw assets remain outside wiggle_web until provenance and service-use permission are reviewed."

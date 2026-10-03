@@ -43,6 +43,14 @@ try{
  const text=()=>page.getByRole('textbox',{name:'이 쪽의 이야기',exact:true});
  const closeTools=async()=>{if(await btn('꾸미기 닫기').count())await btn('꾸미기 닫기').click();};
  const range=async(name,value)=>page.getByRole('slider',{name,exact:true}).evaluate((el,value)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,String(value));el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));},value);
+ const scrollToBook=()=>page.locator('.storybook-stage-wrap').evaluate(el=>window.scrollTo(0,el.getBoundingClientRect().top+scrollY));
+ const toolsOffscreen=()=>page.locator('.storybook-editor-header,.storybook-toolbar-shell').evaluateAll(es=>es.every(el=>el.getBoundingClientRect().bottom<=1));
+ const touch=await context.newCDPSession(page);
+ const swipe=async(x,y,dx,dy)=>{
+  await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});
+  for(let i=1;i<=15;i++){await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+dx*i/15,y:y+dy*i/15,id:1}]});await page.waitForTimeout(20);}
+  await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForTimeout(400);
+ };
  await page.goto(server.origin+'/student');await page.locator('.desk-book-card').last().waitFor();
  for(const [width,height]of [[1440,1000],[768,1024],[390,844],[320,568]]){
   await page.setViewportSize({width,height});
@@ -69,16 +77,15 @@ try{
  await page.locator('.storybook-page-rail>button').nth(2).click();await btn('쪽 양식·배경').click();await btn('속표지').click();await page.getByRole('textbox',{name:'이 쪽의 제목',exact:true}).fill('봄이의 바다');
  await page.locator('.storybook-page-rail>button').nth(3).click();await btn('쪽 양식·배경').click();await btn('작가의 말').click();await text().fill('고래를 생각하며 이 책을 만들었어요.');await saved();await closeTools();
  await page.screenshot({path:output+'/author.png',fullPage:true});
- // Native fullscreen where supported, with a CSS fallback for tablet browsers.
- const before=await page.locator('.storybook-stage:not(.preview)').boundingBox();await btn('전체 화면').click();await page.locator('.is-focus-mode').waitFor();
- const after=await page.locator('.storybook-stage:not(.preview)').boundingBox();assert.ok(after.width>before.width);assert.equal(await page.locator('.storybook-page-rail').isVisible(),false);
- await text().fill('전체 화면에서도 고친 작가의 말');await saved();await closeTools();await page.screenshot({path:output+'/fullscreen.png',fullPage:true});await btn('전체 화면 나가기').click();
+ // Scrolling takes both top rows out of view; editing never switches screen modes.
+ assert.equal(await btn('전체 화면').count(),0);await scrollToBook();assert.ok(await toolsOffscreen());
+ await text().fill('스크롤한 뒤에도 고친 작가의 말');await saved();await closeTools();assert.ok(await toolsOffscreen());await page.screenshot({path:output+'/scrolled-book.png'});
  await page.locator('.storybook-page-rail>button').nth(0).click();await btn('미리보기').click();await page.getByRole('dialog',{name:'그림책 미리보기'}).waitFor();
  assert.equal(await page.locator('.reader-spread>.reader-page').count(),1);await btn('다음 쪽').click();assert.equal(await page.locator('.reader-turn').count(),1);await page.waitForTimeout(550);
  assert.equal(await page.locator('.reader-spread>.reader-page').count(),2);await page.screenshot({path:output+'/reader.png',fullPage:true});
  await page.keyboard.press('ArrowRight');await page.waitForTimeout(550);assert.match(await page.locator('.storybook-reader footer').innerText(),/4–5/);
  await page.keyboard.press('Escape');assert.equal(await page.locator('.storybook-reader').count(),0);
- console.log('PASS home order/groups, no load mutation, whole-book copy, text tools/save, page-local warning, templates/credit, fullscreen editing, spread turn/keyboard');
+ console.log('PASS home order/groups, no load mutation, whole-book copy, text tools/save, page-local warning, templates/credit, scrolled editing, spread turn/keyboard');
  for(const [width,height]of [[320,568],[390,844],[844,390],[768,1024],[820,1180],[1180,820]]){
   await closeTools();await page.setViewportSize({width,height});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow ${width}`);
@@ -91,12 +98,30 @@ try{
   await page.getByRole('slider',{name:'이야기 칸 높이',exact:true}).scrollIntoViewIfNeeded();
   assert.ok(await page.getByRole('slider',{name:'이야기 칸 높이',exact:true}).evaluate(el=>{const b=el.getBoundingClientRect();return b.top>=0&&b.bottom<=innerHeight+1;}),`last text tool reachable ${width}`);
   await range('글자 크기',.04);await closeTools();await saved();
-  await btn('전체 화면').click();await page.locator('.is-focus-mode').waitFor();await page.screenshot({path:output+`/focus-${width}.png`,fullPage:true});await btn('전체 화면 나가기').click();
+  await scrollToBook();await page.evaluate(()=>window.scrollBy(0,-220));
+  const paper=await page.locator('.storybook-stage:not(.preview)').boundingBox();
+  const swipeY=Math.min(height-24,paper.y+paper.height*.6);
+  await swipe(paper.x+6,swipeY,0,-Math.min(300,swipeY-30));
+  assert.ok(await toolsOffscreen(),`native touch scroll hides both top rows ${width}`);
+  assert.equal(await page.locator('.storybook-inspector').count(),0,'scrolling the paper does not open tools');
+  if(width>=768){
+   await scrollToBook();await page.evaluate(()=>window.scrollBy(0,-180));
+   const illustration=page.locator('.storybook-stage:not(.preview) .storybook-stage-element.image').first();
+   const picture=await illustration.boundingBox(),startY=Math.min(height-24,picture.y+picture.height*.3);
+   const originalPage=await server.DB.prepare('SELECT document_json FROM storybooks WHERE id=?').bind(copyId).first();
+   await swipe(picture.x+picture.width/2,startY,0,-Math.min(260,startY-30));
+   assert.ok(await toolsOffscreen(),`native touch scroll over unselected image ${width}`);
+   assert.equal(await page.locator('.storybook-inspector').count(),0);
+   assert.deepEqual(await server.DB.prepare('SELECT document_json FROM storybooks WHERE id=?').bind(copyId).first(),originalPage,'scroll gestures preserve image geometry');
+   await illustration.tap();assert.equal(await page.locator('.storybook-inspector').getAttribute('aria-label'),'그림 꾸미기');
+   assert.ok(await toolsOffscreen(),`tapping picture keeps scrolled view ${width}`);await closeTools();await btn('선택 해제').click();
+  }
+  await scrollToBook();assert.ok(await toolsOffscreen(),`tools scroll away ${width}`);await page.screenshot({path:output+`/scroll-${width}.png`});
   await btn('미리보기').click();await btn('다음 쪽').click();await page.waitForTimeout(550);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:output+`/reader-${width}.png`,fullPage:true});await btn('편집으로 돌아가기').click();
  }
  await saved();assert.deepEqual(await server.DB.prepare('SELECT * FROM storybooks WHERE id=?').bind(id).first(),original);
  await page.reload();await page.locator('.storybook-stage:not(.preview) .image img').waitFor();
- const stored=JSON.parse((await server.DB.prepare('SELECT document_json FROM storybooks WHERE id=?').bind(copyId).first()).document_json);assert.equal(stored.pages[3].elements.find(e=>e.textRole==='story').text,'전체 화면에서도 고친 작가의 말');assert.equal(stored.pages[0].elements.find(e=>e.textRole==='credit').text,'글 / 그림 봄이');
+ const stored=JSON.parse((await server.DB.prepare('SELECT document_json FROM storybooks WHERE id=?').bind(copyId).first()).document_json);assert.equal(stored.pages[3].elements.find(e=>e.textRole==='story').text,'스크롤한 뒤에도 고친 작가의 말');assert.equal(stored.pages[0].elements.find(e=>e.textRole==='credit').text,'글 / 그림 봄이');
  // Import a real two-page PDF through the teacher UI, then use the same editor.
  await page.setViewportSize({width:1440,height:1000});await context.addCookies([{name:'wiggle_teacher',value:teacherToken,url:server.origin}]);
  await page.goto(server.origin+`/teacher/class/${room}/books`);await page.locator('.pdf-import-panel').waitFor();

@@ -31,39 +31,24 @@
 .storybook-story-control legend{font-size:14px;margin-bottom:8px}
 .storybook-align-buttons button[aria-pressed=true],.storybook-template-options button[aria-pressed=true]{background:#dceacb;border-color:#41642f;color:#203916}
 .storybook-template-options{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.storybook-template-options button,.storybook-focus-bar button{min-height:44px;padding:8px 12px;border:1px solid #bbc6ad;border-radius:12px;background:#fffdf6;color:#294329;font:inherit;cursor:pointer}
+.storybook-template-options button{min-height:44px;padding:8px 12px;border:1px solid #bbc6ad;border-radius:12px;background:#fffdf6;color:#294329;font:inherit;cursor:pointer}
 .storybook-template-controls p{font-size:14px;line-height:1.6}
 @media(max-width:680px){.design-surface .storybook-editor-shell .storybook-inspector{top:0}.design-surface .storybook-inspector-heading{position:sticky;top:-16px;z-index:2;padding-block:8px;background:var(--bg)}}
 @media(max-width:680px){
-  .design-surface .storybook-editor-shell>.storybook-editor-header{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.6fr);gap:6px;padding:8px;min-height:0}
-  .design-surface .storybook-editor-header>a{grid-row:1;grid-column:1/3;justify-self:start;white-space:nowrap;min-height:44px;font-size:14px;padding:8px 10px}
-  .design-surface .storybook-editor-header>.storybook-save-state{grid-row:1;grid-column:3;margin:0;font-size:12px;white-space:nowrap;text-align:center}
-  .design-surface .storybook-editor-header>.storybook-copy-action{grid-row:1;grid-column:4;min-width:0}
+  .design-surface .storybook-editor-shell>.storybook-editor-header{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:8px;min-height:0}
+  .design-surface .storybook-editor-header>a{grid-row:1;grid-column:1;justify-self:start;white-space:nowrap;min-height:44px;font-size:14px;padding:8px 10px}
+  .design-surface .storybook-editor-header>.storybook-save-state{grid-row:1;grid-column:2;margin:0;font-size:12px;white-space:nowrap;text-align:center}
+  .design-surface .storybook-editor-header>.storybook-copy-action{grid-row:1;grid-column:3;min-width:0}
   .design-surface .storybook-editor-header>.storybook-copy-action button{width:100%;min-height:44px;font-size:13px;padding:6px}
   .design-surface .storybook-editor-header>input{grid-row:2;grid-column:1/-1;width:100%;min-width:0;max-width:none;min-height:44px;font-size:16px}
   .design-surface .storybook-editor-header>button{grid-row:3;grid-column:auto;min-width:0;min-height:44px;font-size:13px;line-height:1.3;padding:6px 3px;white-space:normal}
-  .design-surface .storybook-editor-shell.is-focus-mode>.storybook-editor-header{display:none}
 }
 .storybook-text-notice{margin:0;padding:10px 16px;background:#fff4cf;color:#58421e;font-size:14px;line-height:1.5}
-.storybook-focus-bar{display:flex;align-items:center;justify-content:center;gap:8px;padding:8px;background:#f9f7eb;flex-wrap:wrap;z-index:30}
-.storybook-focus-bar>span{font-size:14px;color:#365136}
-.design-surface .storybook-editor-shell.is-focus-mode{position:fixed;inset:0;z-index:100;height:100dvh;display:flex;flex-direction:column;background:#e7e9df}
-.design-surface .is-focus-mode>.storybook-editor-header,.design-surface .is-focus-mode .storybook-page-rail,.design-surface .is-focus-mode .storybook-stage-help,.design-surface .is-focus-mode .storybook-teacher-editor-note{display:none}
-.design-surface .is-focus-mode .storybook-editor-body,.design-surface .is-focus-mode .storybook-editor-body.has-inspector{display:flex;flex:1;min-height:0;overflow:hidden}
-.design-surface .is-focus-mode .storybook-workspace{width:100%;display:flex;flex-direction:column;min-height:0;overflow:auto}
-.design-surface .is-focus-mode:not(.show-focus-tools) .storybook-toolbar-shell{display:none}
-.design-surface .is-focus-mode .storybook-image-zone{display:none}
 .storybook-book-grid>article{min-width:0;padding:16px;border:1px solid #cad2bf;border-radius:14px;background:#fffdf7}
 .storybook-book-grid>article>a{display:flex;align-items:center;gap:14px;color:inherit;text-decoration:none}
 .storybook-book-grid>article>a>div{min-width:0;flex:1}
 .storybook-book-grid>article h3{overflow-wrap:anywhere}
 .storybook-book-grid>article .storybook-copy-action{margin-top:12px}
-.design-surface .is-focus-mode .storybook-stage-wrap{flex:1;min-height:0;padding:8px;overflow:auto}
-.design-surface .is-focus-mode .storybook-stage:not(.preview){width:min(100%,calc((100dvh - 88px) * 243 / 248));min-width:0;max-width:none}
-.design-surface .is-focus-mode.show-focus-tools .storybook-stage:not(.preview){width:min(100%,calc((100dvh - 188px) * 243 / 248))}
-.design-surface .is-focus-mode .storybook-stage.format-landscape:not(.preview){aspect-ratio:4/3;width:min(100%,calc((100dvh - 88px) * 4 / 3))}
-.design-surface .is-focus-mode .storybook-stage.format-portrait:not(.preview){aspect-ratio:3/4;width:min(100%,calc((100dvh - 88px) * 3 / 4))}
-.design-surface .is-focus-mode .storybook-inspector{position:absolute;right:0;top:0;bottom:0;width:min(278px,80%);z-index:25;overflow-y:auto;box-shadow:-6px 0 24px #26351e26}
 .design-surface .storybook-reader{background:#f4f1e7;color:#294329}
 .reader-scene{display:grid;grid-template-columns:48px minmax(0,1fr) 48px;align-items:center;gap:12px;min-height:0;perspective:2000px;background:radial-gradient(ellipse,#e3e0d2,transparent 70%)}
 .reader-arrow{width:44px;min-height:60px;border:0;border-radius:50%;background:#fffdf8;color:#375334;font-size:40px;cursor:pointer;box-shadow:0 3px 12px #26351e15}
@@ -82,5 +67,13 @@
 .storybook-reader footer small{font-size:12px;font-weight:400;margin-top:4px}
 @keyframes reader-flip-forward{from{transform:rotateY(0)}to{transform:rotateY(-180deg)}}
 @keyframes reader-flip-back{from{transform:rotateY(0)}to{transform:rotateY(180deg)}}
-@media(max-width:680px){.reader-scene{grid-template-columns:1fr 1fr;gap:8px}.reader-spread{grid-column:1/-1;grid-row:1}.reader-arrow{justify-self:center;grid-row:2}.reader-spread.is-cover .reader-right{width:90%!important}.reader-spread{width:100%}.focus-save-state{display:none}.storybook-focus-bar{gap:4px;padding:4px}.storybook-focus-bar button{font-size:12px;padding:6px}.design-surface .is-focus-mode .storybook-stage-wrap{align-content:start}.design-surface .is-focus-mode .storybook-inspector{top:0}}
 @media(prefers-reduced-motion:reduce){.reader-turn{display:none}}
+
+@media(max-width:680px){.reader-scene{grid-template-columns:1fr 1fr;gap:8px}.reader-spread{grid-column:1/-1;grid-row:1}.reader-arrow{justify-self:center;grid-row:2}.reader-spread.is-cover .reader-right{width:90%!important}.reader-spread{width:100%}}
+
+/* Fill the available paper area without reserving room for the scrolled-away toolbar. */
+.design-surface .storybook-editor-shell .storybook-stage:not(.preview){width:min(100%,calc((100dvh - 40px) * 243 / 248));min-width:0;max-width:none;touch-action:pan-y pinch-zoom}
+.design-surface .storybook-editor-shell .storybook-stage.format-square:not(.preview){width:min(100%,calc(100dvh - 40px))}
+.design-surface .storybook-editor-shell .storybook-stage.format-landscape:not(.preview){width:min(100%,calc((100dvh - 40px) * 4 / 3))}
+.design-surface .storybook-editor-shell .storybook-stage.format-portrait:not(.preview){width:min(100%,calc((100dvh - 40px) * 3 / 4))}
+.storybook-stage-element.image:not(.selected){touch-action:pan-y pinch-zoom}

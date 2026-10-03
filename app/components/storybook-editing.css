@@ -8,6 +8,24 @@
 .storybook-preview header>div{display:flex;gap:8px;flex-wrap:wrap}
 .storybook-image-controls .book-check{display:flex;align-items:center;gap:8px}
 .storybook-image-controls .book-check input{width:20px;min-height:20px}
+.storybook-size-buttons,.cutout-history{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-block:12px}
+.storybook-size-buttons button{min-height:44px;border:1px solid #bac8b0;border-radius:12px;background:#fffdf6;color:#294329;font:inherit;font-weight:700;cursor:pointer}
+.design-surface .storybook-stage .moveable-control{width:28px!important;height:28px!important;margin-top:-14px!important;margin-left:-14px!important;border-radius:50%!important}
+.design-surface .storybook-stage>.moveable-control-box{z-index:10003!important}
+.storybook-asset-notice{margin:0;padding:8px 16px;background:#fff4bb;color:#294329;font-weight:700}
+.storybook-selection-actions{display:flex;align-items:center;gap:8px;padding:4px 8px;background:#f5f7ec}
+.storybook-selection-actions button{min-height:44px;border:1px solid #bac8b0;border-radius:12px;padding:6px 10px;background:#fffdf6;color:#294329;font:inherit;cursor:pointer}
+.storybook-selection-actions span{flex:1;font-size:13px}
+@media(max-width:680px){.storybook-selection-actions{justify-content:space-between}.storybook-selection-actions span{display:none}.storybook-selection-actions button{font-size:12px}}
+.design-surface .storybook-image-controls>.cutout-open-button{margin-top:0;background:var(--yellow,#f4cc50)!important;color:#233d27!important}
+.design-surface .image-cutout-modal{display:flex;flex-direction:column;overflow:hidden}
+.design-surface .image-cutout-modal>header,.design-surface .image-cutout-modal>footer{flex-shrink:0}
+.design-surface .image-cutout-modal>header .small-button{flex-shrink:0;min-width:56px;white-space:nowrap}
+.design-surface .image-cutout-modal .cutout-layout{min-height:0;overflow-y:auto;align-content:start}
+.design-surface .image-cutout-modal>footer{background:#fff;padding-block:12px;z-index:2}
+.design-surface .cutout-tool-buttons button{font-size:14px}
+.design-surface .cutout-canvas-wrap canvas{width:min(100%,calc(52dvh * var(--cutout-ratio,1)));height:auto;max-height:none}
+@media(max-width:680px){.image-cutout-modal .cutout-canvas-wrap{min-height:180px}.design-surface .image-cutout-modal>header .eyebrow{font-size:11px}.design-surface .image-cutout-modal>footer{margin-top:8px;padding-block:4px}}
 
 .storybook-story-control fieldset{border:0;padding:0;margin:18px 0}
 .storybook-story-control legend{font-size:14px;margin-bottom:8px}
